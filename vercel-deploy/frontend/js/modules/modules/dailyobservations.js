@@ -603,6 +603,44 @@ const DailyObservations = {
         }
     },
 
+    observationHasRealImages(obs) {
+        if (!obs) return false;
+        const atts = Array.isArray(obs.attachments) ? obs.attachments : [];
+        const hasAtt = atts.some((a) => a && !a.__listOnly && (a.data || a.url || a.directLink || a.shareableLink || a.fileId || a.driveUrl || a.driveId));
+        const after = Array.isArray(obs.afterExecutionImages) ? obs.afterExecutionImages : [];
+        const hasAfter = after.some((img) => {
+            if (!img) return false;
+            if (typeof img === 'string' && img.trim().length > 8) return true;
+            if (typeof img === 'object' && (img.data || img.url || img.directLink || img.fileId)) return true;
+            return false;
+        });
+        return hasAtt || hasAfter;
+    },
+
+    async hydrateObservationBatchForExport(rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const out = [];
+        const chunkSize = 4;
+        for (let i = 0; i < list.length; i += chunkSize) {
+            const chunk = list.slice(i, i + chunkSize);
+            const fetched = await Promise.all(chunk.map(async (obs) => {
+                const normalized = this.normalizeRecord(obs);
+                if (this.observationHasRealImages(normalized)) return normalized;
+                const id = normalized.id || obs?.id;
+                if (!id || typeof this._getObservationData !== 'function') return normalized;
+                try {
+                    const full = await this._getObservationData(id);
+                    if (!full) return normalized;
+                    return this.normalizeRecord(full);
+                } catch (_e) {
+                    return normalized;
+                }
+            }));
+            out.push(...fetched);
+        }
+        return out;
+    },
+
     canShowAssignResponsiblePanel(obs) {
         const stage = String(obs?.workflowStage || '').trim();
         const u = AppState.currentUser;
@@ -8605,7 +8643,7 @@ const DailyObservations = {
 
             const isAllCount = (maxCount === 'all' || maxCount === 0 || maxCount === '0' || !maxCount);
             const limit = isAllCount ? sorted.length : (parseInt(maxCount, 10) || sorted.length);
-            const exportBatch = sorted.slice(0, limit);
+            const exportBatch = await this.hydrateObservationBatchForExport(sorted.slice(0, limit));
             const taskId = 'ppt_export_' + Date.now();
             const taskTitle = `جاري تصميم وتصدير تقرير PPTX (${exportBatch.length} ملاحظة)...`;
 
@@ -8631,25 +8669,46 @@ const DailyObservations = {
             const imageCache = new Map();
             // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX
             const formatPptxImage = async (input) => {
-                if (!input) return null;
+                if (!input || input.__listOnly) return null;
                 let url = '';
+                let fileId = '';
                 if (typeof input === 'object') {
                     if (input.data && typeof input.data === 'string' && input.data.trim()) {
-                        return { data: input.data.trim() };
+                        const dataVal = input.data.trim();
+                        if (dataVal.startsWith('data:') || dataVal.startsWith('/9j/') || dataVal.startsWith('iVBORw')) {
+                            return { data: dataVal.startsWith('data:') ? dataVal : ('data:image/jpeg;base64,' + dataVal) };
+                        }
                     }
-                    url = input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || '';
+                    url = input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || input.data || '';
+                    const rawId = String(input.fileId || input.driveId || '').trim();
+                    const attId = String(input.id || '').trim();
+                    fileId = rawId;
+                    if (!fileId && /^FILE_/i.test(attId)) fileId = attId;
+                    if (!fileId && typeof Utils !== 'undefined' && typeof Utils.extractImageProxyId === 'function') {
+                        fileId = Utils.extractImageProxyId(url) || Utils.extractImageProxyId(attId) || '';
+                    }
                 } else if (typeof input === 'string') {
                     url = input.trim();
                 }
-                if (!url) return null;
+                if (!url && !fileId) return null;
 
-                // التعامل مع بادئات Base64 المباشرة (فوري 0ms)
                 if (url.startsWith('/9j/') || url.startsWith('iVBORw') || url.startsWith('R0lGOD') || url.startsWith('UklGR')) {
                     url = 'data:image/jpeg;base64,' + url;
                 }
 
                 if (url.startsWith('data:image/') || url.startsWith('data:')) {
                     return { data: url };
+                }
+
+                if (!fileId && typeof Utils !== 'undefined' && typeof Utils.extractImageProxyId === 'function') {
+                    fileId = Utils.extractImageProxyId(url) || '';
+                }
+                if (/^FILE_/i.test(url)) fileId = url.split(/[?#\s]/)[0];
+                if (fileId && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
+                    try {
+                        const uri = await Utils.fetchDriveImageDataUri(fileId);
+                        if (uri && String(uri).startsWith('data:image/')) return { data: uri };
+                    } catch (_e) { /* fallback below */ }
                 }
 
                 if (imageCache.has(url)) return imageCache.get(url);
@@ -8773,19 +8832,25 @@ const DailyObservations = {
 
             const getObservationPrimaryImageUrl = (obs) => {
                 if (!obs) return '';
+                const isImageAtt = (att) => {
+                    if (!att || att.__listOnly) return false;
+                    const type = String(att?.type || '').toLowerCase();
+                    const name = String(att?.name || att?.fileName || '').toLowerCase();
+                    const data = String(att?.data || att?.url || att?.directLink || att?.shareableLink || att?.fileId || '');
+                    return type.startsWith('image/') ||
+                           name.match(/\.(jpe?g|png|webp|gif|bmp)$/i) ||
+                           /^image[-_]?\d+/i.test(name) ||
+                           data.startsWith('data:image/') ||
+                           /^FILE_/i.test(data) ||
+                           data.match(/\/d\/|\/file\/d\/|drive\.google|googleusercontent|vercel-storage/i);
+                };
                 if (Array.isArray(obs.attachments) && obs.attachments.length > 0) {
-                    const imageAtt = obs.attachments.find(att => {
-                        const type = String(att?.type || '').toLowerCase();
-                        const name = String(att?.name || '').toLowerCase();
-                        const data = String(att?.data || att?.url || att?.directLink || '');
-                        return type.startsWith('image/') ||
-                               name.match(/\.(jpe?g|png|webp|gif|bmp)$/i) ||
-                               data.startsWith('data:image/') ||
-                               data.match(/\/d\/|\/file\/d\/|drive\.google|googleusercontent/i);
-                    }) || obs.attachments[0];
-                    if (imageAtt) {
-                        return imageAtt.data || imageAtt.directLink || imageAtt.url || imageAtt.shareableLink || imageAtt.driveUrl || imageAtt.driveId || '';
-                    }
+                    const imageAtt = obs.attachments.find(isImageAtt) || obs.attachments.find((a) => a && !a.__listOnly) || null;
+                    if (imageAtt && !imageAtt.__listOnly) return imageAtt;
+                }
+                if (Array.isArray(obs.afterExecutionImages) && obs.afterExecutionImages.length > 0) {
+                    const first = obs.afterExecutionImages.find(Boolean);
+                    if (first) return first;
                 }
                 return obs.image || obs.photo || obs.imageUrl || obs.photoUrl || obs.attachment || obs.directLink || '';
             };

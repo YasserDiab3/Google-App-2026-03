@@ -1,1 +1,68 @@
-const AuditLog={log(t,a,n,r={}){AppState.appData.auditLog||(AppState.appData.auditLog=[]);const e={id:Utils.generateId("AUDIT"),timestamp:new Date().toISOString(),action:t,module:a,recordId:n,details:r,user:this._extractUser(AppState.currentUser)};AppState.appData.auditLog.push(e);try{DataManager.save(),typeof GoogleIntegration<"u"&&GoogleIntegration.autoSave&&GoogleIntegration.autoSave("AuditLog",AppState.appData.auditLog).catch(()=>{})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0633\u062C\u0644 \u0627\u0644\u062A\u062F\u0642\u064A\u0642:",i)}return e},getAll(t={}){const a=AppState.appData.auditLog||[];return Object.keys(t).length===0?a:a.filter(n=>Object.entries(t).every(([r,e])=>e==null||e===""?!0:n[r]===e))},getByRecord(t,a){return this.getAll({module:t,recordId:a})},_extractUser(t){return t?{id:t.id||null,name:t.name||t.fullName||t.displayName||"",email:t.email||"",role:t.role||""}:null}};typeof window<"u"&&(window.AuditLog=AuditLog);
+/**
+ * Audit Log Service
+ * Handles system audit logging
+ */
+
+const AuditLog = {
+    log(action, module, recordId, details = {}) {
+        if (!AppState.appData.auditLog) {
+            AppState.appData.auditLog = [];
+        }
+
+        const entry = {
+            id: Utils.generateId('AUDIT'),
+            timestamp: new Date().toISOString(),
+            action,
+            module,
+            recordId,
+            details,
+            user: this._extractUser(AppState.currentUser)
+        };
+
+        AppState.appData.auditLog.push(entry);
+
+        try {
+            DataManager.save();
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                GoogleIntegration.autoSave('AuditLog', AppState.appData.auditLog).catch(() => {});
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في حفظ سجل التدقيق:', error);
+        }
+
+        return entry;
+    },
+
+    getAll(filter = {}) {
+        const logs = AppState.appData.auditLog || [];
+        if (Object.keys(filter).length === 0) {
+            return logs;
+        }
+        return logs.filter(entry => {
+            return Object.entries(filter).every(([key, value]) => {
+                if (value === undefined || value === null || value === '') return true;
+                return entry[key] === value;
+            });
+        });
+    },
+
+    getByRecord(module, recordId) {
+        return this.getAll({ module, recordId });
+    },
+
+    _extractUser(user) {
+        if (!user) return null;
+        return {
+            id: user.id || null,
+            name: user.name || user.fullName || user.displayName || '',
+            email: user.email || '',
+            role: user.role || ''
+        };
+    }
+};
+
+// Export to global window (for script tag loading)
+if (typeof window !== 'undefined') {
+    window.AuditLog = AuditLog;
+}
+

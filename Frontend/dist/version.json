@@ -1,15 +1,13 @@
 {
-  "version": "1.0.1585",
+  "version": "1.0.1587",
   "highlights": {
     "ar": [
-      "إصلاح تهنيج الملاحظات: القائمة بدون صور حتى لا تنفد ذاكرة المتصفح.",
-      "سجل الملاحظات يعرض 50 صفاً ثم زر عرض المزيد.",
-      "صور الملاحظة تُحمَّل عند فتح التفاصيل فقط."
+      "تصدير PPT للملاحظات يعرض صور المرفقات بعد جلبها لدفعة التقرير فقط.",
+      "دعم صور FILE_* وصور بعد التنفيذ داخل شرائح العرض."
     ],
     "en": [
-      "Fix observations Out of Memory: list loads without photo blobs.",
-      "Observations table shows 50 rows then Load more.",
-      "Photos load only when opening one observation."
+      "PPT export loads observation photos for the export batch only.",
+      "FILE_* attachments and after-execution images appear on slides."
     ]
   }
 }

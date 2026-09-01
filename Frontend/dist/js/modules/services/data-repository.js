@@ -1,1 +1,39 @@
-(function(t){"use strict";const n={name:"SheetsViaAppsScript",isConfigured(){try{return!!(typeof Utils<"u"&&typeof Utils.hasCloudBackendSync=="function"&&Utils.hasCloudBackendSync())}catch{return!1}},async readSheet(e,s){if(!e)return{success:!1,message:"sheetName \u0645\u0637\u0644\u0648\u0628"};if(typeof GoogleIntegration>"u"||typeof GoogleIntegration.sendToAppsScript!="function")return{success:!1,message:"GoogleIntegration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D"};const o=Object.assign({},s||{},{sheetName:e});return GoogleIntegration.sendToAppsScript("readFromSheet",o)}};t.DataRepository=n})(typeof window<"u"?window:this);
+/**
+ * DataRepository — طبقة عزل تخزين رقيقة للانتقال المستقبلي عن قاعدة SQL فقط.
+ * حاليًا تفوّض إلى خادم SQL عبر GoogleIntegration.
+ *
+ * عند الهجرة إلى Firebase أو Supabase، يُستبدل التنفيذ هنا مع الإبقاء على نفس الأسماء قدر الإمكان.
+ */
+(function (global) {
+    'use strict';
+
+    const DataRepository = {
+        name: 'SheetsViaAppsScript',
+
+        isConfigured() {
+            try {
+                return !!(typeof Utils !== 'undefined' &&
+                    typeof Utils.hasCloudBackendSync === 'function' &&
+                    Utils.hasCloudBackendSync());
+            } catch (e) {
+                return false;
+            }
+        },
+
+        /**
+         * قراءة ورقة عبر الإجراء المعياري readFromSheet
+         */
+        async readSheet(sheetName, extraPayload) {
+            if (!sheetName) {
+                return { success: false, message: 'sheetName مطلوب' };
+            }
+            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendToAppsScript !== 'function') {
+                return { success: false, message: 'GoogleIntegration غير متاح' };
+            }
+            const payload = Object.assign({}, extraPayload || {}, { sheetName: sheetName });
+            return GoogleIntegration.sendToAppsScript('readFromSheet', payload);
+        }
+    };
+
+    global.DataRepository = DataRepository;
+})(typeof window !== 'undefined' ? window : this);

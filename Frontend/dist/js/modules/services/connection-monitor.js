@@ -1,21 +1,328 @@
-const ConnectionMonitor={config:{checkInterval:12e4,failureThreshold:2,enabled:!0,enableNotifications:!0},state:{isMonitoring:!1,checkIntervalId:null,consecutiveFailures:0,lastCheckTime:null,lastSuccessTime:null,lastFailureTime:null,isConnected:!0,adminNotified:!1},start(){if(this.state.isMonitoring){Utils.safeLog("\u2139\uFE0F \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u064A\u0639\u0645\u0644 \u0628\u0627\u0644\u0641\u0639\u0644");return}if(!this.config.enabled){Utils.safeLog("\u2139\uFE0F \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639\u0637\u0644");return}if(!AppState.googleConfig||!AppState.googleConfig.appsScript||!AppState.googleConfig.appsScript.enabled){Utils.safeLog("\u2139\uFE0F \u062E\u0627\u062F\u0645 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0644 - \u062A\u062E\u0637\u064A \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644");return}this.state.isMonitoring=!0,this.state.consecutiveFailures=0,this.state.adminNotified=!1,this.checkConnection(),this.state.checkIntervalId=setInterval(()=>{this.checkConnection()},this.config.checkInterval),Utils.safeLog("\u2705 \u062A\u0645 \u0628\u062F\u0621 \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")},stop(){this.state.checkIntervalId&&(clearInterval(this.state.checkIntervalId),this.state.checkIntervalId=null),this.state.isMonitoring=!1,Utils.safeLog("\u23F9\uFE0F \u062A\u0645 \u0625\u064A\u0642\u0627\u0641 \u0646\u0638\u0627\u0645 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")},async checkConnection(){if(this.config.enabled&&!(!AppState.googleConfig||!AppState.googleConfig.appsScript||!AppState.googleConfig.appsScript.enabled||!AppState.googleConfig.appsScript.scriptUrl)){this.state.lastCheckTime=new Date().toISOString();try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.readFromSheets){const t=await Utils.promiseWithTimeout(GoogleIntegration.readFromSheets("Users"),6e4,"\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644");this.state.consecutiveFailures=0,this.state.lastSuccessTime=new Date().toISOString(),this.state.isConnected=!0,this.emitUserConnectionState(!0),this.state.adminNotified&&this.state.isConnected&&(this.notifyAdminConnectionRestored(),this.state.adminNotified=!1),Utils.safeLog("\u2705 \u0641\u062D\u0635 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: \u0646\u062C\u062D")}else throw new Error("GoogleIntegration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D")}catch(t){const i=t?.message||t?.toString()||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",s=i.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")||i.includes("timeout")||i.includes("Timeout")||i.includes("\u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL");if(s&&this.state.consecutiveFailures<this.config.failureThreshold){const e=Math.max(this.config.failureThreshold,3);if(this.state.consecutiveFailures+1<e){Utils.safeLog(`\u23F1\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0641\u062D\u0635 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (\u0645\u062D\u0627\u0648\u0644\u0629 ${this.state.consecutiveFailures+1}/${e}) - \u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629`),this.state.consecutiveFailures++,this.state.lastFailureTime=new Date().toISOString();return}}this.state.consecutiveFailures++,this.state.lastFailureTime=new Date().toISOString(),this.state.isConnected=!1,(!s||this.state.consecutiveFailures>=this.config.failureThreshold)&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0641\u062D\u0635 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (${this.state.consecutiveFailures}/${this.config.failureThreshold}):`,i),this.state.consecutiveFailures>=this.config.failureThreshold&&this.emitUserConnectionState(!1),this.state.consecutiveFailures>=this.config.failureThreshold&&!this.state.adminNotified&&(this.notifyAdminConnectionLost(t),this.state.adminNotified=!0)}}},emitUserConnectionState(t){try{typeof OfflineBanner<"u"&&typeof OfflineBanner.setBackendOffline=="function"&&OfflineBanner.setBackendOffline(!t),typeof window<"u"&&typeof window.dispatchEvent=="function"&&window.dispatchEvent(new CustomEvent("hse:backend-connection",{detail:{connected:!!t,at:new Date().toISOString()}}))}catch{}},notifyAdminConnectionLost(t){if(!this.config.enableNotifications)return;const s=(AppState.appData.users||[]).filter(e=>e&&e.active!==!1&&(e.role==="admin"||e.permissions&&(e.permissions.isAdmin===!0||e.permissions.admin===!0)));if(AppState.currentUser&&(AppState.currentUser.role==="admin"||AppState.currentUser.permissions&&(AppState.currentUser.permissions.isAdmin===!0||AppState.currentUser.permissions.admin===!0))){const e=t?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",n=e.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")||e.includes("timeout")||e.includes("\u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL");let o;n?o=`\u26A0\uFE0F \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL!
+/**
+ * Connection Monitor Service
+ * نظام مراقبة الاتصال بين الواجهة الأمامية والخلفية
+ * يرسل إشعارات لمدير النظام عند فقدان الاتصال
+ */
 
-\u0627\u0644\u062E\u0637\u0623: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644
-\u0627\u0644\u0648\u0642\u062A: ${new Date().toLocaleString("ar-SA")}
+const ConnectionMonitor = {
+    // إعدادات النظام
+    config: {
+        // فحص الاتصال كل 2 دقيقة (120000 ms)
+        checkInterval: 120000,
+        
+        // عدد المحاولات المتتالية للفشل قبل إرسال إشعار
+        failureThreshold: 2,
+        
+        // تفعيل المراقبة
+        enabled: true,
+        
+        // تفعيل الإشعارات
+        enableNotifications: true
+    },
 
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u0627\u062F\u0645 SQL
-2. \u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL
-3. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A
+    // حالة النظام
+    state: {
+        isMonitoring: false,
+        checkIntervalId: null,
+        consecutiveFailures: 0,
+        lastCheckTime: null,
+        lastSuccessTime: null,
+        lastFailureTime: null,
+        isConnected: true,
+        adminNotified: false
+    },
 
-\u{1F4A1} \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u062D\u062A\u0649 \u064A\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644.`:o=`\u26A0\uFE0F \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL!
+    /**
+     * بدء مراقبة الاتصال
+     */
+    start() {
+        if (this.state.isMonitoring) {
+            Utils.safeLog('ℹ️ نظام مراقبة الاتصال يعمل بالفعل');
+            return;
+        }
 
-\u0627\u0644\u062E\u0637\u0623: ${e}
-\u0627\u0644\u0648\u0642\u062A: ${new Date().toLocaleString("ar-SA")}
+        if (!this.config.enabled) {
+            Utils.safeLog('ℹ️ نظام مراقبة الاتصال معطل');
+            return;
+        }
 
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u0627\u062F\u0645 SQL
-2. \u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL
-3. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A`,typeof Notification<"u"&&Notification.error(o,{duration:n?1e4:0,persistent:!n}),typeof UserActivityLog<"u"&&UserActivityLog.log("connection_lost","System",null,{description:`\u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL: ${e}`,error:e,timestamp:new Date().toISOString()}).catch(()=>{})}s.length>0&&typeof Notification<"u"&&s.forEach(e=>{e.email&&e.email!==AppState.currentUser?.email&&Utils.safeLog(`\u{1F4E7} \u064A\u062C\u0628 \u0625\u0631\u0633\u0627\u0644 \u0625\u0634\u0639\u0627\u0631 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645: ${e.email}`)}),Utils.safeError("\u274C \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL - \u062A\u0645 \u0625\u0634\u0639\u0627\u0631 \u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645")},notifyAdminConnectionRestored(){if(this.config.enableNotifications){if(AppState.currentUser&&(AppState.currentUser.role==="admin"||AppState.currentUser.permissions&&(AppState.currentUser.permissions.isAdmin===!0||AppState.currentUser.permissions.admin===!0))){const t=`\u2705 \u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL \u0628\u0646\u062C\u0627\u062D!
+        // التحقق من تفعيل خادم SQL
+        if (!AppState.googleConfig || !AppState.googleConfig.appsScript || !AppState.googleConfig.appsScript.enabled) {
+            Utils.safeLog('ℹ️ خادم SQL غير مفعل - تخطي مراقبة الاتصال');
+            return;
+        }
 
-\u0627\u0644\u0648\u0642\u062A: ${new Date().toLocaleString("ar-SA")}`;typeof Notification<"u"&&Notification.success(t,{duration:5e3}),typeof UserActivityLog<"u"&&UserActivityLog.log("connection_restored","System",null,{description:"\u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL",timestamp:new Date().toISOString()}).catch(()=>{})}Utils.safeLog("\u2705 \u062A\u0645 \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL")}},getStatus(){return{isMonitoring:this.state.isMonitoring,isConnected:this.state.isConnected,consecutiveFailures:this.state.consecutiveFailures,lastCheckTime:this.state.lastCheckTime,lastSuccessTime:this.state.lastSuccessTime,lastFailureTime:this.state.lastFailureTime,adminNotified:this.state.adminNotified}},reset(){this.state.consecutiveFailures=0,this.state.adminNotified=!1,this.state.isConnected=!0,Utils.safeLog("\u{1F504} \u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u062D\u0627\u0644\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644")}};typeof window<"u"&&(window.ConnectionMonitor=ConnectionMonitor);
+        this.state.isMonitoring = true;
+        this.state.consecutiveFailures = 0;
+        this.state.adminNotified = false;
+
+        // فحص فوري عند البدء
+        this.checkConnection();
+
+        // فحص دوري
+        this.state.checkIntervalId = setInterval(() => {
+            this.checkConnection();
+        }, this.config.checkInterval);
+
+        Utils.safeLog('✅ تم بدء نظام مراقبة الاتصال');
+    },
+
+    /**
+     * إيقاف مراقبة الاتصال
+     */
+    stop() {
+        if (this.state.checkIntervalId) {
+            clearInterval(this.state.checkIntervalId);
+            this.state.checkIntervalId = null;
+        }
+        this.state.isMonitoring = false;
+        Utils.safeLog('⏹️ تم إيقاف نظام مراقبة الاتصال');
+    },
+
+    /**
+     * فحص الاتصال
+     */
+    async checkConnection() {
+        if (!this.config.enabled) {
+            return;
+        }
+
+        // التحقق من تفعيل خادم SQL
+        if (!AppState.googleConfig || !AppState.googleConfig.appsScript || !AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+            return;
+        }
+
+        this.state.lastCheckTime = new Date().toISOString();
+
+        try {
+            // محاولة قراءة بيانات بسيطة من قاعدة SQL
+            // استخدام timeout أطول (60 ثانية) لتجنب أخطاء timeout غير ضرورية
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.readFromSheets) {
+                const result = await Utils.promiseWithTimeout(
+                    GoogleIntegration.readFromSheets('Users'),
+                    60000, // 60 ثانية بدلاً من 15 ثانية
+                    'انتهت مهلة الاتصال'
+                );
+
+                // نجح الاتصال
+                this.state.consecutiveFailures = 0;
+                this.state.lastSuccessTime = new Date().toISOString();
+                this.state.isConnected = true;
+
+                // بانر للمستخدم العادي + حدث عام
+                this.emitUserConnectionState(true);
+
+                // إذا كان الاتصال قد انقطع سابقاً وأعيد الآن، نرسل إشعار نجاح
+                if (this.state.adminNotified && this.state.isConnected) {
+                    this.notifyAdminConnectionRestored();
+                    this.state.adminNotified = false;
+                }
+
+                Utils.safeLog('✅ فحص الاتصال: نجح');
+            } else {
+                throw new Error('GoogleIntegration غير متاح');
+            }
+        } catch (error) {
+            // فشل الاتصال
+            const errorMsg = error?.message || error?.toString() || 'خطأ غير معروف';
+            
+            // تجاهل أخطاء timeout المؤقتة - قد تكون بسبب بطء الاتصال المؤقت
+            // نتعامل معها فقط إذا استمرت لعدة محاولات متتالية
+            const isTimeoutError = errorMsg.includes('انتهت مهلة الاتصال') || 
+                                   errorMsg.includes('timeout') || 
+                                   errorMsg.includes('Timeout') ||
+                                   errorMsg.includes('فقدان الاتصال مع قاعدة SQL');
+            
+            // إذا كان خطأ timeout، نزيد العتبة قليلاً قبل الإشعار
+            if (isTimeoutError && this.state.consecutiveFailures < this.config.failureThreshold) {
+                // نزيد العتبة لخطأ timeout إلى 3 محاولات بدلاً من 2
+                const timeoutThreshold = Math.max(this.config.failureThreshold, 3);
+                if (this.state.consecutiveFailures + 1 < timeoutThreshold) {
+                    Utils.safeLog(`⏱️ انتهت مهلة فحص الاتصال (محاولة ${this.state.consecutiveFailures + 1}/${timeoutThreshold}) - سيتم إعادة المحاولة`);
+                    this.state.consecutiveFailures++;
+                    this.state.lastFailureTime = new Date().toISOString();
+                    return; // لا نعتبره فشلاً كاملاً بعد
+                }
+            }
+            
+            this.state.consecutiveFailures++;
+            this.state.lastFailureTime = new Date().toISOString();
+            this.state.isConnected = false;
+
+            // تسجيل تحذير فقط إذا لم يكن خطأ timeout مؤقت
+            if (!isTimeoutError || this.state.consecutiveFailures >= this.config.failureThreshold) {
+                Utils.safeWarn(`⚠️ فشل فحص الاتصال (${this.state.consecutiveFailures}/${this.config.failureThreshold}):`, errorMsg);
+            }
+
+            // بانر لكل المستخدمين بعد تجاوز العتبة (ليس أدمن فقط)
+            if (this.state.consecutiveFailures >= this.config.failureThreshold) {
+                this.emitUserConnectionState(false);
+            }
+
+            // إرسال إشعار لمدير النظام إذا تجاوزنا العتبة
+            if (this.state.consecutiveFailures >= this.config.failureThreshold && !this.state.adminNotified) {
+                this.notifyAdminConnectionLost(error);
+                this.state.adminNotified = true;
+            }
+        }
+    },
+
+    /**
+     * إخطار الواجهة (بانر عام) بحالة الخادم — لجميع المستخدمين
+     */
+    emitUserConnectionState(connected) {
+        try {
+            if (typeof OfflineBanner !== 'undefined' && typeof OfflineBanner.setBackendOffline === 'function') {
+                OfflineBanner.setBackendOffline(!connected);
+            }
+            if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+                window.dispatchEvent(new CustomEvent('hse:backend-connection', {
+                    detail: { connected: !!connected, at: new Date().toISOString() }
+                }));
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    /**
+     * إرسال إشعار لمدير النظام عند فقدان الاتصال
+     */
+    notifyAdminConnectionLost(error) {
+        if (!this.config.enableNotifications) {
+            return;
+        }
+
+        // البحث عن مدير النظام
+        const users = AppState.appData.users || [];
+        const adminUsers = users.filter(u => 
+            u && u.active !== false && (
+                u.role === 'admin' || 
+                (u.permissions && (u.permissions.isAdmin === true || u.permissions.admin === true))
+            )
+        );
+
+        // إذا كان المستخدم الحالي هو مدير النظام، نعرض إشعار مباشر
+        if (AppState.currentUser && (
+            AppState.currentUser.role === 'admin' ||
+            (AppState.currentUser.permissions && (AppState.currentUser.permissions.isAdmin === true || AppState.currentUser.permissions.admin === true))
+        )) {
+            const errorMessage = error?.message || 'خطأ غير معروف';
+            const isTimeoutError = errorMessage.includes('انتهت مهلة الاتصال') || 
+                                   errorMessage.includes('timeout') || 
+                                   errorMessage.includes('فقدان الاتصال مع قاعدة SQL');
+            
+            // رسالة مبسطة لخطأ timeout
+            let message;
+            if (isTimeoutError) {
+                message = `⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                         `الخطأ: انتهت مهلة الاتصال\n` +
+                         `الوقت: ${new Date().toLocaleString('ar-SA')}\n\n` +
+                         `يرجى التحقق من:\n` +
+                         `1. إعدادات خادم SQL\n` +
+                         `2. معرف قاعدة SQL\n` +
+                         `3. الاتصال بالإنترنت\n\n` +
+                         `💡 سيتم استخدام البيانات المحلية حتى يتم استعادة الاتصال.`;
+            } else {
+                message = `⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                         `الخطأ: ${errorMessage}\n` +
+                         `الوقت: ${new Date().toLocaleString('ar-SA')}\n\n` +
+                         `يرجى التحقق من:\n` +
+                         `1. إعدادات خادم SQL\n` +
+                         `2. معرف قاعدة SQL\n` +
+                         `3. الاتصال بالإنترنت`;
+            }
+
+            if (typeof Notification !== 'undefined') {
+                Notification.error(message, {
+                    duration: isTimeoutError ? 10000 : 0, // timeout errors تختفي بعد 10 ثوانٍ
+                    persistent: !isTimeoutError // فقط الأخطاء غير timeout تكون دائمة
+                });
+            }
+
+            // تسجيل في سجل النشاط
+            if (typeof UserActivityLog !== 'undefined') {
+                UserActivityLog.log('connection_lost', 'System', null, {
+                    description: `فقدان الاتصال مع قاعدة SQL: ${errorMessage}`,
+                    error: errorMessage,
+                    timestamp: new Date().toISOString()
+                }).catch(() => {});
+            }
+        }
+
+        // إرسال إشعار لجميع المديرين الآخرين (إذا كان هناك نظام إشعارات)
+        if (adminUsers.length > 0 && typeof Notification !== 'undefined') {
+            adminUsers.forEach(admin => {
+                if (admin.email && admin.email !== AppState.currentUser?.email) {
+                    // يمكن إضافة نظام إشعارات للمديرين الآخرين هنا
+                    Utils.safeLog(`📧 يجب إرسال إشعار لمدير النظام: ${admin.email}`);
+                }
+            });
+        }
+
+        Utils.safeError('❌ فقدان الاتصال مع قاعدة SQL - تم إشعار مدير النظام');
+    },
+
+    /**
+     * إرسال إشعار لمدير النظام عند استعادة الاتصال
+     */
+    notifyAdminConnectionRestored() {
+        if (!this.config.enableNotifications) {
+            return;
+        }
+
+        // إذا كان المستخدم الحالي هو مدير النظام، نعرض إشعار مباشر
+        if (AppState.currentUser && (
+            AppState.currentUser.role === 'admin' ||
+            (AppState.currentUser.permissions && (AppState.currentUser.permissions.isAdmin === true || AppState.currentUser.permissions.admin === true))
+        )) {
+            const message = `✅ تم استعادة الاتصال مع قاعدة SQL بنجاح!\n\n` +
+                          `الوقت: ${new Date().toLocaleString('ar-SA')}`;
+
+            if (typeof Notification !== 'undefined') {
+                Notification.success(message, {
+                    duration: 5000
+                });
+            }
+
+            // تسجيل في سجل النشاط
+            if (typeof UserActivityLog !== 'undefined') {
+                UserActivityLog.log('connection_restored', 'System', null, {
+                    description: 'تم استعادة الاتصال مع قاعدة SQL',
+                    timestamp: new Date().toISOString()
+                }).catch(() => {});
+            }
+        }
+
+        Utils.safeLog('✅ تم استعادة الاتصال مع قاعدة SQL');
+    },
+
+    /**
+     * الحصول على حالة الاتصال
+     */
+    getStatus() {
+        return {
+            isMonitoring: this.state.isMonitoring,
+            isConnected: this.state.isConnected,
+            consecutiveFailures: this.state.consecutiveFailures,
+            lastCheckTime: this.state.lastCheckTime,
+            lastSuccessTime: this.state.lastSuccessTime,
+            lastFailureTime: this.state.lastFailureTime,
+            adminNotified: this.state.adminNotified
+        };
+    },
+
+    /**
+     * إعادة تعيين حالة المراقبة
+     */
+    reset() {
+        this.state.consecutiveFailures = 0;
+        this.state.adminNotified = false;
+        this.state.isConnected = true;
+        Utils.safeLog('🔄 تم إعادة تعيين حالة مراقبة الاتصال');
+    }
+};
+
+// تصدير للاستخدام العام
+if (typeof window !== 'undefined') {
+    window.ConnectionMonitor = ConnectionMonitor;
+}
+

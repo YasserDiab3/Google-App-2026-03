@@ -1,1 +1,87 @@
-typeof window<"u"&&(window.DataManager,window.GoogleIntegration,window.GoogleIntegration&&!window.GoogleIntegration.syncSpecificSheets&&(window.GoogleIntegration.syncSpecificSheets=async function(o=[],c={}){const{silent:t=!1,showLoader:n=!1,notifyOnSuccess:f=!t,notifyOnError:l=!t}=c;if(!AppState.googleConfig.appsScript.enabled||!AppState.googleConfig.appsScript.scriptUrl)return t||Utils.safeLog("\u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"),!1;if(!Array.isArray(o)||o.length===0)return t||Utils.safeWarn("\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0648\u0631\u0627\u0642 \u0645\u062D\u062F\u062F\u0629 \u0644\u0644\u0645\u0632\u0627\u0645\u0646\u0629"),!1;try{t||Utils.safeLog(`\u062C\u0627\u0631\u064A \u0645\u0632\u0627\u0645\u0646\u0629 ${o.length} \u0623\u0648\u0631\u0627\u0642...`),n&&typeof Loading<"u"&&Loading.show();const i={users:"Users",incidents:"Incidents",training:"Training",employees:"Employees"},d=o.map(e=>i[e.toLowerCase()]||e).map(async e=>{try{const s=await window.GoogleIntegration.sendRequest({action:"readFromSheet",data:{sheetName:e,spreadsheetId:AppState.googleConfig.sheets.spreadsheetId}});if(s&&s.success){const r=e.charAt(0).toLowerCase()+e.slice(1);return AppState.appData[r]=s.data||[],t||Utils.safeLog(`\u2705 \u062A\u0645 \u0645\u0632\u0627\u0645\u0646\u0629 ${e}: ${AppState.appData[r].length} \u0633\u062C\u0644`),{sheet:e,success:!0,count:AppState.appData[r].length}}return{sheet:e,success:!1}}catch(s){return t||Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 ${e}:`,s),{sheet:e,success:!1,error:s}}}),a=(await Promise.all(d)).filter(e=>e.success).length;return window.DataManager.save(),n&&typeof Loading<"u"&&Loading.hide(),f&&a>0&&Notification.success(`\u2705 \u062A\u0645 \u0645\u0632\u0627\u0645\u0646\u0629 ${a} \u0645\u0646 ${o.length} \u0623\u0648\u0631\u0627\u0642 \u0628\u0646\u062C\u0627\u062D`),t||Utils.safeLog(`\u2705 \u062A\u0645\u062A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D: ${a}/${o.length}`),!0}catch(i){return n&&typeof Loading<"u"&&Loading.hide(),t||Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",i),l&&Notification.error("\u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),!1}}));
+/**
+ * App Services - Main Loader/Index File
+ * 
+ * This file serves as the main entry point for all service modules.
+ * All service modules are loaded via script tags before this file,
+ * and they expose themselves to the global window object.
+ * 
+ * This file ensures all services are available and adds any helper functions.
+ * 
+ * Refactored from a single 5000+ line file into modular services:
+ * - services/data-manager.js - Data management and sync queue
+ * - services/periodic-inspection-store.js - Periodic inspection management
+ * - services/approval-circuits.js - Approval circuit management
+ * - services/audit-log.js - Audit logging
+ * - services/user-activity-log.js - User activity logging
+ * - services/cloud-storage-integration.js - Cloud storage (OneDrive, الخادم, SharePoint)
+ * - services/workflow.js - Workflow engine
+ * - services/google-integration.js - خادم SQL and Sheets integration
+ */
+
+// All services are already loaded via script tags and exposed to window
+// This file ensures they're all available and adds helper functions
+
+// Verify all services are loaded (for debugging)
+if (typeof window !== 'undefined') {
+    // Services should already be on window from their respective modules
+    // Just verify they exist and add helper functions if needed
+    
+    // Verify all services are loaded
+    if (!window.DataManager) {
+        console.error('❌ DataManager not loaded! Make sure services/data-manager.js is loaded before app-services.js');
+    }
+    if (!window.GoogleIntegration) {
+        console.error('❌ GoogleIntegration not loaded! Make sure services/google-integration.js is loaded before app-services.js');
+    }
+    
+    // Add syncSpecificSheets helper function if it doesn't exist
+    if (window.GoogleIntegration && !window.GoogleIntegration.syncSpecificSheets) {
+        window.GoogleIntegration.syncSpecificSheets = async function(sheetNames = [], options = {}) {
+            const { silent = false, showLoader = false, notifyOnSuccess = !silent, notifyOnError = !silent } = options;
+            if (!AppState.googleConfig.appsScript.enabled || !AppState.googleConfig.appsScript.scriptUrl) {
+                if (!silent) Utils.safeLog('قاعدة SQL غير مفعّل');
+                return false;
+            }
+            if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
+                if (!silent) Utils.safeWarn('لا توجد أوراق محددة للمزامنة');
+                return false;
+            }
+            try {
+                if (!silent) Utils.safeLog(`جاري مزامنة ${sheetNames.length} أوراق...`);
+                if (showLoader && typeof Loading !== 'undefined') Loading.show();
+                const sheetMapping = { 'users': 'Users', 'incidents': 'Incidents', 'training': 'Training', 'employees': 'Employees' };
+                const mappedSheets = sheetNames.map(name => sheetMapping[name.toLowerCase()] || name);
+                const syncPromises = mappedSheets.map(async (sheetName) => {
+                    try {
+                        const result = await window.GoogleIntegration.sendRequest({
+                            action: 'readFromSheet',
+                            data: { sheetName, spreadsheetId: AppState.googleConfig.sheets.spreadsheetId }
+                        });
+                        if (result && result.success) {
+                            const dataKey = sheetName.charAt(0).toLowerCase() + sheetName.slice(1);
+                            AppState.appData[dataKey] = result.data || [];
+                            if (!silent) Utils.safeLog(`✅ تم مزامنة ${sheetName}: ${AppState.appData[dataKey].length} سجل`);
+                            return { sheet: sheetName, success: true, count: AppState.appData[dataKey].length };
+                        }
+                        return { sheet: sheetName, success: false };
+                    } catch (error) {
+                        if (!silent) Utils.safeWarn(`⚠️ فشل مزامنة ${sheetName}:`, error);
+                        return { sheet: sheetName, success: false, error };
+                    }
+                });
+                const results = await Promise.all(syncPromises);
+                const successCount = results.filter(r => r.success).length;
+                window.DataManager.save();
+                if (showLoader && typeof Loading !== 'undefined') Loading.hide();
+                if (notifyOnSuccess && successCount > 0) Notification.success(`✅ تم مزامنة ${successCount} من ${sheetNames.length} أوراق بنجاح`);
+                if (!silent) Utils.safeLog(`✅ تمت مزامنة البيانات بنجاح: ${successCount}/${sheetNames.length}`);
+                return true;
+            } catch (error) {
+                if (showLoader && typeof Loading !== 'undefined') Loading.hide();
+                if (!silent) Utils.safeError('❌ خطأ في مزامنة البيانات:', error);
+                if (notifyOnError) Notification.error('فشل مزامنة البيانات');
+                return false;
+            }
+        };
+    }
+}

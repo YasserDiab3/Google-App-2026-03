@@ -1,4 +1,69 @@
-const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,stockItemsCache:null,stockItemsCacheTime:null,stockCacheExpiry:3e5,ppeItemsListCache:null,ppeItemsListCacheTime:null,ppeItemsListCacheExpiry:12e4,ppeItemsOptionsHTML:"",stockStaleWarningMsg:"",stockLoadHardErrorMsg:"",lastSyncTime:null,filters:{receipts:{search:"",equipmentType:"",status:"",dateFrom:"",dateTo:""},stock:{search:"",category:"",supplier:"",status:"",dateFrom:"",dateTo:""}}},_t(t,e){return window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n.t(t,e):window.I18n&&typeof window.I18n.t=="function"?window.I18n.t(t,e):e},applyModuleI18n(t){const e=t&&t.nodeType?t:document.getElementById("ppe-section");if(!e)return;const i=window.AppI18n&&typeof window.AppI18n.applyModuleI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyModuleI18n=="function"?window.I18n:null;i&&i.applyModuleI18n(e)},ensurePpeFilterStyles(){if(document.getElementById("ppe-module-filter-styles"))return;const t=document.createElement("style");t.id="ppe-module-filter-styles",t.textContent=`
+/**
+ * PPE Module
+ * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
+ */
+const PPE = {
+    state: {
+        activeTab: 'receipts', // receipts, stock-control, analysis
+        isSwitchingTab: false, // منع التبديل المتزامن
+        eventListeners: new Map(), // تتبع مستمعي الأحداث للتنظيف
+        stockItemsCache: null, // Cache لبيانات المخزون
+        stockItemsCacheTime: null, // وقت التخزين المؤقت
+        stockCacheExpiry: 5 * 60 * 1000, // انتهاء صلاحية Cache بعد 5 دقائق
+        ppeItemsListCache: null, // Cache لقائمة الأصناف في المنسدلة
+        ppeItemsListCacheTime: null, // وقت تحديث قائمة الأصناف
+        ppeItemsListCacheExpiry: 2 * 60 * 1000, // انتهاء صلاحية القائمة بعد دقيقتين
+        ppeItemsOptionsHTML: '', // HTML options معاد استخدامه عند إضافة صفوف
+        /** رسالة مختصرة عند تعذّر الجلب وبقاء المعروض من الكاش */
+        stockStaleWarningMsg: '',
+        /** رسالة خطأ صريحة عند عدم وجود أي بيانات مخزونة بعد الفشل (timeout/شبكة) */
+        stockLoadHardErrorMsg: '',
+        lastSyncTime: null, // وقت آخر مزامنة
+        /** فلاتر سجل الاستلامات (نفس نمط سجل التردد / المستندات القانونية) */
+        filters: {
+            receipts: {
+                search: '',
+                equipmentType: '',
+                status: '',
+                dateFrom: '',
+                dateTo: ''
+            },
+            // فلاتر جدول المخزون (نفس نمط فلاتر سجل الاستلامات)
+            stock: {
+                search: '',
+                category: '',
+                supplier: '',
+                status: '', // '', 'available', 'low'
+                dateFrom: '',
+                dateTo: ''
+            }
+        }
+    },
+
+    _t(key, fallback) {
+        if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+            return window.AppI18n.t(key, fallback);
+        }
+        if (window.I18n && typeof window.I18n.t === 'function') {
+            return window.I18n.t(key, fallback);
+        }
+        return fallback;
+    },
+
+    applyModuleI18n(root) {
+        const el = root && root.nodeType ? root : document.getElementById('ppe-section');
+        if (!el) return;
+        const i18n = (window.AppI18n && typeof window.AppI18n.applyModuleI18n === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.applyModuleI18n === 'function') ? window.I18n : null);
+        if (i18n) i18n.applyModuleI18n(el);
+    },
+
+    ensurePpeFilterStyles() {
+        if (document.getElementById('ppe-module-filter-styles')) return;
+        const style = document.createElement('style');
+        style.id = 'ppe-module-filter-styles';
+        style.textContent = `
             .ppe-visits-filters-row { position: relative; }
             .ppe-visits-filters-row .filters-grid { width: 100%; }
             .ppe-visits-filters-row .filter-field { display: flex; flex-direction: column; gap: 6px; }
@@ -88,7 +153,7 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
             @media (max-width: 640px) {
                 .ppe-receipts-kpi__grid { grid-template-columns: 1fr; }
             }
-            /* ===== \u0628\u0637\u0627\u0642\u0629 \u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u2014 \u0647\u0648\u064A\u0629 HSE \u0627\u0644\u0632\u0631\u0642\u0627\u0621 ===== */
+            /* ===== بطاقة استحقاق الاستلام — هوية HSE الزرقاء ===== */
             .ppe-elig-outer { background: #fff; border: 1px solid #dbeafe; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08); }
             .ppe-elig--gray { border-color: #e2e8f0; box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06); }
             .ppe-elig--green { border-color: #a7f3d0; box-shadow: 0 10px 24px rgba(4, 120, 87, 0.10); }
@@ -127,356 +192,948 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                 .ppe-rk-card:hover { transform: none; }
                 .ppe-elig-outer { box-shadow: none !important; }
             }
-        `,document.head.appendChild(t)},computeReceiptsKpiStats(t,e){const i=Array.isArray(t)?t:[],s=Array.isArray(e)?e:i;let a=0,r=0;const o=new Set;for(let p=0;p<i.length;p++){const l=i[p];if(!l)continue;const n=String(l.status||"").trim();n==="\u0645\u0633\u062A\u0644\u0645"?a++:n==="\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"&&r++;const d=l.employeeCode||l.employeeNumber||l.employeeName;d&&o.add(String(d).trim().toLowerCase())}return{total:i.length,received:a,pending:r,employees:o.size,filteredCount:s.length,hasFilters:this.hasActiveReceiptFilters()}},buildReceiptsKpiHtml(t){const e=(p,l)=>this._t(p,l),i=p=>Utils.escapeHTML(p),s=t||this.computeReceiptsKpiStats(AppState.appData.ppe||[],[]),a=s.hasFilters?`${e("module.ppe.kpi.showingFiltered","\u0639\u0631\u0636")} ${s.filteredCount} ${e("module.ppe.kpi.ofTotal","\u0645\u0646")} ${s.total}`:`${e("module.ppe.kpi.liveSnapshot","\u0645\u0644\u062E\u0635 \u0641\u0648\u0631\u064A \u0644\u0644\u0633\u062C\u0644")}`,r=s.pending>0?`<span class="ppe-rk-card__chip"><i class="fas fa-exclamation-circle ml-1"></i>${i(e("module.ppe.kpi.needsFollowUp","\u062A\u062D\u062A\u0627\u062C \u0645\u062A\u0627\u0628\u0639\u0629"))}</span>`:`<span class="ppe-rk-card__chip">${i(e("module.ppe.kpi.noPending","\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0639\u0644\u0651\u0642"))}</span>`,o=s.total>0?Math.round(s.received/s.total*100):0;return`
-            <section class="ppe-receipts-kpi" id="ppe-receipts-kpi" aria-label="${i(e("module.ppe.kpi.sectionLabel","\u0645\u0644\u062E\u0635 \u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}">
+        `;
+        document.head.appendChild(style);
+    },
+
+    /** إحصائيات سجل الاستلام — مرور واحد */
+    computeReceiptsKpiStats(ppeList, filteredList) {
+        const list = Array.isArray(ppeList) ? ppeList : [];
+        const filtered = Array.isArray(filteredList) ? filteredList : list;
+        let received = 0;
+        let pending = 0;
+        const employees = new Set();
+        for (let i = 0; i < list.length; i++) {
+            const item = list[i];
+            if (!item) continue;
+            const st = String(item.status || '').trim();
+            if (st === 'مستلم') received++;
+            else if (st === 'قيد التسليم') pending++;
+            const empKey = item.employeeCode || item.employeeNumber || item.employeeName;
+            if (empKey) employees.add(String(empKey).trim().toLowerCase());
+        }
+        return {
+            total: list.length,
+            received,
+            pending,
+            employees: employees.size,
+            filteredCount: filtered.length,
+            hasFilters: this.hasActiveReceiptFilters()
+        };
+    },
+
+    buildReceiptsKpiHtml(stats) {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        const s = stats || this.computeReceiptsKpiStats(AppState.appData.ppe || [], []);
+        const metaText = s.hasFilters
+            ? `${t('module.ppe.kpi.showingFiltered', 'عرض')} ${s.filteredCount} ${t('module.ppe.kpi.ofTotal', 'من')} ${s.total}`
+            : `${t('module.ppe.kpi.liveSnapshot', 'ملخص فوري للسجل')}`;
+        const pendingChip = s.pending > 0
+            ? `<span class="ppe-rk-card__chip"><i class="fas fa-exclamation-circle ml-1"></i>${esc(t('module.ppe.kpi.needsFollowUp', 'تحتاج متابعة'))}</span>`
+            : `<span class="ppe-rk-card__chip">${esc(t('module.ppe.kpi.noPending', 'لا يوجد معلّق'))}</span>`;
+        const receivedPct = s.total > 0 ? Math.round((s.received / s.total) * 100) : 0;
+
+        return `
+            <section class="ppe-receipts-kpi" id="ppe-receipts-kpi" aria-label="${esc(t('module.ppe.kpi.sectionLabel', 'ملخص سجل الاستلام'))}">
                 <div class="ppe-receipts-kpi__intro">
                     <div>
                         <h3 class="ppe-receipts-kpi__title">
                             <i class="fas fa-clipboard-list" aria-hidden="true"></i>
-                            <span>${i(e("module.ppe.kpi.sectionTitle","\u0644\u0648\u062D\u0629 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"))}</span>
+                            <span>${esc(t('module.ppe.kpi.sectionTitle', 'لوحة متابعة الاستلامات'))}</span>
                         </h3>
-                        <p class="ppe-receipts-kpi__sub">${i(e("module.ppe.kpi.sectionSub","\u0623\u0631\u0642\u0627\u0645 \u0633\u0631\u064A\u0639\u0629 \u062A\u0633\u0627\u0639\u062F\u0643 \u0639\u0644\u0649 \u0641\u0647\u0645 \u062D\u0627\u0644\u0629 \u0627\u0644\u062A\u0633\u0644\u064A\u0645 \u0648\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u062F\u0648\u0646 \u0641\u062A\u062D \u0643\u0644 \u0633\u062C\u0644."))}</p>
+                        <p class="ppe-receipts-kpi__sub">${esc(t('module.ppe.kpi.sectionSub', 'أرقام سريعة تساعدك على فهم حالة التسليم والمتابعة دون فتح كل سجل.'))}</p>
                     </div>
                     <span class="ppe-receipts-kpi__meta" id="ppe-receipts-kpi-meta">
-                        <i class="fas fa-filter" aria-hidden="true"></i>${i(a)}
+                        <i class="fas fa-filter" aria-hidden="true"></i>${esc(metaText)}
                     </span>
                 </div>
                 <div class="ppe-receipts-kpi__grid">
                     <article class="ppe-rk-card ppe-rk-card--total">
                         <div class="ppe-rk-card__head">
                             <div>
-                                <p class="ppe-rk-card__label">${i(e("module.ppe.kpi.totalReceipts","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"))}</p>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.totalReceipts', 'إجمالي الاستلامات'))}</p>
                                 <p class="ppe-rk-card__value" id="ppe-kpi-total">${s.total}</p>
                             </div>
                             <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-receipt"></i></span>
                         </div>
-                        <p class="ppe-rk-card__desc">${i(e("module.ppe.kpi.totalReceiptsDesc","\u0643\u0644 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0627\u0644\u0645\u0633\u062C\u0651\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645"))}</p>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.totalReceiptsDesc', 'كل سجلات الاستلام المسجّلة في النظام'))}</p>
                     </article>
                     <article class="ppe-rk-card ppe-rk-card--received">
                         <div class="ppe-rk-card__head">
                             <div>
-                                <p class="ppe-rk-card__label">${i(e("module.ppe.kpi.receivedItems","\u0645\u0647\u0645\u0627\u062A \u062A\u0645 \u062A\u0633\u0644\u064A\u0645\u0647\u0627"))}</p>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.receivedItems', 'مهمات تم تسليمها'))}</p>
                                 <p class="ppe-rk-card__value" id="ppe-kpi-received">${s.received}</p>
                             </div>
                             <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-check-circle"></i></span>
                         </div>
-                        <p class="ppe-rk-card__desc">${i(e("module.ppe.kpi.receivedItemsDesc","\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0645\u0643\u062A\u0645\u0644\u0629 \u0648\u0645\u0648\u062B\u0651\u0642\u0629"))}</p>
-                        <span class="ppe-rk-card__chip">${o}% ${i(e("module.ppe.kpi.ofAll","\u0645\u0646 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A"))}</span>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.receivedItemsDesc', 'استلامات مكتملة وموثّقة'))}</p>
+                        <span class="ppe-rk-card__chip">${receivedPct}% ${esc(t('module.ppe.kpi.ofAll', 'من الإجمالي'))}</span>
                     </article>
-                    <article class="ppe-rk-card ppe-rk-card--pending${s.pending>0?" is-attention":""}">
+                    <article class="ppe-rk-card ppe-rk-card--pending${s.pending > 0 ? ' is-attention' : ''}">
                         <div class="ppe-rk-card__head">
                             <div>
-                                <p class="ppe-rk-card__label">${i(e("module.ppe.kpi.pendingItems","\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"))}</p>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.pendingItems', 'قيد التسليم'))}</p>
                                 <p class="ppe-rk-card__value" id="ppe-kpi-pending">${s.pending}</p>
                             </div>
                             <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-clock"></i></span>
                         </div>
-                        <p class="ppe-rk-card__desc">${i(e("module.ppe.kpi.pendingItemsDesc","\u0633\u062C\u0644\u0627\u062A \u0644\u0645 \u062A\u064F\u063A\u0644\u0642 \u0628\u0639\u062F \u2014 \u0631\u0627\u062C\u0639\u0647\u0627 \u0623\u0648\u0644\u0627\u064B"))}</p>
-                        ${r}
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.pendingItemsDesc', 'سجلات لم تُغلق بعد — راجعها أولاً'))}</p>
+                        ${pendingChip}
                     </article>
                     <article class="ppe-rk-card ppe-rk-card--employees">
                         <div class="ppe-rk-card__head">
                             <div>
-                                <p class="ppe-rk-card__label">${i(e("module.ppe.kpi.uniqueEmployees","\u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646 \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0648\u0646"))}</p>
+                                <p class="ppe-rk-card__label">${esc(t('module.ppe.kpi.uniqueEmployees', 'الموظفون المستلمون'))}</p>
                                 <p class="ppe-rk-card__value" id="ppe-kpi-employees">${s.employees}</p>
                             </div>
                             <span class="ppe-rk-card__icon" aria-hidden="true"><i class="fas fa-users"></i></span>
                         </div>
-                        <p class="ppe-rk-card__desc">${i(e("module.ppe.kpi.uniqueEmployeesDesc","\u0639\u062F\u062F \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0627\u0644\u0645\u0633\u062A\u0641\u064A\u062F\u064A\u0646 \u0645\u0646 \u0627\u0644\u0645\u0647\u0645\u0627\u062A"))}</p>
+                        <p class="ppe-rk-card__desc">${esc(t('module.ppe.kpi.uniqueEmployeesDesc', 'عدد الموظفين المستفيدين من المهمات'))}</p>
                     </article>
                 </div>
             </section>
-        `},_ppeBindOnce(t,e,i){if(!t||!e||typeof i!="function")return;const s=`data-ppe-bound-${e}`;t.hasAttribute(s)||(t.setAttribute(s,"1"),t.addEventListener(e,i))},_ppeCaptureFocus(t){try{const e=document.activeElement;return!e||!t||!t.contains(e)||!e.id?null:{id:e.id,start:typeof e.selectionStart=="number"?e.selectionStart:null,end:typeof e.selectionEnd=="number"?e.selectionEnd:null}}catch{return null}},_ppeRestoreFocus(t){if(!(!t||!t.id))try{const e=document.getElementById(t.id);if(!e)return;if(e.focus({preventScroll:!0}),t.start!=null&&typeof e.setSelectionRange=="function"){const i=String(e.value||"").length,s=Math.min(t.start,i),a=Math.min(t.end!=null?t.end:s,i);e.setSelectionRange(s,a)}}catch{}},_ppeMatchesSearch(t,e){const i=String(e||"").trim().toLowerCase();if(!i)return!0;const s=(Array.isArray(t)?t:[t]).map(r=>String(r??"").toLowerCase()).join(" | "),a=i.split(/\s+/).filter(Boolean);return a.length?a.every(r=>s.includes(r)):!0},showPPEFormById(t){const i=(typeof AppState<"u"&&AppState.appData&&Array.isArray(AppState.appData.ppe)?AppState.appData.ppe:[]).find(s=>s&&String(s.id)===String(t));return this.showPPEForm(i||null)},getDisplayStatus(t){const e=String(t||"").trim();return e==="\u0645\u0633\u062A\u0644\u0645"?this._t("module.ppe.status.received","\u0645\u0633\u062A\u0644\u0645"):e==="\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"?this._t("module.ppe.status.pending","\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"):e||"\u2014"},isStatusReceived(t){return String(t||"").trim()==="\u0645\u0633\u062A\u0644\u0645"},getFilteredPpeReceipts(t){const e=Array.isArray(t)?t:[],i=this.state.filters?.receipts||{},s=(i.search||"").trim().toLowerCase(),a=i.equipmentType||"",r=i.status||"",o=i.dateFrom?new Date(i.dateFrom+"T00:00:00"):null,p=i.dateTo?new Date(i.dateTo+"T23:59:59.999"):null;return o&&isNaN(o.getTime())||p&&isNaN(p.getTime())?e:e.filter(l=>{if(a&&String(l.equipmentType||"")!==a||r&&String(l.status||"")!==r)return!1;if(o||p){if(!l.receiptDate)return!1;const n=new Date(l.receiptDate);if(isNaN(n.getTime())||o&&n<o||p&&n>p)return!1}return!(s&&!this._ppeMatchesSearch([l.receiptNumber,l.id,l.employeeName,l.employeeCode,l.employeeNumber,l.equipmentType,l.status,l.employeeDepartment,l.department,l.createdBy,l.createdByUser,l.recordedBy,l.recorderName,l.shoeSize,l.quantity,l.notes,l.remarks,l.site,l.location],s))})},hasActiveReceiptFilters(){const t=this.state.filters?.receipts||{};return!!(t.search||t.equipmentType||t.status||t.dateFrom||t.dateTo)},resetReceiptFilters(){this.state.filters||(this.state.filters={}),this.state.filters.receipts={search:"",equipmentType:"",status:"",dateFrom:"",dateTo:""}},getFilteredStockItems(t){const e=Array.isArray(t)?t:[],i=this.state.filters&&this.state.filters.stock||{},s=(i.search||"").trim().toLowerCase(),a=i.category||"",r=i.supplier||"",o=i.status||"",p=i.dateFrom?new Date(i.dateFrom+"T00:00:00"):null,l=i.dateTo?new Date(i.dateTo+"T23:59:59.999"):null;return p&&isNaN(p.getTime())||l&&isNaN(l.getTime())?e:e.filter(n=>{if(!n||a&&String(n.category||"")!==a||r&&String(n.supplier||"")!==r)return!1;if(o){const d=parseFloat(n.balance||0),f=parseFloat(n.minThreshold||0),b=d<f;if(o==="low"&&!b||o==="available"&&b)return!1}if(p||l){if(!n.lastUpdate)return!1;const d=new Date(n.lastUpdate);if(isNaN(d.getTime())||p&&d<p||l&&d>l)return!1}return!(s&&!this._ppeMatchesSearch([n.itemCode,n.itemName,n.category,n.supplier,n.itemId,n.unit,n.notes,n.balance,n.minThreshold,n.location],s))})},hasActiveStockFilters(){const t=this.state.filters&&this.state.filters.stock||{};return!!(t.search||t.category||t.supplier||t.status||t.dateFrom||t.dateTo)},resetStockFilters(){this.state.filters||(this.state.filters={}),this.state.filters.stock={search:"",category:"",supplier:"",status:"",dateFrom:"",dateTo:""}},buildStockFilterRow(t){const e=(n,d)=>this._t(n,d),i=n=>Utils.escapeHTML(n);this.ensurePpeFilterStyles();const s=Array.isArray(t)?t:[],a=this.state.filters&&this.state.filters.stock||{},r=this.getFilteredStockItems(s),o=typeof document<"u"&&(document.documentElement.getAttribute("dir")==="rtl"||window.AppI18n&&window.AppI18n.getCurrentLang&&window.AppI18n.getCurrentLang()==="ar"),p=[...new Set(s.map(n=>n&&n.category).filter(Boolean))].sort(),l=[...new Set(s.map(n=>n&&n.supplier).filter(Boolean))].sort();return`
-            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; direction: ${o?"rtl":"ltr"}; border-radius: 10px;">
+        `;
+    },
+
+    /** ربط مستمع مرة واحدة لكل عنصر (يمنع التكرار عند إعادة الرسم) */
+    _ppeBindOnce(el, eventName, handler) {
+        if (!el || !eventName || typeof handler !== 'function') return;
+        const attr = `data-ppe-bound-${eventName}`;
+        if (el.hasAttribute(attr)) return;
+        el.setAttribute(attr, '1');
+        el.addEventListener(eventName, handler);
+    },
+
+    /** حفظ تركيز حقل فلتر قبل إعادة الرسم */
+    _ppeCaptureFocus(root) {
+        try {
+            const ae = document.activeElement;
+            if (!ae || !root || !root.contains(ae) || !ae.id) return null;
+            return {
+                id: ae.id,
+                start: typeof ae.selectionStart === 'number' ? ae.selectionStart : null,
+                end: typeof ae.selectionEnd === 'number' ? ae.selectionEnd : null
+            };
+        } catch (_e) {
+            return null;
+        }
+    },
+
+    _ppeRestoreFocus(meta) {
+        if (!meta || !meta.id) return;
+        try {
+            const el = document.getElementById(meta.id);
+            if (!el) return;
+            el.focus({ preventScroll: true });
+            if (meta.start != null && typeof el.setSelectionRange === 'function') {
+                const len = String(el.value || '').length;
+                const s = Math.min(meta.start, len);
+                const e = Math.min(meta.end != null ? meta.end : s, len);
+                el.setSelectionRange(s, e);
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    /** بحث متعدد الكلمات — كل كلمة يجب أن تظهر في النص */
+    _ppeMatchesSearch(hayParts, searchRaw) {
+        const search = String(searchRaw || '').trim().toLowerCase();
+        if (!search) return true;
+        const hay = (Array.isArray(hayParts) ? hayParts : [hayParts])
+            .map((x) => String(x == null ? '' : x).toLowerCase())
+            .join(' | ');
+        const tokens = search.split(/\s+/).filter(Boolean);
+        if (!tokens.length) return true;
+        return tokens.every((tok) => hay.includes(tok));
+    },
+
+    showPPEFormById(id) {
+        const list = (typeof AppState !== 'undefined' && AppState.appData && Array.isArray(AppState.appData.ppe))
+            ? AppState.appData.ppe
+            : [];
+        const item = list.find((row) => row && String(row.id) === String(id));
+        return this.showPPEForm(item || null);
+    },
+
+    getDisplayStatus(status) {
+        const s = String(status || '').trim();
+        if (s === 'مستلم') return this._t('module.ppe.status.received', 'مستلم');
+        if (s === 'قيد التسليم') return this._t('module.ppe.status.pending', 'قيد التسليم');
+        return s || '—';
+    },
+
+    isStatusReceived(status) {
+        return String(status || '').trim() === 'مستلم';
+    },
+
+    getFilteredPpeReceipts(ppeList) {
+        const list = Array.isArray(ppeList) ? ppeList : [];
+        const f = this.state.filters?.receipts || {};
+        const search = (f.search || '').trim().toLowerCase();
+        const type = f.equipmentType || '';
+        const status = f.status || '';
+        const from = f.dateFrom ? new Date(f.dateFrom + 'T00:00:00') : null;
+        const to = f.dateTo ? new Date(f.dateTo + 'T23:59:59.999') : null;
+        if (from && isNaN(from.getTime())) return list;
+        if (to && isNaN(to.getTime())) return list;
+
+        return list.filter((item) => {
+            if (type && String(item.equipmentType || '') !== type) return false;
+            if (status && String(item.status || '') !== status) return false;
+            if (from || to) {
+                if (!item.receiptDate) return false;
+                const rd = new Date(item.receiptDate);
+                if (isNaN(rd.getTime())) return false;
+                if (from && rd < from) return false;
+                if (to && rd > to) return false;
+            }
+            if (search) {
+                if (!this._ppeMatchesSearch([
+                    item.receiptNumber, item.id, item.employeeName, item.employeeCode, item.employeeNumber,
+                    item.equipmentType, item.status, item.employeeDepartment, item.department,
+                    item.createdBy, item.createdByUser, item.recordedBy, item.recorderName,
+                    item.shoeSize, item.quantity, item.notes, item.remarks, item.site, item.location
+                ], search)) return false;
+            }
+            return true;
+        });
+    },
+
+    hasActiveReceiptFilters() {
+        const f = this.state.filters?.receipts || {};
+        return !!(f.search || f.equipmentType || f.status || f.dateFrom || f.dateTo);
+    },
+
+    resetReceiptFilters() {
+        if (!this.state.filters) this.state.filters = {};
+        this.state.filters.receipts = {
+            search: '',
+            equipmentType: '',
+            status: '',
+            dateFrom: '',
+            dateTo: ''
+        };
+    },
+
+    // ====== فلاتر جدول المخزون (نفس نمط فلاتر الاستلامات) ======
+
+    /** تطبيق الفلاتر على قائمة الأصناف */
+    getFilteredStockItems(stockItems) {
+        const list = Array.isArray(stockItems) ? stockItems : [];
+        const f = (this.state.filters && this.state.filters.stock) || {};
+        const search = (f.search || '').trim().toLowerCase();
+        const category = f.category || '';
+        const supplier = f.supplier || '';
+        const status = f.status || '';
+        const from = f.dateFrom ? new Date(f.dateFrom + 'T00:00:00') : null;
+        const to = f.dateTo ? new Date(f.dateTo + 'T23:59:59.999') : null;
+        if (from && isNaN(from.getTime())) return list;
+        if (to && isNaN(to.getTime())) return list;
+
+        return list.filter((item) => {
+            if (!item) return false;
+            if (category && String(item.category || '') !== category) return false;
+            if (supplier && String(item.supplier || '') !== supplier) return false;
+            if (status) {
+                const balance = parseFloat(item.balance || 0);
+                const minThreshold = parseFloat(item.minThreshold || 0);
+                const isLow = balance < minThreshold;
+                if (status === 'low' && !isLow) return false;
+                if (status === 'available' && isLow) return false;
+            }
+            if (from || to) {
+                if (!item.lastUpdate) return false;
+                const rd = new Date(item.lastUpdate);
+                if (isNaN(rd.getTime())) return false;
+                if (from && rd < from) return false;
+                if (to && rd > to) return false;
+            }
+            if (search) {
+                if (!this._ppeMatchesSearch([
+                    item.itemCode, item.itemName, item.category, item.supplier,
+                    item.itemId, item.unit, item.notes, item.balance, item.minThreshold, item.location
+                ], search)) return false;
+            }
+            return true;
+        });
+    },
+
+    hasActiveStockFilters() {
+        const f = (this.state.filters && this.state.filters.stock) || {};
+        return !!(f.search || f.category || f.supplier || f.status || f.dateFrom || f.dateTo);
+    },
+
+    resetStockFilters() {
+        if (!this.state.filters) this.state.filters = {};
+        this.state.filters.stock = {
+            search: '',
+            category: '',
+            supplier: '',
+            status: '',
+            dateFrom: '',
+            dateTo: ''
+        };
+    },
+
+    /** بناء صف فلاتر جدول المخزون (نفس نمط ppe-visits-filters-row) */
+    buildStockFilterRow(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        this.ensurePpeFilterStyles();
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const filters = (this.state.filters && this.state.filters.stock) || {};
+        const filtered = this.getFilteredStockItems(items);
+        const isRTL = typeof document !== 'undefined'
+            && (document.documentElement.getAttribute('dir') === 'rtl'
+                || (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'ar'));
+
+        const uniqueCategories = [...new Set(items.map(it => it && it.category).filter(Boolean))].sort();
+        const uniqueSuppliers = [...new Set(items.map(it => it && it.supplier).filter(Boolean))].sort();
+
+        return `
+            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; direction: ${isRTL ? 'rtl' : 'ltr'}; border-radius: 10px;">
                 <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
                     <div class="filter-field" style="min-width: 180px;">
                         <label class="filter-label" for="ppe-stock-search">
-                            <i class="fas fa-search ml-1"></i>${i(e("module.ppe.filter.search","\u0628\u062D\u062B"))}
+                            <i class="fas fa-search ml-1"></i>${esc(t('module.ppe.filter.search', 'بحث'))}
                         </label>
-                        <input type="text" id="ppe-stock-search" class="form-input pr-10 filter-input" placeholder="${i(e("module.ppe.stock.filter.searchPlaceholder","\u0643\u0648\u062F/\u0627\u0633\u0645/\u0641\u0626\u0629/\u0645\u0648\u0631\u062F"))}" value="${i(a.search||"")}">
+                        <input type="text" id="ppe-stock-search" class="form-input pr-10 filter-input" placeholder="${esc(t('module.ppe.stock.filter.searchPlaceholder', 'كود/اسم/فئة/مورد'))}" value="${esc(filters.search || '')}">
                     </div>
                     <div class="filter-field" style="min-width: 160px;">
                         <label class="filter-label" for="ppe-stock-filter-category">
-                            <i class="fas fa-tags ml-1"></i>${i(e("module.ppe.stock.category","\u0627\u0644\u0641\u0626\u0629"))}
-                            ${a.category?`<span class="filter-count-badge" title="${i(e("module.ppe.filter.badgeCount",""))}">${r.length}</span>`:""}
+                            <i class="fas fa-tags ml-1"></i>${esc(t('module.ppe.stock.category', 'الفئة'))}
+                            ${filters.category ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
                         </label>
                         <select id="ppe-stock-filter-category" class="form-input filter-input">
-                            <option value="">${i(e("module.common.all","\u0627\u0644\u0643\u0644"))}</option>
-                            ${p.map(n=>`<option value="${i(n)}" ${a.category===n?"selected":""}>${i(n)}</option>`).join("")}
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueCategories.map((c) => `<option value="${esc(c)}" ${filters.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="filter-field" style="min-width: 160px;">
                         <label class="filter-label" for="ppe-stock-filter-supplier">
-                            <i class="fas fa-truck ml-1"></i>${i(e("module.ppe.stock.supplier","\u0627\u0644\u0645\u0648\u0631\u062F"))}
-                            ${a.supplier?`<span class="filter-count-badge" title="${i(e("module.ppe.filter.badgeCount",""))}">${r.length}</span>`:""}
+                            <i class="fas fa-truck ml-1"></i>${esc(t('module.ppe.stock.supplier', 'المورد'))}
+                            ${filters.supplier ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
                         </label>
                         <select id="ppe-stock-filter-supplier" class="form-input filter-input">
-                            <option value="">${i(e("module.common.all","\u0627\u0644\u0643\u0644"))}</option>
-                            ${l.map(n=>`<option value="${i(n)}" ${a.supplier===n?"selected":""}>${i(n)}</option>`).join("")}
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueSuppliers.map((s) => `<option value="${esc(s)}" ${filters.supplier === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="filter-field" style="min-width: 160px;">
                         <label class="filter-label" for="ppe-stock-filter-status">
-                            <i class="fas fa-signal ml-1"></i>${i(e("module.ppe.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}
-                            ${a.status?`<span class="filter-count-badge" title="${i(e("module.ppe.filter.badgeCount",""))}">${r.length}</span>`:""}
+                            <i class="fas fa-signal ml-1"></i>${esc(t('module.ppe.table.status', 'الحالة'))}
+                            ${filters.status ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
                         </label>
                         <select id="ppe-stock-filter-status" class="form-input filter-input">
-                            <option value="">${i(e("module.common.all","\u0627\u0644\u0643\u0644"))}</option>
-                            <option value="available" ${a.status==="available"?"selected":""}>${i(e("module.ppe.status.available","\u0645\u062A\u0648\u0641\u0631"))}</option>
-                            <option value="low" ${a.status==="low"?"selected":""}>${i(e("module.ppe.status.lowStock","\u0645\u062E\u0632\u0648\u0646 \u0645\u0646\u062E\u0641\u0636"))}</option>
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            <option value="available" ${filters.status === 'available' ? 'selected' : ''}>${esc(t('module.ppe.status.available', 'متوفر'))}</option>
+                            <option value="low" ${filters.status === 'low' ? 'selected' : ''}>${esc(t('module.ppe.status.lowStock', 'مخزون منخفض'))}</option>
                         </select>
                     </div>
                     <div class="filter-field">
-                        <label class="filter-label" for="ppe-stock-date-from"><i class="fas fa-calendar-alt ml-1"></i>${i(e("module.ppe.stock.filter.dateFrom","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B"))}</label>
-                        <input type="date" id="ppe-stock-date-from" class="form-input filter-input" value="${i(a.dateFrom||"")}">
+                        <label class="filter-label" for="ppe-stock-date-from"><i class="fas fa-calendar-alt ml-1"></i>${esc(t('module.ppe.stock.filter.dateFrom', 'من تاريخ آخر تحديث'))}</label>
+                        <input type="date" id="ppe-stock-date-from" class="form-input filter-input" value="${esc(filters.dateFrom || '')}">
                     </div>
                     <div class="filter-field">
-                        <label class="filter-label" for="ppe-stock-date-to"><i class="fas fa-calendar-check ml-1"></i>${i(e("module.ppe.stock.filter.dateTo","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B"))}</label>
-                        <input type="date" id="ppe-stock-date-to" class="form-input filter-input" value="${i(a.dateTo||"")}">
+                        <label class="filter-label" for="ppe-stock-date-to"><i class="fas fa-calendar-check ml-1"></i>${esc(t('module.ppe.stock.filter.dateTo', 'إلى تاريخ آخر تحديث'))}</label>
+                        <input type="date" id="ppe-stock-date-to" class="form-input filter-input" value="${esc(filters.dateTo || '')}">
                     </div>
                     <div class="filter-field" style="min-width: 170px;">
-                        <button type="button" id="ppe-stock-reset-filters" class="filter-reset-btn" title="${i(e("module.ppe.filter.resetTitle",""))}">
-                            <i class="fas fa-rotate-left ml-1"></i>${i(e("module.ppe.filter.reset","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0641\u0644\u0627\u062A\u0631"))}
+                        <button type="button" id="ppe-stock-reset-filters" class="filter-reset-btn" title="${esc(t('module.ppe.filter.resetTitle', ''))}">
+                            <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
                         </button>
                     </div>
                 </div>
-            </div>`},buildPPEListHtml(){const t=(h,v)=>this._t(h,v);this.ensurePpeFilterStyles();const e=AppState.appData.ppe||[],i=this.state.filters?.receipts||{},s=this.getFilteredPpeReceipts(e),a=this.hasActiveReceiptFilters(),r=typeof document<"u"&&(document.documentElement.getAttribute("dir")==="rtl"||window.AppI18n&&window.AppI18n.getCurrentLang&&window.AppI18n.getCurrentLang()==="ar"),o=h=>Utils.escapeHTML(h),p=[...new Set(e.map(h=>h.equipmentType).filter(Boolean))].sort(),l=["\u0645\u0633\u062A\u0644\u0645","\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"],n=this.computeReceiptsKpiStats(e,s),d=this.buildReceiptsKpiHtml(n),f=`
-            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; direction: ${r?"rtl":"ltr"};">
+            </div>`;
+    },
+
+    /**
+     * محتوى سجل الاستلامات: فلاتر ديناميكية + جدول (نفس نمط visits-filters-row)
+     */
+    buildPPEListHtml() {
+        const t = (k, f) => this._t(k, f);
+        this.ensurePpeFilterStyles();
+        const ppeList = AppState.appData.ppe || [];
+        const filters = this.state.filters?.receipts || {};
+        const filtered = this.getFilteredPpeReceipts(ppeList);
+        const hasFilters = this.hasActiveReceiptFilters();
+        const isRTL = typeof document !== 'undefined'
+            && (document.documentElement.getAttribute('dir') === 'rtl'
+                || (window.AppI18n && window.AppI18n.getCurrentLang && window.AppI18n.getCurrentLang() === 'ar'));
+        const esc = (v) => Utils.escapeHTML(v);
+
+        const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))].sort();
+        const uniqueStatuses = ['مستلم', 'قيد التسليم'];
+        const kpiStats = this.computeReceiptsKpiStats(ppeList, filtered);
+        const receiptsKpiGrid = this.buildReceiptsKpiHtml(kpiStats);
+
+        const filterRow = `
+            <div class="ppe-visits-filters-row visits-filters-row" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 16px 20px; margin: 0 0 14px 0; width: 100%; border: 1px solid #e2e8f0; border-radius: 12px; direction: ${isRTL ? 'rtl' : 'ltr'};">
                 <div class="filters-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: end;">
                     <div class="filter-field" style="min-width: 180px;">
                         <label class="filter-label" for="ppe-receipts-search">
-                            <i class="fas fa-search ml-1"></i>${o(t("module.ppe.filter.search","\u0628\u062D\u062B"))}
+                            <i class="fas fa-search ml-1"></i>${esc(t('module.ppe.filter.search', 'بحث'))}
                         </label>
-                        <input type="text" id="ppe-receipts-search" class="form-input pr-10 filter-input" placeholder="${o(t("module.ppe.filter.searchPlaceholder",""))}" value="${o(i.search||"")}">
+                        <input type="text" id="ppe-receipts-search" class="form-input pr-10 filter-input" placeholder="${esc(t('module.ppe.filter.searchPlaceholder', ''))}" value="${esc(filters.search || '')}">
                     </div>
                     <div class="filter-field" style="min-width: 160px;">
                         <label class="filter-label" for="ppe-receipts-filter-type">
-                            <i class="fas fa-hard-hat ml-1"></i>${o(t("module.ppe.filter.equipmentType","\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"))}
-                            ${i.equipmentType?`<span class="filter-count-badge" title="${o(t("module.ppe.filter.badgeCount",""))}">${s.length}</span>`:""}
+                            <i class="fas fa-hard-hat ml-1"></i>${esc(t('module.ppe.filter.equipmentType', 'نوع المعدة'))}
+                            ${filters.equipmentType ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
                         </label>
                         <select id="ppe-receipts-filter-type" class="form-input filter-input">
-                            <option value="">${o(t("module.common.all","\u0627\u0644\u0643\u0644"))}</option>
-                            ${p.map(h=>`<option value="${o(h)}" ${i.equipmentType===h?"selected":""}>${o(h)}</option>`).join("")}
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueTypes.map((typ) => `<option value="${esc(typ)}" ${filters.equipmentType === typ ? 'selected' : ''}>${esc(typ)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="filter-field" style="min-width: 160px;">
                         <label class="filter-label" for="ppe-receipts-filter-status">
-                            <i class="fas fa-signal ml-1"></i>${o(t("module.ppe.filter.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}
-                            ${i.status?`<span class="filter-count-badge" title="${o(t("module.ppe.filter.badgeCount",""))}">${s.length}</span>`:""}
+                            <i class="fas fa-signal ml-1"></i>${esc(t('module.ppe.filter.status', 'الحالة'))}
+                            ${filters.status ? `<span class="filter-count-badge" title="${esc(t('module.ppe.filter.badgeCount', ''))}">${filtered.length}</span>` : ''}
                         </label>
                         <select id="ppe-receipts-filter-status" class="form-input filter-input">
-                            <option value="">${o(t("module.common.all","\u0627\u0644\u0643\u0644"))}</option>
-                            ${l.map(h=>`<option value="${o(h)}" ${i.status===h?"selected":""}>${o(this.getDisplayStatus(h))}</option>`).join("")}
+                            <option value="">${esc(t('module.common.all', 'الكل'))}</option>
+                            ${uniqueStatuses.map((st) => `<option value="${esc(st)}" ${filters.status === st ? 'selected' : ''}>${esc(this.getDisplayStatus(st))}</option>`).join('')}
                         </select>
                     </div>
                     <div class="filter-field">
-                        <label class="filter-label" for="ppe-receipts-date-from"><i class="fas fa-calendar-alt ml-1"></i>${o(t("module.ppe.filter.dateFrom","\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</label>
-                        <input type="date" id="ppe-receipts-date-from" class="form-input filter-input" value="${o(i.dateFrom||"")}">
+                        <label class="filter-label" for="ppe-receipts-date-from"><i class="fas fa-calendar-alt ml-1"></i>${esc(t('module.ppe.filter.dateFrom', 'من تاريخ الاستلام'))}</label>
+                        <input type="date" id="ppe-receipts-date-from" class="form-input filter-input" value="${esc(filters.dateFrom || '')}">
                     </div>
                     <div class="filter-field">
-                        <label class="filter-label" for="ppe-receipts-date-to"><i class="fas fa-calendar-check ml-1"></i>${o(t("module.ppe.filter.dateTo","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</label>
-                        <input type="date" id="ppe-receipts-date-to" class="form-input filter-input" value="${o(i.dateTo||"")}">
+                        <label class="filter-label" for="ppe-receipts-date-to"><i class="fas fa-calendar-check ml-1"></i>${esc(t('module.ppe.filter.dateTo', 'إلى تاريخ الاستلام'))}</label>
+                        <input type="date" id="ppe-receipts-date-to" class="form-input filter-input" value="${esc(filters.dateTo || '')}">
                     </div>
                     <div class="filter-field" style="min-width: 170px;">
-                        <button type="button" id="ppe-receipts-reset-filters" class="filter-reset-btn" title="${o(t("module.ppe.filter.resetTitle",""))}">
-                            <i class="fas fa-rotate-left ml-1"></i>${o(t("module.ppe.filter.reset","\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0641\u0644\u0627\u062A\u0631"))}
+                        <button type="button" id="ppe-receipts-reset-filters" class="filter-reset-btn" title="${esc(t('module.ppe.filter.resetTitle', ''))}">
+                            <i class="fas fa-rotate-left ml-1"></i>${esc(t('module.ppe.filter.reset', 'إعادة تعيين الفلاتر'))}
                         </button>
                     </div>
                 </div>
-            </div>`;if(e.length===0){const h=`<div class="empty-state"><p class="text-gray-500">${o(t("module.ppe.empty.noReceipts","\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0645\u0633\u062C\u0644\u0629"))}</p></div>`;return d+this._buildExcelToolbarHtml("receipts")+`<div id="ppe-receipts-filters-host">${f}</div><div id="ppe-receipts-results-host">${h}</div>`}const b=a&&s.length===0?`
+            </div>`;
+
+        if (ppeList.length === 0) {
+            const emptyBlock = `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+                + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+                + `<div id="ppe-receipts-results-host">${emptyBlock}</div>`;
+        }
+
+        const noMatchBlock = (hasFilters && filtered.length === 0) ? `
             <div class="empty-state">
                 <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500 mb-2">${o(t("module.ppe.filter.noMatch","\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0645\u0637\u0627\u0628\u0642\u0629"))}</p>
+                <p class="text-gray-500 mb-2">${esc(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
                 <button type="button" id="ppe-receipts-clear-empty-filters" class="btn-secondary mt-2">
-                    <i class="fas fa-undo-alt ml-2"></i>${o(t("module.ppe.filter.clearEmpty","\u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631"))}
+                    <i class="fas fa-undo-alt ml-2"></i>${esc(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
                 </button>
             </div>
-        `:"";if(s.length===0)return d+this._buildExcelToolbarHtml("receipts")+`<div id="ppe-receipts-filters-host">${f}</div><div id="ppe-receipts-results-host">${b}</div>`;const c=t("module.common.view","\u0639\u0631\u0636"),m=t("module.kpi.exportPDF","\u062A\u0635\u062F\u064A\u0631 PDF"),x=t("module.common.edit","\u062A\u0639\u062F\u064A\u0644"),k=t("module.ppe.btn.deleteReceipt","\u062D\u0630\u0641"),u=`
+        ` : '';
+
+        if (filtered.length === 0) {
+            return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+                + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+                + `<div id="ppe-receipts-results-host">${noMatchBlock}</div>`;
+        }
+
+        const viewTitle = t('module.common.view', 'عرض');
+        const pdfT = t('module.kpi.exportPDF', 'تصدير PDF');
+        const editTitle = t('module.common.edit', 'تعديل');
+        const delTitle = t('module.ppe.btn.deleteReceipt', 'حذف');
+        const table = `
             <table class="data-table table-header-blue">
                 <thead>
                     <tr>
-                        <th>${o(t("module.ppe.table.receiptNo","\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644"))}</th>
-                        <th>${o(t("module.ppe.table.employeeName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641"))}</th>
-                        <th>${o(t("module.ppe.table.employeeCode","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"))}</th>
-                        <th>${o(t("module.ppe.table.equipmentType","\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"))}</th>
-                        <th>${o(t("module.ppe.table.quantity","\u0627\u0644\u0643\u0645\u064A\u0629"))}</th>
-                        <th>${o(t("module.ppe.table.createdBy","\u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</th>
-                        <th>${o(t("module.ppe.table.receiptDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</th>
-                        <th>${o(t("module.ppe.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}</th>
-                        <th>${o(t("module.ppe.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                        <th>${esc(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeName', 'اسم الموظف'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}</th>
+                        <th>${esc(t('module.ppe.table.equipmentType', 'نوع المعدة'))}</th>
+                        <th>${esc(t('module.ppe.table.quantity', 'الكمية'))}</th>
+                        <th>${esc(t('module.ppe.table.createdBy', 'مسجّل الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.status', 'الحالة'))}</th>
+                        <th>${esc(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${s.map(h=>{const v=this.getDisplayStatus(h.status),w=String(h.id||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'"),C=h.createdBy||h.createdByUser||h.recordedBy||h.recorderName||h.user||"\u2014";return`
+                    ${filtered.map((item) => {
+            const stDisp = this.getDisplayStatus(item.status);
+            const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
+            return `
                         <tr>
-                            <td class="font-mono font-semibold">${o(h.receiptNumber||h.id||"")}</td>
-                            <td>${o(h.employeeName||"")}</td>
-                            <td>${o(h.employeeCode||h.employeeNumber||"")}</td>
+                            <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
+                            <td>${esc(item.employeeName || '')}</td>
+                            <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
                             <td>
-                                ${o(h.equipmentType||"")}
-                                ${h.shoeSize?`<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>\u0645\u0642\u0627\u0633: ${o(h.shoeSize)}</span>`:""}
+                                ${esc(item.equipmentType || '')}
+                                ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
                             </td>
-                            <td>${h.quantity||0}</td>
-                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${o(C)}</span></td>
-                            <td>${h.receiptDate?Utils.formatDate(h.receiptDate):"-"}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
+                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
-                                <span class="badge badge-${this.isStatusReceived(h.status)?"success":"warning"}">
-                                    ${o(v)}
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${esc(stDisp)}
                                 </span>
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="PPE.viewPPE('${w}')" class="btn-icon btn-icon-info" title="${o(c)}">
+                                    <button onclick="PPE.viewPPE('${idJs}')" class="btn-icon btn-icon-info" title="${esc(viewTitle)}">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="PPE.exportPDF('${w}')" class="btn-icon btn-icon-success" title="${o(m)}">
+                                    <button onclick="PPE.exportPDF('${idJs}')" class="btn-icon btn-icon-success" title="${esc(pdfT)}">
                                         <i class="fas fa-file-pdf"></i>
                                     </button>
-                                    <button onclick="PPE.showPPEFormById('${w}')" class="btn-icon btn-icon-primary" title="${o(x)}">
+                                    <button onclick="PPE.showPPEFormById('${idJs}')" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="PPE.deletePPE('${w}')" class="btn-icon btn-icon-danger" title="${o(k)}">
+                                    <button onclick="PPE.deletePPE('${idJs}')" class="btn-icon btn-icon-danger" title="${esc(delTitle)}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
-                        </tr>`}).join("")}
+                        </tr>`;
+        }).join('')}
                 </tbody>
             </table>
-        `;return d+this._buildExcelToolbarHtml("receipts")+`<div id="ppe-receipts-filters-host">${f}</div><div id="ppe-receipts-results-host">${u}</div>`},buildPPEReceiptsResultsHtml(){const t=(n,d)=>this._t(n,d),e=n=>Utils.escapeHTML(n),i=AppState.appData.ppe||[],s=this.getFilteredPpeReceipts(i),a=this.hasActiveReceiptFilters();if(i.length===0)return`<div class="empty-state"><p class="text-gray-500">${e(t("module.ppe.empty.noReceipts","\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0645\u0633\u062C\u0644\u0629"))}</p></div>`;if(s.length===0)return`
+        `;
+
+        return receiptsKpiGrid + this._buildExcelToolbarHtml('receipts')
+            + `<div id="ppe-receipts-filters-host">${filterRow}</div>`
+            + `<div id="ppe-receipts-results-host">${table}</div>`;
+    },
+
+    /** نتائج سجل الاستلام فقط (بدون تدمير حقول الفلتر) */
+    buildPPEReceiptsResultsHtml() {
+        const t = (k, f) => this._t(k, f);
+        const esc = (v) => Utils.escapeHTML(v);
+        const ppeList = AppState.appData.ppe || [];
+        const filtered = this.getFilteredPpeReceipts(ppeList);
+        const hasFilters = this.hasActiveReceiptFilters();
+
+        if (ppeList.length === 0) {
+            return `<div class="empty-state"><p class="text-gray-500">${esc(t('module.ppe.empty.noReceipts', 'لا توجد استلامات مسجلة'))}</p></div>`;
+        }
+        if (filtered.length === 0) {
+            return `
             <div class="empty-state">
                 <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500 mb-2">${e(t("module.ppe.filter.noMatch","\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0645\u0637\u0627\u0628\u0642\u0629"))}</p>
+                <p class="text-gray-500 mb-2">${esc(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
                 <button type="button" id="ppe-receipts-clear-empty-filters" class="btn-secondary mt-2">
-                    <i class="fas fa-undo-alt ml-2"></i>${e(t("module.ppe.filter.clearEmpty","\u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631"))}
+                    <i class="fas fa-undo-alt ml-2"></i>${esc(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
                 </button>
-            </div>`;const r=t("module.common.view","\u0639\u0631\u0636"),o=t("module.kpi.exportPDF","\u062A\u0635\u062F\u064A\u0631 PDF"),p=t("module.common.edit","\u062A\u0639\u062F\u064A\u0644"),l=t("module.ppe.btn.deleteReceipt","\u062D\u0630\u0641");return`
+            </div>`;
+        }
+
+        const viewTitle = t('module.common.view', 'عرض');
+        const pdfT = t('module.kpi.exportPDF', 'تصدير PDF');
+        const editTitle = t('module.common.edit', 'تعديل');
+        const delTitle = t('module.ppe.btn.deleteReceipt', 'حذف');
+        return `
             <table class="data-table table-header-blue">
                 <thead>
                     <tr>
-                        <th>${e(t("module.ppe.table.receiptNo","\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644"))}</th>
-                        <th>${e(t("module.ppe.table.employeeName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641"))}</th>
-                        <th>${e(t("module.ppe.table.employeeCode","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"))}</th>
-                        <th>${e(t("module.ppe.table.equipmentType","\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"))}</th>
-                        <th>${e(t("module.ppe.table.quantity","\u0627\u0644\u0643\u0645\u064A\u0629"))}</th>
-                        <th>${e(t("module.ppe.table.createdBy","\u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</th>
-                        <th>${e(t("module.ppe.table.receiptDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</th>
-                        <th>${e(t("module.ppe.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}</th>
-                        <th>${e(t("module.ppe.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                        <th>${esc(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeName', 'اسم الموظف'))}</th>
+                        <th>${esc(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}</th>
+                        <th>${esc(t('module.ppe.table.equipmentType', 'نوع المعدة'))}</th>
+                        <th>${esc(t('module.ppe.table.quantity', 'الكمية'))}</th>
+                        <th>${esc(t('module.ppe.table.createdBy', 'مسجّل الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}</th>
+                        <th>${esc(t('module.ppe.table.status', 'الحالة'))}</th>
+                        <th>${esc(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${s.map(n=>{const d=this.getDisplayStatus(n.status),f=String(n.id||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'"),b=n.createdBy||n.createdByUser||n.recordedBy||n.recorderName||n.user||"\u2014";return`
+                    ${filtered.map((item) => {
+            const stDisp = this.getDisplayStatus(item.status);
+            const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
+            return `
                         <tr>
-                            <td class="font-mono font-semibold">${e(n.receiptNumber||n.id||"")}</td>
-                            <td>${e(n.employeeName||"")}</td>
-                            <td>${e(n.employeeCode||n.employeeNumber||"")}</td>
+                            <td class="font-mono font-semibold">${esc(item.receiptNumber || item.id || '')}</td>
+                            <td>${esc(item.employeeName || '')}</td>
+                            <td>${esc(item.employeeCode || item.employeeNumber || '')}</td>
                             <td>
-                                ${e(n.equipmentType||"")}
-                                ${n.shoeSize?`<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>\u0645\u0642\u0627\u0633: ${e(n.shoeSize)}</span>`:""}
+                                ${esc(item.equipmentType || '')}
+                                ${item.shoeSize ? `<span class="block text-[11px] text-blue-600 font-semibold mt-0.5"><i class="fas fa-shoe-prints ml-1 text-[10px]"></i>مقاس: ${esc(item.shoeSize)}</span>` : ''}
                             </td>
-                            <td>${n.quantity||0}</td>
-                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${e(b)}</span></td>
-                            <td>${n.receiptDate?Utils.formatDate(n.receiptDate):"-"}</td>
+                            <td>${item.quantity || 0}</td>
+                            <td><span class="text-xs font-semibold text-gray-700"><i class="fas fa-user-edit text-blue-500 ml-1 text-[11px]"></i>${esc(recordedBy)}</span></td>
+                            <td>${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</td>
                             <td>
-                                <span class="badge badge-${this.isStatusReceived(n.status)?"success":"warning"}">
-                                    ${e(d)}
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${esc(stDisp)}
                                 </span>
                             </td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <button onclick="PPE.viewPPE('${f}')" class="btn-icon btn-icon-info" title="${e(r)}">
+                                    <button onclick="PPE.viewPPE('${idJs}')" class="btn-icon btn-icon-info" title="${esc(viewTitle)}">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button onclick="PPE.exportPDF('${f}')" class="btn-icon btn-icon-success" title="${e(o)}">
+                                    <button onclick="PPE.exportPDF('${idJs}')" class="btn-icon btn-icon-success" title="${esc(pdfT)}">
                                         <i class="fas fa-file-pdf"></i>
                                     </button>
-                                    <button onclick="PPE.showPPEFormById('${f}')" class="btn-icon btn-icon-primary" title="${e(p)}">
+                                    <button onclick="PPE.showPPEFormById('${idJs}')" class="btn-icon btn-icon-primary" title="${esc(editTitle)}">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button onclick="PPE.deletePPE('${f}')" class="btn-icon btn-icon-danger" title="${e(l)}">
+                                    <button onclick="PPE.deletePPE('${idJs}')" class="btn-icon btn-icon-danger" title="${esc(delTitle)}">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
                             </td>
-                        </tr>`}).join("")}
+                        </tr>`;
+        }).join('')}
                 </tbody>
-            </table>`},_receiptsFilterTimer:null,refreshReceiptsListUI(t={}){const e=document.getElementById("ppe-list");if(!e)return;const i=!!(t&&t.forceFull),s=this._ppeCaptureFocus(e),a=document.getElementById("ppe-receipts-results-host"),r=document.getElementById("ppe-receipts-filters-host");if(!i&&a&&r){const o=AppState.appData.ppe||[],p=this.getFilteredPpeReceipts(o),l=this.computeReceiptsKpiStats(o,p),n=document.getElementById("ppe-receipts-kpi");if(n){const d=document.createElement("div");d.innerHTML=this.buildReceiptsKpiHtml(l).trim();const f=d.firstElementChild;f&&n.replaceWith(f)}a.innerHTML=this.buildPPEReceiptsResultsHtml(),this.applyModuleI18n(a),this.bindReceiptsFilters(),this._ppeRestoreFocus(s);return}e.innerHTML=this.buildPPEListHtml(),this.applyModuleI18n(e),this.bindReceiptsFilters(),this._ppeRestoreFocus(s)},bindReceiptsFilters(){if(this.state.activeTab!=="receipts")return;const t=s=>{typeof requestAnimationFrame=="function"?requestAnimationFrame(s):setTimeout(s,0)},e=document.getElementById("ppe-receipts-search");this._ppeBindOnce(e,"input",s=>{this.state.filters.receipts.search=s.target&&s.target.value||"",clearTimeout(this._receiptsFilterTimer),this._receiptsFilterTimer=setTimeout(()=>t(()=>this.refreshReceiptsListUI()),180)}),this._ppeBindOnce(document.getElementById("ppe-receipts-filter-type"),"change",s=>{this.state.filters.receipts.equipmentType=s.target&&s.target.value||"",this.refreshReceiptsListUI()}),this._ppeBindOnce(document.getElementById("ppe-receipts-filter-status"),"change",s=>{this.state.filters.receipts.status=s.target&&s.target.value||"",this.refreshReceiptsListUI()}),this._ppeBindOnce(document.getElementById("ppe-receipts-date-from"),"change",s=>{this.state.filters.receipts.dateFrom=s.target&&s.target.value||"",this.refreshReceiptsListUI()}),this._ppeBindOnce(document.getElementById("ppe-receipts-date-to"),"change",s=>{this.state.filters.receipts.dateTo=s.target&&s.target.value||"",this.refreshReceiptsListUI()}),this._ppeBindOnce(document.getElementById("ppe-receipts-reset-filters"),"click",()=>{this.resetReceiptFilters(),this.refreshReceiptsListUI({forceFull:!0})});const i=document.getElementById("ppe-receipts-clear-empty-filters");i&&(i.onclick=()=>{this.resetReceiptFilters(),this.refreshReceiptsListUI({forceFull:!0})})},clearCache(){this.state.stockItemsCache&&(AppState.appData.ppeStock=this.state.stockItemsCache,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save()),this.state.stockItemsCache=null,this.state.stockItemsCacheTime=null,this.state.lastSyncTime=Date.now(),Utils.safeLog("\u{1F504} PPE: \u062A\u0645 \u0645\u0633\u062D Cache \u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")},async preloadData(){try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)try{const t=await GoogleIntegration.sendToAppsScript("getAllPPE",{});if(t&&t.success&&Array.isArray(t.data)){const e=Array.isArray(AppState.appData.ppe)?AppState.appData.ppe:[];t.data.length===0&&e.length>0?Utils.safeWarn(`\u26A0\uFE0F PPE preload: \u062A\u062C\u0627\u0647\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 ${e.length} \u0633\u062C\u0644 \u0645\u062D\u0644\u064A`):(AppState.appData.ppe=t.data,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save())}}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A:",t)}this.loadStockItems(!0).catch(t=>Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0633\u0628\u0642\u0627\u064B:",t))}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A preloadData:",t)}},renderActiveTabContentWithFallback(){try{switch(this.state.activeTab){case"stock-control":const t=AppState.appData.ppeStock||[];return t.length===0?`
+            </table>`;
+    },
+
+    _receiptsFilterTimer: null,
+
+    refreshReceiptsListUI(opts = {}) {
+        const container = document.getElementById('ppe-list');
+        if (!container) return;
+        const forceFull = !!(opts && opts.forceFull);
+        const focusMeta = this._ppeCaptureFocus(container);
+        const resultsHost = document.getElementById('ppe-receipts-results-host');
+        const filtersHost = document.getElementById('ppe-receipts-filters-host');
+
+        // تحديث جزئي: لا تُدمَّر حقول البحث/الفلاتر أثناء الكتابة
+        if (!forceFull && resultsHost && filtersHost) {
+            const ppeList = AppState.appData.ppe || [];
+            const filtered = this.getFilteredPpeReceipts(ppeList);
+            const kpiStats = this.computeReceiptsKpiStats(ppeList, filtered);
+            const kpiEl = document.getElementById('ppe-receipts-kpi');
+            if (kpiEl) {
+                const wrap = document.createElement('div');
+                wrap.innerHTML = this.buildReceiptsKpiHtml(kpiStats).trim();
+                const next = wrap.firstElementChild;
+                if (next) kpiEl.replaceWith(next);
+            }
+            resultsHost.innerHTML = this.buildPPEReceiptsResultsHtml();
+            this.applyModuleI18n(resultsHost);
+            this.bindReceiptsFilters();
+            this._ppeRestoreFocus(focusMeta);
+            return;
+        }
+
+        container.innerHTML = this.buildPPEListHtml();
+        this.applyModuleI18n(container);
+        this.bindReceiptsFilters();
+        this._ppeRestoreFocus(focusMeta);
+    },
+
+    bindReceiptsFilters() {
+        if (this.state.activeTab !== 'receipts') return;
+        const run = (fn) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(fn);
+            } else {
+                setTimeout(fn, 0);
+            }
+        };
+        const search = document.getElementById('ppe-receipts-search');
+        this._ppeBindOnce(search, 'input', (e) => {
+            this.state.filters.receipts.search = (e.target && e.target.value) || '';
+            clearTimeout(this._receiptsFilterTimer);
+            this._receiptsFilterTimer = setTimeout(() => run(() => this.refreshReceiptsListUI()), 180);
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-filter-type'), 'change', (e) => {
+            this.state.filters.receipts.equipmentType = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-filter-status'), 'change', (e) => {
+            this.state.filters.receipts.status = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-date-from'), 'change', (e) => {
+            this.state.filters.receipts.dateFrom = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-date-to'), 'change', (e) => {
+            this.state.filters.receipts.dateTo = (e.target && e.target.value) || '';
+            this.refreshReceiptsListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-receipts-reset-filters'), 'click', () => {
+            this.resetReceiptFilters();
+            this.refreshReceiptsListUI({ forceFull: true });
+        });
+        // زر المسح داخل النتائج يُعاد إنشاؤه — اربطه دائماً
+        const clearEmpty = document.getElementById('ppe-receipts-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.onclick = () => {
+                this.resetReceiptFilters();
+                this.refreshReceiptsListUI({ forceFull: true });
+            };
+        }
+    },
+
+    /**
+     * ✅ مسح Cache لتحديث البيانات بعد المزامنة
+     * يتم استدعاؤها من RealtimeSyncManager عند تحديث البيانات
+     */
+    clearCache() {
+        // ✅ حفظ البيانات الحالية في AppState قبل مسح Cache
+        if (this.state.stockItemsCache) {
+            AppState.appData.ppeStock = this.state.stockItemsCache;
+            // ✅ حفظ في localStorage أيضاً
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+        }
+        
+        this.state.stockItemsCache = null;
+        this.state.stockItemsCacheTime = null;
+        this.state.lastSyncTime = Date.now();
+        Utils.safeLog('🔄 PPE: تم مسح Cache لتحديث البيانات');
+    },
+
+    /**
+     * ✅ تحميل البيانات مسبقاً في الخلفية
+     * يتم استدعاؤها عند تحميل المديول لضمان توفر البيانات
+     */
+    async preloadData() {
+        try {
+            // تحميل بيانات الاستلامات
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                try {
+                    const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
+                    if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
+                        const localPpe = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+                        if (ppeResult.data.length === 0 && localPpe.length > 0) {
+                            Utils.safeWarn(`⚠️ PPE preload: تجاهل مصفوفة فارغة من الخادم — الإبقاء على ${localPpe.length} سجل محلي`);
+                        } else {
+                            AppState.appData.ppe = ppeResult.data;
+                            // ✅ حفظ البيانات في localStorage للاستخدام لاحقاً
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                        }
+                    }
+                } catch (error) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل بيانات الاستلامات:', error);
+                }
+            }
+
+            // تحميل بيانات المخزون (تحميل مسبق دائماً لتسريع العرض)
+            this.loadStockItems(true).catch(e => Utils.safeWarn('⚠️ خطأ في تحميل المخزون مسبقاً:', e));
+        } catch (error) {
+            Utils.safeError('❌ خطأ في preloadData:', error);
+        }
+    },
+
+    /**
+     * ✅ عرض محتوى التبويب مع البيانات المتوفرة (fallback)
+     * يُستخدم في حالة timeout أو خطأ في التحميل
+     */
+    renderActiveTabContentWithFallback() {
+        try {
+            switch (this.state.activeTab) {
+                case 'stock-control':
+                    const stockItems = AppState.appData.ppeStock || [];
+                    if (stockItems.length === 0) {
+                        return `
                             <div class="empty-state">
                                 <div style="width: 300px; margin: 0 auto 16px;">
                                     <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
                                         <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
                                     </div>
                                 </div>
-                                <p class="text-gray-500 mb-4">${this._t("module.ppe.loading.stockData","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646...")}</p>
+                                <p class="text-gray-500 mb-4">${this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون...')}</p>
                             </div>
-                        `:`
+                        `;
+                    }
+                    // عرض البيانات المتوفرة
+                    return `
                         <div class="space-y-6">
-                            ${this.renderStockTableSync(t)}
+                            ${this.renderStockTableSync(stockItems)}
                         </div>
-                    `;case"receipts":default:return this.renderPPEListSync()}}catch(t){return Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A renderActiveTabContentWithFallback:",t),`
+                    `;
+                case 'receipts':
+                default:
+                    return this.renderPPEListSync();
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في renderActiveTabContentWithFallback:', error);
+            return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.loadContentError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649"))}</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadContentError', 'حدث خطأ أثناء تحميل المحتوى'))}</p>
                     <button onclick="PPE.load()" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
-            `}},renderPPEListSync(){return this.buildPPEListHtml()},renderStockTableSync(t){const e=(s,a)=>this._t(s,a),i=s=>Utils.escapeHTML(s);return!t||t.length===0?`
+            `;
+        }
+    },
+
+    /**
+     * ✅ عرض قائمة الاستلامات بشكل متزامن (بدون await)
+     */
+    renderPPEListSync() {
+        return this.buildPPEListHtml();
+    },
+
+    /**
+     * ✅ عرض جدول المخزون بشكل متزامن (بدون await)
+     */
+    renderStockTableSync(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        if (!stockItems || stockItems.length === 0) {
+            return `
                 <div class="empty-state">
                     <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">${i(e("module.ppe.empty.noStock","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0635\u0646\u0627\u0641 \u0641\u064A \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</p>
+                    <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
                 </div>
-            `:`
+            `;
+        }
+        return `
             <div class="overflow-x-auto">
                 <table class="data-table table-header-blue">
                     <thead>
                         <tr>
-                            <th>${i(e("module.ppe.stock.itemCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641"))}</th>
-                            <th>${i(e("module.ppe.stock.itemName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641"))}</th>
-                            <th>${i(e("module.ppe.stock.category","\u0627\u0644\u0641\u0626\u0629"))}</th>
-                            <th>${i(e("module.ppe.stock.in","\u0627\u0644\u0648\u0627\u0631\u062F"))}</th>
-                            <th>${i(e("module.ppe.stock.out","\u0627\u0644\u0645\u0646\u0635\u0631\u0641"))}</th>
-                            <th>${i(e("module.ppe.stock.balance","\u0627\u0644\u0631\u0635\u064A\u062F"))}</th>
-                            <th>${i(e("module.ppe.stock.reorder","\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628"))}</th>
-                            <th>${i(e("module.ppe.stock.supplier","\u0627\u0644\u0645\u0648\u0631\u062F"))}</th>
-                            <th>${i(e("module.ppe.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                            <th>${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))}</th>
+                            <th>${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))}</th>
+                            <th>${ut(t('module.ppe.stock.category', 'الفئة'))}</th>
+                            <th>${ut(t('module.ppe.stock.in', 'الوارد'))}</th>
+                            <th>${ut(t('module.ppe.stock.out', 'المنصرف'))}</th>
+                            <th>${ut(t('module.ppe.stock.balance', 'الرصيد'))}</th>
+                            <th>${ut(t('module.ppe.stock.reorder', 'حد إعادة الطلب'))}</th>
+                            <th>${ut(t('module.ppe.stock.supplier', 'المورد'))}</th>
+                            <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${t.map(s=>{const a=parseFloat(s.balance||0),r=parseFloat(s.minThreshold||0),o=a<r;return`
-                                <tr class="${o?"bg-red-50":""}">
-                                    <td class="font-mono font-semibold">${Utils.escapeHTML(s.itemCode||"")}</td>
-                                    <td>${Utils.escapeHTML(s.itemName||"")}</td>
-                                    <td>${Utils.escapeHTML(s.category||"")}</td>
-                                    <td class="text-green-600 font-semibold">${parseFloat(s.stock_IN||0).toFixed(0)}</td>
-                                    <td class="text-red-600 font-semibold">${parseFloat(s.stock_OUT||0).toFixed(0)}</td>
-                                    <td class="font-bold ${o?"text-red-600":"text-blue-600"}">${a.toFixed(0)}</td>
-                                    <td>${r.toFixed(0)}</td>
-                                    <td>${Utils.escapeHTML(s.supplier||"")}</td>
+                        ${stockItems.map(item => {
+                            const balance = parseFloat(item.balance || 0);
+                            const minThreshold = parseFloat(item.minThreshold || 0);
+                            const isLowStock = balance < minThreshold;
+                            return `
+                                <tr class="${isLowStock ? 'bg-red-50' : ''}">
+                                    <td class="font-mono font-semibold">${Utils.escapeHTML(item.itemCode || '')}</td>
+                                    <td>${Utils.escapeHTML(item.itemName || '')}</td>
+                                    <td>${Utils.escapeHTML(item.category || '')}</td>
+                                    <td class="text-green-600 font-semibold">${parseFloat(item.stock_IN || 0).toFixed(0)}</td>
+                                    <td class="text-red-600 font-semibold">${parseFloat(item.stock_OUT || 0).toFixed(0)}</td>
+                                    <td class="font-bold ${isLowStock ? 'text-red-600' : 'text-blue-600'}">${balance.toFixed(0)}</td>
+                                    <td>${minThreshold.toFixed(0)}</td>
+                                    <td>${Utils.escapeHTML(item.supplier || '')}</td>
                                     <td>
                                         <div class="flex items-center gap-2">
-                                            <button onclick="PPE.editStockItem('${s.itemId}')" class="btn-icon btn-icon-warning" title="${i(e("module.common.edit","\u062A\u0639\u062F\u064A\u0644"))}">
+                                            <button onclick="PPE.editStockItem('${item.itemId}')" class="btn-icon btn-icon-warning" title="${ut(t('module.common.edit', 'تعديل'))}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
-                                            <button onclick="PPE.deleteStockItem('${s.itemId}')" class="btn-icon btn-icon-danger" title="${i(e("module.ppe.btn.deleteItem","\u062D\u0630\u0641"))}">
+                                            <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="${ut(t('module.ppe.btn.deleteItem', 'حذف'))}">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
                                 </tr>
-                            `}).join("")}
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             </div>
-        `},async refreshActiveTab(t={}){try{const e=!!t.skipRemote;this.clearCache();const i=document.getElementById("ppe-tab-content");if(!i){Utils.safeWarn("\u26A0\uFE0F PPE: \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062D\u0627\u0648\u064A\u0629 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628");return}try{if(this.state.activeTab==="stock-control")await this.loadStockItems(!0);else if(!e){if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)try{const a=await GoogleIntegration.sendToAppsScript("getAllPPE",{});if(a&&a.success&&Array.isArray(a.data)){const r=Array.isArray(AppState.appData.ppe)?AppState.appData.ppe:[];a.data.length===0&&r.length>0?Utils.safeWarn(`\u26A0\uFE0F PPE refresh: \u062A\u062C\u0627\u0647\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 ${r.length} \u0633\u062C\u0644 \u0645\u062D\u0644\u064A`):(AppState.appData.ppe=a.data,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save())}}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A:",a)}}}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0623\u062B\u0646\u0627\u0621 refreshActiveTab:",a)}const s=i.innerHTML;i.style.opacity="0.6",i.style.pointerEvents="none";try{const a=await this.renderActiveTabContent(!1);i.innerHTML=a,this.applyModuleI18n(i),this.state.activeTab==="receipts"?(this.ensurePpeFilterStyles(),this.bindReceiptsFilters(),this._bindPpeReceiptExcelToolbar()):this.state.activeTab==="stock-control"&&(this.ensurePpeFilterStyles(),this.bindStockFilters(),this._bindPpeStockExcelToolbar()),Utils.safeLog("\u2705 PPE: \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0646\u0634\u0637 \u0628\u0646\u062C\u0627\u062D")}catch(a){Utils.safeError("\u274C PPE: \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062A\u0628\u0648\u064A\u0628:",a),i.innerHTML=s}finally{i.style.opacity="1",i.style.pointerEvents="auto"}}catch(e){Utils.safeError("\u274C PPE: \u062E\u0637\u0623 \u0641\u064A refreshActiveTab:",e)}},_injectPpeIdentityStyles(){try{if(document.getElementById("ppe-professional-identity-styles"))return;const t=document.createElement("style");t.id="ppe-professional-identity-styles",t.textContent=`
+        `;
+    },
+
+    /**
+     * ✅ تحديث التبويب النشط فقط دون إعادة تحميل الموديول بالكامل
+     * يُستخدم بعد المزامنة لتحديث البيانات مباشرة
+     */
+    async refreshActiveTab(options = {}) {
+        try {
+            const skipRemote = !!options.skipRemote;
+            // ✅ مسح Cache لضمان تحميل البيانات الجديدة
+            this.clearCache();
+            
+            const tabContentContainer = document.getElementById('ppe-tab-content');
+            if (!tabContentContainer) {
+                Utils.safeWarn('⚠️ PPE: لم يتم العثور على حاوية محتوى التبويب');
+                return;
+            }
+            
+            // ✅ تحميل البيانات الجديدة أولاً
+            try {
+                if (this.state.activeTab === 'stock-control') {
+                    await this.loadStockItems(true); // forceRefresh = true
+                } else {
+                    if (skipRemote) {
+                        // تحديث محلي فقط (يُستخدم مباشرة بعد الحفظ المحلي لتجنب فقدان السجل الجديد مؤقتاً)
+                    } else {
+                    // تحميل بيانات الاستلامات
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                        try {
+                            const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
+                            if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
+                                const localPpe = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+                                if (ppeResult.data.length === 0 && localPpe.length > 0) {
+                                    Utils.safeWarn(`⚠️ PPE refresh: تجاهل مصفوفة فارغة من الخادم — الإبقاء على ${localPpe.length} سجل محلي`);
+                                } else {
+                                    AppState.appData.ppe = ppeResult.data;
+                                    // ✅ حفظ البيانات في localStorage
+                                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                        window.DataManager.save();
+                                    }
+                                }
+                            }
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ في تحميل بيانات الاستلامات:', error);
+                        }
+                    }
+                    }
+                }
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في تحميل البيانات أثناء refreshActiveTab:', error);
+            }
+            
+            // عرض مؤشر تحميل خفيف (بدون overlay كامل)
+            const originalContent = tabContentContainer.innerHTML;
+            tabContentContainer.style.opacity = '0.6';
+            tabContentContainer.style.pointerEvents = 'none';
+            
+            try {
+                // ✅ تحميل محتوى التبويب الجديد بدون Loading overlay
+                const newContent = await this.renderActiveTabContent(false);
+                tabContentContainer.innerHTML = newContent;
+                this.applyModuleI18n(tabContentContainer);
+                if (this.state.activeTab === 'receipts') {
+                    this.ensurePpeFilterStyles();
+                    this.bindReceiptsFilters();
+                    this._bindPpeReceiptExcelToolbar();
+                } else if (this.state.activeTab === 'stock-control') {
+                    this.ensurePpeFilterStyles();
+                    this.bindStockFilters();
+                    this._bindPpeStockExcelToolbar();
+                }
+                Utils.safeLog('✅ PPE: تم تحديث التبويب النشط بنجاح');
+            } catch (error) {
+                Utils.safeError('❌ PPE: خطأ في تحديث التبويب:', error);
+                // استعادة المحتوى الأصلي في حالة الخطأ
+                tabContentContainer.innerHTML = originalContent;
+            } finally {
+                tabContentContainer.style.opacity = '1';
+                tabContentContainer.style.pointerEvents = 'auto';
+            }
+        } catch (error) {
+            Utils.safeError('❌ PPE: خطأ في refreshActiveTab:', error);
+        }
+    },
+
+    _injectPpeIdentityStyles() {
+        try {
+            if (document.getElementById('ppe-professional-identity-styles')) return;
+            const style = document.createElement('style');
+            style.id = 'ppe-professional-identity-styles';
+            style.textContent = `
                 #ppe-section .ppe-id-hero {
                     --p-navy: #0b2a55;
                     --p-blue: #1e40af;
                     --p-blue2: #2563eb;
                     --p-line: #dce7f5;
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u062A\u0631\u0648\u064A\u0633\u0629 \u0627\u0644\u0645\u062F\u064A\u0648\u0644 (Hero) */
+                /* ✅ الهوية — ترويسة المديول (Hero) */
                 #ppe-section .ppe-id-hero {
                     position: relative; overflow: hidden;
                     display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
@@ -526,7 +1183,7 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                     #ppe-section .ppe-id-hero__actions { width: 100%; }
                     #ppe-section .ppe-id-hero__actions .btn { flex: 1; justify-content: center; }
                 }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0634\u0631\u064A\u0637 \u0627\u0644\u062A\u0628\u0648\u064A\u0628\u0627\u062A (\u0646\u0645\u0637 \u0647\u0648\u064A\u0629 \u0627\u0644\u0645\u062F\u064A\u0648\u0644\u0627\u062A) */
+                /* ✅ الهوية — شريط التبويبات (نمط هوية المديولات) */
                 #ppe-section .ppe-id-tabs-wrap {
                     display: flex; gap: 8px; padding: 8px; border-radius: 16px; overflow-x: auto; margin-bottom: 18px;
                     border: 1px solid rgba(255,255,255,.14);
@@ -553,7 +1210,7 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                 }
                 #ppe-section .ppe-tab-btn.active::before { display: none; }
                 #ppe-section .ppe-tab-btn.active i { background: #eff6ff; color: var(--p-blue, #1e40af); }
-                /* \u2705 \u0627\u0644\u0647\u0648\u064A\u0629 \u2014 \u0623\u0633\u0637\u062D \u0627\u0644\u0645\u062D\u062A\u0648\u0649 */
+                /* ✅ الهوية — أسطح المحتوى */
                 #ppe-section #ppe-tab-content { animation: ppeSurfaceIn .24s ease-out; }
                 @keyframes ppeSurfaceIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
                 #ppe-section #ppe-tab-content .content-card {
@@ -569,81 +1226,230 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                 }
                 #ppe-section .data-table tbody tr:hover td { background: #f2f7ff !important; }
                 #ppe-section .data-table td { vertical-align: middle; }
-            `,document.head.appendChild(t)}catch(t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062D\u0642\u0646 \u0647\u0648\u064A\u0629 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629:",t)}},async load(){this._injectPpeIdentityStyles(),this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const t=document.getElementById("ppe-section");if(!t){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0642\u0633\u0645 ppe-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}try{(!AppState||!AppState.appData)&&(typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F AppState \u063A\u064A\u0631 \u062C\u0627\u0647\u0632 - \u062C\u0627\u0631\u064A \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631..."),await new Promise(e=>{let i=0;const s=50,a=setInterval(()=>{i++,AppState&&AppState.appData?(clearInterval(a),e()):i>=s&&(clearInterval(a),AppState||(AppState={}),AppState.appData||(AppState.appData={}),e())},50)}))}catch(e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 AppState:",e),AppState||(AppState={}),AppState.appData||(AppState.appData={})}try{AppState.appData.ppe||(AppState.appData.ppe=[]),AppState.appData.ppeStock||(AppState.appData.ppeStock=[]);const e=this.preloadData();let i="";try{if(this.state.activeTab==="stock-control"){const r=this.state.stockItemsCache&&this.state.stockItemsCache.length?this.state.stockItemsCache:Array.isArray(AppState.appData.ppeStock)?AppState.appData.ppeStock:[];i=r.length?this.buildStockControlTabHtmlSync(r,""):`<div class="empty-state py-8"><p class="text-gray-500">${Utils.escapeHTML(this._t("module.ppe.loading.stockData","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u2026"))}</p></div>`}else this.state.activeTab==="analysis"?i=await this.renderPpeAnalysisTab():i=await this.renderReceiptsTab()}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628:",r),i=this.renderActiveTabContentWithFallback()}e.then(()=>{if(this.state.activeTab==="receipts")document.getElementById("ppe-list")&&this.refreshReceiptsListUI();else if(this.state.activeTab==="stock-control"){const r=document.getElementById("ppe-tab-content");if(!r)return;this.renderActiveTabContent(!1).then(o=>{this.state.activeTab!=="stock-control"||!o||(r.innerHTML=o,this.ensurePpeFilterStyles(),this.bindStockFilters(),this._bindPpeStockExcelToolbar())}).catch(()=>{})}else if(this.state.activeTab==="analysis")try{this.updatePpeAnalyticsDashboard()}catch{}}).catch(r=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",r)});const s=(r,o)=>this._t(r,o),a=r=>Utils.escapeHTML(r);t.innerHTML=`
+            `;
+            document.head.appendChild(style);
+        } catch (e) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر حقن هوية معدات الوقاية:', e);
+        }
+    },
+
+    async load() {
+        this._injectPpeIdentityStyles();
+        // Add language change listener
+        if (!this._languageChangeListenerAdded) {
+            document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                this.load();
+            });
+            this._languageChangeListenerAdded = true;
+        }
+
+        const section = document.getElementById('ppe-section');
+        if (!section) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ قسم ppe-section غير موجود');
+            } else {
+                console.warn('⚠️ قسم ppe-section غير موجود');
+            }
+            return;
+        }
+
+        // ✅ تحسين: التأكد من وجود البيانات الأساسية بشكل أسرع
+        try {
+            if (!AppState || !AppState.appData) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ AppState غير جاهز - جاري الانتظار...');
+                } else {
+                    console.warn('⚠️ AppState غير جاهز - جاري الانتظار...');
+                }
+                await new Promise(resolve => {
+                    let attempts = 0;
+                    const maxAttempts = 50; // ✅ تقليل من 100 إلى 50 (2.5 ثانية بدلاً من 5)
+                    const checkInterval = setInterval(() => {
+                        attempts++;
+                        if (AppState && AppState.appData) {
+                            clearInterval(checkInterval);
+                            resolve();
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(checkInterval);
+                            if (!AppState) AppState = {};
+                            if (!AppState.appData) AppState.appData = {};
+                            resolve();
+                        }
+                    }, 50);
+                });
+            }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                Utils.safeWarn('⚠️ خطأ في التحقق من AppState:', error);
+            } else {
+                console.warn('⚠️ خطأ في التحقق من AppState:', error);
+            }
+            if (!AppState) AppState = {};
+            if (!AppState.appData) AppState.appData = {};
+        }
+
+        try {
+            // ✅ تحسين: التأكد من وجود جميع البيانات المطلوبة
+            if (!AppState.appData.ppe) {
+                AppState.appData.ppe = [];
+            }
+            if (!AppState.appData.ppeStock) {
+                AppState.appData.ppeStock = [];
+            }
+
+            // ✅ تحسين: تحميل البيانات مباشرة في الخلفية قبل عرض الواجهة
+            const dataLoadPromise = this.preloadData();
+
+            // ✅ رسم فوري من البيانات المحلية — لا ننتظر الشبكة قبل shell
+            let tabContent = '';
+            try {
+                if (this.state.activeTab === 'stock-control') {
+                    const cached = (this.state.stockItemsCache && this.state.stockItemsCache.length)
+                        ? this.state.stockItemsCache
+                        : (Array.isArray(AppState.appData.ppeStock) ? AppState.appData.ppeStock : []);
+                    tabContent = cached.length
+                        ? this.buildStockControlTabHtmlSync(cached, '')
+                        : `<div class="empty-state py-8"><p class="text-gray-500">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div>`;
+                } else if (this.state.activeTab === 'analysis') {
+                    tabContent = await this.renderPpeAnalysisTab();
+                } else {
+                    tabContent = await this.renderReceiptsTab();
+                }
+            } catch (error) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل محتوى التبويب:', error);
+                } else {
+                    console.warn('⚠️ خطأ في تحميل محتوى التبويب:', error);
+                }
+                tabContent = this.renderActiveTabContentWithFallback();
+            }
+
+            // ✅ انتظار تحميل البيانات في الخلفية (بدون حجب الواجهة)
+            dataLoadPromise.then(() => {
+                if (this.state.activeTab === 'receipts') {
+                    const list = document.getElementById('ppe-list');
+                    if (list) this.refreshReceiptsListUI();
+                } else if (this.state.activeTab === 'stock-control') {
+                    const container = document.getElementById('ppe-tab-content');
+                    if (!container) return;
+                    this.renderActiveTabContent(false).then((html) => {
+                        if (this.state.activeTab !== 'stock-control' || !html) return;
+                        container.innerHTML = html;
+                        this.ensurePpeFilterStyles();
+                        this.bindStockFilters();
+                        this._bindPpeStockExcelToolbar();
+                    }).catch(() => {});
+                } else if (this.state.activeTab === 'analysis') {
+                    try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                }
+            }).catch(error => {
+                Utils.safeWarn('⚠️ خطأ في تحميل البيانات في الخلفية:', error);
+            });
+
+            const t = (k, f) => this._t(k, f);
+            const ut = (s) => Utils.escapeHTML(s);
+        section.innerHTML = `
             <div class="ppe-id-hero">
                 <div class="ppe-id-hero__copy">
                     <div class="ppe-id-hero__icon"><i class="fas fa-hard-hat"></i></div>
                     <div>
-                        <span class="ppe-id-hero__eyebrow">${a(s("module.ppe.eyebrow","\u0646\u0638\u0627\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"))}</span>
-                        <h1>${a(s("module.ppe.title","\u0625\u062F\u0627\u0631\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629"))}</h1>
-                        <p>${a(s("module.ppe.subtitle","\u062A\u0633\u062C\u064A\u0644 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0633\u062A\u0644\u0627\u0645 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629"))}</p>
+                        <span class="ppe-id-hero__eyebrow">${ut(t('module.ppe.eyebrow', 'نظام السلامة والصحة المهنية'))}</span>
+                        <h1>${ut(t('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}</h1>
+                        <p>${ut(t('module.ppe.subtitle', 'تسجيل ومتابعة استلام مهمات الوقاية الشخصية'))}</p>
                     </div>
                 </div>
                 <div class="ppe-id-hero__meta">
-                    <span><i class="fas fa-receipt"></i> ${a(s("module.ppe.tab.receipts","\u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"))}</span>
-                    <span><i class="fas fa-boxes"></i> ${a(s("module.ppe.tab.stock","\u0625\u062F\u0627\u0631\u0629 \u0645\u062E\u0632\u0648\u0646 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"))}</span>
-                    <span><i class="fas fa-chart-pie"></i> ${a(s("module.ppe.tab.analysis","\u0627\u0644\u062A\u062D\u0644\u064A\u0644"))}</span>
+                    <span><i class="fas fa-receipt"></i> ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}</span>
+                    <span><i class="fas fa-boxes"></i> ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}</span>
+                    <span><i class="fas fa-chart-pie"></i> ${ut(t('module.ppe.tab.analysis', 'التحليل'))}</span>
                 </div>
                 <div class="ppe-id-hero__actions">
-                    ${this.state.activeTab==="receipts"?`
+                    ${this.state.activeTab === 'receipts' ? `
                         <button id="view-ppe-matrix-btn" class="btn-secondary">
                             <i class="fas fa-table ml-2"></i>
-                            ${a(s("module.ppe.btn.matrix","\u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"))}
+                            ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                         </button>
                         <button id="add-ppe-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            ${a(s("module.ppe.btn.newReceipt","\u062A\u0633\u062C\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u062C\u062F\u064A\u062F"))}
+                            ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                         </button>
-                        <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${a(s("module.ppe.btn.refreshTitle","\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062D\u0627\u0644\u064A"))}">
+                        <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                             <i class="fas fa-sync-alt ml-2"></i>
-                            ${a(s("module.ppe.btn.refresh","\u062A\u062D\u062F\u064A\u062B"))}
+                            ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                         </button>
-                    `:this.state.activeTab==="stock-control"?`
+                    ` : this.state.activeTab === 'stock-control' ? `
                         <button id="add-stock-item-btn" class="btn-primary">
                             <i class="fas fa-plus ml-2"></i>
-                            ${a(s("module.ppe.btn.addStockItem","\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F"))}
+                            ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                         </button>
                         <button id="add-transaction-btn" class="btn-secondary">
                             <i class="fas fa-exchange-alt ml-2"></i>
-                            ${a(s("module.ppe.btn.addTransaction","\u0625\u0636\u0627\u0641\u0629 \u062D\u0631\u0643\u0629"))}
+                            ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
                         </button>
-                    `:""}
+                    ` : ''}
                 </div>
             </div>
             <div class="mt-6">
                 <div class="ppe-id-tabs-wrap">
                     <div class="ppe-tabs-container ppe-id-tabs">
-                        <button type="button" class="ppe-tab-btn ${this.state.activeTab==="receipts"?"active":""}" data-tab="receipts">
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'receipts' ? 'active' : ''}" data-tab="receipts">
                             <i class="fas fa-receipt"></i>
-                            ${a(s("module.ppe.tab.receipts","\u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"))}
+                            ${ut(t('module.ppe.tab.receipts', 'سجل الاستلامات'))}
                         </button>
-                        <button type="button" class="ppe-tab-btn ${this.state.activeTab==="stock-control"?"active":""}" data-tab="stock-control">
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'stock-control' ? 'active' : ''}" data-tab="stock-control">
                             <i class="fas fa-boxes"></i>
-                            ${a(s("module.ppe.tab.stock","\u0625\u062F\u0627\u0631\u0629 \u0645\u062E\u0632\u0648\u0646 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"))}
+                            ${ut(t('module.ppe.tab.stock', 'إدارة مخزون مهمات الوقاية'))}
                         </button>
-                        <button type="button" class="ppe-tab-btn ${this.state.activeTab==="analysis"?"active":""}" data-tab="analysis">
+                        <button type="button" class="ppe-tab-btn ${this.state.activeTab === 'analysis' ? 'active' : ''}" data-tab="analysis">
                             <i class="fas fa-chart-pie"></i>
-                            ${a(s("module.ppe.tab.analysis","\u0627\u0644\u062A\u062D\u0644\u064A\u0644"))}
+                            ${ut(t('module.ppe.tab.analysis', 'التحليل'))}
                         </button>
                     </div>
                 </div>
                 <div id="ppe-tab-content">
-                    ${i}
+                    ${tabContent}
                 </div>
             </div>
-        `;try{this.ensurePpeFilterStyles(),this.setupEventListeners();const r=document.getElementById("ppe-tab-content")||t;this.applyModuleI18n(r),this.state.activeTab==="receipts"?(this.bindReceiptsFilters(),this._bindPpeReceiptExcelToolbar()):this.state.activeTab==="stock-control"?(this.bindStockFilters(),this._bindPpeStockExcelToolbar()):this.state.activeTab==="analysis"&&(this._ppeBindAnalyticsEvents(),requestAnimationFrame(()=>{try{this.updatePpeAnalyticsDashboard()}catch{}}))}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A setupEventListeners:",r)}}catch(e){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0645\u0639\u062F\u0627\u062A \u0627\u0644\u062D\u0645\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629:",e);const i=(a,r)=>this._t(a,r),s=a=>Utils.escapeHTML(a);t.innerHTML=`
+        `;
+            // تهيئة الأحداث بعد عرض الواجهة
+            try {
+                this.ensurePpeFilterStyles();
+                this.setupEventListeners();
+                const tabRoot = document.getElementById('ppe-tab-content') || section;
+                this.applyModuleI18n(tabRoot);
+                if (this.state.activeTab === 'receipts') {
+                    this.bindReceiptsFilters();
+                    this._bindPpeReceiptExcelToolbar();
+                } else if (this.state.activeTab === 'stock-control') {
+                    this.bindStockFilters();
+                    this._bindPpeStockExcelToolbar();
+                } else if (this.state.activeTab === 'analysis') {
+                    this._ppeBindAnalyticsEvents();
+                    requestAnimationFrame(() => {
+                        try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                    });
+                }
+            } catch (error) {
+                Utils.safeWarn('⚠️ خطأ في setupEventListeners:', error);
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تحميل مديول معدات الحماية الشخصية:', error);
+            const te = (k, f) => this._t(k, f);
+            const ut = (s) => Utils.escapeHTML(s);
+            section.innerHTML = `
                 <div class="ppe-id-hero">
                     <div class="ppe-id-hero__copy">
                         <div class="ppe-id-hero__icon"><i class="fas fa-hard-hat"></i></div>
                         <div>
-                            <span class="ppe-id-hero__eyebrow">${s(i("module.ppe.eyebrow","\u0646\u0638\u0627\u0645 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"))}</span>
-                            <h1>${s(i("module.ppe.title","\u0625\u062F\u0627\u0631\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629"))}</h1>
+                            <span class="ppe-id-hero__eyebrow">${ut(te('module.ppe.eyebrow', 'نظام السلامة والصحة المهنية'))}</span>
+                            <h1>${ut(te('module.ppe.title', 'إدارة مهمات الوقاية الشخصية'))}</h1>
                         </div>
                     </div>
                     <div class="ppe-id-hero__actions">
                         <button onclick="PPE.load()" class="btn-secondary">
                             <i class="fas fa-redo ml-2"></i>
-                            ${s(i("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                            ${ut(te('module.common.retry', 'إعادة المحاولة'))}
                         </button>
                     </div>
                 </div>
@@ -652,113 +1458,761 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">${s(i("module.ppe.empty.loadError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"))}</p>
+                                <p class="text-gray-500 mb-4">${ut(te('module.ppe.empty.loadError', 'حدث خطأ أثناء تحميل البيانات'))}</p>
                                 <button onclick="PPE.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    ${s(i("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                                    ${ut(te('module.common.retry', 'إعادة المحاولة'))}
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-            `}},async renderActiveTabContent(t=!0){try{switch(this.state.activeTab){case"analysis":return await this.renderPpeAnalysisTab();case"stock-control":t&&Loading.show(this._t("module.ppe.loading.stock","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646..."));try{const e=await this.renderStockControlTab();return t&&Loading.hide(),e}catch(e){return t&&Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0645\u062E\u0632\u0648\u0646:",e),`
+            `;
+        }
+    },
+
+    /**
+     * تحميل محتوى التبويب النشط
+     * @param {boolean} showLoadingOverlay - عرض Loading overlay (افتراضي: true)
+     */
+    async renderActiveTabContent(showLoadingOverlay = true) {
+        try {
+            switch (this.state.activeTab) {
+                case 'analysis':
+                    // ✅ تبويب التحليل — لا يحتاج تحميل بيانات إضافية (يستخدم AppState مباشرة)
+                    return await this.renderPpeAnalysisTab();
+                case 'stock-control':
+                    // ✅ تحميل البيانات مباشرة عند الدخول للتبويب
+                    if (showLoadingOverlay) {
+                        Loading.show(this._t('module.ppe.loading.stock', 'جاري تحميل بيانات المخزون...'));
+                    }
+                    try {
+                        const content = await this.renderStockControlTab();
+                        if (showLoadingOverlay) {
+                            Loading.hide();
+                        }
+                        return content;
+                    } catch (error) {
+                        if (showLoadingOverlay) {
+                            Loading.hide();
+                        }
+                        Utils.safeError('❌ خطأ في تحميل تبويب المخزون:', error);
+                        return `
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.loadStockError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</p>
+                                <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadStockError', 'حدث خطأ أثناء تحميل بيانات المخزون'))}</p>
                                 <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                                    <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                                    <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                                 </button>
                             </div>
-                        `}case"receipts":default:return await this.renderReceiptsTab()}}catch(e){return Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A renderActiveTabContent:",e),t&&Loading.hide(),`
+                        `;
+                    }
+                case 'receipts':
+                default:
+                    return await this.renderReceiptsTab();
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في renderActiveTabContent:', error);
+            if (showLoadingOverlay) {
+                Loading.hide();
+            }
+            return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.loadContentError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649"))}</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadContentError', 'حدث خطأ أثناء تحميل المحتوى'))}</p>
                     <button onclick="PPE.load()" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
-            `}},async renderReceiptsTab(){return`
+            `;
+        }
+    },
+
+    async renderReceiptsTab() {
+        return `
             <div id="ppe-list">
                 ${this.buildPPEListHtml()}
             </div>
-        `},cleanupEventListeners(){this.state.eventListeners.forEach((t,e)=>{e&&e.removeEventListener&&e.removeEventListener(t.event,t.handler)}),this.state.eventListeners.clear()},setupEventListeners(){this.cleanupEventListeners(),setTimeout(()=>{document.querySelectorAll(".ppe-tab-btn").forEach(o=>{const p=()=>{const l=o.getAttribute("data-tab");l&&!this.state.isSwitchingTab&&this.switchTab(l)};o.addEventListener("click",p),this.state.eventListeners.set(o,{event:"click",handler:p})});const e=document.getElementById("add-ppe-btn"),i=document.getElementById("view-ppe-matrix-btn");if(e){const o=()=>this.showPPEForm();e.addEventListener("click",o),this.state.eventListeners.set(e,{event:"click",handler:o})}if(i){const o=()=>this.showPPEMatrix();i.addEventListener("click",o),this.state.eventListeners.set(i,{event:"click",handler:o})}const s=document.getElementById("ppe-refresh-btn");if(s){const o=()=>this.refreshActiveTab();s.addEventListener("click",o),this.state.eventListeners.set(s,{event:"click",handler:o})}const a=document.getElementById("add-stock-item-btn"),r=document.getElementById("add-transaction-btn");if(a){const o=()=>this.showStockItemForm();a.addEventListener("click",o),this.state.eventListeners.set(a,{event:"click",handler:o})}if(r){const o=()=>this.showTransactionForm();r.addEventListener("click",o),this.state.eventListeners.set(r,{event:"click",handler:o})}this._bindPpeReceiptExcelToolbar(),this._bindPpeStockExcelToolbar()},100)},updateHeaderButtons(){const t=document.querySelector("#ppe-section .ppe-id-hero__actions");if(!t)return;[document.getElementById("add-ppe-btn"),document.getElementById("view-ppe-matrix-btn"),document.getElementById("ppe-refresh-btn"),document.getElementById("add-stock-item-btn"),document.getElementById("add-transaction-btn")].filter(Boolean).forEach(n=>{if(this.state.eventListeners.has(n)){const d=this.state.eventListeners.get(n);n.removeEventListener(d.event,d.handler),this.state.eventListeners.delete(n)}});const i=(n,d)=>this._t(n,d),s=n=>Utils.escapeHTML(n);this.state.activeTab==="receipts"?t.innerHTML=`
+        `;
+    },
+
+    /**
+     * تنظيف مستمعي الأحداث السابقين
+     */
+    cleanupEventListeners() {
+        this.state.eventListeners.forEach((listener, element) => {
+            if (element && element.removeEventListener) {
+                element.removeEventListener(listener.event, listener.handler);
+            }
+        });
+        this.state.eventListeners.clear();
+    },
+
+    setupEventListeners() {
+        // تنظيف المستمعين السابقين أولاً
+        this.cleanupEventListeners();
+
+        setTimeout(() => {
+            // Tab switching
+            const tabButtons = document.querySelectorAll('.ppe-tab-btn');
+            tabButtons.forEach(btn => {
+                const handler = () => {
+                    const tab = btn.getAttribute('data-tab');
+                    if (tab && !this.state.isSwitchingTab) {
+                        this.switchTab(tab);
+                    }
+                };
+                btn.addEventListener('click', handler);
+                // حفظ المستمع للتنظيف لاحقاً
+                this.state.eventListeners.set(btn, { event: 'click', handler });
+            });
+
+            // Receipts tab buttons
+            const addBtn = document.getElementById('add-ppe-btn');
+            const viewMatrixBtn = document.getElementById('view-ppe-matrix-btn');
+            if (addBtn) {
+                const handler = () => this.showPPEForm();
+                addBtn.addEventListener('click', handler);
+                this.state.eventListeners.set(addBtn, { event: 'click', handler });
+            }
+            if (viewMatrixBtn) {
+                const handler = () => this.showPPEMatrix();
+                viewMatrixBtn.addEventListener('click', handler);
+                this.state.eventListeners.set(viewMatrixBtn, { event: 'click', handler });
+            }
+            const refreshBtn = document.getElementById('ppe-refresh-btn');
+            if (refreshBtn) {
+                const handler = () => this.refreshActiveTab();
+                refreshBtn.addEventListener('click', handler);
+                this.state.eventListeners.set(refreshBtn, { event: 'click', handler });
+            }
+
+            // Stock control tab buttons
+            const addStockItemBtn = document.getElementById('add-stock-item-btn');
+            const addTransactionBtn = document.getElementById('add-transaction-btn');
+            if (addStockItemBtn) {
+                const handler = () => this.showStockItemForm();
+                addStockItemBtn.addEventListener('click', handler);
+                this.state.eventListeners.set(addStockItemBtn, { event: 'click', handler });
+            }
+            if (addTransactionBtn) {
+                const handler = () => this.showTransactionForm();
+                addTransactionBtn.addEventListener('click', handler);
+                this.state.eventListeners.set(addTransactionBtn, { event: 'click', handler });
+            }
+
+            this._bindPpeReceiptExcelToolbar();
+            this._bindPpeStockExcelToolbar();
+        }, 100);
+    },
+
+    /**
+     * تحديث أزرار الهيدر حسب التبويب النشط
+     */
+    updateHeaderButtons() {
+        const headerButtonsContainer = document.querySelector('#ppe-section .ppe-id-hero__actions');
+        if (!headerButtonsContainer) return;
+
+        // تنظيف مستمعي الأحداث للأزرار القديمة قبل استبدالها
+        const oldButtons = [
+            document.getElementById('add-ppe-btn'),
+            document.getElementById('view-ppe-matrix-btn'),
+            document.getElementById('ppe-refresh-btn'),
+            document.getElementById('add-stock-item-btn'),
+            document.getElementById('add-transaction-btn')
+        ].filter(Boolean);
+
+        oldButtons.forEach(btn => {
+            if (this.state.eventListeners.has(btn)) {
+                const listener = this.state.eventListeners.get(btn);
+                btn.removeEventListener(listener.event, listener.handler);
+                this.state.eventListeners.delete(btn);
+            }
+        });
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        // استبدال الأزرار
+        if (this.state.activeTab === 'receipts') {
+            headerButtonsContainer.innerHTML = `
                 <button id="view-ppe-matrix-btn" class="btn-secondary">
                     <i class="fas fa-table ml-2"></i>
-                    ${s(i("module.ppe.btn.matrix","\u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"))}
+                    ${ut(t('module.ppe.btn.matrix', 'مصفوفة مهمات الوقاية'))}
                 </button>
                 <button id="add-ppe-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
-                    ${s(i("module.ppe.btn.newReceipt","\u062A\u0633\u062C\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u062C\u062F\u064A\u062F"))}
+                    ${ut(t('module.ppe.btn.newReceipt', 'تسجيل استلام جديد'))}
                 </button>
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${s(i("module.ppe.btn.refreshTitle","\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062D\u0627\u0644\u064A"))}">
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
-                    ${s(i("module.ppe.btn.refresh","\u062A\u062D\u062F\u064A\u062B"))}
+                    ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
-            `:this.state.activeTab==="stock-control"?t.innerHTML=`
+            `;
+        } else if (this.state.activeTab === 'stock-control') {
+            headerButtonsContainer.innerHTML = `
                 <button id="add-stock-item-btn" class="btn-primary">
                     <i class="fas fa-plus ml-2"></i>
-                    ${s(i("module.ppe.btn.addStockItem","\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F"))}
+                    ${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                 </button>
                 <button id="add-transaction-btn" class="btn-secondary">
                     <i class="fas fa-exchange-alt ml-2"></i>
-                    ${s(i("module.ppe.btn.addTransaction","\u0625\u0636\u0627\u0641\u0629 \u062D\u0631\u0643\u0629"))}
+                    ${ut(t('module.ppe.btn.addTransaction', 'إضافة حركة'))}
                 </button>
-            `:t.innerHTML=`
-                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${s(i("module.ppe.btn.refreshTitle","\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062D\u0627\u0644\u064A"))}">
+            `;
+        } else {
+            headerButtonsContainer.innerHTML = `
+                <button id="ppe-refresh-btn" type="button" class="btn-secondary" title="${ut(t('module.ppe.btn.refreshTitle', 'تحديث المحتوى الحالي'))}">
                     <i class="fas fa-sync-alt ml-2"></i>
-                    ${s(i("module.ppe.btn.refresh","\u062A\u062D\u062F\u064A\u062B"))}
+                    ${ut(t('module.ppe.btn.refresh', 'تحديث'))}
                 </button>
-            `,this.applyModuleI18n(t);const a=document.getElementById("add-ppe-btn"),r=document.getElementById("view-ppe-matrix-btn"),o=document.getElementById("add-stock-item-btn"),p=document.getElementById("add-transaction-btn");if(a){const n=()=>this.showPPEForm();a.addEventListener("click",n),this.state.eventListeners.set(a,{event:"click",handler:n})}if(r){const n=()=>this.showPPEMatrix();r.addEventListener("click",n),this.state.eventListeners.set(r,{event:"click",handler:n})}const l=document.getElementById("ppe-refresh-btn");if(l){const n=()=>this.refreshActiveTab();l.addEventListener("click",n),this.state.eventListeners.set(l,{event:"click",handler:n})}if(o){const n=()=>this.showStockItemForm();o.addEventListener("click",n),this.state.eventListeners.set(o,{event:"click",handler:n})}if(p){const n=()=>this.showTransactionForm();p.addEventListener("click",n),this.state.eventListeners.set(p,{event:"click",handler:n})}this._bindPpeReceiptExcelToolbar(),this._bindPpeStockExcelToolbar()},async switchTab(t){if(this.state.isSwitchingTab){Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0628\u064A\u0646 \u0627\u0644\u062A\u0628\u0648\u064A\u0628\u0627\u062A \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 \u0628\u0627\u0644\u0641\u0639\u0644");return}if(this.state.activeTab===t)return;const e=this._switchTabToken=(this._switchTabToken||0)+1;try{this.state.isSwitchingTab=!0,this.state.activeTab=t,document.querySelectorAll(".ppe-tab-btn").forEach(a=>{a.classList.remove("active"),a.getAttribute("data-tab")===t&&a.classList.add("active")});const s=document.getElementById("ppe-tab-content");if(s)try{if(s.style.opacity="1",s.style.pointerEvents="auto",t==="receipts")s.innerHTML=await this.renderReceiptsTab(),this.ensurePpeFilterStyles(),this.bindReceiptsFilters(),this._bindPpeReceiptExcelToolbar(),this.applyModuleI18n(s);else if(t==="stock-control"){const a=this.state.stockItemsCache&&this.state.stockItemsCache.length?this.state.stockItemsCache:Array.isArray(AppState.appData.ppeStock)&&AppState.appData.ppeStock.length?AppState.appData.ppeStock:[],r=`<div role="status" class="rounded-lg border border-blue-100 bg-blue-50/90 px-4 py-2 text-sm text-blue-900 flex items-center gap-2 mb-3">
+            `;
+        }
+        this.applyModuleI18n(headerButtonsContainer);
+
+        // إعادة إعداد مستمعي الأحداث للأزرار الجديدة
+        const addBtn = document.getElementById('add-ppe-btn');
+        const viewMatrixBtn = document.getElementById('view-ppe-matrix-btn');
+        const addStockItemBtn = document.getElementById('add-stock-item-btn');
+        const addTransactionBtn = document.getElementById('add-transaction-btn');
+
+        if (addBtn) {
+            const handler = () => this.showPPEForm();
+            addBtn.addEventListener('click', handler);
+            this.state.eventListeners.set(addBtn, { event: 'click', handler });
+        }
+        if (viewMatrixBtn) {
+            const handler = () => this.showPPEMatrix();
+            viewMatrixBtn.addEventListener('click', handler);
+            this.state.eventListeners.set(viewMatrixBtn, { event: 'click', handler });
+        }
+        const refreshBtn = document.getElementById('ppe-refresh-btn');
+        if (refreshBtn) {
+            const handler = () => this.refreshActiveTab();
+            refreshBtn.addEventListener('click', handler);
+            this.state.eventListeners.set(refreshBtn, { event: 'click', handler });
+        }
+        if (addStockItemBtn) {
+            const handler = () => this.showStockItemForm();
+            addStockItemBtn.addEventListener('click', handler);
+            this.state.eventListeners.set(addStockItemBtn, { event: 'click', handler });
+        }
+        if (addTransactionBtn) {
+            const handler = () => this.showTransactionForm();
+            addTransactionBtn.addEventListener('click', handler);
+            this.state.eventListeners.set(addTransactionBtn, { event: 'click', handler });
+        }
+
+        this._bindPpeReceiptExcelToolbar();
+        this._bindPpeStockExcelToolbar();
+    },
+
+    async switchTab(tabName) {
+        // منع التبديل المتزامن
+        if (this.state.isSwitchingTab) {
+            Utils.safeWarn('⚠️ التبديل بين التبويبات قيد التنفيذ بالفعل');
+            return;
+        }
+
+        // التحقق من أن التبويب مختلف
+        if (this.state.activeTab === tabName) {
+            return;
+        }
+
+        const switchToken = (this._switchTabToken = (this._switchTabToken || 0) + 1);
+
+        try {
+            this.state.isSwitchingTab = true;
+            this.state.activeTab = tabName;
+            
+            // تحديث حالة التبويبات (إزالة active من الكل وإضافتها للتبويب المحدد)
+            const tabBtns = document.querySelectorAll('.ppe-tab-btn');
+            tabBtns.forEach(btn => {
+                btn.classList.remove('active');
+                const btnTab = btn.getAttribute('data-tab');
+                if (btnTab === tabName) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // تحديث محتوى التبويب فقط (بدلاً من إعادة تحميل الموديول بالكامل)
+            const tabContentContainer = document.getElementById('ppe-tab-content');
+            if (tabContentContainer) {
+                try {
+                    tabContentContainer.style.opacity = '1';
+                    tabContentContainer.style.pointerEvents = 'auto';
+
+                    // رسم فوري من البيانات المحلية أولاً (بدون انتظار شبكة)
+                    if (tabName === 'receipts') {
+                        tabContentContainer.innerHTML = await this.renderReceiptsTab();
+                        this.ensurePpeFilterStyles();
+                        this.bindReceiptsFilters();
+                        this._bindPpeReceiptExcelToolbar();
+                        this.applyModuleI18n(tabContentContainer);
+                    } else if (tabName === 'stock-control') {
+                        const cached = (this.state.stockItemsCache && this.state.stockItemsCache.length)
+                            ? this.state.stockItemsCache
+                            : (Array.isArray(AppState.appData.ppeStock) && AppState.appData.ppeStock.length
+                                ? AppState.appData.ppeStock
+                                : []);
+                        const syncHint = `<div role="status" class="rounded-lg border border-blue-100 bg-blue-50/90 px-4 py-2 text-sm text-blue-900 flex items-center gap-2 mb-3">
                             <i class="fas fa-sync-alt fa-spin text-blue-600"></i>
-                            <span>${Utils.escapeHTML(this._t("module.ppe.stock.syncingHint","\u062C\u0627\u0631\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0623\u062D\u062F\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u2026"))}</span>
-                        </div>`;s.innerHTML=a.length>0?this.buildStockControlTabHtmlSync(a,r):`<div class="space-y-4" id="ppe-stock-tab-root">${r}<div class="empty-state py-8"><p class="text-gray-600">${Utils.escapeHTML(this._t("module.ppe.loading.stockData","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u2026"))}</p></div></div>`,a.length>0&&(this.ensurePpeFilterStyles(),this.bindStockFilters(),this._bindPpeStockExcelToolbar()),this.applyModuleI18n(s)}else if(t==="analysis"){s.innerHTML=await this.renderPpeAnalysisTab(),this._ppeBindAnalyticsEvents(),this.applyModuleI18n(s);const a=e;requestAnimationFrame(()=>{if(!(this._switchTabToken!==a||this.state.activeTab!=="analysis"))try{this.updatePpeAnalyticsDashboard()}catch{}})}if(this.state.isSwitchingTab=!1,this.updateHeaderButtons(),t==="stock-control"){const a=e;this.renderActiveTabContent(!1).then(r=>{if(this._switchTabToken!==a||this.state.activeTab!=="stock-control")return;const o=document.getElementById("ppe-tab-content");!o||!r||(o.innerHTML=r,this.ensurePpeFilterStyles(),this.bindStockFilters(),this._bindPpeStockExcelToolbar(),this.applyModuleI18n(o))}).catch(r=>{this._switchTabToken===a&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0645\u062E\u0632\u0648\u0646:",r)})}Utils.safeLog(`\u2705 PPE: \u062A\u0645 \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0625\u0644\u0649 \u062A\u0628\u0648\u064A\u0628 ${t}`)}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628:",a),s.innerHTML=`
+                            <span>${Utils.escapeHTML(this._t('module.ppe.stock.syncingHint', 'جاري مزامنة أحدث بيانات المخزون…'))}</span>
+                        </div>`;
+                        tabContentContainer.innerHTML = cached.length > 0
+                            ? this.buildStockControlTabHtmlSync(cached, syncHint)
+                            : `<div class="space-y-4" id="ppe-stock-tab-root">${syncHint}<div class="empty-state py-8"><p class="text-gray-600">${Utils.escapeHTML(this._t('module.ppe.loading.stockData', 'جاري تحميل بيانات المخزون…'))}</p></div></div>`;
+                        if (cached.length > 0) {
+                            this.ensurePpeFilterStyles();
+                            this.bindStockFilters();
+                            this._bindPpeStockExcelToolbar();
+                        }
+                        this.applyModuleI18n(tabContentContainer);
+                    } else if (tabName === 'analysis') {
+                        tabContentContainer.innerHTML = await this.renderPpeAnalysisTab();
+                        this._ppeBindAnalyticsEvents();
+                        this.applyModuleI18n(tabContentContainer);
+                        // تأجيل تحديث الرسوم الثقيلة بعد paint
+                        const tokenAtPaint = switchToken;
+                        requestAnimationFrame(() => {
+                            if (this._switchTabToken !== tokenAtPaint || this.state.activeTab !== 'analysis') return;
+                            try { this.updatePpeAnalyticsDashboard(); } catch (_e) { /* ignore */ }
+                        });
+                    }
+
+                    // فتح القفل بعد الرسم الفوري حتى لا يتجمد التبديل التالي
+                    this.state.isSwitchingTab = false;
+                    this.updateHeaderButtons();
+
+                    // مزامنة خلفية للمخزون فقط (قد تنتظر الشبكة)
+                    if (tabName === 'stock-control') {
+                        const tokenForStock = switchToken;
+                        this.renderActiveTabContent(false).then((newContent) => {
+                            if (this._switchTabToken !== tokenForStock || this.state.activeTab !== 'stock-control') return;
+                            const container = document.getElementById('ppe-tab-content');
+                            if (!container || !newContent) return;
+                            container.innerHTML = newContent;
+                            this.ensurePpeFilterStyles();
+                            this.bindStockFilters();
+                            this._bindPpeStockExcelToolbar();
+                            this.applyModuleI18n(container);
+                        }).catch((error) => {
+                            if (this._switchTabToken !== tokenForStock) return;
+                            Utils.safeError('❌ خطأ في مزامنة تبويب المخزون:', error);
+                        });
+                    }
+
+                    Utils.safeLog(`✅ PPE: تم التبديل إلى تبويب ${tabName}`);
+                } catch (error) {
+                    Utils.safeError('❌ خطأ في تحميل محتوى التبويب:', error);
+                    tabContentContainer.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                            <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.loadError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"))}</p>
-                            <button onclick="PPE.switchTab('${t}')" class="btn-primary">
+                            <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadError', 'حدث خطأ أثناء تحميل البيانات'))}</p>
+                            <button onclick="PPE.switchTab('${tabName}')" class="btn-primary">
                                 <i class="fas fa-redo ml-2"></i>
-                                ${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                                ${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                             </button>
                         </div>
-                    `,this.updateHeaderButtons()}finally{s.style.opacity="1",s.style.pointerEvents="auto"}else this.updateHeaderButtons()}catch(i){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0628\u064A\u0646 \u0627\u0644\u062A\u0628\u0648\u064A\u0628\u0627\u062A:",i)}finally{this.state.isSwitchingTab=!1}},parseEligibilityRules(t){if(!t)return[];try{if(Array.isArray(t))return t;if(typeof t=="string"){const e=JSON.parse(t);return Array.isArray(e)?e:[]}}catch{return[]}return[]},getEligibilityRule(t){const e=typeof AppState<"u"&&AppState.companySettings?AppState.companySettings:{},i=this.parseEligibilityRules(e.ppeEligibilityRules),s=r=>(r||"").toString().trim().toLowerCase(),a=s(t);if(a){const r=i.find(o=>o&&s(o.equipmentType||o.itemName)===a);if(r){let o=parseInt(r.months,10),p=parseInt(r.days,10);return(isNaN(o)||o<0)&&(o=0),(isNaN(p)||p<0)&&(p=0),o=Math.min(120,o),p=Math.min(3650,p),{months:o,days:p,hasRule:o+p>0,equipmentType:r.equipmentType||r.itemName}}}return{months:0,days:0,hasRule:!1,equipmentType:t||null}},findLastReceiptForEmployeeItem(t,e,i={}){const s=(t||"").toString().trim().toLowerCase(),a=(e||"").toString().trim().toLowerCase();if(!s||!a)return null;const r=i.excludeId||null,o=Array.isArray(i.pendingSameSession)?i.pendingSameSession:[],l=(typeof AppState<"u"&&Array.isArray(AppState.appData?.ppe)?AppState.appData.ppe:[]).concat(o);let n=null,d=null;for(const f of l){if(!f||r&&f.id===r)continue;const b=(f.employeeCode||f.employeeNumber||"").toString().trim().toLowerCase(),c=(f.equipmentType||"").toString().trim().toLowerCase();if(b!==s||c!==a)continue;const m=f.receiptDate?new Date(f.receiptDate):null;!m||isNaN(m.getTime())||(!d||m>d)&&(n=f,d=m)}return n},diffMonthsAndDays(t,e){const i=new Date(t),s=new Date(e);if(isNaN(i.getTime())||isNaN(s.getTime())||s<i)return{months:0,days:0,totalDays:0,isNegative:s<i};let a=(s.getFullYear()-i.getFullYear())*12+(s.getMonth()-i.getMonth()),r=s.getDate()-i.getDate();if(r<0){a-=1;const p=new Date(s.getFullYear(),s.getMonth(),0);r+=p.getDate()}a<0&&(a=0);const o=Math.floor((s-i)/(1e3*60*60*24));return{months:a,days:r,totalDays:o,isNegative:!1}},addMonthsAndDays(t,e,i){const s=new Date(t);if(isNaN(s.getTime()))return null;const a=new Date(s.getFullYear(),s.getMonth()+(e||0),s.getDate());return a.setDate(a.getDate()+(i||0)),a.setHours(s.getHours(),s.getMinutes(),s.getSeconds(),s.getMilliseconds()),a},computeEligibility(t,e,i,s={}){const a=this.getEligibilityRule(e),r={hasInputs:!1,hasPrevious:!1,hasRule:a.hasRule,ruleMonths:a.months,ruleDays:a.days,lastReceiptDate:null,currentDate:null,elapsed:null,dueDate:null,isEligible:!0,remaining:null};if(!t||!e)return r;r.hasInputs=!0;const o=this.findLastReceiptForEmployeeItem(t,e,s);if(!o||!o.receiptDate)return r;const p=new Date(o.receiptDate);if(isNaN(p.getTime()))return r;r.hasPrevious=!0,r.lastReceiptDate=p;const l=i?new Date(i):new Date;if(isNaN(l.getTime())?r.currentDate=new Date:r.currentDate=l,r.elapsed=this.diffMonthsAndDays(p,r.currentDate),a.hasRule){const n=this.addMonthsAndDays(p,a.months,a.days);r.dueDate=n,n&&r.currentDate<n&&(r.isEligible=!1,r.remaining=this.diffMonthsAndDays(r.currentDate,n))}return r},formatMonthsDays(t,e){const i=parseInt(t,10)||0,s=parseInt(e,10)||0,a=[];return i>0&&a.push(`${i} \u0634\u0647\u0631`),(s>0||i===0&&s===0)&&a.push(`${s} \u064A\u0648\u0645`),a.join(" \u0648 ")},renderEligibilityInfo(t,e){if(!t)return;const i=p=>p?typeof Utils<"u"&&Utils.formatDate?Utils.formatDate(p):new Date(p).toLocaleDateString("ar"):"-",s=(p,l,n,d,f)=>{const b={gray:{outer:"ppe-elig-outer ppe-elig--gray",headerBar:"ppe-elig-head",headerIconBg:"ppe-elig-head-icon",tileSurface:"ppe-elig-tile",iconBox:"ppe-elig-tile-icon",labelClass:"ppe-elig-label",valueClass:"text-lg font-extrabold text-gray-900 tracking-tight tabular-nums",footerWrap:"ppe-elig-foot"},blue:{outer:"ppe-elig-outer ppe-elig--blue",headerBar:"ppe-elig-head",headerIconBg:"ppe-elig-head-icon",tileSurface:"ppe-elig-tile",iconBox:"ppe-elig-tile-icon",labelClass:"ppe-elig-label",valueClass:"text-lg font-extrabold text-gray-900 tracking-tight tabular-nums",footerWrap:"ppe-elig-foot"},green:{outer:"ppe-elig-outer ppe-elig--green",headerBar:"ppe-elig-head",headerIconBg:"ppe-elig-head-icon",tileSurface:"ppe-elig-tile",iconBox:"ppe-elig-tile-icon",labelClass:"ppe-elig-label",valueClass:"text-lg font-extrabold text-gray-900 tracking-tight tabular-nums",footerWrap:"ppe-elig-foot"},red:{outer:"ppe-elig-outer ppe-elig--red",headerBar:"ppe-elig-head",headerIconBg:"ppe-elig-head-icon",tileSurface:"ppe-elig-tile",iconBox:"ppe-elig-tile-icon",labelClass:"ppe-elig-label",valueClass:"text-lg font-extrabold text-gray-900 tracking-tight tabular-nums",footerWrap:"ppe-elig-foot"}},c=b[p]||b.gray,m=d.length;let x="grid gap-3 md:gap-4 w-full ";m<=1?x+="grid-cols-1":m===2?x+="grid-cols-1 sm:grid-cols-2":m===3?x+="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3":x+="grid-cols-1 sm:grid-cols-2 xl:grid-cols-4";const k=m?`<div class="px-3 py-4 sm:px-6 sm:py-5 bg-gray-50">
-                    <div class="${x}">
-                    ${d.map(u=>{const v=typeof u.value=="string"&&u.value.includes("\u0628\u062F\u0648\u0646 \u0642\u0627\u0639\u062F\u0629")?"text-base sm:text-[1.0625rem] font-semibold text-gray-600 tracking-tight leading-snug":c.valueClass;return`
-                        <div class="${c.tileSurface}">
+                    `;
+                    this.updateHeaderButtons();
+                } finally {
+                    tabContentContainer.style.opacity = '1';
+                    tabContentContainer.style.pointerEvents = 'auto';
+                }
+            } else {
+                this.updateHeaderButtons();
+            }
+            
+        } catch (error) {
+            Utils.safeError('❌ خطأ في التبديل بين التبويبات:', error);
+        } finally {
+            this.state.isSwitchingTab = false;
+        }
+    },
+
+    // ====== استحقاق استلام مهمات الوقاية ======
+    /**
+     * تحليل قائمة قواعد الاستحقاق المخزنة في إعدادات الشركة.
+     * تدعم الصيغة الجديدة (JSON list per equipment type) وتتجاهل الصيغ غير الصالحة.
+     */
+    parseEligibilityRules(raw) {
+        if (!raw) return [];
+        try {
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+        } catch (e) {
+            return [];
+        }
+        return [];
+    },
+
+    /**
+     * قراءة قاعدة الاستحقاق الخاصة بنوع معدة محدد من قائمة القواعد لكل صنف.
+     * إن لم يُمرَّر equipmentType ولم تُحدد قاعدة لأي صنف، تُرجَع قاعدة فارغة (لا تحقق).
+     */
+    getEligibilityRule(equipmentType) {
+        const settings = (typeof AppState !== 'undefined' && AppState.companySettings) ? AppState.companySettings : {};
+        const rules = this.parseEligibilityRules(settings.ppeEligibilityRules);
+        const norm = (v) => (v || '').toString().trim().toLowerCase();
+        const target = norm(equipmentType);
+        if (target) {
+            const match = rules.find(r => r && norm(r.equipmentType || r.itemName) === target);
+            if (match) {
+                let months = parseInt(match.months, 10);
+                let days = parseInt(match.days, 10);
+                if (isNaN(months) || months < 0) months = 0;
+                if (isNaN(days) || days < 0) days = 0;
+                months = Math.min(120, months);
+                days = Math.min(3650, days);
+                return { months, days, hasRule: (months + days) > 0, equipmentType: match.equipmentType || match.itemName };
+            }
+        }
+        return { months: 0, days: 0, hasRule: false, equipmentType: equipmentType || null };
+    },
+
+    /**
+     * البحث عن آخر استلام لنفس الموظف ونفس نوع المعدة.
+     */
+    findLastReceiptForEmployeeItem(employeeCode, equipmentType, options = {}) {
+        const code = (employeeCode || '').toString().trim().toLowerCase();
+        const type = (equipmentType || '').toString().trim().toLowerCase();
+        if (!code || !type) return null;
+        const excludeId = options.excludeId || null;
+        const pending = Array.isArray(options.pendingSameSession) ? options.pendingSameSession : [];
+        const list = (typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.ppe)) ? AppState.appData.ppe : [];
+        const combined = list.concat(pending);
+        let candidate = null;
+        let candidateDate = null;
+        for (const rec of combined) {
+            if (!rec) continue;
+            if (excludeId && rec.id === excludeId) continue;
+            const recCode = (rec.employeeCode || rec.employeeNumber || '').toString().trim().toLowerCase();
+            const recType = (rec.equipmentType || '').toString().trim().toLowerCase();
+            if (recCode !== code || recType !== type) continue;
+            const rd = rec.receiptDate ? new Date(rec.receiptDate) : null;
+            if (!rd || isNaN(rd.getTime())) continue;
+            if (!candidateDate || rd > candidateDate) {
+                candidate = rec;
+                candidateDate = rd;
+            }
+        }
+        return candidate;
+    },
+
+    /**
+     * حساب الفرق بالأشهر والأيام بين تاريخين.
+     * يستخدم خوارزمية تقويمية: نحسب الأشهر بطرح الأشهر مع تعديل اليوم،
+     * ثم الأيام المتبقية تُحسب بناءً على التقويم.
+     */
+    diffMonthsAndDays(startDate, endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+            return { months: 0, days: 0, totalDays: 0, isNegative: end < start };
+        }
+        let months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+        let days = end.getDate() - start.getDate();
+        if (days < 0) {
+            months -= 1;
+            const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+            days += prevMonth.getDate();
+        }
+        if (months < 0) months = 0;
+        const totalDays = Math.floor((end - start) / (1000 * 60 * 60 * 24));
+        return { months, days, totalDays, isNegative: false };
+    },
+
+    /**
+     * إضافة (أشهر + أيام) إلى تاريخ.
+     */
+    addMonthsAndDays(date, months, days) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return null;
+        const target = new Date(d.getFullYear(), d.getMonth() + (months || 0), d.getDate());
+        target.setDate(target.getDate() + (days || 0));
+        target.setHours(d.getHours(), d.getMinutes(), d.getSeconds(), d.getMilliseconds());
+        return target;
+    },
+
+    /**
+     * حساب نتيجة التحقق من الاستحقاق لاستلام جديد.
+     * ترجع كائناً يصف: هل يوجد استلام سابق، تاريخه، المدة المنقضية،
+     * المدة المطلوبة، تاريخ الاستحقاق، الحالة (مستحق/غير مستحق)، والمتبقي.
+     */
+    computeEligibility(employeeCode, equipmentType, currentDateValue, options = {}) {
+        const rule = this.getEligibilityRule(equipmentType);
+        const result = {
+            hasInputs: false,
+            hasPrevious: false,
+            hasRule: rule.hasRule,
+            ruleMonths: rule.months,
+            ruleDays: rule.days,
+            lastReceiptDate: null,
+            currentDate: null,
+            elapsed: null,
+            dueDate: null,
+            isEligible: true,
+            remaining: null
+        };
+        if (!employeeCode || !equipmentType) {
+            return result;
+        }
+        result.hasInputs = true;
+        const last = this.findLastReceiptForEmployeeItem(employeeCode, equipmentType, options);
+        if (!last || !last.receiptDate) {
+            return result;
+        }
+        const lastDate = new Date(last.receiptDate);
+        if (isNaN(lastDate.getTime())) return result;
+        result.hasPrevious = true;
+        result.lastReceiptDate = lastDate;
+        const current = currentDateValue ? new Date(currentDateValue) : new Date();
+        if (isNaN(current.getTime())) {
+            result.currentDate = new Date();
+        } else {
+            result.currentDate = current;
+        }
+        result.elapsed = this.diffMonthsAndDays(lastDate, result.currentDate);
+        if (rule.hasRule) {
+            const due = this.addMonthsAndDays(lastDate, rule.months, rule.days);
+            result.dueDate = due;
+            if (due && result.currentDate < due) {
+                result.isEligible = false;
+                result.remaining = this.diffMonthsAndDays(result.currentDate, due);
+            }
+        }
+        return result;
+    },
+
+    /**
+     * تحويل (شهور/أيام) إلى نص عربي مفهوم.
+     */
+    formatMonthsDays(months, days) {
+        const m = parseInt(months, 10) || 0;
+        const d = parseInt(days, 10) || 0;
+        const parts = [];
+        if (m > 0) parts.push(`${m} شهر`);
+        if (d > 0 || (m === 0 && d === 0)) parts.push(`${d} يوم`);
+        return parts.join(' و ');
+    },
+
+    /**
+     * عرض حالة الاستحقاق داخل صف الصنف.
+     */
+    renderEligibilityInfo(infoEl, result) {
+        if (!infoEl) return;
+        const fmt = (d) => d ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(d) : new Date(d).toLocaleDateString('ar')) : '-';
+
+        const card = (variant, headerIconSolid, title, statValueRows, footerHtml) => {
+const themes = {
+                gray: {
+                    outer: 'ppe-elig-outer ppe-elig--gray',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
+                },
+                blue: {
+                    outer: 'ppe-elig-outer ppe-elig--blue',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
+                },
+                green: {
+                    outer: 'ppe-elig-outer ppe-elig--green',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
+                },
+                red: {
+                    outer: 'ppe-elig-outer ppe-elig--red',
+                    headerBar: 'ppe-elig-head',
+                    headerIconBg: 'ppe-elig-head-icon',
+                    tileSurface: 'ppe-elig-tile',
+                    iconBox: 'ppe-elig-tile-icon',
+                    labelClass: 'ppe-elig-label',
+                    valueClass: 'text-lg font-extrabold text-gray-900 tracking-tight tabular-nums',
+                    footerWrap: 'ppe-elig-foot'
+                }
+            };
+            const t = themes[variant] || themes.gray;
+
+            const statCount = statValueRows.length;
+            let metricsGridCls = 'grid gap-3 md:gap-4 w-full ';
+            if (statCount <= 1) metricsGridCls += 'grid-cols-1';
+            else if (statCount === 2) metricsGridCls += 'grid-cols-1 sm:grid-cols-2';
+            else if (statCount === 3) metricsGridCls += 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+            else metricsGridCls += 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4';
+
+            const statsHtml = statCount
+                ? `<div class="px-3 py-4 sm:px-6 sm:py-5 bg-gray-50">
+                    <div class="${metricsGridCls}">
+                    ${statValueRows.map((s) => {
+                        const mutedValue = typeof s.value === 'string' && s.value.includes('بدون قاعدة');
+                        const valueCls = mutedValue
+                            ? 'text-base sm:text-[1.0625rem] font-semibold text-gray-600 tracking-tight leading-snug'
+                            : t.valueClass;
+                        return `
+                        <div class="${t.tileSurface}">
                             <div class="flex items-center gap-3 sm:gap-4 text-start h-full">
-                                <span class="${c.iconBox} shrink-0">
-                                    <i class="${u.icon}"></i>
+                                <span class="${t.iconBox} shrink-0">
+                                    <i class="${s.icon}"></i>
                                 </span>
                                 <div class="flex-1 min-w-0 flex flex-col gap-1.5 justify-center">
-                                    <div class="${c.labelClass} text-xs sm:text-[11px] leading-snug">${u.label}</div>
-                                    <p class="${v} leading-snug break-words hyphens-none">${u.value}</p>
+                                    <div class="${t.labelClass} text-xs sm:text-[11px] leading-snug">${s.label}</div>
+                                    <p class="${valueCls} leading-snug break-words hyphens-none">${s.value}</p>
                                 </div>
                             </div>
-                        </div>`}).join("")}
+                        </div>`;
+                    }).join('')}
                     </div>
-                </div>`:"";return`
-                <div class="mt-1 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${c.outer}">
-                    <div class="flex items-center gap-4 bg-gradient-to-l ${c.headerBar} px-5 py-4 sm:px-6 text-white shadow-inner">
-                        <span class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ${c.headerIconBg} text-lg sm:text-xl">
-                            <i class="${l}"></i>
+                </div>`
+                : '';
+
+            return `
+                <div class="mt-1 w-full min-w-0 overflow-hidden rounded-2xl bg-white ${t.outer}">
+                    <div class="flex items-center gap-4 bg-gradient-to-l ${t.headerBar} px-5 py-4 sm:px-6 text-white shadow-inner">
+                        <span class="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl ${t.headerIconBg} text-lg sm:text-xl">
+                            <i class="${headerIconSolid}"></i>
                         </span>
                         <div class="min-w-0 flex-1">
-                            <p class="text-[11px] font-semibold tracking-wide text-white/85 mb-1">\u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645</p>
-                            <h4 class="text-base sm:text-lg font-extrabold leading-snug text-white break-words">${n}</h4>
+                            <p class="text-[11px] font-semibold tracking-wide text-white/85 mb-1">استحقاق الاستلام</p>
+                            <h4 class="text-base sm:text-lg font-extrabold leading-snug text-white break-words">${title}</h4>
                         </div>
                     </div>
-                    ${k}
-                    ${f?`<div class="${c.footerWrap} px-5 py-4 sm:px-6 text-sm sm:text-[0.9375rem] font-medium text-gray-700 leading-relaxed flex flex-wrap items-center gap-3 w-full">${f}</div>`:""}
+                    ${statsHtml}
+                    ${footerHtml ? `<div class="${t.footerWrap} px-5 py-4 sm:px-6 text-sm sm:text-[0.9375rem] font-medium text-gray-700 leading-relaxed flex flex-wrap items-center gap-3 w-full">${footerHtml}</div>` : ''}
                 </div>
-            `};if(!e||!e.hasInputs){t.innerHTML=s("gray","fas fa-info-circle","\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629",[],'<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs"><i class="fas fa-lightbulb"></i></span><span>\u0628\u0639\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0643\u0648\u062F \u0648\u0627\u0644\u0635\u0646\u0641 \u062A\u0638\u0647\u0631 \u062A\u0641\u0627\u0635\u064A\u0644 \u0622\u062E\u0631 \u0627\u0633\u062A\u0644\u0627\u0645 \u0648\u0627\u0644\u0645\u062F\u0629 \u0648\u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642.</span>'),t.classList.remove("hidden"),t.setAttribute("data-eligible","pending");return}if(!e.hasPrevious){const p=[];e.hasRule&&p.push({icon:"fas fa-shield-alt",label:"\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649 \u0644\u0644\u0635\u0646\u0641",value:this.formatMonthsDays(e.ruleMonths,e.ruleDays)}),t.innerHTML=s("blue","fas fa-box-open","\u0623\u0648\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0646\u0641",p,'<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs"><i class="fas fa-check"></i></span><span>\u0644\u0627 \u064A\u0648\u062C\u062F \u0627\u0633\u062A\u0644\u0627\u0645 \u0633\u0627\u0628\u0642 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0646\u0641 \u0644\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0638\u0641\u061B \u064A\u0645\u0643\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645.</span>'),t.setAttribute("data-eligible","1"),t.classList.remove("hidden");return}const a=this.formatMonthsDays(e.elapsed?.months||0,e.elapsed?.days||0),r=e.hasRule?this.formatMonthsDays(e.ruleMonths,e.ruleDays):"\u0628\u062F\u0648\u0646 \u0642\u0627\u0639\u062F\u0629 \u0645\u062D\u062F\u062F\u0629",o=[{icon:"fas fa-history",label:"\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u0627\u0633\u062A\u0644\u0627\u0645",value:i(e.lastReceiptDate)},{icon:"fas fa-hourglass-half",label:"\u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u0645\u0646\u0642\u0636\u064A\u0629",value:a},{icon:"fas fa-shield-alt",label:"\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649 \u0644\u0644\u0635\u0646\u0641",value:r}];if(e.dueDate&&o.push({icon:"fas fa-calendar-check",label:"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642",value:i(e.dueDate)}),e.isEligible){const p=e.hasRule?'<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs shadow-sm"><i class="fas fa-check-double"></i></span><span class="font-semibold text-green-700">\u064A\u0645\u0643\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u062C\u062F\u064A\u062F\u061B \u062A\u0645 \u0627\u0633\u062A\u064A\u0641\u0627\u0621 \u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u062F\u0646\u064A\u0627 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0646\u0641.</span>':'<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs shadow-sm"><i class="fas fa-unlock-alt"></i></span><span class="font-semibold text-gray-800">\u064A\u0645\u0643\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u062C\u062F\u064A\u062F\u061B \u0644\u0645 \u062A\u064F\u0636\u0641 \u0645\u062F\u0629 \u062F\u0646\u064A\u0627 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0646\u0641 \u0641\u064A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u064A\u064F\u0633\u0645\u062D \u062F\u0648\u0646 \u0642\u064A\u062F \u0632\u0645\u0646\u064A \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0648\u0639.</span>';t.innerHTML=s("green","fas fa-check-circle","\u0627\u0644\u0645\u0648\u0638\u0641 \u0645\u0633\u062A\u062D\u0642 \u0644\u0644\u0627\u0633\u062A\u0644\u0627\u0645",o,p),t.setAttribute("data-eligible","1")}else{const p=this.formatMonthsDays(e.remaining?.months||0,e.remaining?.days||0);t.innerHTML=s("red","fas fa-ban","\u0627\u0644\u0645\u0648\u0638\u0641 \u063A\u064A\u0631 \u0645\u0633\u062A\u062D\u0642 \u062D\u0627\u0644\u064A\u0627\u064B",o,`<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 text-xs"><i class="fas fa-clock"></i></span><span class="font-semibold text-red-600">\u0627\u0644\u0645\u062F\u0629 \u0627\u0644\u0645\u062A\u0628\u0642\u064A\u0629 \u062D\u062A\u0649 \u064A\u0635\u0628\u062D \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0645\u0633\u0645\u0648\u062D\u0627\u064B: <strong class="font-extrabold">${p}</strong>.</span>`),t.setAttribute("data-eligible","0")}t.classList.remove("hidden")},async showPPEForm(t=null){const e=!!t,i=document.createElement("div");i.className="modal-overlay";const s=AppState.appData.employees||[],a=(t?.employeeCode||t?.employeeNumber||"").toString().trim(),r=a.length?a:"",o=r?s.find(c=>[c.employeeNumber,c.employeeCode,c.sapId,c.id,c.nationalId,c.cardId].map(x=>(x||"").toString().trim().toLowerCase()).includes(r.toLowerCase())):null,p={name:o?.name||t?.employeeName||"",department:o?.department||t?.employeeDepartment||"",position:o?.position||t?.employeePosition||"",branch:o?.branch||t?.employeeBranch||"",location:o?.location||t?.employeeLocation||""},l=c=>c?Utils.escapeHTML(c):"\u2014",n=(c,m)=>this._t(c,m),d=c=>Utils.escapeHTML(c),f=n("module.ppe.status.received","\u0645\u0633\u062A\u0644\u0645"),b=n("module.ppe.status.pending","\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645");i.innerHTML=`
+            `;
+        };
+
+        if (!result || !result.hasInputs) {
+            infoEl.innerHTML = card(
+                'gray',
+                'fas fa-info-circle',
+                'اختر الموظف ونوع المعدة',
+                [],
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-600 text-xs"><i class="fas fa-lightbulb"></i></span><span>بعد اختيار الكود والصنف تظهر تفاصيل آخر استلام والمدة والاستحقاق.</span>'
+            );
+            infoEl.classList.remove('hidden');
+            infoEl.setAttribute('data-eligible', 'pending');
+            return;
+        }
+
+        if (!result.hasPrevious) {
+            const stats = [];
+            if (result.hasRule) {
+                stats.push({ icon: 'fas fa-shield-alt', label: 'الحد الأدنى للصنف', value: this.formatMonthsDays(result.ruleMonths, result.ruleDays) });
+            }
+            infoEl.innerHTML = card(
+                'blue',
+                'fas fa-box-open',
+                'أول استلام لهذا الصنف',
+                stats,
+                '<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs"><i class="fas fa-check"></i></span><span>لا يوجد استلام سابق لهذا الصنف لهذا الموظف؛ يمكن تسجيل الاستلام.</span>'
+            );
+            infoEl.setAttribute('data-eligible', '1');
+            infoEl.classList.remove('hidden');
+            return;
+        }
+
+        const elapsedText = this.formatMonthsDays(result.elapsed?.months || 0, result.elapsed?.days || 0);
+        const requiredText = result.hasRule ? this.formatMonthsDays(result.ruleMonths, result.ruleDays) : 'بدون قاعدة محددة';
+        const stats = [
+            { icon: 'fas fa-history', label: 'تاريخ آخر استلام', value: fmt(result.lastReceiptDate) },
+            { icon: 'fas fa-hourglass-half', label: 'المدة المنقضية', value: elapsedText },
+            { icon: 'fas fa-shield-alt', label: 'الحد الأدنى للصنف', value: requiredText }
+        ];
+        if (result.dueDate) {
+            stats.push({ icon: 'fas fa-calendar-check', label: 'تاريخ الاستحقاق', value: fmt(result.dueDate) });
+        }
+
+        if (result.isEligible) {
+            const eligibleFooter = result.hasRule
+                ? '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs shadow-sm"><i class="fas fa-check-double"></i></span><span class="font-semibold text-green-700">يمكن تسجيل استلام جديد؛ تم استيفاء المدة الدنيا المعتمدة لهذا الصنف.</span>'
+                : '<span class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-700 text-xs shadow-sm"><i class="fas fa-unlock-alt"></i></span><span class="font-semibold text-gray-800">يمكن تسجيل استلام جديد؛ لم تُضف مدة دنيا لهذا الصنف في إعدادات الشركة فيُسمح دون قيد زمني لهذا النوع.</span>';
+            infoEl.innerHTML = card(
+                'green',
+                'fas fa-check-circle',
+                'الموظف مستحق للاستلام',
+                stats,
+                eligibleFooter
+            );
+            infoEl.setAttribute('data-eligible', '1');
+        } else {
+            const remainingText = this.formatMonthsDays(result.remaining?.months || 0, result.remaining?.days || 0);
+            infoEl.innerHTML = card(
+                'red',
+                'fas fa-ban',
+                'الموظف غير مستحق حالياً',
+                stats,
+                `<span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 text-xs"><i class="fas fa-clock"></i></span><span class="font-semibold text-red-600">المدة المتبقية حتى يصبح الاستلام مسموحاً: <strong class="font-extrabold">${remainingText}</strong>.</span>`
+            );
+            infoEl.setAttribute('data-eligible', '0');
+        }
+        infoEl.classList.remove('hidden');
+    },
+
+    async showPPEForm(ppeData = null) {
+        const isEdit = !!ppeData;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const employeesList = AppState.appData.employees || [];
+        const initialCodeRaw = (ppeData?.employeeCode || ppeData?.employeeNumber || '').toString().trim();
+        const initialCode = initialCodeRaw.length ? initialCodeRaw : '';
+        const initialEmployee = initialCode
+            ? employeesList.find(emp => {
+                const codes = [
+                    emp.employeeNumber,
+                    emp.employeeCode,
+                    emp.sapId,
+                    emp.id,
+                    emp.nationalId,
+                    emp.cardId
+                ].map(value => (value || '').toString().trim().toLowerCase());
+                return codes.includes(initialCode.toLowerCase());
+            })
+            : null;
+        const employeeInfo = {
+            name: initialEmployee?.name || ppeData?.employeeName || '',
+            department: initialEmployee?.department || ppeData?.employeeDepartment || '',
+            position: initialEmployee?.position || ppeData?.employeePosition || '',
+            branch: initialEmployee?.branch || ppeData?.employeeBranch || '',
+            location: initialEmployee?.location || ppeData?.employeeLocation || ''
+        };
+        const formatInfo = (value) => value ? Utils.escapeHTML(value) : '—';
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const stReceived = t('module.ppe.status.received', 'مستلم');
+        const stPending = t('module.ppe.status.pending', 'قيد التسليم');
+        
+        
+        
+        
+        modal.innerHTML = `
             <div class="modal-content" style="width: 100%; max-width: 800px; max-height: 90vh; display: flex; flex-direction: column; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); margin: auto;">
                 
                 <!-- Header -->
                 <div style="background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
                     <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 10px;">
                         <span style="background: #eff6ff; color: #2563eb; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
-                            <i class="fas ${e?"fa-edit":"fa-clipboard-list"}"></i>
+                            <i class="fas ${isEdit ? 'fa-edit' : 'fa-clipboard-list'}"></i>
                         </span>
-                        ${d(e?n("module.ppe.title.editReceipt","\u062A\u0639\u062F\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645"):n("module.ppe.title.newReceipt","\u062A\u0633\u062C\u064A\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u062C\u062F\u064A\u062F"))}
+                        ${isEdit ? ut(t('module.ppe.title.editReceipt', 'تعديل استلام')) : ut(t('module.ppe.title.newReceipt', 'تسجيل استلام جديد'))}
                     </h2>
                     <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.25rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'; this.style.color='#475569'" onmouseout="this.style.background='transparent'; this.style.color='#94a3b8'">
                         <i class="fas fa-times"></i>
@@ -773,59 +2227,59 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                         <!-- Employee Section -->
                         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
                             <div style="background: #f0f9ff; border-bottom: 1px solid #e0f2fe; padding: 10px 16px; color: #0369a1; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user-circle"></i> \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641
+                                <i class="fas fa-user-circle"></i> بيانات الموظف
                             </div>
                             <div style="padding: 16px;">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${d(n("module.ppe.label.employeeCode","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A *"))}</label>
+                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${ut(t('module.ppe.label.employeeCode', 'الكود الوظيفي *'))}</label>
                                         <div style="position: relative;">
                                             <input type="text" id="ppe-employee-code" required class="form-input" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px 8px 36px; font-size: 0.85rem; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#cbd5e1'"
-                                                value="${Utils.escapeHTML(t?.employeeCode||t?.employeeNumber||"")}"
-                                                placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F..." autocomplete="off">
+                                                value="${Utils.escapeHTML(ppeData?.employeeCode || ppeData?.employeeNumber || '')}"
+                                                placeholder="أدخل الكود..." autocomplete="off">
                                             <button type="button" id="ppe-search-code-btn" style="position: absolute; top: 0; left: 0; bottom: 0; width: 36px; background: none; border: none; color: #94a3b8; cursor: pointer;">
                                                 <i class="fas fa-search"></i>
                                             </button>
                                         </div>
                                     </div>
                                     <div>
-                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${d(n("module.ppe.label.employeeName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641"))}</label>
+                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${ut(t('module.ppe.label.employeeName', 'اسم الموظف'))}</label>
                                         <div style="position: relative;">
                                             <input type="text" id="ppe-employee-name" class="form-input" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; outline: none; transition: 0.2s;" onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#cbd5e1'"
-                                                value="${Utils.escapeHTML(t?.employeeName||"")}"
-                                                placeholder="\u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0627\u0633\u0645..." autocomplete="off">
+                                                value="${Utils.escapeHTML(ppeData?.employeeName || '')}"
+                                                placeholder="البحث بالاسم..." autocomplete="off">
                                             <div id="ppe-employee-dropdown" style="position: absolute; z-index: 50; display: none; width: 100%; margin-top: 4px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); max-height: 240px; overflow-y: auto;"></div>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Hidden Inputs -->
-                                <input type="hidden" id="ppe-employee-department" value="${Utils.escapeHTML(p.department)}">
-                                <input type="hidden" id="ppe-employee-position" value="${Utils.escapeHTML(p.position)}">
-                                <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(p.branch)}">
-                                <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(p.location)}">
+                                <input type="hidden" id="ppe-employee-department" value="${Utils.escapeHTML(employeeInfo.department)}">
+                                <input type="hidden" id="ppe-employee-position" value="${Utils.escapeHTML(employeeInfo.position)}">
+                                <input type="hidden" id="ppe-employee-branch" value="${Utils.escapeHTML(employeeInfo.branch)}">
+                                <input type="hidden" id="ppe-employee-location" value="${Utils.escapeHTML(employeeInfo.location)}">
 
                                 <!-- Summary Info Box -->
                                 <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-top: 16px; display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <span style="background: #dbeafe; color: #2563eb; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;"><i class="fas fa-id-badge"></i></span>
                                         <div>
-                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">\u0627\u0644\u0627\u0633\u0645</div>
-                                            <div id="ppe-employee-info-name" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${l(p.name)}</div>
+                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">الاسم</div>
+                                            <div id="ppe-employee-info-name" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${formatInfo(employeeInfo.name)}</div>
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <span style="background: #dbeafe; color: #1e40af; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;"><i class="fas fa-building"></i></span>
                                         <div>
-                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">\u0627\u0644\u0642\u0633\u0645</div>
-                                            <div id="ppe-employee-info-department" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${l(p.department)}</div>
+                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">القسم</div>
+                                            <div id="ppe-employee-info-department" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${formatInfo(employeeInfo.department)}</div>
                                         </div>
                                     </div>
                                     <div style="display: flex; align-items: center; gap: 10px;">
                                         <span style="background: #fef3c7; color: #d97706; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;"><i class="fas fa-briefcase"></i></span>
                                         <div>
-                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">\u0627\u0644\u0645\u0646\u0635\u0628</div>
-                                            <div id="ppe-employee-info-position" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${l(p.position)}</div>
+                                            <div style="font-size: 0.65rem; color: #64748b; font-weight: 600; margin-bottom: 2px;">المنصب</div>
+                                            <div id="ppe-employee-info-position" style="font-size: 0.85rem; font-weight: 700; color: #0f172a;">${formatInfo(employeeInfo.position)}</div>
                                         </div>
                                     </div>
                                 </div>
@@ -836,10 +2290,10 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
                             <div style="background: #f0fdf4; border-bottom: 1px solid #dcfce7; padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;">
                                 <div style="color: #166534; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-boxes"></i> \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629 *
+                                    <i class="fas fa-boxes"></i> الأصناف المستلمة *
                                 </div>
                                 <button type="button" id="ppe-add-item-btn" style="background: #ffffff; border: 1px solid #bbf7d0; color: #166534; font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#ffffff'">
-                                    <i class="fas fa-plus"></i> \u0635\u0646\u0641 \u0622\u062E\u0631
+                                    <i class="fas fa-plus"></i> صنف آخر
                                 </button>
                             </div>
                             <div style="padding: 16px;">
@@ -847,23 +2301,23 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                                     <div class="ppe-item-row" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; position: relative;">
                                         <div class="grid grid-cols-1 md:grid-cols-12 gap-3" style="align-items: flex-end;">
                                             <div class="md:col-span-5">
-                                                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629 *</label>
+                                                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">نوع المعدة *</label>
                                                 <select id="ppe-equipment-type" required class="form-input ppe-equipment-type" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; outline: none;">
-                                                    <option value="">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</option>
+                                                    <option value="">جاري التحميل...</option>
                                                 </select>
                                             </div>
                                             <div class="md:col-span-3">
-                                                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">\u0627\u0644\u0645\u0642\u0627\u0633</label>
+                                                <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">المقاس</label>
                                                 <select class="form-input ppe-shoe-size" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; outline: none;">
-                                                    <option value="">\u0627\u062E\u062A\u0631...</option>
-                                                    ${[38,39,40,41,42,43,44,45,46,47,48].map(c=>`<option value="${c}" ${t?.shoeSize==c?"selected":""}>${c}</option>`).join("")}
+                                                    <option value="">اختر...</option>
+                                                    ${[38,39,40,41,42,43,44,45,46,47,48].map(s => `<option value="${s}" ${(ppeData?.shoeSize==s)?'selected':''}>${s}</option>`).join('')}
                                                 </select>
                                             </div>
                                             <div class="md:col-span-4" style="display: flex; gap: 8px; align-items: flex-end;">
                                                 <div style="flex: 1;">
-                                                    <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">\u0627\u0644\u0643\u0645\u064A\u0629 *</label>
+                                                    <label style="display: block; font-size: 0.7rem; font-weight: 700; color: #475569; margin-bottom: 4px;">الكمية *</label>
                                                     <input type="number" id="ppe-quantity" required class="form-input ppe-quantity" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 0.8rem; outline: none;" min="1"
-                                                        value="${t?.quantity||1}">
+                                                        value="${ppeData?.quantity || 1}">
                                                 </div>
                                                 <button type="button" class="ppe-remove-item hidden" style="background: #fff1f2; border: 1px solid #fecdd3; color: #e11d48; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#fecdd3'" onmouseout="this.style.background='#fff1f2'">
                                                     <i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i>
@@ -879,27 +2333,27 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                         <!-- Details Section -->
                         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden;">
                             <div style="background: #fffbeb; border-bottom: 1px solid #fef3c7; padding: 10px 16px; color: #b45309; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-file-invoice"></i> \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645
+                                <i class="fas fa-file-invoice"></i> تفاصيل الاستلام
                             </div>
                             <div style="padding: 16px;">
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" style="margin-bottom: 16px;">
                                     <div>
-                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${d(n("module.ppe.label.receiptDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 *"))}</label>
+                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${ut(t('module.ppe.label.receiptDate', 'تاريخ الاستلام *'))}</label>
                                         <input type="date" id="ppe-receipt-date" required class="form-input" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; outline: none;"
-                                            value="${t?.receiptDate?new Date(t.receiptDate).toISOString().slice(0,10):""}">
+                                            value="${ppeData?.receiptDate ? new Date(ppeData.receiptDate).toISOString().slice(0, 10) : ''}">
                                     </div>
                                     <div>
-                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${d(n("module.ppe.label.status","\u0627\u0644\u062D\u0627\u0644\u0629 *"))}</label>
+                                        <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${ut(t('module.ppe.label.status', 'الحالة *'))}</label>
                                         <select id="ppe-status" required class="form-input" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; outline: none;">
-                                            <option value="\u0645\u0633\u062A\u0644\u0645" ${t?.status==="\u0645\u0633\u062A\u0644\u0645"?"selected":""}>${d(f)}</option>
-                                            <option value="\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645" ${t?.status==="\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"?"selected":""}>${d(b)}</option>
+                                            <option value="مستلم" ${ppeData?.status === 'مستلم' ? 'selected' : ''}>${ut(stReceived)}</option>
+                                            <option value="قيد التسليم" ${ppeData?.status === 'قيد التسليم' ? 'selected' : ''}>${ut(stPending)}</option>
                                         </select>
                                     </div>
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${d(n("module.ppe.label.notes","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"))}</label>
+                                    <label style="display: block; font-size: 0.75rem; font-weight: 700; color: #475569; margin-bottom: 6px;">${ut(t('module.ppe.label.notes', 'ملاحظات'))}</label>
                                     <textarea id="ppe-notes" class="form-input" rows="2" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.85rem; outline: none; resize: vertical;"
-                                        placeholder="\u0623\u0636\u0641 \u0623\u064A \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629 \u0647\u0646\u0627...">${Utils.escapeHTML(t?.notes||"")}</textarea>
+                                        placeholder="أضف أي ملاحظات إضافية هنا...">${Utils.escapeHTML(ppeData?.notes || '')}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -909,18 +2363,767 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                     <!-- Fixed Footer -->
                     <div style="background: #ffffff; border-top: 1px solid #e2e8f0; padding: 14px 24px; display: flex; justify-content: flex-end; gap: 12px; flex-shrink: 0; z-index: 10;">
                         <button type="button" onclick="this.closest('.modal-overlay').remove()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #475569; font-weight: 600; font-size: 0.85rem; padding: 8px 20px; border-radius: 6px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'">
-                            ${d(n("module.common.cancel","\u0625\u0644\u063A\u0627\u0621"))}
+                            ${ut(t('module.common.cancel', 'إلغاء'))}
                         </button>
                         <button type="submit" style="background: #2563eb; border: none; color: #ffffff; font-weight: 600; font-size: 0.85rem; padding: 8px 24px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); transition: 0.2s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">
-                            <i class="fas fa-save"></i> ${d(e?n("module.common.saveChanges","\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A"):n("module.ppe.btn.saveReceipt","\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}
+                            <i class="fas fa-save"></i> ${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.saveReceipt', 'تسجيل الاستلام'))}
                         </button>
                     </div>
                 </form>
             </div>
-        `,document.body.appendChild(i),this.applyModuleI18n(i),setTimeout(()=>{const c=document.getElementById("ppe-employee-code"),m=document.getElementById("ppe-employee-name"),x=document.getElementById("ppe-employee-dropdown"),k=document.getElementById("ppe-search-code-btn"),u=document.getElementById("ppe-employee-department"),h=document.getElementById("ppe-employee-position"),v=document.getElementById("ppe-employee-branch"),w=document.getElementById("ppe-employee-location"),C=document.getElementById("ppe-employee-info-name"),M=document.getElementById("ppe-employee-info-department"),R=document.getElementById("ppe-employee-info-position"),$=document.getElementById("ppe-employee-info-branch"),_=document.getElementById("ppe-employee-info-location"),q=AppState.appData.employees||[],z=(g,y)=>PPE._t(g,y),G=(g={})=>{C&&(C.textContent=g.name||"\u2014"),M&&(M.textContent=g.department||"\u2014"),R&&(R.textContent=g.position||"\u2014"),$&&(g.branch?($.innerHTML=`<i class="fas fa-code-branch text-gray-400 ml-1"></i>${z("module.ppe.label.branch","\u0627\u0644\u0641\u0631\u0639")}: ${Utils.escapeHTML(g.branch)}`,$.classList.remove("hidden")):($.innerHTML="",$.classList.add("hidden"))),_&&(g.location?(_.innerHTML=`<i class="fas fa-map-marker-alt text-gray-400 ml-1"></i>${z("module.ppe.label.location","\u0627\u0644\u0645\u0648\u0642\u0639")}: ${Utils.escapeHTML(g.location)}`,_.classList.remove("hidden")):(_.innerHTML="",_.classList.add("hidden")))},Z=(g,{notifySuccess:y=!1,notifyFail:T=!1}={})=>{if(!g)return T&&Notification.warning(z("module.ppe.notify.employeeNotFound","\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0645\u0648\u0638\u0641 \u0628\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062F")),G({name:m?.value?.trim()||"\u2014",department:u?.value||"",position:h?.value||"",branch:v?.value||"",location:w?.value||""}),!1;const P=g.employeeNumber||g.employeeCode||g.sapId||g.id||"";return c&&P&&(c.value=P),m&&(m.value=g.name||""),u&&(u.value=g.department||""),h&&(h.value=g.position||""),v&&(v.value=g.branch||""),w&&(w.value=g.location||""),G({name:g.name||"\u2014",department:g.department||"",position:g.position||"",branch:g.branch||"",location:g.location||""}),y&&Notification.success(z("module.ppe.notify.employeeLoaded","\u062A\u0645 \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062C\u0627\u062D")),!0},te=g=>{if(!g)return null;const y=g.trim().toLowerCase();if(!y)return null;let T=null;return typeof EmployeeHelper<"u"&&typeof EmployeeHelper.findByCode=="function"&&(T=EmployeeHelper.findByCode(g)||EmployeeHelper.findByCode(y)),T||q.find(P=>[P.employeeNumber,P.employeeCode,P.sapId,P.id,P.nationalId,P.cardId].some(D=>String(D||"").trim().toLowerCase()===y))||null},E=({notify:g=!0}={})=>{const y=c?.value?.trim();if(!y)return;const T=te(y);Z(T,{notifySuccess:g,notifyFail:g})};c&&(c.addEventListener("blur",()=>E({notify:!1})),c.addEventListener("keydown",g=>{g.key==="Enter"&&(g.preventDefault(),E({notify:!0}))})),k&&k.addEventListener("click",g=>{g.preventDefault(),E({notify:!0})}),m&&x&&m.addEventListener("input",g=>{const y=g.target.value.trim();if(x.innerHTML="",x.classList.add("hidden"),y.length<2)return;const T=y.toLowerCase(),P=q.filter(D=>[D.name,D.employeeNumber,D.employeeCode,D.sapId].some(H=>String(H||"").toLowerCase().includes(T))).slice(0,12);P.length&&(P.forEach(D=>{const B=document.createElement("button");B.type="button",B.className="w-full text-right p-3 hover:bg-blue-50 focus:bg-blue-100 focus:outline-none border-b border-gray-100 last:border-b-0";const H=document.createElement("div");H.className="font-semibold text-gray-800",H.textContent=D.name||"\u0628\u062F\u0648\u0646 \u0627\u0633\u0645";const J=document.createElement("div");J.className="text-xs text-gray-500 mt-1",J.textContent=[D.employeeNumber||D.employeeCode||D.sapId||"",D.department||"",D.position||""].filter(Boolean).join(" \u2022 "),B.appendChild(H),B.appendChild(J),B.addEventListener("click",()=>{Z(D,{notifySuccess:!1,notifyFail:!1}),x.classList.add("hidden")}),x.appendChild(B)}),x.classList.remove("hidden"))});const S=g=>{x&&!x.contains(g.target)&&m&&!m.contains(g.target)&&x.classList.add("hidden"),g.target===i&&i.remove()};i.addEventListener("click",S),G({name:p.name||m?.value?.trim()||"\u2014",department:p.department||u?.value||"",position:p.position||h?.value||"",branch:p.branch||v?.value||"",location:p.location||w?.value||""});const I=document.getElementById("ppe-items-container"),j=document.getElementById("ppe-add-item-btn"),Y=()=>{if(!I)return;const g=Array.from(I.querySelectorAll(".ppe-item-row"));g.forEach(y=>{const T=y.querySelector(".ppe-remove-item");if(!T)return;g.length===1||e?T.classList.add("hidden"):T.classList.remove("hidden")})},K=g=>{if(!I||!g)return;const y=g.querySelector(".ppe-remove-item");y&&y.addEventListener("click",()=>{Array.from(I.querySelectorAll(".ppe-item-row")).length<=1||(g.remove(),Y())})},re=()=>{if(!I)return null;const g=I.querySelector(".ppe-item-row");if(!g)return null;const y=g.cloneNode(!0),T=y.querySelector(".ppe-equipment-type");T&&(T.value="",T.id==="ppe-equipment-type"&&T.removeAttribute("id"));const P=y.querySelector(".ppe-quantity");P&&(P.value="1",P.id==="ppe-quantity"&&P.removeAttribute("id"));const D=y.querySelector(".ppe-shoe-size");D&&(D.value="");const B=y.querySelector(".ppe-eligibility-info");B&&(B.innerHTML="",B.classList.add("hidden"),B.removeAttribute("data-eligible")),I.appendChild(y),K(y),Y();const H=y.querySelector(".ppe-equipment-type");return H&&this.state.ppeItemsOptionsHTML?H.innerHTML=this.state.ppeItemsOptionsHTML:this.loadPPEItemsForDropdown(),y};I&&(Array.from(I.querySelectorAll(".ppe-item-row")).forEach(y=>K(y)),Y()),j&&(e?j.classList.add("hidden"):j.addEventListener("click",g=>{g.preventDefault(),re()})),this.loadPPEItemsForDropdown(t?.equipmentType);const ie=document.getElementById("ppe-receipt-date"),se=document.getElementById("ppe-employee-code"),xe=e&&t?.id?t.id:null,O=()=>{if(!I)return;const g=Array.from(I.querySelectorAll(".ppe-item-row")),y=(se?.value||"").trim(),T=(ie?.value||"").trim();g.forEach(P=>{const B=(P.querySelector(".ppe-equipment-type")?.value||"").trim(),H=P.querySelector(".ppe-eligibility-info");if(!H)return;const J=PPE.computeEligibility(y,B,T,{excludeId:xe});PPE.renderEligibilityInfo(H,J)})};if(ie&&(ie.addEventListener("change",O),ie.addEventListener("input",O)),se&&(se.addEventListener("change",O),se.addEventListener("blur",O)),I&&I.addEventListener("change",g=>{g.target&&g.target.classList&&g.target.classList.contains("ppe-equipment-type")&&O()}),i._refreshPPEEligibility=O,c&&(c.addEventListener("input",O),c.addEventListener("change",O)),c){let g=c.value;const y=setInterval(()=>{if(!document.body.contains(c)){clearInterval(y);return}c.value!==g&&(g=c.value,O())},300)}O(),setTimeout(O,300),setTimeout(O,1500);const le=i.querySelector("#ppe-form");le&&le.addEventListener("submit",async g=>{g.preventDefault();const y=le?.querySelector('button[type="submit"]')||g.target?.querySelector('button[type="submit"]');if(y&&y.disabled)return;let T="";y&&(T=y.innerHTML,y.disabled=!0,y.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');const P=AppState.appData.ppe||[],D=new Date().getFullYear(),B=P.filter(U=>U.receiptNumber&&U.receiptNumber.startsWith(`PPE-${D}-`)).map(U=>{const X=U.receiptNumber.match(/\d+$/);return X?parseInt(X[0]):0}),H=B.length>0?Math.max(...B)+1:1,J=e&&t?.receiptNumber?t.receiptNumber:`PPE-${D}-${String(H).padStart(4,"0")}`,ce=document.getElementById("ppe-employee-name"),ae=document.getElementById("ppe-employee-code"),me=document.getElementById("ppe-employee-department"),fe=document.getElementById("ppe-employee-position"),ue=document.getElementById("ppe-employee-branch"),he=document.getElementById("ppe-employee-location"),be=document.getElementById("ppe-items-container"),oe=document.getElementById("ppe-receipt-date"),ge=document.getElementById("ppe-status"),ve=document.getElementById("ppe-notes");if(!ce||!ae||!me||!fe||!ue||!he||!be||!oe||!ge){Notification.error(PPE._t("module.ppe.notify.fieldsMissing","\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")),y&&(y.disabled=!1,y.innerHTML=T);return}if(!oe.value){Notification.error(PPE._t("module.ppe.notify.dateRequired","\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645.")),y&&(y.disabled=!1,y.innerHTML=T);return}const pe=Array.from(be.querySelectorAll(".ppe-item-row"));if(!pe.length){Notification.error(PPE._t("module.ppe.notify.itemsRequired","\u064A\u062C\u0628 \u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u062D\u0641\u0638 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645.")),y&&(y.disabled=!1,y.innerHTML=T);return}const ne=[];for(const U of pe){const X=U.querySelector(".ppe-equipment-type"),W=U.querySelector(".ppe-quantity"),A=U.querySelector(".ppe-shoe-size");if(!X||!W){Notification.error(PPE._t("module.ppe.notify.rowsIncomplete","\u0628\u0639\u0636 \u0635\u0641\u0648\u0641 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0643\u0644 \u0635\u0641 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u0646\u0648\u0639 \u0648\u0643\u0645\u064A\u0629.")),y&&(y.disabled=!1,y.innerHTML=T);return}const L=(X.value||"").trim(),F=parseInt(W.value,10)||0,N=A?(A.value||"").trim():"";if(!L){Notification.error(PPE._t("module.ppe.notify.selectEquipmentEachRow","\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629 \u0644\u0643\u0644 \u0635\u0641 \u0642\u0628\u0644 \u0627\u0644\u062D\u0641\u0638.")),y&&(y.disabled=!1,y.innerHTML=T);return}if(F<=0){Notification.error(PPE._t("module.ppe.notify.qtyPositive","\u0627\u0644\u0643\u0645\u064A\u0629 \u0644\u0643\u0644 \u0635\u0646\u0641 \u064A\u062C\u0628 \u0623\u0646 \u062A\u0643\u0648\u0646 \u0631\u0642\u0645\u064B\u0627 \u0623\u0643\u0628\u0631 \u0645\u0646 \u0635\u0641\u0631.")),y&&(y.disabled=!1,y.innerHTML=T);return}ne.push({equipmentType:L,quantity:F,shoeSize:N})}{const U=ae.value.trim(),X=oe.value,W=e&&t?.id?t.id:null,A=[];if(ne.forEach((L,F)=>{const N=PPE.computeEligibility(U,L.equipmentType,X,{excludeId:W});if(N.hasRule&&N.hasPrevious&&!N.isEligible){A.push({index:F,item:L,result:N});const ee=pe[F];if(ee){const Q=ee.querySelector(".ppe-eligibility-info");PPE.renderEligibilityInfo(Q,N)}}}),A.length>0){const L=A[0],F=PPE.formatMonthsDays(L.result.remaining?.months||0,L.result.remaining?.days||0),N=L.result.dueDate?typeof Utils<"u"&&Utils.formatDate?Utils.formatDate(L.result.dueDate):new Date(L.result.dueDate).toLocaleDateString("ar"):"",ee=A.map(ke=>ke.item.equipmentType).join("\u060C "),Q=A.length===1?PPE._t("module.ppe.notify.notEligible",`\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645: \u0627\u0644\u0645\u0648\u0638\u0641 \u063A\u064A\u0631 \u0645\u0633\u062A\u062D\u0642 \u0644\u0635\u0646\u0641 \xAB${L.item.equipmentType}\xBB \u062D\u0627\u0644\u064A\u0627\u064B. \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642: ${N}\u060C \u0627\u0644\u0645\u062A\u0628\u0642\u064A: ${F}.`):PPE._t("module.ppe.notify.notEligibleMulti",`\u0644\u0627 \u064A\u0645\u0643\u0646 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645: \u0627\u0644\u0645\u0648\u0638\u0641 \u063A\u064A\u0631 \u0645\u0633\u062A\u062D\u0642 \u0644\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u062A\u0627\u0644\u064A\u0629 \u062D\u0627\u0644\u064A\u0627\u064B (${ee}). \u0623\u0642\u0631\u0628 \u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0628\u0639\u062F: ${F}.`);Notification.error(Q),y&&(y.disabled=!1,y.innerHTML=T);return}}const de=typeof AppState<"u"&&AppState.currentUser?AppState.currentUser:{},V=de.name||de.username||de.email||"\u2014",ye={receiptNumber:J,employeeName:ce.value.trim(),employeeCode:ae.value.trim(),employeeNumber:ae.value.trim(),employeeDepartment:me.value.trim(),employeePosition:fe.value.trim(),employeeBranch:ue.value.trim(),employeeLocation:he.value.trim(),receiptDate:new Date(oe.value).toISOString(),status:ge.value,notes:(ve?.value||"").trim(),createdBy:e&&(t?.createdBy||t?.createdByUser)||V,createdByUser:e&&(t?.createdByUser||t?.createdBy)||V,recordedBy:e&&(t?.recordedBy||t?.createdBy)||V};try{const U=Array.isArray(AppState.appData.ppe)?[...AppState.appData.ppe]:[];let X=[],W=null;if(e){const A=AppState.appData.ppe.findIndex(L=>L.id===t.id);if(A!==-1){const L=ne[0]||{equipmentType:"",quantity:0,shoeSize:""},F=AppState.appData.ppe[A]||{},N={...F,...ye,equipmentType:L.equipmentType,quantity:L.quantity,shoeSize:L.shoeSize,createdAt:F.createdAt||t?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.ppe[A]=N,W=N}}else{const A=AppState.appData.ppe||[],L=[];ne.forEach(F=>{const N=A.concat(L),Q={id:Utils.generateSequentialId("PPE",N),...ye,equipmentType:F.equipmentType,quantity:F.quantity,shoeSize:F.shoeSize,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};L.push(Q),AppState.appData.ppe.push(Q)}),X=L}if(AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)if(e){if(!W)throw new Error("\u062A\u0639\u0630\u0631 \u062A\u062C\u0647\u064A\u0632 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0644\u0644\u062D\u0641\u0638 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645.");const A=await GoogleIntegration.sendToAppsScript("updatePPE",{ppeId:W.id,updateData:W});if(!A||A.success!==!0)throw new Error(A?.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.")}else for(const A of X){const L=await GoogleIntegration.sendToAppsScript("addPPE",A);if(!L||L.success!==!0)throw new Error(L?.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A.")}typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),i.remove(),Notification.success(e?PPE._t("module.ppe.notify.updateSuccess","\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0628\u0646\u062C\u0627\u062D"):PPE._t("module.ppe.notify.saveSuccess","\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0628\u0646\u062C\u0627\u062D")),y&&(y.disabled=!1,y.innerHTML=T),this.refreshActiveTab({skipRemote:!0}),GoogleIntegration.autoSave("PPE",AppState.appData.ppe).catch(A=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",A)})}catch(U){typeof previousPpeSnapshot<"u"&&(AppState.appData.ppe=previousPpeSnapshot,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save()),Notification.error(PPE._t("module.ppe.notify.saveRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638")+": "+(U.message||U)),y&&(y.disabled=!1,y.innerHTML=T)}})},200)},async loadPPEItemsForDropdown(t=null){const e=document.getElementById("ppe-equipment-type")||document.querySelector(".ppe-equipment-type");if(e)try{const i=Date.now(),s=this.state.ppeItemsListCache&&this.state.ppeItemsListCacheTime&&i-this.state.ppeItemsListCacheTime<this.state.ppeItemsListCacheExpiry;let a=[];if(s)a=Array.isArray(this.state.ppeItemsListCache)?this.state.ppeItemsListCache:[];else if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const p=await GoogleIntegration.sendToAppsScript("getPPEItemsList",{});p&&p.success&&p.data&&(a=p.data,this.state.ppeItemsListCache=a,this.state.ppeItemsListCacheTime=i)}if(a.length===0){const p=AppState.appData.ppe||[];a=[...new Set(p.map(n=>n.equipmentType).filter(Boolean))].map(n=>({itemName:n,itemCode:""}))}e.innerHTML='<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>',a.forEach(p=>{const l=(p.itemName||"").trim();if(!l)return;const n=document.createElement("option");n.value=l,n.textContent=p.itemCode?`${p.itemCode} - ${l}`:l,t&&(l===t||p.itemCode===t)&&(n.selected=!0),e.appendChild(n)});const r=e.innerHTML;this.state.ppeItemsOptionsHTML=r,document.querySelectorAll(".ppe-equipment-type").forEach(p=>{if(p===e)return;const l=p.value;p.innerHTML=r,l&&(p.value=l)})}catch(i){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629:",i),e.innerHTML=this.state.ppeItemsOptionsHTML||'<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>';const s=e.innerHTML;document.querySelectorAll(".ppe-equipment-type").forEach(r=>{if(r===e)return;const o=r.value;r.innerHTML=s,o&&(r.value=o)})}},async viewPPE(t){const e=AppState.appData.ppe.find(l=>l.id===t);if(!e)return;const i=(l,n)=>this._t(l,n),s=l=>Utils.escapeHTML(l),a=this.getDisplayStatus(e.status),r=e.createdBy||e.createdByUser||e.recordedBy||e.recorderName||e.user||"\u2014",o=document.createElement("div");o.className="modal-overlay";const p=String(e.id||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'");o.innerHTML=`
+        `;
+
+
+
+
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        // Setup employee code search and autocomplete for PPE form
+        setTimeout(() => {
+            const codeInput = document.getElementById('ppe-employee-code');
+            const nameInput = document.getElementById('ppe-employee-name');
+            const dropdown = document.getElementById('ppe-employee-dropdown');
+            const searchBtn = document.getElementById('ppe-search-code-btn');
+            const departmentInput = document.getElementById('ppe-employee-department');
+            const positionInput = document.getElementById('ppe-employee-position');
+            const branchInput = document.getElementById('ppe-employee-branch');
+            const locationInput = document.getElementById('ppe-employee-location');
+            const infoName = document.getElementById('ppe-employee-info-name');
+            const infoDepartment = document.getElementById('ppe-employee-info-department');
+            const infoPosition = document.getElementById('ppe-employee-info-position');
+            const infoBranch = document.getElementById('ppe-employee-info-branch');
+            const infoLocation = document.getElementById('ppe-employee-info-location');
+            const employees = AppState.appData.employees || [];
+
+            const Lb = (k, f) => PPE._t(k, f);
+            const updateInfoDisplay = (info = {}) => {
+                if (infoName) infoName.textContent = info.name || '—';
+                if (infoDepartment) infoDepartment.textContent = info.department || '—';
+                if (infoPosition) infoPosition.textContent = info.position || '—';
+                if (infoBranch) {
+                    if (info.branch) {
+                        infoBranch.innerHTML = `<i class="fas fa-code-branch text-gray-400 ml-1"></i>${Lb('module.ppe.label.branch', 'الفرع')}: ${Utils.escapeHTML(info.branch)}`;
+                        infoBranch.classList.remove('hidden');
+                    } else {
+                        infoBranch.innerHTML = '';
+                        infoBranch.classList.add('hidden');
+                    }
+                }
+                if (infoLocation) {
+                    if (info.location) {
+                        infoLocation.innerHTML = `<i class="fas fa-map-marker-alt text-gray-400 ml-1"></i>${Lb('module.ppe.label.location', 'الموقع')}: ${Utils.escapeHTML(info.location)}`;
+                        infoLocation.classList.remove('hidden');
+                    } else {
+                        infoLocation.innerHTML = '';
+                        infoLocation.classList.add('hidden');
+                    }
+                }
+            };
+
+            const applyEmployee = (employee, { notifySuccess = false, notifyFail = false } = {}) => {
+                if (!employee) {
+                    if (notifyFail) {
+                        Notification.warning(Lb('module.ppe.notify.employeeNotFound', 'لم يتم العثور على موظف بهذا الكود'));
+                    }
+                    updateInfoDisplay({
+                        name: nameInput?.value?.trim() || '—',
+                        department: departmentInput?.value || '',
+                        position: positionInput?.value || '',
+                        branch: branchInput?.value || '',
+                        location: locationInput?.value || ''
+                    });
+                    return false;
+                }
+
+                const codeValue = employee.employeeNumber || employee.employeeCode || employee.sapId || employee.id || '';
+                if (codeInput && codeValue) {
+                    codeInput.value = codeValue;
+                }
+                if (nameInput) nameInput.value = employee.name || '';
+                if (departmentInput) departmentInput.value = employee.department || '';
+                if (positionInput) positionInput.value = employee.position || '';
+                if (branchInput) branchInput.value = employee.branch || '';
+                if (locationInput) locationInput.value = employee.location || '';
+
+                updateInfoDisplay({
+                    name: employee.name || '—',
+                    department: employee.department || '',
+                    position: employee.position || '',
+                    branch: employee.branch || '',
+                    location: employee.location || ''
+                });
+
+                if (notifySuccess) {
+                    Notification.success(Lb('module.ppe.notify.employeeLoaded', 'تم جلب بيانات الموظف بنجاح'));
+                }
+                return true;
+            };
+
+            const findEmployeeByCode = (code) => {
+                if (!code) return null;
+                const normalized = code.trim().toLowerCase();
+                if (!normalized) return null;
+
+                let result = null;
+                if (typeof EmployeeHelper !== 'undefined' && typeof EmployeeHelper.findByCode === 'function') {
+                    result = EmployeeHelper.findByCode(code) || EmployeeHelper.findByCode(normalized);
+                }
+                if (result) return result;
+
+                return employees.find(emp => (
+                    [
+                        emp.employeeNumber,
+                        emp.employeeCode,
+                        emp.sapId,
+                        emp.id,
+                        emp.nationalId,
+                        emp.cardId
+                    ].some(value => String(value || '').trim().toLowerCase() === normalized)
+                )) || null;
+            };
+
+            const handleCodeSearch = ({ notify = true } = {}) => {
+                const codeValue = codeInput?.value?.trim();
+                if (!codeValue) return;
+                const employee = findEmployeeByCode(codeValue);
+                applyEmployee(employee, { notifySuccess: notify, notifyFail: notify });
+            };
+
+            if (codeInput) {
+                codeInput.addEventListener('blur', () => handleCodeSearch({ notify: false }));
+                codeInput.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        handleCodeSearch({ notify: true });
+                    }
+                });
+            }
+
+            if (searchBtn) {
+                searchBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    handleCodeSearch({ notify: true });
+                });
+            }
+
+            if (nameInput && dropdown) {
+                nameInput.addEventListener('input', (event) => {
+                    const searchTerm = event.target.value.trim();
+                    dropdown.innerHTML = '';
+                    dropdown.classList.add('hidden');
+
+                    if (searchTerm.length < 2) return;
+
+                    const lower = searchTerm.toLowerCase();
+                    const matches = employees.filter(emp => {
+                        const values = [emp.name, emp.employeeNumber, emp.employeeCode, emp.sapId];
+                        return values.some(value => String(value || '').toLowerCase().includes(lower));
+                    }).slice(0, 12);
+
+                    if (!matches.length) return;
+
+                    matches.forEach(emp => {
+                        const option = document.createElement('button');
+                        option.type = 'button';
+                        option.className = 'w-full text-right p-3 hover:bg-blue-50 focus:bg-blue-100 focus:outline-none border-b border-gray-100 last:border-b-0';
+
+                        const title = document.createElement('div');
+                        title.className = 'font-semibold text-gray-800';
+                        title.textContent = emp.name || 'بدون اسم';
+
+                        const subtitle = document.createElement('div');
+                        subtitle.className = 'text-xs text-gray-500 mt-1';
+                        subtitle.textContent = [emp.employeeNumber || emp.employeeCode || emp.sapId || '', emp.department || '', emp.position || '']
+                            .filter(Boolean)
+                            .join(' • ');
+
+                        option.appendChild(title);
+                        option.appendChild(subtitle);
+                        option.addEventListener('click', () => {
+                            applyEmployee(emp, { notifySuccess: false, notifyFail: false });
+                            dropdown.classList.add('hidden');
+                        });
+
+                        dropdown.appendChild(option);
+                    });
+
+                    dropdown.classList.remove('hidden');
+                });
+            }
+
+            const modalClickHandler = (event) => {
+                if (dropdown && !dropdown.contains(event.target) && nameInput && !nameInput.contains(event.target)) {
+                    dropdown.classList.add('hidden');
+                }
+                if (event.target === modal) {
+                    modal.remove();
+                }
+            };
+            modal.addEventListener('click', modalClickHandler);
+
+            updateInfoDisplay({
+                name: employeeInfo.name || nameInput?.value?.trim() || '—',
+                department: employeeInfo.department || departmentInput?.value || '',
+                position: employeeInfo.position || positionInput?.value || '',
+                branch: employeeInfo.branch || branchInput?.value || '',
+                location: employeeInfo.location || locationInput?.value || ''
+            });
+
+            // إعداد إدارة صفوف الأصناف (إمكانية إضافة أكثر من صنف لنفس الموظف)
+            const itemsContainer = document.getElementById('ppe-items-container');
+            const addItemBtn = document.getElementById('ppe-add-item-btn');
+
+            const refreshRemoveButtonsVisibility = () => {
+                if (!itemsContainer) return;
+                const rows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
+                rows.forEach(row => {
+                    const removeBtn = row.querySelector('.ppe-remove-item');
+                    if (!removeBtn) return;
+                    const shouldHide = rows.length === 1 || isEdit;
+                    if (shouldHide) {
+                        removeBtn.classList.add('hidden');
+                    } else {
+                        removeBtn.classList.remove('hidden');
+                    }
+                });
+            };
+
+            const attachRemoveHandler = (row) => {
+                if (!itemsContainer || !row) return;
+                const removeBtn = row.querySelector('.ppe-remove-item');
+                if (!removeBtn) return;
+
+                removeBtn.addEventListener('click', () => {
+                    const rows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
+                    if (rows.length <= 1) return;
+                    row.remove();
+                    refreshRemoveButtonsVisibility();
+                });
+            };
+
+            const createItemRow = () => {
+                if (!itemsContainer) return null;
+                const baseRow = itemsContainer.querySelector('.ppe-item-row');
+                if (!baseRow) return null;
+
+                const newRow = baseRow.cloneNode(true);
+
+                const selectEl = newRow.querySelector('.ppe-equipment-type');
+                if (selectEl) {
+                    selectEl.value = '';
+                    if (selectEl.id === 'ppe-equipment-type') {
+                        selectEl.removeAttribute('id');
+                    }
+                }
+
+                const quantityEl = newRow.querySelector('.ppe-quantity');
+                if (quantityEl) {
+                    quantityEl.value = '1';
+                    if (quantityEl.id === 'ppe-quantity') {
+                        quantityEl.removeAttribute('id');
+                    }
+                }
+
+                const shoeSizeEl = newRow.querySelector('.ppe-shoe-size');
+                if (shoeSizeEl) {
+                    shoeSizeEl.value = '';
+                }
+
+                const eligibilityEl = newRow.querySelector('.ppe-eligibility-info');
+                if (eligibilityEl) {
+                    eligibilityEl.innerHTML = '';
+                    eligibilityEl.classList.add('hidden');
+                    eligibilityEl.removeAttribute('data-eligible');
+                }
+
+                itemsContainer.appendChild(newRow);
+                attachRemoveHandler(newRow);
+                refreshRemoveButtonsVisibility();
+
+                // تحسين الأداء: استخدام HTML الخيارات المخزن بدل طلب Backend جديد
+                const newSelect = newRow.querySelector('.ppe-equipment-type');
+                if (newSelect && this.state.ppeItemsOptionsHTML) {
+                    newSelect.innerHTML = this.state.ppeItemsOptionsHTML;
+                } else {
+                    this.loadPPEItemsForDropdown();
+                }
+
+                return newRow;
+            };
+
+            if (itemsContainer) {
+                const initialRows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
+                initialRows.forEach(row => attachRemoveHandler(row));
+                refreshRemoveButtonsVisibility();
+            }
+
+            if (addItemBtn) {
+                if (isEdit) {
+                    addItemBtn.classList.add('hidden');
+                } else {
+                    addItemBtn.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        createItemRow();
+                    });
+                }
+            }
+
+            // Load PPE items list from stock and populate equipment type dropdown
+            this.loadPPEItemsForDropdown(ppeData?.equipmentType);
+
+            // ===== استحقاق الاستلام: عرض آخر استلام والمدة وحالة الاستحقاق =====
+            const receiptDateInput = document.getElementById('ppe-receipt-date');
+            const employeeCodeInput = document.getElementById('ppe-employee-code');
+            const excludeEditId = isEdit && ppeData?.id ? ppeData.id : null;
+
+            const refreshAllEligibilityRows = () => {
+                if (!itemsContainer) return;
+                const rows = Array.from(itemsContainer.querySelectorAll('.ppe-item-row'));
+                const employeeCode = (employeeCodeInput?.value || '').trim();
+                const receiptDateValue = (receiptDateInput?.value || '').trim();
+                rows.forEach(row => {
+                    const typeSelect = row.querySelector('.ppe-equipment-type');
+                    const equipmentType = (typeSelect?.value || '').trim();
+                    const infoEl = row.querySelector('.ppe-eligibility-info');
+                    if (!infoEl) return;
+                    const result = PPE.computeEligibility(employeeCode, equipmentType, receiptDateValue, { excludeId: excludeEditId });
+                    PPE.renderEligibilityInfo(infoEl, result);
+                });
+            };
+
+            if (receiptDateInput) {
+                receiptDateInput.addEventListener('change', refreshAllEligibilityRows);
+                receiptDateInput.addEventListener('input', refreshAllEligibilityRows);
+            }
+            if (employeeCodeInput) {
+                employeeCodeInput.addEventListener('change', refreshAllEligibilityRows);
+                employeeCodeInput.addEventListener('blur', refreshAllEligibilityRows);
+            }
+            if (itemsContainer) {
+                itemsContainer.addEventListener('change', (event) => {
+                    if (event.target && event.target.classList && event.target.classList.contains('ppe-equipment-type')) {
+                        refreshAllEligibilityRows();
+                    }
+                });
+            }
+
+            modal._refreshPPEEligibility = refreshAllEligibilityRows;
+
+            if (codeInput) {
+                codeInput.addEventListener('input', refreshAllEligibilityRows);
+                codeInput.addEventListener('change', refreshAllEligibilityRows);
+            }
+
+            // عند اختيار موظف من قائمة البحث، يتم تحديث قيمة الكود برمجياً ولا تُطلق
+            // أحداث input/change تلقائياً، لذا نراقب التغييرات على قيمة الحقل.
+            if (codeInput) {
+                let lastSeenCode = codeInput.value;
+                const codeWatcher = setInterval(() => {
+                    if (!document.body.contains(codeInput)) {
+                        clearInterval(codeWatcher);
+                        return;
+                    }
+                    if (codeInput.value !== lastSeenCode) {
+                        lastSeenCode = codeInput.value;
+                        refreshAllEligibilityRows();
+                    }
+                }, 300);
+            }
+
+            // عرض البطاقة الإرشادية فوراً، ثم تحديثها بعد تحميل قوائم الأصناف
+            refreshAllEligibilityRows();
+            setTimeout(refreshAllEligibilityRows, 300);
+            setTimeout(refreshAllEligibilityRows, 1500);
+
+            // Setup form submit handler
+            const form = modal.querySelector('#ppe-form');
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    // منع النقر المتكرر
+                    const submitBtn = form?.querySelector('button[type="submit"]') || 
+                                     e.target?.querySelector('button[type="submit"]');
+                    
+                    if (submitBtn && submitBtn.disabled) {
+                        return; // النموذج قيد المعالجة
+                    }
+
+                    // تعطيل الزر لمنع النقر المتكرر
+                    let originalText = '';
+                    if (submitBtn) {
+                        originalText = submitBtn.innerHTML;
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+                    }
+
+                    // توليد رقم إيصال مسلسل
+                    const existingPPE = AppState.appData.ppe || [];
+                    const currentYear = new Date().getFullYear();
+                    const existingNumbers = existingPPE
+                        .filter(p => p.receiptNumber && p.receiptNumber.startsWith(`PPE-${currentYear}-`))
+                        .map(p => {
+                            const match = p.receiptNumber.match(/\d+$/);
+                            return match ? parseInt(match[0]) : 0;
+                        });
+                    const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+                    const receiptNumber = isEdit && ppeData?.receiptNumber
+                        ? ppeData.receiptNumber
+                        : `PPE-${currentYear}-${String(nextNumber).padStart(4, '0')}`;
+
+                    // فحص العناصر قبل الاستخدام
+                    const employeeNameEl = document.getElementById('ppe-employee-name');
+                    const employeeCodeEl = document.getElementById('ppe-employee-code');
+                    const employeeDepartmentEl = document.getElementById('ppe-employee-department');
+                    const employeePositionEl = document.getElementById('ppe-employee-position');
+                    const employeeBranchEl = document.getElementById('ppe-employee-branch');
+                    const employeeLocationEl = document.getElementById('ppe-employee-location');
+                    const itemsContainerEl = document.getElementById('ppe-items-container');
+                    const receiptDateEl = document.getElementById('ppe-receipt-date');
+                    const statusEl = document.getElementById('ppe-status');
+                    const notesEl = document.getElementById('ppe-notes');
+                    
+                    if (!employeeNameEl || !employeeCodeEl || !employeeDepartmentEl || !employeePositionEl || 
+                        !employeeBranchEl || !employeeLocationEl || !itemsContainerEl || 
+                        !receiptDateEl || !statusEl) {
+                        Notification.error(PPE._t('module.ppe.notify.fieldsMissing', 'بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.'));
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                        return;
+                    }
+
+                    if (!receiptDateEl.value) {
+                        Notification.error(PPE._t('module.ppe.notify.dateRequired', 'يرجى تحديد تاريخ الاستلام.'));
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                        return;
+                    }
+
+                    const itemRows = Array.from(itemsContainerEl.querySelectorAll('.ppe-item-row'));
+                    if (!itemRows.length) {
+                        Notification.error(PPE._t('module.ppe.notify.itemsRequired', 'يجب إضافة صنف واحد على الأقل قبل حفظ الاستلام.'));
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                        return;
+                    }
+
+                    const equipmentItems = [];
+                    for (const row of itemRows) {
+                        const typeSelect = row.querySelector('.ppe-equipment-type');
+                        const quantityInput = row.querySelector('.ppe-quantity');
+                        const shoeSizeSelect = row.querySelector('.ppe-shoe-size');
+
+                        if (!typeSelect || !quantityInput) {
+                            Notification.error(PPE._t('module.ppe.notify.rowsIncomplete', 'بعض صفوف الأصناف غير مكتملة. يرجى التأكد من أن كل صف يحتوي على نوع وكمية.'));
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                            return;
+                        }
+
+                        const typeValue = (typeSelect.value || '').trim();
+                        const quantityValue = parseInt(quantityInput.value, 10) || 0;
+                        const shoeSizeValue = shoeSizeSelect ? (shoeSizeSelect.value || '').trim() : '';
+
+                        if (!typeValue) {
+                            Notification.error(PPE._t('module.ppe.notify.selectEquipmentEachRow', 'يرجى اختيار نوع المعدة لكل صف قبل الحفظ.'));
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                            return;
+                        }
+
+                        if (quantityValue <= 0) {
+                            Notification.error(PPE._t('module.ppe.notify.qtyPositive', 'الكمية لكل صنف يجب أن تكون رقمًا أكبر من صفر.'));
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                            return;
+                        }
+
+                        equipmentItems.push({
+                            equipmentType: typeValue,
+                            quantity: quantityValue,
+                            shoeSize: shoeSizeValue
+                        });
+                    }
+
+                    // ===== التحقق من استحقاق الاستلام لكل صنف قبل الحفظ =====
+                    {
+                        const employeeCodeForCheck = employeeCodeEl.value.trim();
+                        const receiptDateForCheck = receiptDateEl.value;
+                        const excludeIdForCheck = isEdit && ppeData?.id ? ppeData.id : null;
+                        const blockingItems = [];
+                        equipmentItems.forEach((item, idx) => {
+                            const r = PPE.computeEligibility(employeeCodeForCheck, item.equipmentType, receiptDateForCheck, { excludeId: excludeIdForCheck });
+                            if (r.hasRule && r.hasPrevious && !r.isEligible) {
+                                blockingItems.push({ index: idx, item, result: r });
+                                const row = itemRows[idx];
+                                if (row) {
+                                    const infoEl = row.querySelector('.ppe-eligibility-info');
+                                    PPE.renderEligibilityInfo(infoEl, r);
+                                }
+                            }
+                        });
+                        if (blockingItems.length > 0) {
+                            const first = blockingItems[0];
+                            const remainingText = PPE.formatMonthsDays(first.result.remaining?.months || 0, first.result.remaining?.days || 0);
+                            const dueText = first.result.dueDate ? (typeof Utils !== 'undefined' && Utils.formatDate ? Utils.formatDate(first.result.dueDate) : new Date(first.result.dueDate).toLocaleDateString('ar')) : '';
+                            const itemNames = blockingItems.map(b => b.item.equipmentType).join('، ');
+                            const message = blockingItems.length === 1
+                                ? PPE._t('module.ppe.notify.notEligible', `لا يمكن تسجيل الاستلام: الموظف غير مستحق لصنف «${first.item.equipmentType}» حالياً. تاريخ الاستحقاق: ${dueText}، المتبقي: ${remainingText}.`)
+                                : PPE._t('module.ppe.notify.notEligibleMulti', `لا يمكن تسجيل الاستلام: الموظف غير مستحق للأصناف التالية حالياً (${itemNames}). أقرب استحقاق بعد: ${remainingText}.`);
+                            Notification.error(message);
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalText;
+                            }
+                            return;
+                        }
+                    }
+
+                    const activeUser = (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : {};
+                    const currentUserName = activeUser.name || activeUser.username || activeUser.email || '—';
+
+                    const commonData = {
+                        receiptNumber: receiptNumber,
+                        employeeName: employeeNameEl.value.trim(),
+                        employeeCode: employeeCodeEl.value.trim(),
+                        employeeNumber: employeeCodeEl.value.trim(),
+                        employeeDepartment: employeeDepartmentEl.value.trim(),
+                        employeePosition: employeePositionEl.value.trim(),
+                        employeeBranch: employeeBranchEl.value.trim(),
+                        employeeLocation: employeeLocationEl.value.trim(),
+                        receiptDate: new Date(receiptDateEl.value).toISOString(),
+                        status: statusEl.value,
+                        notes: (notesEl?.value || '').trim(),
+                        createdBy: isEdit ? (ppeData?.createdBy || ppeData?.createdByUser || currentUserName) : currentUserName,
+                        createdByUser: isEdit ? (ppeData?.createdByUser || ppeData?.createdBy || currentUserName) : currentUserName,
+                        recordedBy: isEdit ? (ppeData?.recordedBy || ppeData?.createdBy || currentUserName) : currentUserName
+                    };
+
+                    try {
+                        const previousPpeSnapshot = Array.isArray(AppState.appData.ppe) ? [...AppState.appData.ppe] : [];
+                        let recordsForServer = [];
+                        let updatedRecordForServer = null;
+
+                        // 1. حفظ البيانات فوراً في الذاكرة
+                        if (isEdit) {
+                            const index = AppState.appData.ppe.findIndex(p => p.id === ppeData.id);
+                            if (index !== -1) {
+                                const firstItem = equipmentItems[0] || { equipmentType: '', quantity: 0, shoeSize: '' };
+                                const existing = AppState.appData.ppe[index] || {};
+                                const updatedRecord = {
+                                    ...existing,
+                                    ...commonData,
+                                    equipmentType: firstItem.equipmentType,
+                                    quantity: firstItem.quantity,
+                                    shoeSize: firstItem.shoeSize,
+                                    createdAt: existing.createdAt || ppeData?.createdAt || new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                };
+                                AppState.appData.ppe[index] = updatedRecord;
+                                updatedRecordForServer = updatedRecord;
+                            }
+                        } else {
+                            const existingPPEData = AppState.appData.ppe || [];
+                            const newItems = [];
+
+                            equipmentItems.forEach(item => {
+                                const allExisting = existingPPEData.concat(newItems);
+                                const id = Utils.generateSequentialId('PPE', allExisting);
+                                const record = {
+                                    id,
+                                    ...commonData,
+                                    equipmentType: item.equipmentType,
+                                    quantity: item.quantity,
+                                    shoeSize: item.shoeSize,
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                };
+                                newItems.push(record);
+                                AppState.appData.ppe.push(record);
+                            });
+                            recordsForServer = newItems;
+                        }
+
+                        // 1.1 حفظ إلزامي في الخادم قبل إعلان النجاح
+                        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                            if (isEdit) {
+                                if (!updatedRecordForServer) {
+                                    throw new Error('تعذر تجهيز بيانات التعديل للحفظ في الخادم.');
+                                }
+                                const serverResult = await GoogleIntegration.sendToAppsScript('updatePPE', {
+                                    ppeId: updatedRecordForServer.id,
+                                    updateData: updatedRecordForServer
+                                });
+                                if (!serverResult || serverResult.success !== true) {
+                                    throw new Error(serverResult?.message || 'فشل حفظ تعديل الاستلام في قاعدة البيانات.');
+                                }
+                            } else {
+                                for (const rec of recordsForServer) {
+                                    const serverResult = await GoogleIntegration.sendToAppsScript('addPPE', rec);
+                                    if (!serverResult || serverResult.success !== true) {
+                                        throw new Error(serverResult?.message || 'فشل حفظ الاستلام في قاعدة البيانات.');
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // حفظ البيانات باستخدام window.DataManager
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                            window.DataManager.save();
+                        } else {
+                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                        }
+                        
+                        // 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
+                        modal.remove();
+                        
+                        // 3. عرض رسالة نجاح فورية
+                        Notification.success(isEdit
+                            ? PPE._t('module.ppe.notify.updateSuccess', 'تم تحديث الاستلام بنجاح')
+                            : PPE._t('module.ppe.notify.saveSuccess', 'تم تسجيل الاستلام بنجاح'));
+                        
+                        // 4. استعادة الزر بعد النجاح
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                        
+                        // 5. ✅ تحديث التبويب النشط فقط (أسرع من إعادة تحميل كامل)
+                        this.refreshActiveTab({ skipRemote: true });
+                        
+                        // 6. معالجة المهام الخلفية (قاعدة SQL) في الخلفية
+                        GoogleIntegration.autoSave('PPE', AppState.appData.ppe).catch(error => {
+                            Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
+                        });
+                    } catch (error) {
+                        // rollback عند فشل الحفظ بالخادم لمنع نجاح وهمي في الواجهة
+                        if (typeof previousPpeSnapshot !== 'undefined') {
+                            AppState.appData.ppe = previousPpeSnapshot;
+                            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                                window.DataManager.save();
+                            }
+                        }
+                        Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ أثناء الحفظ') + ': ' + (error.message || error));
+                        
+                        // استعادة الزر في حالة الخطأ
+                        if (submitBtn) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                    }
+                });
+            }
+        }, 200);
+    },
+
+    async loadPPEItemsForDropdown(selectedValue = null) {
+        const equipmentTypeSelect = document.getElementById('ppe-equipment-type') 
+            || document.querySelector('.ppe-equipment-type');
+        if (!equipmentTypeSelect) return;
+
+        try {
+            const now = Date.now();
+            const cacheValid = this.state.ppeItemsListCache &&
+                this.state.ppeItemsListCacheTime &&
+                (now - this.state.ppeItemsListCacheTime) < this.state.ppeItemsListCacheExpiry;
+
+            // Load items from backend (with short TTL cache)
+            let items = [];
+            if (cacheValid) {
+                items = Array.isArray(this.state.ppeItemsListCache) ? this.state.ppeItemsListCache : [];
+            } else if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                const result = await GoogleIntegration.sendToAppsScript('getPPEItemsList', {});
+                if (result && result.success && result.data) {
+                    items = result.data;
+                    this.state.ppeItemsListCache = items;
+                    this.state.ppeItemsListCacheTime = now;
+                }
+            }
+
+            // Fallback: collect from existing PPE data
+            if (items.length === 0) {
+                const ppeList = AppState.appData.ppe || [];
+                const uniqueTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))];
+                items = uniqueTypes.map(type => ({ itemName: type, itemCode: '' }));
+            }
+
+            // Clear and populate dropdown
+            equipmentTypeSelect.innerHTML = '<option value="">اختر النوع</option>';
+            
+            items.forEach(item => {
+                const itemName = (item.itemName || '').trim();
+                if (!itemName) return;
+                
+                const option = document.createElement('option');
+                option.value = itemName;
+                option.textContent = item.itemCode ? `${item.itemCode} - ${itemName}` : itemName;
+                
+                if (selectedValue && (itemName === selectedValue || item.itemCode === selectedValue)) {
+                    option.selected = true;
+                }
+                
+                equipmentTypeSelect.appendChild(option);
+            });
+
+            const optionsHTML = equipmentTypeSelect.innerHTML;
+            this.state.ppeItemsOptionsHTML = optionsHTML;
+
+            // مزامنة نفس الخيارات مع جميع قوائم الأنواع في صفوف الأصناف
+            const allSelects = document.querySelectorAll('.ppe-equipment-type');
+            allSelects.forEach(select => {
+                if (select === equipmentTypeSelect) return;
+                const previousValue = select.value;
+                select.innerHTML = optionsHTML;
+                if (previousValue) {
+                    select.value = previousValue;
+                }
+            });
+        } catch (error) {
+            Utils.safeError('خطأ في تحميل قائمة مهمات الوقاية:', error);
+            // بدون بنود افتراضية: إن توفر لدينا HTML سابق استخدمه، وإلا أبقِ خيار "اختر النوع" فقط
+            equipmentTypeSelect.innerHTML = this.state.ppeItemsOptionsHTML || '<option value="">اختر النوع</option>';
+
+            const optionsHTML = equipmentTypeSelect.innerHTML;
+            const allSelects = document.querySelectorAll('.ppe-equipment-type');
+            allSelects.forEach(select => {
+                if (select === equipmentTypeSelect) return;
+                const previousValue = select.value;
+                select.innerHTML = optionsHTML;
+                if (previousValue) {
+                    select.value = previousValue;
+                }
+            });
+        }
+    },
+
+    async viewPPE(id) {
+        const item = AppState.appData.ppe.find(p => p.id === id);
+        if (!item) return;
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const stLabel = this.getDisplayStatus(item.status);
+        const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        const idJs = String(item.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header" style="text-align: center; position: relative;">
-                    <h2 class="modal-title" style="margin: 0 auto; text-align: center;">${s(i("module.ppe.title.viewReceipt","\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}</h2>
+                    <h2 class="modal-title" style="margin: 0 auto; text-align: center;">${ut(t('module.ppe.title.viewReceipt', 'تفاصيل الاستلام'))}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%);">
                         <i class="fas fa-times"></i>
                     </button>
@@ -929,105 +3132,241 @@ const PPE={state:{activeTab:"receipts",isSwitchingTab:!1,eventListeners:new Map,
                     <div class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.receiptNo","\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644"))}:</label>
-                                <p class="text-gray-800 font-mono font-semibold text-lg">${Utils.escapeHTML(e.receiptNumber||e.id||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptNo', 'رقم الإيصال'))}:</label>
+                                <p class="text-gray-800 font-mono font-semibold text-lg">${Utils.escapeHTML(item.receiptNumber || item.id || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.employeeName","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeeName||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.employeeName', 'اسم الموظف'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeeName || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.employeeCode","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeeCode||e.employeeNumber||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.employeeCode', 'الكود الوظيفي'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeeCode || item.employeeNumber || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.createdBy","\u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}:</label>
-                                <p class="text-gray-800 font-semibold text-blue-700"><i class="fas fa-user-edit text-blue-500 ml-1"></i>${Utils.escapeHTML(r)}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.createdBy', 'مسجّل الاستلام'))}:</label>
+                                <p class="text-gray-800 font-semibold text-blue-700"><i class="fas fa-user-edit text-blue-500 ml-1"></i>${Utils.escapeHTML(recordedBy)}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.department","\u0627\u0644\u0642\u0633\u0645"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeeDepartment||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.department', 'القسم'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeeDepartment || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.position","\u0627\u0644\u0645\u0646\u0635\u0628"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeePosition||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.position', 'المنصب'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeePosition || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.branch","\u0627\u0644\u0641\u0631\u0639"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeeBranch||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.branch', 'الفرع'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeeBranch || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.location","\u0627\u0644\u0645\u0648\u0642\u0639"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.employeeLocation||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.location', 'الموقع'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.employeeLocation || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.equipmentType","\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"))}:</label>
-                                <p class="text-gray-800">${Utils.escapeHTML(e.equipmentType||"")}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.equipmentType', 'نوع المعدة'))}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(item.equipmentType || '')}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.quantity","\u0627\u0644\u0643\u0645\u064A\u0629"))}:</label>
-                                <p class="text-gray-800">${e.quantity||0}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.quantity', 'الكمية'))}:</label>
+                                <p class="text-gray-800">${item.quantity || 0}</p>
                             </div>
-                            ${e.shoeSize?`
+                            ${item.shoeSize ? `
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">\u0645\u0642\u0627\u0633 \u0627\u0644\u062D\u0630\u0627\u0621:</label>
-                                <p class="text-gray-800 font-bold"><i class="fas fa-shoe-prints text-blue-600 ml-1"></i>${Utils.escapeHTML(e.shoeSize)}</p>
+                                <label class="text-sm font-semibold text-gray-600">مقاس الحذاء:</label>
+                                <p class="text-gray-800 font-bold"><i class="fas fa-shoe-prints text-blue-600 ml-1"></i>${Utils.escapeHTML(item.shoeSize)}</p>
                             </div>
-                            `:""}
+                            ` : ''}
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.receiptDate","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}:</label>
-                                <p class="text-gray-800">${e.receiptDate?Utils.formatDate(e.receiptDate):"-"}</p>
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.receiptDate', 'تاريخ الاستلام'))}:</label>
+                                <p class="text-gray-800">${item.receiptDate ? Utils.formatDate(item.receiptDate) : '-'}</p>
                             </div>
                             <div>
-                                <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}:</label>
-                                <span class="badge badge-${this.isStatusReceived(e.status)?"success":"warning"}">
-                                    ${s(a)}
+                                <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.table.status', 'الحالة'))}:</label>
+                                <span class="badge badge-${this.isStatusReceived(item.status) ? 'success' : 'warning'}">
+                                    ${ut(stLabel)}
                                 </span>
                             </div>
                         </div>
                         <div class="mt-4">
-                            <label class="text-sm font-semibold text-gray-600">${s(i("module.ppe.label.notes","\u0645\u0644\u0627\u062D\u0638\u0627\u062A"))}:</label>
-                            <p class="text-gray-800 whitespace-pre-wrap">${Utils.escapeHTML(e.notes||i("module.ppe.notes.none","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0644\u0627\u062D\u0638\u0627\u062A"))}</p>
+                            <label class="text-sm font-semibold text-gray-600">${ut(t('module.ppe.label.notes', 'ملاحظات'))}:</label>
+                            <p class="text-gray-800 whitespace-pre-wrap">${Utils.escapeHTML(item.notes || t('module.ppe.notes.none', 'لا توجد ملاحظات'))}</p>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: center; gap: 10px;">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${s(i("module.common.close","\u0625\u063A\u0644\u0627\u0642"))}</button>
-                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("ppe"):""}
-                    <button class="btn-success" onclick="PPE.exportPDF('${p}');">
-                        <i class="fas fa-file-pdf ml-2"></i>${s(i("module.kpi.exportPDF","\u062A\u0635\u062F\u064A\u0631 PDF"))}
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.close', 'إغلاق'))}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('ppe') : ''}
+                    <button class="btn-success" onclick="PPE.exportPDF('${idJs}');">
+                        <i class="fas fa-file-pdf ml-2"></i>${ut(t('module.kpi.exportPDF', 'تصدير PDF'))}
                     </button>
-                    <button class="btn-primary" onclick="PPE.showPPEForm(${JSON.stringify(e).replace(/"/g,"&quot;")}); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-edit ml-2"></i>${s(i("module.common.edit","\u062A\u0639\u062F\u064A\u0644"))}
+                    <button class="btn-primary" onclick="PPE.showPPEForm(${JSON.stringify(item).replace(/"/g, '&quot;')}); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-edit ml-2"></i>${ut(t('module.common.edit', 'تعديل'))}
                     </button>
-                    <button class="btn-danger" onclick="PPE.deletePPE('${p}'); this.closest('.modal-overlay').remove();">
-                        <i class="fas fa-trash ml-2"></i>${s(i("module.ppe.btn.deleteReceipt","\u062D\u0630\u0641"))}
+                    <button class="btn-danger" onclick="PPE.deletePPE('${idJs}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-trash ml-2"></i>${ut(t('module.ppe.btn.deleteReceipt', 'حذف'))}
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(o),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(o,{moduleKey:"ppe",record:e,recordId:e.id||e.isoCode||""}),this.applyModuleI18n(o),o.addEventListener("click",l=>{l.target===o&&o.remove()})},async deletePPE(t){if(!t){Notification.error(this._t("module.ppe.notify.idMissing","\u0645\u0639\u0631\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"));return}const e=AppState.appData.ppe.find(s=>s.id===t);if(!e){Notification.error(this._t("module.ppe.notify.receiptNotFound","\u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"));return}const i=`${this._t("module.ppe.confirm.delete","\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u061F")}
+        `;
+        document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'ppe', record: item, recordId: item.id || item.isoCode || '' });
+        }
+        this.applyModuleI18n(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
 
-${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.show();try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const s=await GoogleIntegration.sendToAppsScript("deletePPE",{ppeId:t});s&&s.success?(AppState.appData.ppe&&(AppState.appData.ppe=AppState.appData.ppe.filter(a=>a.id!==t)),Notification.success(this._t("module.ppe.notify.deleteSuccess","\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0628\u0646\u062C\u0627\u062D")),await this.load()):Notification.error(s?.message||this._t("module.ppe.notify.deleteError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645"))}else AppState.appData.ppe?(AppState.appData.ppe=AppState.appData.ppe.filter(s=>s.id!==t),Notification.success(this._t("module.ppe.notify.deleteSuccess","\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u0628\u0646\u062C\u0627\u062D")),await this.load()):Notification.error(this._t("module.ppe.empty.noReceipts","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A"))}catch(s){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645:",s),Notification.error(this._t("module.ppe.notify.deleteError","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645")+": "+(s.message||s))}finally{Loading.hide()}}},async exportPDF(t){const e=AppState.appData.ppe.find(i=>i.id===t);if(!e){Notification.error(this._t("module.ppe.notify.receiptNotFound","\u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"));return}try{Loading.show();const i=e.receiptNumber||`PPE-${e.id?.substring(0,8)||"UNKNOWN"}`,s=b=>Utils.escapeHTML(b||""),a=b=>b?Utils.formatDate(b):"-",r=e.createdBy||e.createdByUser||e.recordedBy||e.recorderName||e.user||"\u2014",o=`
+    async deletePPE(id) {
+        if (!id) {
+            Notification.error(this._t('module.ppe.notify.idMissing', 'معرف الاستلام غير موجود'));
+            return;
+        }
+
+        const item = AppState.appData.ppe.find(p => p.id === id);
+        if (!item) {
+            Notification.error(this._t('module.ppe.notify.receiptNotFound', 'الاستلام غير موجود'));
+            return;
+        }
+
+        const confirmMessage = `${this._t('module.ppe.confirm.delete', 'هل أنت متأكد من حذف هذا الاستلام؟')}\n\n${item.receiptNumber || item.id} — ${item.employeeName || ''}`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        Loading.show();
+
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                const result = await GoogleIntegration.sendToAppsScript('deletePPE', { ppeId: id });
+                
+                if (result && result.success) {
+                    // حذف من AppState
+                    if (AppState.appData.ppe) {
+                        AppState.appData.ppe = AppState.appData.ppe.filter(p => p.id !== id);
+                    }
+                    
+                    Notification.success(this._t('module.ppe.notify.deleteSuccess', 'تم حذف الاستلام بنجاح'));
+                    await this.load(); // إعادة تحميل البيانات
+                } else {
+                    Notification.error(result?.message || this._t('module.ppe.notify.deleteError', 'حدث خطأ أثناء حذف الاستلام'));
+                }
+            } else {
+                // Fallback to local storage
+                if (AppState.appData.ppe) {
+                    AppState.appData.ppe = AppState.appData.ppe.filter(p => p.id !== id);
+                    Notification.success(this._t('module.ppe.notify.deleteSuccess', 'تم حذف الاستلام بنجاح'));
+                    await this.load();
+                } else {
+                    Notification.error(this._t('module.ppe.empty.noReceipts', 'لا توجد بيانات'));
+                }
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف الاستلام:', error);
+            Notification.error(this._t('module.ppe.notify.deleteError', 'حدث خطأ أثناء حذف الاستلام') + ': ' + (error.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    async exportPDF(id) {
+        const item = AppState.appData.ppe.find(p => p.id === id);
+        if (!item) {
+            Notification.error(this._t('module.ppe.notify.receiptNotFound', 'الاستلام غير موجود'));
+            return;
+        }
+
+        try {
+            Loading.show();
+
+            const formCode = item.receiptNumber || `PPE-${item.id?.substring(0, 8) || 'UNKNOWN'}`;
+            const escape = (value) => Utils.escapeHTML(value || '');
+            const formatDate = (value) => value ? Utils.formatDate(value) : '-';
+            const recordedBy = item.createdBy || item.createdByUser || item.recordedBy || item.recorderName || item.user || '—';
+            const content = `
                 <table>
-                    <tr><th>\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644</th><td>${s(e.receiptNumber||e.id)}</td></tr>
-                    <tr><th>\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641</th><td>${s(e.employeeName)}</td></tr>
-                    <tr><th>\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A</th><td>${s(e.employeeCode||e.employeeNumber)}</td></tr>
-                    <tr><th>\u0627\u0644\u0642\u0633\u0645</th><td>${s(e.employeeDepartment)}</td></tr>
-                    <tr><th>\u0627\u0644\u0645\u0646\u0635\u0628</th><td>${s(e.employeePosition)}</td></tr>
-                    <tr><th>\u0627\u0644\u0641\u0631\u0639</th><td>${s(e.employeeBranch)}</td></tr>
-                    <tr><th>\u0627\u0644\u0645\u0648\u0642\u0639</th><td>${s(e.employeeLocation)}</td></tr>
-                    <tr><th>\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629</th><td>${s(e.equipmentType)}</td></tr>
-                    <tr><th>\u0627\u0644\u0643\u0645\u064A\u0629</th><td>${e.quantity||0}</td></tr>
-                    <tr><th>\u0645\u0633\u062C\u0651\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645</th><td>${s(r)}</td></tr>
-                    <tr><th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645</th><td>${a(e.receiptDate)}</td></tr>
-                    <tr><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><td>${s(e.status)}</td></tr>
+                    <tr><th>رقم الإيصال</th><td>${escape(item.receiptNumber || item.id)}</td></tr>
+                    <tr><th>اسم الموظف</th><td>${escape(item.employeeName)}</td></tr>
+                    <tr><th>الكود الوظيفي</th><td>${escape(item.employeeCode || item.employeeNumber)}</td></tr>
+                    <tr><th>القسم</th><td>${escape(item.employeeDepartment)}</td></tr>
+                    <tr><th>المنصب</th><td>${escape(item.employeePosition)}</td></tr>
+                    <tr><th>الفرع</th><td>${escape(item.employeeBranch)}</td></tr>
+                    <tr><th>الموقع</th><td>${escape(item.employeeLocation)}</td></tr>
+                    <tr><th>نوع المعدة</th><td>${escape(item.equipmentType)}</td></tr>
+                    <tr><th>الكمية</th><td>${item.quantity || 0}</td></tr>
+                    <tr><th>مسجّل الاستلام</th><td>${escape(recordedBy)}</td></tr>
+                    <tr><th>تاريخ الاستلام</th><td>${formatDate(item.receiptDate)}</td></tr>
+                    <tr><th>الحالة</th><td>${escape(item.status)}</td></tr>
                 </table>
-            `,p={type:"PPE",id:e.id,code:i,url:`${window.location.origin}/ppe/${e.id}`},l=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(i,this._t("module.ppe.pdf.receiptTitle","\u0625\u064A\u0635\u0627\u0644 \u0627\u0633\u062A\u0644\u0627\u0645 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629"),o,!1,!0,{version:"1.0",releaseDate:e.receiptDate||e.createdAt,revisionDate:e.updatedAt||e.receiptDate||e.createdAt,qrData:p},e.createdAt,e.updatedAt||e.receiptDate||e.createdAt):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>${Utils.escapeHTML(this._t("module.ppe.pdf.pageTitle","\u0625\u064A\u0635\u0627\u0644 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629"))}</title></head><body>${o}</body></html>`,n=new Blob([l],{type:"text/html;charset=utf-8"}),d=URL.createObjectURL(n),f=window.open(d,"_blank");f?f.onload=()=>{setTimeout(()=>{f.print(),setTimeout(()=>{URL.revokeObjectURL(d),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error(this._t("module.ppe.notify.pdfBlocked","\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631")))}catch(i){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF \u0644\u0644\u0627\u0633\u062A\u0644\u0627\u0645:",i),Notification.error(this._t("module.ppe.notify.pdfError","\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF")+": "+i.message)}},async showPPEMatrix(){const t=(r,o)=>this._t(r,o),e=r=>Utils.escapeHTML(r),i=document.createElement("div");i.className="modal-overlay",i.innerHTML=`
+            `;
+
+            const qrPayload = {
+                type: 'PPE',
+                id: item.id,
+                code: formCode,
+                url: `${window.location.origin}/ppe/${item.id}`
+            };
+
+            const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+                ? FormHeader.generatePDFHTML(
+                    formCode,
+                    this._t('module.ppe.pdf.receiptTitle', 'إيصال استلام مهمات الوقاية الشخصية'),
+                    content,
+                    false,
+                    true,
+                    {
+                        version: '1.0',
+                        releaseDate: item.receiptDate || item.createdAt,
+                        revisionDate: item.updatedAt || item.receiptDate || item.createdAt,
+                        qrData: qrPayload
+                    },
+                    item.createdAt,
+                    item.updatedAt || item.receiptDate || item.createdAt
+                )
+                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>${Utils.escapeHTML(this._t('module.ppe.pdf.pageTitle', 'إيصال مهمات الوقاية الشخصية'))}</title></head><body>${content}</body></html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+
+            if (printWindow) {
+                printWindow.onload = () => {
+                    setTimeout(() => {
+                        printWindow.print();
+                        setTimeout(() => {
+                            URL.revokeObjectURL(url);
+                            Loading.hide();
+                        }, 800);
+                    }, 500);
+                };
+            } else {
+                Loading.hide();
+                Notification.error(this._t('module.ppe.notify.pdfBlocked', 'يرجى السماح للنوافذ المنبثقة لعرض التقرير'));
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في تصدير PDF للاستلام:', error);
+            Notification.error(this._t('module.ppe.notify.pdfError', 'فشل في تصدير PDF') + ': ' + error.message);
+        }
+    },
+
+    /**
+     * عرض مصوة مهمات الوقاية لكل موظ حسب الوظية
+     */
+    async showPPEMatrix() {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 1400px; max-height: 90vh; overflow-y: auto;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-table ml-2"></i>
-                        ${e(t("module.ppe.title.matrix","\u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 \u0644\u0643\u0644 \u0645\u0648\u0638\u0641"))}
+                        ${ut(t('module.ppe.title.matrix', 'مصفوفة مهمات الوقاية الشخصية لكل موظف'))}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1037,10 +3376,10 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     <div class="mb-4">
                         <div class="flex gap-2 items-center">
                             <input type="text" id="ppe-matrix-search" class="form-input" style="max-width: 400px;" 
-                                placeholder="${e(t("module.ppe.matrix.searchPlaceholder",""))}">
+                                placeholder="${ut(t('module.ppe.matrix.searchPlaceholder', ''))}">
                             <button id="add-ppe-matrix-btn" class="btn-primary">
                                 <i class="fas fa-plus ml-2"></i>
-                                ${e(t("module.ppe.matrix.addEdit","\u0625\u0636\u0627\u0641\u0629/\u062A\u0639\u062F\u064A\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u0644\u0648\u0638\u064A\u0641\u0629"))}
+                                ${ut(t('module.ppe.matrix.addEdit', 'إضافة/تعديل مصفوفة لوظيفة'))}
                             </button>
                         </div>
                     </div>
@@ -1049,64 +3388,165 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${e(t("module.common.close","\u0625\u063A\u0644\u0627\u0642"))}</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.close', 'إغلاق'))}</button>
                     <button class="btn-primary" onclick="PPE.exportPPEMatrix()">
-                        <i class="fas fa-file-excel ml-2"></i>${e(t("module.ppe.matrix.exportExcel","\u062A\u0635\u062F\u064A\u0631 Excel"))}
+                        <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.matrix.exportExcel', 'تصدير Excel'))}
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(i),this.applyModuleI18n(i);const s=document.getElementById("ppe-matrix-search");s&&s.addEventListener("input",r=>{this.filterPPEMatrix(r.target.value.trim())});const a=document.getElementById("add-ppe-matrix-btn");a&&a.addEventListener("click",()=>{this.showAddPPEMatrixForm()}),i.addEventListener("click",r=>{r.target===i&&i.remove()})},async renderPPEMatrix(){const t=(o,p)=>this._t(o,p),e=o=>Utils.escapeHTML(o),i=AppState.appData.employees||[],s=AppState.appData.employeePPEMatrixByCode||{},a=AppState.appData.ppe||[];if(i.length===0)return`
+        `;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        // Setup search
+        const searchInput = document.getElementById('ppe-matrix-search');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.filterPPEMatrix(e.target.value.trim());
+            });
+        }
+
+        // Setup add matrix button
+        const addMatrixBtn = document.getElementById('add-ppe-matrix-btn');
+        if (addMatrixBtn) {
+            addMatrixBtn.addEventListener('click', () => {
+                this.showAddPPEMatrixForm();
+            });
+        }
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    async renderPPEMatrix() {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const employees = AppState.appData.employees || [];
+        const matrixByCode = AppState.appData.employeePPEMatrixByCode || {};
+        const ppeList = AppState.appData.ppe || [];
+
+        // ✅ إرجاع التصميم السابق: عرض مصفوفة لكل موظف بشكل فردي
+        if (employees.length === 0) {
+            return `
                 <div class="empty-state">
                     <i class="fas fa-table text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">${e(t("module.ppe.empty.matrixNoEmployees","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0648\u0638\u0641\u064A\u0646"))}</p>
+                    <p class="text-gray-500">${ut(t('module.ppe.empty.matrixNoEmployees', 'لا توجد بيانات موظفين'))}</p>
                 </div>
-            `;const r=i.map(o=>{const p=o.employeeNumber||o.sapId||"",l=o.name||o.employeeName||"-",n=o.position||t("module.ppe.label.undefinedDept","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),d=o.department||"-",f=s[p]||[],b=a.filter(m=>m.employeeCode===p||m.employeeNumber===p),c=[...new Set(b.map(m=>m.equipmentType).filter(Boolean))];return{code:p,name:l,position:n,department:d,requiredPPE:f,receivedPPE:c}});return`
+            `;
+        }
+
+        // إنشاء مصفوفة لكل موظف
+        const matrixRows = employees.map(emp => {
+            const code = emp.employeeNumber || emp.sapId || '';
+            const name = emp.name || emp.employeeName || '-';
+            const position = emp.position || t('module.ppe.label.undefinedDept', 'غير محدد');
+            const department = emp.department || '-';
+            
+            // الحصول على مهمات الوقاية المطلوبة من المصفوفة
+            const requiredPPE = matrixByCode[code] || [];
+            
+            // الحصول على مهمات الوقاية المستلمة من جدول PPE
+            const employeePPE = ppeList.filter(p => 
+                (p.employeeCode === code || p.employeeNumber === code)
+            );
+            const receivedPPE = [...new Set(employeePPE.map(p => p.equipmentType).filter(Boolean))];
+
+            return {
+                code,
+                name,
+                position,
+                department,
+                requiredPPE,
+                receivedPPE
+            };
+        });
+
+        return `
             <div class="table-wrapper" style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>${e(t("module.ppe.table.matrix.code","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"))}</th>
-                            <th>${e(t("module.ppe.table.matrix.name","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641"))}</th>
-                            <th>${e(t("module.ppe.table.matrix.job","\u0627\u0644\u0648\u0638\u064A\u0641\u0629"))}</th>
-                            <th>${e(t("module.ppe.table.matrix.dept","\u0627\u0644\u0642\u0633\u0645/\u0627\u0644\u0625\u062F\u0627\u0631\u0629"))}</th>
-                            <th>${e(t("module.ppe.table.matrix.required","\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629"))}</th>
-                            <th>${e(t("module.ppe.table.matrix.received","\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629"))}</th>
-                            <th>${e(t("module.ppe.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.code', 'الكود الوظيفي'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.name', 'اسم الموظف'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.job', 'الوظيفة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.dept', 'القسم/الإدارة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.required', 'مهمات الوقاية المطلوبة'))}</th>
+                            <th>${ut(t('module.ppe.table.matrix.received', 'مهمات الوقاية المستلمة'))}</th>
+                            <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${r.map(o=>{const p=o.requiredPPE.length>0?o.requiredPPE.map(n=>`<span class="badge badge-success mr-1 mb-1">${Utils.escapeHTML(n)}</span>`).join(""):`<span class="text-gray-500 text-sm">${e(t("module.ppe.matrix.notSet","\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F"))}</span>`,l=o.receivedPPE.length>0?o.receivedPPE.map(n=>`<span class="badge badge-info mr-1 mb-1">${Utils.escapeHTML(n)}</span>`).join(""):`<span class="text-gray-500 text-sm">${e(t("module.ppe.matrix.noneReceived","\u0644\u0627 \u062A\u0648\u062C\u062F"))}</span>`;return`
-                                <tr data-employee-code="${Utils.escapeHTML(o.code)}" data-employee-name="${Utils.escapeHTML(o.name)}" data-position="${Utils.escapeHTML(o.position)}">
-                                    <td><strong class="font-mono">${Utils.escapeHTML(o.code||"-")}</strong></td>
-                                    <td>${Utils.escapeHTML(o.name)}</td>
-                                    <td>${Utils.escapeHTML(o.position)}</td>
-                                    <td>${Utils.escapeHTML(o.department)}</td>
+                        ${matrixRows.map(emp => {
+            const requiredPPEHtml = emp.requiredPPE.length > 0 
+                ? emp.requiredPPE.map(ppe => `<span class="badge badge-success mr-1 mb-1">${Utils.escapeHTML(ppe)}</span>`).join('')
+                : `<span class="text-gray-500 text-sm">${ut(t('module.ppe.matrix.notSet', 'لم يتم تحديد'))}</span>`;
+            
+            const receivedPPEHtml = emp.receivedPPE.length > 0
+                ? emp.receivedPPE.map(ppe => `<span class="badge badge-info mr-1 mb-1">${Utils.escapeHTML(ppe)}</span>`).join('')
+                : `<span class="text-gray-500 text-sm">${ut(t('module.ppe.matrix.noneReceived', 'لا توجد'))}</span>`;
+
+            return `
+                                <tr data-employee-code="${Utils.escapeHTML(emp.code)}" data-employee-name="${Utils.escapeHTML(emp.name)}" data-position="${Utils.escapeHTML(emp.position)}">
+                                    <td><strong class="font-mono">${Utils.escapeHTML(emp.code || '-')}</strong></td>
+                                    <td>${Utils.escapeHTML(emp.name)}</td>
+                                    <td>${Utils.escapeHTML(emp.position)}</td>
+                                    <td>${Utils.escapeHTML(emp.department)}</td>
                                     <td>
                                         <div class="flex flex-wrap gap-1">
-                                            ${p}
+                                            ${requiredPPEHtml}
                                         </div>
                                     </td>
                                     <td>
                                         <div class="flex flex-wrap gap-1">
-                                            ${l}
+                                            ${receivedPPEHtml}
                                         </div>
                                     </td>
                                     <td>
-                                        <button onclick="PPE.editEmployeePPEMatrix('${Utils.escapeHTML(o.code)}')" class="btn-icon btn-icon-primary" title="${e(t("module.common.edit","\u062A\u0639\u062F\u064A\u0644"))}">
+                                        <button onclick="PPE.editEmployeePPEMatrix('${Utils.escapeHTML(emp.code)}')" class="btn-icon btn-icon-primary" title="${ut(t('module.common.edit', 'تعديل'))}">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     </td>
                                 </tr>
-                            `}).join("")}
+                            `;
+        }).join('')}
                     </tbody>
                 </table>
             </div>
-        `},filterPPEMatrix(t){const e=document.querySelector("#ppe-matrix-content tbody");if(!e)return;e.querySelectorAll("tr[data-employee-code]").forEach(s=>{const a=s.getAttribute("data-employee-code")||"",r=s.getAttribute("data-employee-name")||"",o=s.getAttribute("data-position")||"",p=this._ppeMatchesSearch([a,r,o],t);s.style.display=p?"":"none"})},async showAddPPEMatrixForm(t=null){const e=!!t,i=AppState.appData.employeePPEMatrix||{},s=AppState.appData.ppe||[],a=[...new Set(s.map(u=>u.equipmentType).filter(Boolean))],r=AppState.appData.employees||[],o=[...new Set(r.map(u=>u.position).filter(Boolean))],p=t?i[t]:null,l=document.createElement("div");l.className="modal-overlay",l.innerHTML=`
+        `;
+    },
+
+    filterPPEMatrix(searchTerm) {
+        const tbody = document.querySelector('#ppe-matrix-content tbody');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr[data-employee-code]');
+        rows.forEach(row => {
+            const code = row.getAttribute('data-employee-code') || '';
+            const name = row.getAttribute('data-employee-name') || '';
+            const position = row.getAttribute('data-position') || '';
+            const show = this._ppeMatchesSearch([code, name, position], searchTerm);
+            row.style.display = show ? '' : 'none';
+        });
+    },
+
+    async showAddPPEMatrixForm(position = null) {
+        const isEdit = !!position;
+        const matrix = AppState.appData.employeePPEMatrix || {};
+        const ppeList = AppState.appData.ppe || [];
+        const ppeTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))];
+        const employees = AppState.appData.employees || [];
+        const positions = [...new Set(employees.map(e => e.position).filter(Boolean))];
+        const matrixData = position ? matrix[position] : null;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-plus-circle ml-2"></i>
-                        ${e?"\u062A\u0639\u062F\u064A\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629":"\u0625\u0636\u0627\u0621\u0629 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0644\u0648\u0638\u064A\u0629"}
+                        ${isEdit ? 'تعديل مصفوفة مهمات الوقاية' : 'إضاءة مصفوفة مهمات الوقاية لوظية'}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1116,42 +3556,42 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     <form id="ppe-matrix-form" class="space-y-4">
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629 *</label>
-                                ${e?`
-                                    <input type="text" id="ppe-matrix-position" value="${Utils.escapeHTML(t)}" class="form-input" readonly>
-                                `:`
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة *</label>
+                                ${isEdit ? `
+                                    <input type="text" id="ppe-matrix-position" value="${Utils.escapeHTML(position)}" class="form-input" readonly>
+                                ` : `
                                     <select id="ppe-matrix-position" required class="form-input">
-                                        <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0648\u0638\u064A\u0641\u0629</option>
-                                        ${o.map(u=>`
-                                            <option value="${Utils.escapeHTML(u)}" ${i[u]?"disabled":""}>${Utils.escapeHTML(u)}${i[u]?" (\u0645\u0648\u062C\u0648\u062F\u0629 \u0628\u0627\u0644\u0641\u0639\u0644)":""}</option>
-                                        `).join("")}
-                                        <option value="__custom__">\u0625\u0636\u0627\u0641\u0629 \u0648\u0638\u064A\u0641\u0629 \u062C\u062F\u064A\u062F\u0629</option>
+                                        <option value="">اختر الوظيفة</option>
+                                        ${positions.map(p => `
+                                            <option value="${Utils.escapeHTML(p)}" ${matrix[p] ? 'disabled' : ''}>${Utils.escapeHTML(p)}${matrix[p] ? ' (موجودة بالفعل)' : ''}</option>
+                                        `).join('')}
+                                        <option value="__custom__">إضافة وظيفة جديدة</option>
                                     </select>
-                                    <input type="text" id="ppe-matrix-position-custom" class="form-input mt-2" style="display: none;" placeholder="\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0648\u0638\u064A\u0641\u0629">
+                                    <input type="text" id="ppe-matrix-position-custom" class="form-input mt-2" style="display: none;" placeholder="أدخل اسم الوظيفة">
                                 `}
                             </div>
                         </div>
                         
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u0644\u0647\u0630\u0647 \u0627\u0644\u0648\u0638\u064A\u0641\u0629 *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">مهمات الوقاية المطلوبة لهذه الوظيفة *</label>
                             <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    ${a.map((u,h)=>`
+                                    ${ppeTypes.map((type, index) => `
                                         <label class="flex items-center p-2 border rounded cursor-pointer hover:bg-blue-50 transition-colors">
-                                            <input type="checkbox" name="ppe-type" value="${Utils.escapeHTML(u)}" 
-                                                ${p&&p.requiredPPE&&p.requiredPPE.includes(u)?"checked":""}
+                                            <input type="checkbox" name="ppe-type" value="${Utils.escapeHTML(type)}" 
+                                                ${matrixData && matrixData.requiredPPE && matrixData.requiredPPE.includes(type) ? 'checked' : ''}
                                                 class="ml-2 rounded border-gray-300 text-blue-600">
-                                            <span class="text-sm font-medium">${Utils.escapeHTML(u)}</span>
+                                            <span class="text-sm font-medium">${Utils.escapeHTML(type)}</span>
                                         </label>
-                                    `).join("")}
-                                    ${a.length===0?`
+                                    `).join('')}
+                                    ${ppeTypes.length === 0 ? `
                                         <div class="col-span-3 text-center text-gray-500 py-4">
-                                            \u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0648\u0627\u0639 \u0645\u0647\u0645\u0627\u062A \u0648\u0642\u0627\u064A\u0629 \u0645\u0633\u062C\u0644\u0629. \u064A\u0631\u062C\u0649 \u0625\u0636\u0627\u0641\u0629 \u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0645\u0647\u0645\u0627\u062A \u0648\u0642\u0627\u064A\u0629 \u0623\u0648\u0644\u0627\u064B.
+                                            لا توجد أنواع مهمات وقاية مسجلة. يرجى إضافة استلامات مهمات وقاية أولاً.
                                         </div>
-                                    `:""}
+                                    ` : ''}
                                 </div>
                                 <div class="mt-4">
-                                    <input type="text" id="ppe-matrix-custom-type" class="form-input" placeholder="\u0623\u0648 \u0623\u062F\u062E\u0644 \u0646\u0648\u0639 \u0645\u0647\u0645\u0629 \u0648\u0642\u0627\u064A\u0629 \u0645\u062E\u0635\u0635\u0629">
+                                    <input type="text" id="ppe-matrix-custom-type" class="form-input" placeholder="أو أدخل نوع مهمة وقاية مخصصة">
                                     <button type="button" onclick="
                                         const customType = document.getElementById('ppe-matrix-custom-type');
                                         if(customType && customType.value.trim()) {
@@ -1164,7 +3604,7 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                                             customType.value = '';
                                         }
                                     " class="btn-secondary mt-2">
-                                        <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629
+                                        <i class="fas fa-plus ml-2"></i>إضافة
                                     </button>
                                 </div>
                             </div>
@@ -1173,29 +3613,226 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <p class="text-sm text-blue-700">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                <strong>\u0645\u0644\u0627\u062D\u0638\u0629:</strong> \u0633\u064A\u062A\u0645 \u062A\u0637\u0628\u064A\u0642 \u0647\u0630\u0647 \u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0629 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0627\u0644\u0630\u064A\u0646 \u0644\u062F\u064A\u0647\u0645 \u0647\u0630\u0647 \u0627\u0644\u0648\u0638\u064A\u0641\u0629.
+                                <strong>ملاحظة:</strong> سيتم تطبيق هذه المصفوفة على جميع الموظفين الذين لديهم هذه الوظيفة.
                             </p>
                         </div>
                         
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" data-action="close">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${e?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0645\u0635\u0641\u0648\u0641\u0629"}
+                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'إضافة المصفوفة'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(l);let n=!1;const d=l.querySelector('[data-action="close"]'),f=l.querySelector(".modal-close"),b=()=>{n&&!k&&!confirm(`\u062A\u0646\u0628\u064A\u0647: \u0644\u062F\u064A\u0643 \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u062D\u0641\u0648\u0638\u0629.
+        `;
+        document.body.appendChild(modal);
 
-\u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u062F\u0648\u0646 \u062D\u0641\u0638\u061F`)||l.remove()};d&&d.addEventListener("click",b),f&&f.addEventListener("click",b);const c=document.getElementById("ppe-matrix-position"),m=document.getElementById("ppe-matrix-position-custom");c&&m&&c.addEventListener("change",()=>{c.value==="__custom__"?(m.style.display="block",m.required=!0):(m.style.display="none",m.required=!1)});const x=l.querySelector("#ppe-matrix-form");let k=!1;x.addEventListener("change",()=>{n=!0}),x.addEventListener("input",()=>{n=!0}),x.addEventListener("submit",async u=>{if(u.preventDefault(),k)return;const h=e?t:c?.value==="__custom__"?m?.value.trim():c?.value;if(!h){Notification.error("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u0629");return}const v=Array.from(x.querySelectorAll('input[name="ppe-type"]:checked')).map(M=>M.value);if(v.length===0){Notification.error("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u0645\u0647\u0645\u0627\u062A \u0648\u0642\u0627\u064A\u0629 \u0648\u0627\u062D\u062F\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644");return}k=!0;const w=x.querySelector('button[type="submit"]'),C=w?.innerHTML;w&&(w.disabled=!0,w.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{const M=r.filter($=>$.position===h).map($=>$.employeeNumber||$.sapId||"");AppState.appData.employeePPEMatrix||(AppState.appData.employeePPEMatrix={});const R=AppState.appData.employeePPEMatrix[h]||{};AppState.appData.employeePPEMatrix[h]={requiredPPE:v,employees:M,updatedAt:new Date().toISOString(),createdAt:R?.createdAt||new Date().toISOString()},AppState.appData.employeePPEMatrixByCode||(AppState.appData.employeePPEMatrixByCode={}),M.forEach($=>{$&&(AppState.appData.employeePPEMatrixByCode[$]||(AppState.appData.employeePPEMatrixByCode[$]=[]),v.forEach(_=>{AppState.appData.employeePPEMatrixByCode[$].includes(_)||AppState.appData.employeePPEMatrixByCode[$].push(_)}))}),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),n=!1,Notification.success("\u062A\u0645 "+(e?"\u062A\u062D\u062F\u064A\u062B":"\u0625\u0636\u0627\u0641\u0629")+' \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0644\u0644\u0648\u0638\u064A\u0641\u0629 "'+h+'" \u0628\u0646\u062C\u0627\u062D'),l.remove(),this.showPPEMatrix(),Promise.allSettled([GoogleIntegration.autoSave("PPEMatrix",AppState.appData.employeePPEMatrix).catch($=>(Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",$),{success:!1,error:$})),GoogleIntegration.autoSave("EmployeePPEMatrixByCode",AppState.appData.employeePPEMatrixByCode).catch($=>(Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0645\u0635\u0641\u0648\u0641\u0629 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL:",$),{success:!1,error:$}))]).then($=>{$.every(q=>q.status==="fulfilled")||Utils.safeWarn("\u26A0\uFE0F \u0628\u0639\u0636 \u0627\u0644\u0645\u0647\u0627\u0645 \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u0644\u0645 \u062A\u0643\u062A\u0645\u0644 \u0628\u0646\u062C\u0627\u062D\u060C \u0644\u0643\u0646 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0641\u0648\u0638\u0629 \u0645\u062D\u0644\u064A\u0627\u064B")}).catch($=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0647\u0627\u0645 \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",$)})}catch(M){Notification.error(PPE._t("module.ppe.notify.saveRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623")+": "+M.message),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629:",M),w&&(w.disabled=!1,w.innerHTML=C),k=!1}}),l.addEventListener("click",u=>{if(u.target===l){if(n&&!k&&!confirm(`\u062A\u0646\u0628\u064A\u0647: \u0644\u062F\u064A\u0643 \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u062D\u0641\u0648\u0638\u0629.
+        // معالج زر الإغلاق مع التحقق من التغييرات غير المحفوظة
+        let hasUnsavedChanges = false;
+        const closeBtn = modal.querySelector('[data-action="close"]');
+        const modalCloseBtn = modal.querySelector('.modal-close');
+        
+        const closeModal = () => {
+            if (hasUnsavedChanges && !isSaving) {
+                const ok = confirm('تنبيه: لديك تغييرات غير محفوظة.\n\nهل تريد الإغلاق دون حفظ؟');
+                if (!ok) return;
+            }
+            modal.remove();
+        };
 
-\u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0644\u0625\u063A\u0644\u0627\u0642 \u062F\u0648\u0646 \u062D\u0641\u0638\u061F`))return;l.remove()}})},async editPPEMatrix(t){this.showAddPPEMatrixForm(t)},async editEmployeePPEMatrix(t){const i=(AppState.appData.employees||[]).find(f=>(f.employeeNumber||f.sapId)===t);if(!i){Notification.error("\u0627\u0644\u0645\u0648\u0638\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const a=(AppState.appData.employeePPEMatrixByCode||{})[t]||[],r=AppState.appData.ppe||[],o=[...new Set(r.map(f=>f.equipmentType).filter(Boolean))],p=["\u062E\u0648\u0630\u0629 \u0623\u0645\u0627\u0646","\u0646\u0638\u0627\u0631\u0627\u062A \u0648\u0642\u0627\u064A\u0629","\u0642\u0641\u0627\u0632\u0627\u062A","\u0623\u062D\u0630\u064A\u0629 \u0623\u0645\u0627\u0646","\u0633\u062A\u0631\u0629 \u0639\u0627\u0643\u0633\u0629","\u0633\u062F\u0627\u062F\u0627\u062A \u0623\u0630\u0646","\u0643\u0645\u0627\u0645\u0629","\u0628\u062F\u0644\u0629 \u0648\u0627\u0642\u064A\u0629","\u062D\u0632\u0627\u0645 \u0623\u0645\u0627\u0646","\u0645\u0639\u062F\u0627\u062A \u062D\u0645\u0627\u064A\u0629 \u062A\u0646\u0641\u0633\u064A\u0629"],l=[...new Set([...p,...o])],n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closeModal);
+        }
+        if (modalCloseBtn) {
+            modalCloseBtn.addEventListener('click', closeModal);
+        }
+
+        // Handle custom position input
+        const positionSelect = document.getElementById('ppe-matrix-position');
+        const customPositionInput = document.getElementById('ppe-matrix-position-custom');
+        if (positionSelect && customPositionInput) {
+            positionSelect.addEventListener('change', () => {
+                if (positionSelect.value === '__custom__') {
+                    customPositionInput.style.display = 'block';
+                    customPositionInput.required = true;
+                } else {
+                    customPositionInput.style.display = 'none';
+                    customPositionInput.required = false;
+                }
+            });
+        }
+
+        const form = modal.querySelector('#ppe-matrix-form');
+        let isSaving = false;
+
+        // تتبع التغييرات في النموذج
+        form.addEventListener('change', () => {
+            hasUnsavedChanges = true;
+        });
+        form.addEventListener('input', () => {
+            hasUnsavedChanges = true;
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (isSaving) return; // منع الإرسال المتكرر
+
+            const selectedPosition = isEdit ? position : (positionSelect?.value === '__custom__' ? customPositionInput?.value.trim() : positionSelect?.value);
+            if (!selectedPosition) {
+                Notification.error('يرجى تحديد الوظيفة');
+                return;
+            }
+
+            const checkedPPE = Array.from(form.querySelectorAll('input[name="ppe-type"]:checked')).map(cb => cb.value);
+            if (checkedPPE.length === 0) {
+                Notification.error('يرجى تحديد مهمات وقاية واحدة على الأقل');
+                return;
+            }
+
+            isSaving = true;
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalBtnText = submitBtn?.innerHTML;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+            }
+
+            try {
+                // الحصول على جميع الموظفين بهذه الوظيفة (بناءً على الكود الوظيفي من جدول قاعدة بيانات الموظفين)
+                const employeesWithPosition = employees.filter(e => e.position === selectedPosition).map(e => e.employeeNumber || e.sapId || '');
+
+                if (!AppState.appData.employeePPEMatrix) {
+                    AppState.appData.employeePPEMatrix = {};
+                }
+
+                const matrixData = AppState.appData.employeePPEMatrix[selectedPosition] || {};
+
+                // تحديث مصفوفة مهمات الوقاية للوظيفة (مرتبطة بقاعدة بيانات الموظفين عبر الكود الوظيفي)
+                AppState.appData.employeePPEMatrix[selectedPosition] = {
+                    requiredPPE: checkedPPE,
+                    employees: employeesWithPosition, // قائمة الكود الوظيفي للموظفين بهذه الوظيفة
+                    updatedAt: new Date().toISOString(),
+                    createdAt: matrixData?.createdAt || new Date().toISOString()
+                };
+
+                // تحديث مصفوفة مهمات الوقاية لكل موظف بناءً على الكود الوظيفي
+                if (!AppState.appData.employeePPEMatrixByCode) {
+                    AppState.appData.employeePPEMatrixByCode = {};
+                }
+
+                employeesWithPosition.forEach(code => {
+                    if (code) {
+                        if (!AppState.appData.employeePPEMatrixByCode[code]) {
+                            AppState.appData.employeePPEMatrixByCode[code] = [];
+                        }
+                        // إضافة مهمات الوقاية المطلوبة لهذا الموظف (إذا لم تكن موجودة)
+                        checkedPPE.forEach(ppe => {
+                            if (!AppState.appData.employeePPEMatrixByCode[code].includes(ppe)) {
+                                AppState.appData.employeePPEMatrixByCode[code].push(ppe);
+                            }
+                        });
+                    }
+                });
+
+                // ✅ 1. حفظ البيانات في الذاكرة فوراً
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+
+                // ✅ 2. إغلاق النموذج فوراً بعد الحفظ في الذاكرة
+                hasUnsavedChanges = false;
+                Notification.success('تم ' + (isEdit ? 'تحديث' : 'إضافة') + ' مصفوفة مهمات الوقاية للوظيفة "' + selectedPosition + '" بنجاح');
+                modal.remove();
+                this.showPPEMatrix();
+
+                // ✅ 3. معالجة المهام الخلفية في الخلفية (بدون انتظار)
+                Promise.allSettled([
+                    // حفظ في قاعدة SQL
+                    GoogleIntegration.autoSave('PPEMatrix', AppState.appData.employeePPEMatrix).catch(error => {
+                        Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
+                        return { success: false, error };
+                    }),
+                    // حفظ مصفوفة الموظفين أيضاً
+                    GoogleIntegration.autoSave('EmployeePPEMatrixByCode', AppState.appData.employeePPEMatrixByCode).catch(error => {
+                        Utils.safeError('خطأ في حفظ مصفوفة الموظفين في قاعدة SQL:', error);
+                        return { success: false, error };
+                    })
+                ]).then((results) => {
+                    // التحقق من نجاح المهام الخلفية (اختياري - فقط للتسجيل)
+                    const allSucceeded = results.every(r => r.status === 'fulfilled');
+                    if (!allSucceeded) {
+                        Utils.safeWarn('⚠️ بعض المهام الخلفية لم تكتمل بنجاح، لكن البيانات محفوظة محلياً');
+                    }
+                }).catch(error => {
+                    Utils.safeError('خطأ في معالجة المهام الخلفية:', error);
+                });
+
+            } catch (error) {
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
+                Utils.safeError('خطأ في حفظ مصفوفة مهمات الوقاية:', error);
+                
+                // استعادة الزر في حالة الخطأ
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnText;
+                }
+                isSaving = false;
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                if (hasUnsavedChanges && !isSaving) {
+                    const ok = confirm('تنبيه: لديك تغييرات غير محفوظة.\n\nهل تريد الإغلاق دون حفظ؟');
+                    if (!ok) return;
+                }
+                modal.remove();
+            }
+        });
+    },
+
+    async editPPEMatrix(position) {
+        this.showAddPPEMatrixForm(position);
+    },
+
+    /**
+     * ✅ تعديل مصفوفة مهمات الوقاية لموظف فردي (التصميم السابق)
+     */
+    async editEmployeePPEMatrix(employeeCode) {
+        const employees = AppState.appData.employees || [];
+        const employee = employees.find(e => (e.employeeNumber || e.sapId) === employeeCode);
+        
+        if (!employee) {
+            Notification.error('الموظف غير موجود');
+            return;
+        }
+
+        const matrixByCode = AppState.appData.employeePPEMatrixByCode || {};
+        const currentPPE = matrixByCode[employeeCode] || [];
+        const ppeList = AppState.appData.ppe || [];
+        const ppeTypes = [...new Set(ppeList.map(p => p.equipmentType).filter(Boolean))];
+
+        // إضافة أنواع مهمات الوقاية المحددة مسبقاً
+        const predefinedPPE = [
+            'خوذة أمان', 'نظارات وقاية', 'قفازات', 'أحذية أمان',
+            'سترة عاكسة', 'سدادات أذن', 'كمامة', 'بدلة واقية',
+            'حزام أمان', 'معدات حماية تنفسية'
+        ];
+        const allPPETypes = [...new Set([...predefinedPPE, ...ppeTypes])];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-edit ml-2"></i>
-                        \u062A\u0639\u062F\u064A\u0644 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 - ${Utils.escapeHTML(i.name||t)}
+                        تعديل مصفوفة مهمات الوقاية - ${Utils.escapeHTML(employee.name || employeeCode)}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1203,83 +3840,171 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 </div>
                 <div class="modal-body">
                     <div class="mb-4 p-3 bg-gray-50 rounded">
-                        <p><strong>\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:</strong> ${Utils.escapeHTML(t)}</p>
-                        <p><strong>\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641:</strong> ${Utils.escapeHTML(i.name||"-")}</p>
-                        <p><strong>\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</strong> ${Utils.escapeHTML(i.position||"-")}</p>
-                        <p><strong>\u0627\u0644\u0642\u0633\u0645:</strong> ${Utils.escapeHTML(i.department||"-")}</p>
+                        <p><strong>الكود الوظيفي:</strong> ${Utils.escapeHTML(employeeCode)}</p>
+                        <p><strong>اسم الموظف:</strong> ${Utils.escapeHTML(employee.name || '-')}</p>
+                        <p><strong>الوظيفة:</strong> ${Utils.escapeHTML(employee.position || '-')}</p>
+                        <p><strong>القسم:</strong> ${Utils.escapeHTML(employee.department || '-')}</p>
                     </div>
                     <form id="employee-ppe-matrix-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">مهمات الوقاية المطلوبة *</label>
                             <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                    ${l.map((f,b)=>`
+                                    ${allPPETypes.map((type, index) => `
                                         <label class="flex items-center p-2 border rounded cursor-pointer hover:bg-blue-50 transition-colors">
-                                            <input type="checkbox" name="ppe-type" value="${Utils.escapeHTML(f)}" 
-                                                ${a.includes(f)?"checked":""}
+                                            <input type="checkbox" name="ppe-type" value="${Utils.escapeHTML(type)}" 
+                                                ${currentPPE.includes(type) ? 'checked' : ''}
                                                 class="ml-2 rounded border-gray-300 text-blue-600">
-                                            <span class="text-sm font-medium">${Utils.escapeHTML(f)}</span>
+                                            <span class="text-sm font-medium">${Utils.escapeHTML(type)}</span>
                                         </label>
-                                    `).join("")}
+                                    `).join('')}
                                 </div>
                             </div>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638
+                                <i class="fas fa-save ml-2"></i>حفظ
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(n);const d=n.querySelector("#employee-ppe-matrix-form");d.addEventListener("submit",async f=>{f.preventDefault();const b=d.querySelectorAll('input[name="ppe-type"]:checked'),c=Array.from(b).map(m=>m.value);try{AppState.appData.employeePPEMatrixByCode||(AppState.appData.employeePPEMatrixByCode={}),AppState.appData.employeePPEMatrixByCode[t]=c,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0644\u0644\u0645\u0648\u0638\u0641 \u0628\u0646\u062C\u0627\u062D"),n.remove();const m=document.getElementById("ppe-matrix-content");m&&(m.innerHTML=await this.renderPPEMatrix()),typeof GoogleIntegration<"u"&&GoogleIntegration.autoSave&&GoogleIntegration.autoSave("EmployeePPEMatrixByCode",AppState.appData.employeePPEMatrixByCode).catch(x=>{Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",x)})}catch(m){Notification.error(PPE._t("module.ppe.notify.saveRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623")+": "+m.message),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629:",m)}}),n.addEventListener("click",f=>{f.target===n&&n.remove()})},async viewPositionEmployees(t){const i=(AppState.appData.employeePPEMatrix||{})[t],a=(AppState.appData.employees||[]).filter(l=>l.position===t),r=document.createElement("div");r.className="modal-overlay";const o=i&&i.requiredPPE?i.requiredPPE.map(l=>`<span class="badge badge-success mr-2">${Utils.escapeHTML(l)}</span>`).join(""):"\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F";let p="";a.length>0?p=`
+        `;
+        document.body.appendChild(modal);
+
+        const form = modal.querySelector('#employee-ppe-matrix-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const checkboxes = form.querySelectorAll('input[name="ppe-type"]:checked');
+            const selectedPPE = Array.from(checkboxes).map(cb => cb.value);
+
+            try {
+                if (!AppState.appData.employeePPEMatrixByCode) {
+                    AppState.appData.employeePPEMatrixByCode = {};
+                }
+                
+                AppState.appData.employeePPEMatrixByCode[employeeCode] = selectedPPE;
+
+                // حفظ البيانات
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+
+                Notification.success('تم تحديث مصفوفة مهمات الوقاية للموظف بنجاح');
+                modal.remove();
+                
+                // تحديث عرض المصفوفة
+                const contentContainer = document.getElementById('ppe-matrix-content');
+                if (contentContainer) {
+                    contentContainer.innerHTML = await this.renderPPEMatrix();
+                }
+
+                // حفظ في قاعدة SQL في الخلفية
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                    GoogleIntegration.autoSave('EmployeePPEMatrixByCode', AppState.appData.employeePPEMatrixByCode).catch(error => {
+                        Utils.safeError('خطأ في حفظ قاعدة SQL:', error);
+                    });
+                }
+            } catch (error) {
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
+                Utils.safeError('خطأ في حفظ مصفوفة مهمات الوقاية:', error);
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    async viewPositionEmployees(position) {
+        const matrix = AppState.appData.employeePPEMatrix || {};
+        const matrixData = matrix[position];
+        const employees = AppState.appData.employees || [];
+        const positionEmployees = employees.filter(e => e.position === position);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+
+        // بناء HTML للجدول
+        const requiredPPEHtml = matrixData && matrixData.requiredPPE ?
+            matrixData.requiredPPE.map(ppe => `<span class="badge badge-success mr-2">${Utils.escapeHTML(ppe)}</span>`).join('') :
+            'لم يتم تحديد';
+
+        let employeesTableHtml = '';
+        if (positionEmployees.length > 0) {
+            employeesTableHtml = `
                 <div class="table-wrapper" style="overflow-x: auto;">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A</th>
-                                <th>\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641</th>
-                                <th>\u0627\u0644\u0642\u0633\u0645/\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
-                                <th>\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629</th>
+                                <th>الكود الوظيفي</th>
+                                <th>اسم الموظف</th>
+                                <th>القسم/الإدارة</th>
+                                <th>مهمات الوقاية المستلمة</th>
                             </tr>
                         </thead>
                         <tbody>
-                            ${a.map(l=>{const n=l.employeeNumber||l.sapId||"",d=(AppState.appData.ppe||[]).filter(x=>x.employeeCode===n||x.employeeNumber===n),b=(AppState.appData.employeePPEMatrixByCode||{})[n]||[],c=d.length>0?d.map(x=>`<span class="badge badge-info">${Utils.escapeHTML(x.equipmentType||"")}</span>`).join(""):'<span class="text-gray-500 text-sm">\u0644\u0627 \u062A\u0648\u062C\u062F</span>',m=b.length>0?b.map(x=>`<span class="badge badge-success">${Utils.escapeHTML(x)}</span>`).join(""):'<span class="text-gray-500 text-sm">\u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u062F\u064A\u062F</span>';return`
+                            ${positionEmployees.map(emp => {
+                const code = emp.employeeNumber || emp.sapId || '';
+                // الحصول على مهمات الوقاية المستلمة من جدول PPE
+                const employeePPE = (AppState.appData.ppe || []).filter(p =>
+                    (p.employeeCode === code || p.employeeNumber === code)
+                );
+                // الحصول على مهمات الوقاية المطلوبة من المصفوفة (مرتبطة بالكود الوظيفي)
+                const matrixByCode = AppState.appData.employeePPEMatrixByCode || {};
+                const requiredPPE = matrixByCode[code] || [];
+
+                const receivedPPEHtml = employeePPE.length > 0 ?
+                    employeePPE.map(p => `<span class="badge badge-info">${Utils.escapeHTML(p.equipmentType || '')}</span>`).join('') :
+                    '<span class="text-gray-500 text-sm">لا توجد</span>';
+
+                const requiredPPEHtml = requiredPPE.length > 0 ?
+                    requiredPPE.map(ppe => `<span class="badge badge-success">${Utils.escapeHTML(ppe)}</span>`).join('') :
+                    '<span class="text-gray-500 text-sm">لم يتم تحديد</span>';
+
+                return `
                                     <tr>
-                                        <td><strong>${Utils.escapeHTML(n||"-")}</strong></td>
-                                        <td>${Utils.escapeHTML(l.name||"-")}</td>
-                                        <td>${Utils.escapeHTML(l.department||"-")}</td>
+                                        <td><strong>${Utils.escapeHTML(code || '-')}</strong></td>
+                                        <td>${Utils.escapeHTML(emp.name || '-')}</td>
+                                        <td>${Utils.escapeHTML(emp.department || '-')}</td>
                                         <td>
                                             <div class="mb-2">
-                                                <strong class="text-sm text-gray-600">\u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629:</strong>
+                                                <strong class="text-sm text-gray-600">المطلوبة:</strong>
                                                 <div class="flex flex-wrap gap-2 mt-1">
-                                                    ${m}
+                                                    ${requiredPPEHtml}
                                                 </div>
                                             </div>
                                             <div>
-                                                <strong class="text-sm text-gray-600">\u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629:</strong>
+                                                <strong class="text-sm text-gray-600">المستلمة:</strong>
                                                 <div class="flex flex-wrap gap-2 mt-1">
-                                                    ${c}
+                                                    ${receivedPPEHtml}
                                                 </div>
                                             </div>
                                         </td>
                                     </tr>
-                                `}).join("")}
+                                `;
+            }).join('')}
                         </tbody>
                     </table>
                 </div>
-            `:p=`
+            `;
+        } else {
+            employeesTableHtml = `
                 <div class="empty-state">
                     <i class="fas fa-users text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0648\u0638\u0641\u064A\u0646 \u0628\u0647\u0630\u0647 \u0627\u0644\u0648\u0638\u064A\u0641\u0629</p>
+                    <p class="text-gray-500">لا يوجد موظفين بهذه الوظيفة</p>
                 </div>
-            `,r.innerHTML=`
+            `;
+        }
+
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 900px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-users ml-2"></i>
-                        \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0641\u064A \u0627\u0644\u0648\u0638\u064A\u0641\u0629: ${Utils.escapeHTML(t)}
+                        الموظفين في الوظيفة: ${Utils.escapeHTML(position)}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1289,31 +4014,478 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     <div class="mb-4">
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <p class="text-sm text-blue-700">
-                                <strong>\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629:</strong>
-                                ${o}
+                                <strong>مهمات الوقاية المطلوبة:</strong>
+                                ${requiredPPEHtml}
                             </p>
                         </div>
                     </div>
-                    ${p}
+                    ${employeesTableHtml}
                 </div>
                 <div class="modal-footer">
-                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
                 </div>
             </div>
-        `,document.body.appendChild(r),r.addEventListener("click",l=>{l.target===r&&r.remove()})},_ppeReceiptExcelFieldDefs(){return[{key:"id",ar:"\u0645\u0639\u0631\u0641 \u0627\u0644\u0633\u062C\u0644",en:"id"},{key:"receiptNumber",ar:"\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644",en:"receiptNumber"},{key:"employeeName",ar:"\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641",en:"employeeName"},{key:"employeeCode",ar:"\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A",en:"employeeCode"},{key:"employeeDepartment",ar:"\u0627\u0644\u0642\u0633\u0645",en:"employeeDepartment"},{key:"equipmentType",ar:"\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629",en:"equipmentType"},{key:"quantity",ar:"\u0627\u0644\u0643\u0645\u064A\u0629",en:"quantity"},{key:"receiptDate",ar:"\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645",en:"receiptDate"},{key:"status",ar:"\u0627\u0644\u062D\u0627\u0644\u0629",en:"status"}]},_ppeStockExcelFieldDefs(){return[{key:"itemId",ar:"\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0646\u0641",en:"itemId"},{key:"itemCode",ar:"\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641",en:"itemCode"},{key:"itemName",ar:"\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641",en:"itemName"},{key:"category",ar:"\u0627\u0644\u0641\u0626\u0629",en:"category"},{key:"stock_IN",ar:"\u0627\u0644\u0648\u0627\u0631\u062F",en:"stock_IN"},{key:"stock_OUT",ar:"\u0627\u0644\u0645\u0646\u0635\u0631\u0641",en:"stock_OUT"},{key:"balance",ar:"\u0627\u0644\u0631\u0635\u064A\u062F",en:"balance"},{key:"minThreshold",ar:"\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628",en:"minThreshold"},{key:"supplier",ar:"\u0627\u0644\u0645\u0648\u0631\u062F",en:"supplier"}]},_ppeBuildHeaderAliasMap(t){const e={};return t.forEach(i=>{e[String(i.ar||"").trim()]=i.key,e[String(i.en||"").trim().toLowerCase()]=i.key}),e},_ppeFormatCellForExcel(t){if(t==null)return"";if(t instanceof Date){const e=t.getFullYear(),i=String(t.getMonth()+1).padStart(2,"0"),s=String(t.getDate()).padStart(2,"0");return`${e}-${i}-${s}`}if(typeof t=="object"&&t!==null&&typeof t.toISOString=="function")try{const e=new Date(t);if(!isNaN(e.getTime()))return this._ppeFormatCellForExcel(e)}catch{}return t},async exportReceiptsExcel(){try{if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}Loading.show(this._t("module.ppe.excel.exportingReceipts","\u062C\u0627\u0631\u064A \u062A\u0635\u062F\u064A\u0631 \u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A\u2026"));const t=this._ppeReceiptExcelFieldDefs(),i=this.getFilteredPpeReceipts(AppState.appData.ppe||[]).map(o=>{const p={};return t.forEach(l=>{let n=o[l.key];l.key==="receiptDate"?n=this._ppeFormatCellForExcel(n||o.receiptDate):l.key==="quantity"&&(n=n!=null?Number(n):""),p[l.ar]=n??""}),p}),s=XLSX.utils.json_to_sheet(i.length?i:[t.reduce((o,p)=>(o[p.ar]="",o),{})]),a=XLSX.utils.book_new();XLSX.utils.book_append_sheet(a,s,this._t("module.ppe.excel.sheetReceipts","\u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"));const r=new Date().toISOString().slice(0,10);XLSX.writeFile(a,`PPE_\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A_${r}.xlsx`),Loading.hide(),Notification.success(this._t("module.ppe.excel.exportReceiptsOk","\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 Excel \u0644\u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A"))}catch(t){Loading.hide(),Utils.safeError("exportReceiptsExcel",t),Notification.error(this._t("module.ppe.excel.exportErr","\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631")+": "+(t.message||t))}},downloadReceiptsExcelTemplate(){try{if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}const e=this._ppeReceiptExcelFieldDefs().map(a=>a.ar),i=XLSX.utils.aoa_to_sheet([e]),s=XLSX.utils.book_new();XLSX.utils.book_append_sheet(s,i,this._t("module.ppe.excel.sheetReceipts","\u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A")),XLSX.writeFile(s,`PPE_\u0642\u0627\u0644\u0628_\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A_${new Date().toISOString().slice(0,10)}.xlsx`),Notification.success(this._t("module.ppe.excel.templateDownloadOk","\u062A\u0645 \u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628"))}catch(t){Notification.error(this._t("module.ppe.excel.templateErr","\u0641\u0634\u0644 \u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628")+": "+t.message)}},async importReceiptsExcel(t){if(!t)return;if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}const e=this._ppeReceiptExcelFieldDefs(),i=this._ppeBuildHeaderAliasMap(e);try{Loading.show(this._t("module.ppe.excel.importingReceipts","\u062C\u0627\u0631\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A\u2026"));const s=await t.arrayBuffer(),a=XLSX.read(s,{type:"array",cellDates:!0}),r=a.Sheets[a.SheetNames[0]],o=XLSX.utils.sheet_to_json(r,{header:1,defval:"",raw:!1});if(!o||o.length<2){Loading.hide(),Notification.warning(this._t("module.ppe.excel.importEmpty","\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0635\u0641 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0631\u0624\u0648\u0633"));return}const l=(o[0]||[]).map(m=>String(m||"").trim()).map(m=>i[m]||i[String(m||"").trim().toLowerCase()]||""),n=Array.isArray(AppState.appData.ppe)?AppState.appData.ppe:[],d=new Set(n.map(m=>String(m&&(m.id||m.receiptNumber)||"").trim()).filter(Boolean));let f=0,b=0;const c=[];for(let m=1;m<o.length;m++){const x=o[m];if(!x||!x.some(h=>String(h||"").trim()!==""))continue;const k={};if(l.forEach((h,v)=>{if(!h)return;let w=x[v];if(w instanceof Date)k[h]=w.toISOString();else if(h==="quantity")k[h]=parseFloat(String(w).replace(/,/g,""))||0;else if(h==="receiptDate"&&w!==""&&w!==null&&w!==void 0){const C=w instanceof Date?w:new Date(w);k[h]=isNaN(C.getTime())?String(w):C.toISOString()}else k[h]=w!=null?String(w).trim():""}),!k.equipmentType||!k.employeeName){b++;continue}!k.quantity&&k.quantity!==0&&(k.quantity=1),k.status||(k.status="\u0645\u0633\u062A\u0644\u0645");const u=String(k.id||k.receiptNumber||"").trim();if(u&&d.has(u)){c.push({row:m+1,id:u,label:`${k.employeeName} \u2014 ${k.equipmentType}`});continue}try{const h={...k};delete h.id;const v=await GoogleIntegration.sendToAppsScript("addPPE",h);v&&v.success?(f++,u&&d.add(u)):b++}catch(h){b++,Utils.safeWarn("\u0635\u0641 \u0627\u0633\u062A\u0644\u0627\u0645 \u0641\u0634\u0644:",h)}}Loading.hide(),this.clearCache(),await this.refreshActiveTab(),this._reportImportSummary({scope:"receipts",ok:f,fail:b,duplicates:c})}catch(s){Loading.hide(),Utils.safeError("importReceiptsExcel",s),Notification.error(this._t("module.ppe.excel.importErr","\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F")+": "+(s.message||s))}},async exportStockExcel(){try{if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}Loading.show(this._t("module.ppe.excel.exportingStock","\u062C\u0627\u0631\u064A \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u2026"));const t=this._ppeStockExcelFieldDefs(),i=this.getFilteredStockItems(this._getCurrentStockItems()).map(r=>{const o={};return t.forEach(p=>{let l=r[p.key];p.key==="lastUpdate"?l=this._ppeFormatCellForExcel(l):["stock_IN","stock_OUT","balance","minThreshold"].includes(p.key)&&(l=l!=null&&l!==""?Number(l):""),o[p.ar]=l??""}),o}),s=XLSX.utils.json_to_sheet(i.length?i:[t.reduce((r,o)=>(r[o.ar]="",r),{})]),a=XLSX.utils.book_new();XLSX.utils.book_append_sheet(a,s,this._t("module.ppe.excel.sheetStock","\u0645\u062E\u0632\u0648\u0646 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629")),XLSX.writeFile(a,`PPE_\u0645\u062E\u0632\u0648\u0646_${new Date().toISOString().slice(0,10)}.xlsx`),Loading.hide(),Notification.success(this._t("module.ppe.excel.exportStockOk","\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 Excel \u0644\u0644\u0645\u062E\u0632\u0648\u0646"))}catch(t){Loading.hide(),Utils.safeError("exportStockExcel",t),Notification.error(this._t("module.ppe.excel.exportErr","\u0641\u0634\u0644 \u0627\u0644\u062A\u0635\u062F\u064A\u0631")+": "+(t.message||t))}},downloadStockExcelTemplate(){try{if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}const e=this._ppeStockExcelFieldDefs().filter(a=>!["stock_IN","stock_OUT","balance"].includes(a.key)).map(a=>a.ar),i=XLSX.utils.aoa_to_sheet([e]),s=XLSX.utils.book_new();XLSX.utils.book_append_sheet(s,i,this._t("module.ppe.excel.sheetStock","\u0645\u062E\u0632\u0648\u0646 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629")),XLSX.writeFile(s,`PPE_\u0642\u0627\u0644\u0628_\u0645\u062E\u0632\u0648\u0646_${new Date().toISOString().slice(0,10)}.xlsx`),Notification.success(this._t("module.ppe.excel.templateDownloadOk","\u062A\u0645 \u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628"))}catch(t){Notification.error(this._t("module.ppe.excel.templateErr","\u0641\u0634\u0644 \u062A\u0646\u0632\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628")+": "+t.message)}},async importStockExcel(t){if(!t)return;if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}const e=this._ppeStockExcelFieldDefs(),i=this._ppeBuildHeaderAliasMap(e);try{Loading.show(this._t("module.ppe.excel.importingStock","\u062C\u0627\u0631\u064A \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u2026"));const s=await t.arrayBuffer(),a=XLSX.read(s,{type:"array",cellDates:!0}),r=a.Sheets[a.SheetNames[0]],o=XLSX.utils.sheet_to_json(r,{header:1,defval:"",raw:!1});if(!o||o.length<2){Loading.hide(),Notification.warning(this._t("module.ppe.excel.importEmpty","\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0635\u0641 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0631\u0624\u0648\u0633"));return}const l=(o[0]||[]).map(u=>String(u||"").trim()).map(u=>i[u]||i[String(u||"").trim().toLowerCase()]||"");let n=this._getCurrentStockItems();if(!Array.isArray(n)||n.length===0)try{n=await this.loadStockItems(!0)}catch{n=this._getCurrentStockItems()||[]}const d=u=>String(u??"").trim().toLowerCase(),f=new Set,b=new Set,c=new Set;(n||[]).forEach(u=>{u&&(u.itemCode&&f.add(d(u.itemCode)),u.itemName&&b.add(d(u.itemName)),u.itemId&&c.add(String(u.itemId).trim()))});let m=0,x=0;const k=[];for(let u=1;u<o.length;u++){const h=o[u];if(!h||!h.some(_=>String(_||"").trim()!==""))continue;const v={};if(l.forEach((_,q)=>{if(!_)return;let z=h[q];["stock_IN","stock_OUT","balance","minThreshold"].includes(_)?v[_]=parseFloat(String(z).replace(/,/g,""))||0:v[_]=z!=null?String(z).trim():""}),!v.itemCode||!v.itemName){x++;continue}const w=d(v.itemCode),C=d(v.itemName),M=v.itemId&&String(v.itemId).trim();let R="";if(M&&c.has(M)?R="itemId":f.has(w)?R="itemCode":b.has(C)&&(R="itemName"),R){k.push({row:u+1,code:v.itemCode,name:v.itemName,reason:R});continue}const $={itemCode:v.itemCode,itemName:v.itemName,category:v.category||"",minThreshold:v.minThreshold!==void 0?v.minThreshold:0,supplier:v.supplier||""};v.stock_IN!==void 0&&($.stock_IN=v.stock_IN),v.stock_OUT!==void 0&&($.stock_OUT=v.stock_OUT),v.balance!==void 0&&($.balance=v.balance);try{const _=await GoogleIntegration.sendToAppsScript("addOrUpdatePPEStockItem",$);if(_&&_.success)m++,f.add(w),b.add(C);else{const q=_&&_.message?String(_.message):"";/موجود|exists/i.test(q)?k.push({row:u+1,code:v.itemCode,name:v.itemName,reason:"backend"}):x++}}catch(_){x++,Utils.safeWarn("\u0635\u0641 \u0645\u062E\u0632\u0648\u0646 \u0641\u0634\u0644:",_)}}Loading.hide(),this.clearCache(),await this.refreshActiveTab(),this._reportImportSummary({scope:"stock",ok:m,fail:x,duplicates:k})}catch(s){Loading.hide(),Utils.safeError("importStockExcel",s),Notification.error(this._t("module.ppe.excel.importErr","\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F")+": "+(s.message||s))}},_reportImportSummary({scope:t,ok:e,fail:i,duplicates:s}){const a=(l,n)=>this._t(l,n),r=s&&s.length||0,p=`${t==="receipts"?this._t("module.ppe.excel.importReceiptsSummary","\u0627\u0643\u062A\u0645\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F"):this._t("module.ppe.excel.importStockSummary","\u0627\u0643\u062A\u0645\u0644 \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u062E\u0632\u0648\u0646")}: ${e} ${this._t("module.ppe.excel.ok","\u0646\u062C\u0627\u062D")}\u060C ${r} ${this._t("module.ppe.excel.duplicates","\u0645\u0643\u0631\u0651\u0631 (\u062A\u0645 \u062A\u062C\u0627\u0648\u0632\u0647)")}\u060C ${i} ${this._t("module.ppe.excel.fail","\u062A\u062E\u0637\u064A/\u0641\u0634\u0644")}.`;if(r>0){try{Notification.warning(p)}catch{}this._showDuplicatesModal(t,s)}else if(e>0)try{Notification.success(p)}catch{}else try{Notification.warning(p)}catch{}},_showDuplicatesModal(t,e){const i=(d,f)=>this._t(d,f),s=d=>Utils.escapeHTML(d),a=t==="receipts",r=a?i("module.ppe.excel.duplicatesReceiptsTitle","\u0628\u0646\u0648\u062F \u0645\u0643\u0631\u0651\u0631\u0629 \u0641\u064A \u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A (\u0644\u0645 \u062A\u064F\u0633\u062A\u0648\u0631\u062F)"):i("module.ppe.excel.duplicatesStockTitle","\u0623\u0635\u0646\u0627\u0641 \u0645\u0643\u0631\u0651\u0631\u0629 \u0641\u064A \u0627\u0644\u0645\u062E\u0632\u0648\u0646 (\u0644\u0645 \u062A\u064F\u0633\u062A\u0648\u0631\u062F)"),o=d=>d==="itemCode"?i("module.ppe.excel.dupReasonCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644"):d==="itemName"?i("module.ppe.excel.dupReasonName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644"):d==="itemId"?i("module.ppe.excel.dupReasonId","\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644"):d==="backend"?i("module.ppe.excel.dupReasonBackend","\u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644 (\u062A\u0645 \u0631\u0641\u0636\u0647 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645)"):i("module.ppe.excel.dupReasonGeneric","\u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644"),p=(e||[]).map(d=>a?`<tr>
-                    <td>${s(d.row)}</td>
-                    <td>${s(d.id||"")}</td>
-                    <td>${s(d.label||"")}</td>
-                </tr>`:`<tr>
-                <td>${s(d.row)}</td>
-                <td class="font-mono font-semibold">${s(d.code||"")}</td>
-                <td>${s(d.name||"")}</td>
-                <td>${s(o(d.reason))}</td>
-            </tr>`).join(""),l=a?`<tr><th>${s(i("module.ppe.excel.dupCol.row","\u0627\u0644\u0635\u0641"))}</th><th>${s(i("module.ppe.excel.dupCol.idOrReceipt","\u0627\u0644\u0645\u0639\u0631\u0641/\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644"))}</th><th>${s(i("module.ppe.excel.dupCol.summary","\u0627\u0644\u0645\u0648\u0638\u0641 \u2014 \u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"))}</th></tr>`:`<tr><th>${s(i("module.ppe.excel.dupCol.row","\u0627\u0644\u0635\u0641"))}</th><th>${s(i("module.ppe.excel.dupCol.code","\u0627\u0644\u0643\u0648\u062F"))}</th><th>${s(i("module.ppe.excel.dupCol.name","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641"))}</th><th>${s(i("module.ppe.excel.dupCol.reason","\u0627\u0644\u0633\u0628\u0628"))}</th></tr>`,n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
+        `;
+        document.body.appendChild(modal);
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /** رؤوس قالب/تصدير سجل الاستلامات (عربي ↔ مفتاح الحقل) */
+    _ppeReceiptExcelFieldDefs() {
+        return [
+            { key: 'id', ar: 'معرف السجل', en: 'id' },
+            { key: 'receiptNumber', ar: 'رقم الإيصال', en: 'receiptNumber' },
+            { key: 'employeeName', ar: 'اسم الموظف', en: 'employeeName' },
+            { key: 'employeeCode', ar: 'الكود الوظيفي', en: 'employeeCode' },
+            { key: 'employeeDepartment', ar: 'القسم', en: 'employeeDepartment' },
+            { key: 'equipmentType', ar: 'نوع المعدة', en: 'equipmentType' },
+            { key: 'quantity', ar: 'الكمية', en: 'quantity' },
+            { key: 'receiptDate', ar: 'تاريخ الاستلام', en: 'receiptDate' },
+            { key: 'status', ar: 'الحالة', en: 'status' }
+        ];
+    },
+
+    /** رؤوس قالب/تصدير المخزون */
+    _ppeStockExcelFieldDefs() {
+        return [
+            { key: 'itemId', ar: 'معرف الصنف', en: 'itemId' },
+            { key: 'itemCode', ar: 'كود الصنف', en: 'itemCode' },
+            { key: 'itemName', ar: 'اسم الصنف', en: 'itemName' },
+            { key: 'category', ar: 'الفئة', en: 'category' },
+            { key: 'stock_IN', ar: 'الوارد', en: 'stock_IN' },
+            { key: 'stock_OUT', ar: 'المنصرف', en: 'stock_OUT' },
+            { key: 'balance', ar: 'الرصيد', en: 'balance' },
+            { key: 'minThreshold', ar: 'حد إعادة الطلب', en: 'minThreshold' },
+            { key: 'supplier', ar: 'المورد', en: 'supplier' }
+        ];
+    },
+
+    _ppeBuildHeaderAliasMap(defs) {
+        const m = {};
+        defs.forEach((d) => {
+            m[String(d.ar || '').trim()] = d.key;
+            m[String(d.en || '').trim().toLowerCase()] = d.key;
+        });
+        return m;
+    },
+
+    _ppeFormatCellForExcel(val) {
+        if (val === null || val === undefined) return '';
+        if (val instanceof Date) {
+            const y = val.getFullYear();
+            const mo = String(val.getMonth() + 1).padStart(2, '0');
+            const da = String(val.getDate()).padStart(2, '0');
+            return `${y}-${mo}-${da}`;
+        }
+        if (typeof val === 'object' && val !== null && typeof val.toISOString === 'function') {
+            try {
+                const d = new Date(val);
+                if (!isNaN(d.getTime())) return this._ppeFormatCellForExcel(d);
+            } catch (e) { /* ignore */ }
+        }
+        return val;
+    },
+
+    async exportReceiptsExcel() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            Loading.show(this._t('module.ppe.excel.exportingReceipts', 'جاري تصدير سجل الاستلامات…'));
+            const defs = this._ppeReceiptExcelFieldDefs();
+            const list = this.getFilteredPpeReceipts(AppState.appData.ppe || []);
+            const rows = list.map((item) => {
+                const o = {};
+                defs.forEach((d) => {
+                    let v = item[d.key];
+                    if (d.key === 'receiptDate') v = this._ppeFormatCellForExcel(v || item.receiptDate);
+                    else if (d.key === 'quantity') v = v !== undefined && v !== null ? Number(v) : '';
+                    o[d.ar] = v !== undefined && v !== null ? v : '';
+                });
+                return o;
+            });
+            const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [defs.reduce((acc, d) => { acc[d.ar] = ''; return acc; }, {})]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetReceipts', 'سجل الاستلامات'));
+            const dateStr = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `PPE_استلامات_${dateStr}.xlsx`);
+            Loading.hide();
+            Notification.success(this._t('module.ppe.excel.exportReceiptsOk', 'تم تصدير Excel لسجل الاستلامات'));
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('exportReceiptsExcel', error);
+            Notification.error(this._t('module.ppe.excel.exportErr', 'فشل التصدير') + ': ' + (error.message || error));
+        }
+    },
+
+    downloadReceiptsExcelTemplate() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            const defs = this._ppeReceiptExcelFieldDefs();
+            const headerRow = defs.map((d) => d.ar);
+            const ws = XLSX.utils.aoa_to_sheet([headerRow]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetReceipts', 'سجل الاستلامات'));
+            XLSX.writeFile(wb, `PPE_قالب_استلامات_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Notification.success(this._t('module.ppe.excel.templateDownloadOk', 'تم تنزيل القالب'));
+        } catch (error) {
+            Notification.error(this._t('module.ppe.excel.templateErr', 'فشل تنزيل القالب') + ': ' + error.message);
+        }
+    },
+
+    async importReceiptsExcel(file) {
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        const defs = this._ppeReceiptExcelFieldDefs();
+        const alias = this._ppeBuildHeaderAliasMap(defs);
+        try {
+            Loading.show(this._t('module.ppe.excel.importingReceipts', 'جاري استيراد الاستلامات…'));
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if (!aoa || aoa.length < 2) {
+                Loading.hide();
+                Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                return;
+            }
+            const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
+            const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+
+            // ✅ تحميل البيانات الحالية لاكتشاف التكرار قبل الإرسال
+            const existingList = Array.isArray(AppState.appData.ppe) ? AppState.appData.ppe : [];
+            const existingIds = new Set(existingList
+                .map((r) => String((r && (r.id || r.receiptNumber)) || '').trim())
+                .filter(Boolean));
+
+            let ok = 0;
+            let fail = 0;
+            const duplicates = []; // {row, id, label}
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
+                const obj = {};
+                colToKey.forEach((key, i) => {
+                    if (!key) return;
+                    let v = row[i];
+                    if (v instanceof Date) {
+                        obj[key] = v.toISOString();
+                    } else if (key === 'quantity') {
+                        obj[key] = parseFloat(String(v).replace(/,/g, '')) || 0;
+                    } else if (key === 'receiptDate' && v !== '' && v !== null && v !== undefined) {
+                        const d = v instanceof Date ? v : new Date(v);
+                        obj[key] = !isNaN(d.getTime()) ? d.toISOString() : String(v);
+                    } else {
+                        obj[key] = v !== undefined && v !== null ? String(v).trim() : '';
+                    }
+                });
+                if (!obj.equipmentType || !obj.employeeName) {
+                    fail++;
+                    continue;
+                }
+                if (!obj.quantity && obj.quantity !== 0) obj.quantity = 1;
+                if (!obj.status) obj.status = 'مستلم';
+
+                // ✅ منع التحديث: إذا كان معرف السجل أو رقم الإيصال موجوداً، اعتبره مكرراً وتجاهله
+                const candidateId = String(obj.id || obj.receiptNumber || '').trim();
+                if (candidateId && existingIds.has(candidateId)) {
+                    duplicates.push({
+                        row: r + 1,
+                        id: candidateId,
+                        label: `${obj.employeeName} — ${obj.equipmentType}`
+                    });
+                    continue;
+                }
+
+                try {
+                    const payload = { ...obj };
+                    delete payload.id; // الإضافة فقط
+                    const res = await GoogleIntegration.sendToAppsScript('addPPE', payload);
+                    if (res && res.success) {
+                        ok++;
+                        if (candidateId) existingIds.add(candidateId);
+                    } else {
+                        fail++;
+                    }
+                } catch (e) {
+                    fail++;
+                    Utils.safeWarn('صف استلام فشل:', e);
+                }
+            }
+            Loading.hide();
+            this.clearCache();
+            await this.refreshActiveTab();
+            this._reportImportSummary({
+                scope: 'receipts',
+                ok,
+                fail,
+                duplicates
+            });
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('importReceiptsExcel', error);
+            Notification.error(this._t('module.ppe.excel.importErr', 'فشل الاستيراد') + ': ' + (error.message || error));
+        }
+    },
+
+    async exportStockExcel() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            Loading.show(this._t('module.ppe.excel.exportingStock', 'جاري تصدير المخزون…'));
+            const defs = this._ppeStockExcelFieldDefs();
+            const list = this.getFilteredStockItems(this._getCurrentStockItems());
+            const rows = list.map((item) => {
+                const o = {};
+                defs.forEach((d) => {
+                    let v = item[d.key];
+                    if (d.key === 'lastUpdate') v = this._ppeFormatCellForExcel(v);
+                    else if (['stock_IN', 'stock_OUT', 'balance', 'minThreshold'].includes(d.key)) {
+                        v = v !== undefined && v !== null && v !== '' ? Number(v) : '';
+                    }
+                    o[d.ar] = v !== undefined && v !== null ? v : '';
+                });
+                return o;
+            });
+            const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [defs.reduce((acc, d) => { acc[d.ar] = ''; return acc; }, {})]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetStock', 'مخزون مهمات الوقاية'));
+            XLSX.writeFile(wb, `PPE_مخزون_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Loading.hide();
+            Notification.success(this._t('module.ppe.excel.exportStockOk', 'تم تصدير Excel للمخزون'));
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('exportStockExcel', error);
+            Notification.error(this._t('module.ppe.excel.exportErr', 'فشل التصدير') + ': ' + (error.message || error));
+        }
+    },
+
+    downloadStockExcelTemplate() {
+        try {
+            if (typeof XLSX === 'undefined') {
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+            const defs = this._ppeStockExcelFieldDefs().filter((d) =>
+                !['stock_IN', 'stock_OUT', 'balance'].includes(d.key)
+            );
+            const headerRow = defs.map((d) => d.ar);
+            const ws = XLSX.utils.aoa_to_sheet([headerRow]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, this._t('module.ppe.excel.sheetStock', 'مخزون مهمات الوقاية'));
+            XLSX.writeFile(wb, `PPE_قالب_مخزون_${new Date().toISOString().slice(0, 10)}.xlsx`);
+            Notification.success(this._t('module.ppe.excel.templateDownloadOk', 'تم تنزيل القالب'));
+        } catch (error) {
+            Notification.error(this._t('module.ppe.excel.templateErr', 'فشل تنزيل القالب') + ': ' + error.message);
+        }
+    },
+
+    async importStockExcel(file) {
+        if (!file) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        const defs = this._ppeStockExcelFieldDefs();
+        const alias = this._ppeBuildHeaderAliasMap(defs);
+        try {
+            Loading.show(this._t('module.ppe.excel.importingStock', 'جاري استيراد المخزون…'));
+            const buf = await file.arrayBuffer();
+            const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+            if (!aoa || aoa.length < 2) {
+                Loading.hide();
+                Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                return;
+            }
+            const headerRow = (aoa[0] || []).map((c) => String(c || '').trim());
+            const colToKey = headerRow.map((h) => alias[h] || alias[String(h || '').trim().toLowerCase()] || '');
+
+            // ✅ تحميل البيانات الحالية لاكتشاف التكرار قبل الإرسال — حتى لا تُكتب الأصناف الموجودة
+            let existingItems = this._getCurrentStockItems();
+            if (!Array.isArray(existingItems) || existingItems.length === 0) {
+                try {
+                    existingItems = await this.loadStockItems(true);
+                } catch (e) {
+                    existingItems = this._getCurrentStockItems() || [];
+                }
+            }
+            const norm = (v) => String(v == null ? '' : v).trim().toLowerCase();
+            const existingByCode = new Set();
+            const existingByName = new Set();
+            const existingByItemId = new Set();
+            (existingItems || []).forEach((it) => {
+                if (!it) return;
+                if (it.itemCode) existingByCode.add(norm(it.itemCode));
+                if (it.itemName) existingByName.add(norm(it.itemName));
+                if (it.itemId) existingByItemId.add(String(it.itemId).trim());
+            });
+
+            let ok = 0;
+            let fail = 0;
+            const duplicates = []; // {row, code, name, reason}
+            for (let r = 1; r < aoa.length; r++) {
+                const row = aoa[r];
+                if (!row || !row.some((c) => String(c || '').trim() !== '')) continue;
+                const obj = {};
+                colToKey.forEach((key, i) => {
+                    if (!key) return;
+                    let v = row[i];
+                    if (['stock_IN', 'stock_OUT', 'balance', 'minThreshold'].includes(key)) {
+                        obj[key] = parseFloat(String(v).replace(/,/g, '')) || 0;
+                    } else {
+                        obj[key] = v !== undefined && v !== null ? String(v).trim() : '';
+                    }
+                });
+                if (!obj.itemCode || !obj.itemName) {
+                    fail++;
+                    continue;
+                }
+
+                // ✅ منع التحديث: يُتخطّى الصنف إذا تطابق itemId أو itemCode أو itemName مع موجود
+                const codeKey = norm(obj.itemCode);
+                const nameKey = norm(obj.itemName);
+                const iidRaw = obj.itemId && String(obj.itemId).trim();
+                let dupReason = '';
+                if (iidRaw && existingByItemId.has(iidRaw)) dupReason = 'itemId';
+                else if (existingByCode.has(codeKey)) dupReason = 'itemCode';
+                else if (existingByName.has(nameKey)) dupReason = 'itemName';
+                if (dupReason) {
+                    duplicates.push({
+                        row: r + 1,
+                        code: obj.itemCode,
+                        name: obj.itemName,
+                        reason: dupReason
+                    });
+                    continue;
+                }
+
+                const stockData = {
+                    itemCode: obj.itemCode,
+                    itemName: obj.itemName,
+                    category: obj.category || '',
+                    minThreshold: obj.minThreshold !== undefined ? obj.minThreshold : 0,
+                    supplier: obj.supplier || ''
+                };
+                // لا نمرّر itemId قادماً من الملف لتجنّب أي تطابق غير مقصود؛ يولِّده الباك‑إند للسجل الجديد.
+                if (obj.stock_IN !== undefined) stockData.stock_IN = obj.stock_IN;
+                if (obj.stock_OUT !== undefined) stockData.stock_OUT = obj.stock_OUT;
+                if (obj.balance !== undefined) stockData.balance = obj.balance;
+                try {
+                    const res = await GoogleIntegration.sendToAppsScript('addOrUpdatePPEStockItem', stockData);
+                    if (res && res.success) {
+                        ok++;
+                        existingByCode.add(codeKey);
+                        existingByName.add(nameKey);
+                    } else {
+                        // الباك‑إند يرفض المكرّر برسالة «كود الصنف موجود بالفعل…» — اعدّه ضمن المكررات
+                        const msg = res && res.message ? String(res.message) : '';
+                        if (/موجود|exists/i.test(msg)) {
+                            duplicates.push({
+                                row: r + 1,
+                                code: obj.itemCode,
+                                name: obj.itemName,
+                                reason: 'backend'
+                            });
+                        } else {
+                            fail++;
+                        }
+                    }
+                } catch (e) {
+                    fail++;
+                    Utils.safeWarn('صف مخزون فشل:', e);
+                }
+            }
+            Loading.hide();
+            this.clearCache();
+            await this.refreshActiveTab();
+            this._reportImportSummary({
+                scope: 'stock',
+                ok,
+                fail,
+                duplicates
+            });
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('importStockExcel', error);
+            Notification.error(this._t('module.ppe.excel.importErr', 'فشل الاستيراد') + ': ' + (error.message || error));
+        }
+    },
+
+    /** تنبيه ملخّص بعد الاستيراد + Modal بقائمة المكررات */
+    _reportImportSummary({ scope, ok, fail, duplicates }) {
+        const t = (k, f) => this._t(k, f);
+        const dupCount = (duplicates && duplicates.length) || 0;
+        const baseMsg = scope === 'receipts'
+            ? this._t('module.ppe.excel.importReceiptsSummary', 'اكتمل الاستيراد')
+            : this._t('module.ppe.excel.importStockSummary', 'اكتمل استيراد المخزون');
+        const summary = `${baseMsg}: ${ok} ${this._t('module.ppe.excel.ok', 'نجاح')}، ${dupCount} ${this._t('module.ppe.excel.duplicates', 'مكرّر (تم تجاوزه)')}، ${fail} ${this._t('module.ppe.excel.fail', 'تخطي/فشل')}.`;
+
+        if (dupCount > 0) {
+            try { Notification.warning(summary); } catch (e) { /* ignore */ }
+            this._showDuplicatesModal(scope, duplicates);
+        } else if (ok > 0) {
+            try { Notification.success(summary); } catch (e) { /* ignore */ }
+        } else {
+            try { Notification.warning(summary); } catch (e) { /* ignore */ }
+        }
+    },
+
+    _showDuplicatesModal(scope, duplicates) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const isReceipts = scope === 'receipts';
+        const title = isReceipts
+            ? t('module.ppe.excel.duplicatesReceiptsTitle', 'بنود مكرّرة في سجل الاستلامات (لم تُستورد)')
+            : t('module.ppe.excel.duplicatesStockTitle', 'أصناف مكرّرة في المخزون (لم تُستورد)');
+        const reasonText = (reason) => {
+            if (reason === 'itemCode') return t('module.ppe.excel.dupReasonCode', 'كود الصنف موجود بالفعل');
+            if (reason === 'itemName') return t('module.ppe.excel.dupReasonName', 'اسم الصنف موجود بالفعل');
+            if (reason === 'itemId') return t('module.ppe.excel.dupReasonId', 'معرف الصنف موجود بالفعل');
+            if (reason === 'backend') return t('module.ppe.excel.dupReasonBackend', 'موجود بالفعل (تم رفضه من الخادم)');
+            return t('module.ppe.excel.dupReasonGeneric', 'موجود بالفعل');
+        };
+
+        const rowsHtml = (duplicates || []).map((d) => {
+            if (isReceipts) {
+                return `<tr>
+                    <td>${ut(d.row)}</td>
+                    <td>${ut(d.id || '')}</td>
+                    <td>${ut(d.label || '')}</td>
+                </tr>`;
+            }
+            return `<tr>
+                <td>${ut(d.row)}</td>
+                <td class="font-mono font-semibold">${ut(d.code || '')}</td>
+                <td>${ut(d.name || '')}</td>
+                <td>${ut(reasonText(d.reason))}</td>
+            </tr>`;
+        }).join('');
+
+        const headHtml = isReceipts
+            ? `<tr><th>${ut(t('module.ppe.excel.dupCol.row', 'الصف'))}</th><th>${ut(t('module.ppe.excel.dupCol.idOrReceipt', 'المعرف/رقم الإيصال'))}</th><th>${ut(t('module.ppe.excel.dupCol.summary', 'الموظف — نوع المعدة'))}</th></tr>`
+            : `<tr><th>${ut(t('module.ppe.excel.dupCol.row', 'الصف'))}</th><th>${ut(t('module.ppe.excel.dupCol.code', 'الكود'))}</th><th>${ut(t('module.ppe.excel.dupCol.name', 'اسم الصنف'))}</th><th>${ut(t('module.ppe.excel.dupCol.reason', 'السبب'))}</th></tr>`;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 760px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
-                        <i class="fas fa-exclamation-triangle text-amber-500 ml-2"></i>${s(r)}
+                        <i class="fas fa-exclamation-triangle text-amber-500 ml-2"></i>${ut(title)}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1321,58 +4493,132 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 </div>
                 <div class="modal-body">
                     <p class="text-sm text-gray-600 mb-3">
-                        ${s(i("module.ppe.excel.dupHint","\u0644\u0645 \u064A\u062A\u0645 \u062A\u0639\u062F\u064A\u0644 \u0623\u064A \u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F\u061B \u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u0628\u0646\u0648\u062F \u0627\u0644\u062A\u0627\u0644\u064A\u0629 \u0641\u0642\u0637."))}
+                        ${ut(t('module.ppe.excel.dupHint', 'لم يتم تعديل أي صنف موجود؛ تم تجاوز البنود التالية فقط.'))}
                     </p>
                     <div class="table-wrapper" style="max-height: 380px; overflow:auto;">
                         <table class="data-table">
-                            <thead>${l}</thead>
-                            <tbody>${p}</tbody>
+                            <thead>${headHtml}</thead>
+                            <tbody>${rowsHtml}</tbody>
                         </table>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                        ${s(i("module.common.close","\u0625\u063A\u0644\u0627\u0642"))}
+                        ${ut(t('module.common.close', 'إغلاق'))}
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(n),n.addEventListener("click",d=>{d.target===n&&n.remove()})},_isPpeAdminUser(){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function")return!!Permissions.isCurrentUserEffectiveAdmin()}catch{}const t=typeof AppState<"u"&&AppState?AppState.currentUser:null;if(!t)return!1;const e=String(t.role||"").toLowerCase();if(e==="admin"||e==="system_admin"||t.role==="\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645")return!0;const i=t.permissions||{};return i.admin===!0||i["manage-modules"]===!0},_buildExcelToolbarHtml(t){if(!this._isPpeAdminUser())return"";const e=(r,o)=>this._t(r,o),i=r=>Utils.escapeHTML(r),a=t==="receipts"?{exportBtn:"ppe-receipts-export-excel-btn",tplBtn:"ppe-receipts-template-btn",importBtn:"ppe-receipts-import-btn",exportTitleKey:"module.ppe.excel.exportReceiptsTitle",exportTitleFb:"\u062A\u0635\u062F\u064A\u0631 \u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0625\u0644\u0649 Excel",tplTitleKey:"module.ppe.excel.downloadTemplateReceiptsTitle",tplTitleFb:"\u062A\u0646\u0632\u064A\u0644 \u0642\u0627\u0644\u0628 Excel \u0641\u0627\u0631\u063A",importTitleKey:"module.ppe.excel.importReceiptsTitle",importTitleFb:"\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0635\u0641\u0648\u0641 \u0645\u0646 \u0645\u0644\u0641 \u064A\u0637\u0627\u0628\u0642 \u0627\u0644\u0642\u0627\u0644\u0628"}:{exportBtn:"ppe-stock-export-excel-btn",tplBtn:"ppe-stock-template-btn",importBtn:"ppe-stock-import-btn",exportTitleKey:"module.ppe.excel.exportStockTitle",exportTitleFb:"\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0625\u0644\u0649 Excel",tplTitleKey:"module.ppe.excel.downloadTemplateStockTitle",tplTitleFb:"\u062A\u0646\u0632\u064A\u0644 \u0642\u0627\u0644\u0628 Excel \u0644\u0644\u0623\u0635\u0646\u0627\u0641",importTitleKey:"module.ppe.excel.importStockTitle",importTitleFb:"\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0635\u0646\u0627\u0641 \u0645\u0646 \u0645\u0644\u0641 \u064A\u0637\u0627\u0628\u0642 \u0627\u0644\u0642\u0627\u0644\u0628"};return`
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /** التحقق من أن المستخدم الحالي مدير نظام (لإظهار أدوات Excel) */
+    _isPpeAdminUser() {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
+                return !!Permissions.isCurrentUserEffectiveAdmin();
+            }
+        } catch (e) { /* ignore */ }
+        const user = (typeof AppState !== 'undefined' && AppState) ? AppState.currentUser : null;
+        if (!user) return false;
+        const role = String(user.role || '').toLowerCase();
+        if (role === 'admin' || role === 'system_admin') return true;
+        if (user.role === 'مدير النظام') return true;
+        const perms = user.permissions || {};
+        return !!(perms.admin === true || perms['manage-modules'] === true);
+    },
+
+    /** بناء شريط أزرار Excel (تصدير/قالب/استيراد) — يظهر فقط لمدير النظام */
+    _buildExcelToolbarHtml(scope) {
+        if (!this._isPpeAdminUser()) return '';
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const isReceipts = scope === 'receipts';
+        const ids = isReceipts
+            ? {
+                exportBtn: 'ppe-receipts-export-excel-btn',
+                tplBtn: 'ppe-receipts-template-btn',
+                importBtn: 'ppe-receipts-import-btn',
+                exportTitleKey: 'module.ppe.excel.exportReceiptsTitle',
+                exportTitleFb: 'تصدير سجل الاستلامات إلى Excel',
+                tplTitleKey: 'module.ppe.excel.downloadTemplateReceiptsTitle',
+                tplTitleFb: 'تنزيل قالب Excel فارغ',
+                importTitleKey: 'module.ppe.excel.importReceiptsTitle',
+                importTitleFb: 'استيراد صفوف من ملف يطابق القالب'
+            }
+            : {
+                exportBtn: 'ppe-stock-export-excel-btn',
+                tplBtn: 'ppe-stock-template-btn',
+                importBtn: 'ppe-stock-import-btn',
+                exportTitleKey: 'module.ppe.excel.exportStockTitle',
+                exportTitleFb: 'تصدير المخزون إلى Excel',
+                tplTitleKey: 'module.ppe.excel.downloadTemplateStockTitle',
+                tplTitleFb: 'تنزيل قالب Excel للأصناف',
+                importTitleKey: 'module.ppe.excel.importStockTitle',
+                importTitleFb: 'استيراد أصناف من ملف يطابق القالب'
+            };
+        return `
             <div class="ppe-excel-toolbar flex flex-wrap items-center justify-end gap-2 mb-3">
-                <button id="${a.exportBtn}" type="button" class="btn-secondary" title="${i(e(a.exportTitleKey,a.exportTitleFb))}">
-                    <i class="fas fa-file-excel ml-2"></i>${i(e("module.ppe.excel.exportBtn","\u062A\u0635\u062F\u064A\u0631 Excel"))}
+                <button id="${ids.exportBtn}" type="button" class="btn-secondary" title="${ut(t(ids.exportTitleKey, ids.exportTitleFb))}">
+                    <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.exportBtn', 'تصدير Excel'))}
                 </button>
-                <button id="${a.tplBtn}" type="button" class="btn-secondary" title="${i(e(a.tplTitleKey,a.tplTitleFb))}">
-                    <i class="fas fa-download ml-2"></i>${i(e("module.ppe.excel.downloadTemplateBtn","\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628"))}
+                <button id="${ids.tplBtn}" type="button" class="btn-secondary" title="${ut(t(ids.tplTitleKey, ids.tplTitleFb))}">
+                    <i class="fas fa-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                 </button>
-                <button id="${a.importBtn}" type="button" class="btn-secondary" title="${i(e(a.importTitleKey,a.importTitleFb))}">
-                    <i class="fas fa-file-import ml-2"></i>${i(e("module.ppe.excel.importBtn","\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0646 \u0627\u0644\u0642\u0627\u0644\u0628"))}
+                <button id="${ids.importBtn}" type="button" class="btn-secondary" title="${ut(t(ids.importTitleKey, ids.importTitleFb))}">
+                    <i class="fas fa-file-import ml-2"></i>${ut(t('module.ppe.excel.importBtn', 'استيراد من القالب'))}
                 </button>
             </div>
-        `},showPpeReceiptsImportModal(){if(!this._isPpeAdminUser())return;if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}try{document.getElementById("ppe-receipts-import-modal")?.remove()}catch{}const t=(c,m)=>this._t(c,m),e=c=>Utils.escapeHTML(c),s=this._ppeReceiptExcelFieldDefs().map(c=>`<li><strong>${e(c.ar)}</strong> \u2014 <span class="font-mono text-xs">${e(c.en)}</span></li>`).join(""),a=document.createElement("div");a.className="modal-overlay",a.id="ppe-receipts-import-modal",a.innerHTML=`
+        `;
+    },
+
+    /** نموذج استيراد سجل الاستلامات (مثل قاعدة بيانات الموظفين): قالب + ملف + معاينة + تأكيد */
+    showPpeReceiptsImportModal() {
+        if (!this._isPpeAdminUser()) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        try {
+            document.getElementById('ppe-receipts-import-modal')?.remove();
+        } catch (e) { /* ignore */ }
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const defs = this._ppeReceiptExcelFieldDefs();
+        const colsList = defs.map((d) => `<li><strong>${ut(d.ar)}</strong> — <span class="font-mono text-xs">${ut(d.en)}</span></li>`).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'ppe-receipts-import-modal';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
-                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${e(t("module.ppe.excel.importModalReceiptsTitle","\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0633\u062C\u0644 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0645\u0646 Excel"))}</h2>
-                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${e(t("module.common.close","\u0625\u063A\u0644\u0627\u0642"))}">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${ut(t('module.ppe.excel.importModalReceiptsTitle', 'استيراد سجل الاستلامات من Excel'))}</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${ut(t('module.common.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${e(t("module.ppe.excel.importModalIntro","\u062D\u0645\u0651\u0644 \u0627\u0644\u0642\u0627\u0644\u0628 \u0623\u0648 \u0627\u062A\u0628\u0639 \u0627\u0644\u0623\u0639\u0645\u062F\u0629 \u0627\u0644\u062A\u0627\u0644\u064A\u0629 \u062B\u0645 \u0627\u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641. \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0643\u0631\u0631\u0629 \u062A\u064F\u062A\u062C\u0627\u0648\u064E\u0632 \u0645\u0639 \u062A\u0646\u0628\u064A\u0647."))}</p>
+                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${ut(t('module.ppe.excel.importModalIntro', 'حمّل القالب أو اتبع الأعمدة التالية ثم ارفع الملف. السجلات المكررة تُتجاوَز مع تنبيه.'))}</p>
                         <button type="button" id="ppe-receipts-modal-download-template" class="btn-secondary btn-sm mb-3">
-                            <i class="fas fa-file-download ml-2"></i>${e(t("module.ppe.excel.downloadTemplateBtn","\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628"))}
+                            <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                         </button>
-                        <p class="text-sm text-blue-700 mb-2">${e(t("module.ppe.excel.importModalColumns","\u0627\u0644\u0623\u0639\u0645\u062F\u0629 \u0627\u0644\u0645\u062A\u0648\u0642\u0639\u0629 \u0641\u064A \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644:"))}</p>
-                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${s}</ul>
+                        <p class="text-sm text-blue-700 mb-2">${ut(t('module.ppe.excel.importModalColumns', 'الأعمدة المتوقعة في الصف الأول:'))}</p>
+                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${colsList}</ul>
                     </div>
                     <div>
                         <label for="ppe-receipts-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-file-excel ml-2"></i>${e(t("module.ppe.excel.chooseExcelFile","\u0627\u062E\u062A\u0631 \u0645\u0644\u0641 Excel (.xlsx \u0623\u0648 .xls)"))}
+                            <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.chooseExcelFile', 'اختر ملف Excel (.xlsx أو .xls)'))}
                         </label>
                         <input type="file" id="ppe-receipts-modal-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-input">
                     </div>
                     <div id="ppe-receipts-import-preview" class="hidden">
-                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${e(t("module.ppe.excel.previewTitle","\u0645\u0639\u0627\u064A\u0646\u0629 (\u0623\u0648\u0644 5 \u0635\u0641\u0648\u0641 \u0628\u064A\u0627\u0646\u0627\u062A):"))}</h3>
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${ut(t('module.ppe.excel.previewTitle', 'معاينة (أول 5 صفوف بيانات):'))}</h3>
                         <div class="max-h-60 overflow-auto border rounded bg-white">
                             <table class="data-table text-xs">
                                 <thead id="ppe-receipts-preview-head"></thead>
@@ -1383,36 +4629,115 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     </div>
                 </div>
                 <div class="modal-footer flex justify-end gap-2">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${e(t("module.common.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                     <button type="button" id="ppe-receipts-import-confirm" class="btn-primary" disabled>
-                        <i class="fas fa-check ml-2"></i>${e(t("module.ppe.excel.confirmImport","\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F"))}
+                        <i class="fas fa-check ml-2"></i>${ut(t('module.ppe.excel.confirmImport', 'تأكيد الاستيراد'))}
                     </button>
                 </div>
-            </div>`,document.body.appendChild(a),this.applyModuleI18n(a);const r=a.querySelector("#ppe-receipts-modal-file"),o=a.querySelector("#ppe-receipts-modal-download-template"),p=a.querySelector("#ppe-receipts-import-preview"),l=a.querySelector("#ppe-receipts-preview-head"),n=a.querySelector("#ppe-receipts-preview-body"),d=a.querySelector("#ppe-receipts-preview-count"),f=a.querySelector("#ppe-receipts-import-confirm");let b=null;o&&(o.onclick=()=>this.downloadReceiptsExcelTemplate()),r.addEventListener("change",async c=>{const m=c.target.files&&c.target.files[0];if(b=m||null,f.disabled=!b,!m){p.classList.add("hidden");return}try{const x=await m.arrayBuffer(),k=XLSX.read(x,{type:"array",cellDates:!0}),u=XLSX.utils.sheet_to_json(k.Sheets[k.SheetNames[0]],{header:1,defval:"",raw:!1});if(!u||u.length<2){p.classList.add("hidden"),Notification.warning(this._t("module.ppe.excel.importEmpty","\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0635\u0641 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0631\u0624\u0648\u0633"));return}const h=(u[0]||[]).map(w=>String(w||"").trim());l.innerHTML=`<tr>${h.map(w=>`<th>${e(w)}</th>`).join("")}</tr>`,n.innerHTML=u.slice(1,6).map(w=>`<tr>${h.map((C,M)=>`<td>${e(String(w[M]??""))}</td>`).join("")}</tr>`).join("");const v=Math.max(0,u.length-1);d.textContent=`${this._t("module.ppe.excel.previewRowCount","\u0639\u062F\u062F \u0635\u0641\u0648\u0641 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}: ${v}`,p.classList.remove("hidden")}catch(x){Utils.safeError("ppe receipts import preview",x),p.classList.add("hidden"),Notification.error(this._t("module.ppe.excel.previewErr","\u062A\u0639\u0630\u0651\u0631 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641 \u0644\u0644\u0645\u0639\u0627\u064A\u0646\u0629"))}}),f.addEventListener("click",async()=>{b&&(a.remove(),await this.importReceiptsExcel(b))}),a.addEventListener("click",c=>{c.target===a&&a.remove()})},showPpeStockImportModal(){if(!this._isPpeAdminUser())return;if(typeof XLSX>"u"){Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}try{document.getElementById("ppe-stock-import-modal")?.remove()}catch{}const t=(c,m)=>this._t(c,m),e=c=>Utils.escapeHTML(c),s=this._ppeStockExcelFieldDefs().filter(c=>!["stock_IN","stock_OUT","balance"].includes(c.key)).map(c=>`<li><strong>${e(c.ar)}</strong> \u2014 <span class="font-mono text-xs">${e(c.en)}</span></li>`).join(""),a=document.createElement("div");a.className="modal-overlay",a.id="ppe-stock-import-modal",a.innerHTML=`
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const fileInput = modal.querySelector('#ppe-receipts-modal-file');
+        const dlTpl = modal.querySelector('#ppe-receipts-modal-download-template');
+        const previewWrap = modal.querySelector('#ppe-receipts-import-preview');
+        const previewHead = modal.querySelector('#ppe-receipts-preview-head');
+        const previewBody = modal.querySelector('#ppe-receipts-preview-body');
+        const previewCount = modal.querySelector('#ppe-receipts-preview-count');
+        const confirmBtn = modal.querySelector('#ppe-receipts-import-confirm');
+        let selectedFile = null;
+
+        if (dlTpl) {
+            dlTpl.onclick = () => this.downloadReceiptsExcelTemplate();
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            selectedFile = file || null;
+            confirmBtn.disabled = !selectedFile;
+            if (!file) {
+                previewWrap.classList.add('hidden');
+                return;
+            }
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+                const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+                if (!aoa || aoa.length < 2) {
+                    previewWrap.classList.add('hidden');
+                    Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                    return;
+                }
+                const headers = (aoa[0] || []).map((h) => String(h || '').trim());
+                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${ut(h)}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = aoa.slice(1, 6).map((row) =>
+                    `<tr>${headers.map((_, i) => `<td>${ut(String(row[i] ?? ''))}</td>`).join('')}</tr>`
+                ).join('');
+                const dataRows = Math.max(0, aoa.length - 1);
+                previewCount.textContent = `${this._t('module.ppe.excel.previewRowCount', 'عدد صفوف البيانات')}: ${dataRows}`;
+                previewWrap.classList.remove('hidden');
+            } catch (err) {
+                Utils.safeError('ppe receipts import preview', err);
+                previewWrap.classList.add('hidden');
+                Notification.error(this._t('module.ppe.excel.previewErr', 'تعذّر قراءة الملف للمعاينة'));
+            }
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            modal.remove();
+            await this.importReceiptsExcel(selectedFile);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /** نموذج استيراد أصناف المخزون */
+    showPpeStockImportModal() {
+        if (!this._isPpeAdminUser()) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+            return;
+        }
+        try {
+            document.getElementById('ppe-stock-import-modal')?.remove();
+        } catch (e) { /* ignore */ }
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const defs = this._ppeStockExcelFieldDefs().filter((d) => !['stock_IN', 'stock_OUT', 'balance'].includes(d.key));
+        const colsList = defs.map((d) => `<li><strong>${ut(d.ar)}</strong> — <span class="font-mono text-xs">${ut(d.en)}</span></li>`).join('');
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'ppe-stock-import-modal';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 800px;">
                 <div class="modal-header">
-                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${e(t("module.ppe.excel.importModalStockTitle","\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0646 Excel"))}</h2>
-                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${e(t("module.common.close","\u0625\u063A\u0644\u0627\u0642"))}">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>${ut(t('module.ppe.excel.importModalStockTitle', 'استيراد أصناف المخزون من Excel'))}</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()" aria-label="${ut(t('module.common.close', 'إغلاق'))}">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${e(t("module.ppe.excel.importStockIntro","\u062D\u0645\u0651\u0644 \u0627\u0644\u0642\u0627\u0644\u0628 \u062B\u0645 \u0639\u0628\u0651\u0626 \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u062C\u062F\u064A\u062F\u0629 \u0641\u0642\u0637. \u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 (\u0643\u0648\u062F \u0623\u0648 \u0627\u0633\u0645 \u0623\u0648 \u0645\u0639\u0631\u0641) \u0644\u0646 \u062A\u064F\u0633\u062A\u0628\u062F\u0644 \u0648\u062A\u064F\u0639\u0631\u064E\u0636 \u0641\u064A \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0643\u0631\u0631\u0627\u062A."))}</p>
+                        <p class="text-sm text-blue-900 font-semibold mb-2"><i class="fas fa-info-circle ml-2"></i>${ut(t('module.ppe.excel.importStockIntro', 'حمّل القالب ثم عبّئ الأصناف الجديدة فقط. الأصناف الموجودة (كود أو اسم أو معرف) لن تُستبدل وتُعرَض في قائمة المكررات.'))}</p>
                         <button type="button" id="ppe-stock-modal-download-template" class="btn-secondary btn-sm mb-3">
-                            <i class="fas fa-file-download ml-2"></i>${e(t("module.ppe.excel.downloadTemplateBtn","\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0642\u0627\u0644\u0628"))}
+                            <i class="fas fa-file-download ml-2"></i>${ut(t('module.ppe.excel.downloadTemplateBtn', 'تحميل القالب'))}
                         </button>
-                        <p class="text-sm text-blue-700 mb-2">${e(t("module.ppe.excel.importModalColumnsStock","\u0623\u0639\u0645\u062F\u0629 \u0627\u0644\u0642\u0627\u0644\u0628 (\u0635\u0641 \u0627\u0644\u0631\u0624\u0648\u0633):"))}</p>
-                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${s}</ul>
+                        <p class="text-sm text-blue-700 mb-2">${ut(t('module.ppe.excel.importModalColumnsStock', 'أعمدة القالب (صف الرؤوس):'))}</p>
+                        <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">${colsList}</ul>
                     </div>
                     <div>
                         <label for="ppe-stock-modal-file" class="block text-sm font-semibold text-gray-700 mb-2">
-                            <i class="fas fa-file-excel ml-2"></i>${e(t("module.ppe.excel.chooseExcelFile","\u0627\u062E\u062A\u0631 \u0645\u0644\u0641 Excel (.xlsx \u0623\u0648 .xls)"))}
+                            <i class="fas fa-file-excel ml-2"></i>${ut(t('module.ppe.excel.chooseExcelFile', 'اختر ملف Excel (.xlsx أو .xls)'))}
                         </label>
                         <input type="file" id="ppe-stock-modal-file" accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-input">
                     </div>
                     <div id="ppe-stock-import-preview" class="hidden">
-                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${e(t("module.ppe.excel.previewTitle","\u0645\u0639\u0627\u064A\u0646\u0629 (\u0623\u0648\u0644 5 \u0635\u0641\u0648\u0641 \u0628\u064A\u0627\u0646\u0627\u062A):"))}</h3>
+                        <h3 class="text-sm font-semibold text-gray-800 mb-2">${ut(t('module.ppe.excel.previewTitle', 'معاينة (أول 5 صفوف بيانات):'))}</h3>
                         <div class="max-h-60 overflow-auto border rounded bg-white">
                             <table class="data-table text-xs">
                                 <thead id="ppe-stock-preview-head"></thead>
@@ -1423,58 +4748,247 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     </div>
                 </div>
                 <div class="modal-footer flex justify-end gap-2">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${e(t("module.common.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                     <button type="button" id="ppe-stock-import-confirm" class="btn-primary" disabled>
-                        <i class="fas fa-check ml-2"></i>${e(t("module.ppe.excel.confirmImport","\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F"))}
+                        <i class="fas fa-check ml-2"></i>${ut(t('module.ppe.excel.confirmImport', 'تأكيد الاستيراد'))}
                     </button>
                 </div>
-            </div>`,document.body.appendChild(a),this.applyModuleI18n(a);const r=a.querySelector("#ppe-stock-modal-file"),o=a.querySelector("#ppe-stock-modal-download-template"),p=a.querySelector("#ppe-stock-import-preview"),l=a.querySelector("#ppe-stock-preview-head"),n=a.querySelector("#ppe-stock-preview-body"),d=a.querySelector("#ppe-stock-preview-count"),f=a.querySelector("#ppe-stock-import-confirm");let b=null;o&&(o.onclick=()=>this.downloadStockExcelTemplate()),r.addEventListener("change",async c=>{const m=c.target.files&&c.target.files[0];if(b=m||null,f.disabled=!b,!m){p.classList.add("hidden");return}try{const x=await m.arrayBuffer(),k=XLSX.read(x,{type:"array",cellDates:!0}),u=XLSX.utils.sheet_to_json(k.Sheets[k.SheetNames[0]],{header:1,defval:"",raw:!1});if(!u||u.length<2){p.classList.add("hidden"),Notification.warning(this._t("module.ppe.excel.importEmpty","\u0627\u0644\u0645\u0644\u0641 \u0641\u0627\u0631\u063A \u0623\u0648 \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0635\u0641 \u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u0631\u0624\u0648\u0633"));return}const h=(u[0]||[]).map(w=>String(w||"").trim());l.innerHTML=`<tr>${h.map(w=>`<th>${e(w)}</th>`).join("")}</tr>`,n.innerHTML=u.slice(1,6).map(w=>`<tr>${h.map((C,M)=>`<td>${e(String(w[M]??""))}</td>`).join("")}</tr>`).join("");const v=Math.max(0,u.length-1);d.textContent=`${this._t("module.ppe.excel.previewRowCount","\u0639\u062F\u062F \u0635\u0641\u0648\u0641 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}: ${v}`,p.classList.remove("hidden")}catch(x){Utils.safeError("ppe stock import preview",x),p.classList.add("hidden"),Notification.error(this._t("module.ppe.excel.previewErr","\u062A\u0639\u0630\u0651\u0631 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641 \u0644\u0644\u0645\u0639\u0627\u064A\u0646\u0629"))}}),f.addEventListener("click",async()=>{b&&(a.remove(),await this.importStockExcel(b))}),a.addEventListener("click",c=>{c.target===a&&a.remove()})},_bindPpeReceiptExcelToolbar(){const t=document.getElementById("ppe-receipts-export-excel-btn"),e=document.getElementById("ppe-receipts-template-btn"),i=document.getElementById("ppe-receipts-import-btn");t&&(t.onclick=()=>this.exportReceiptsExcel()),e&&(e.onclick=()=>this.downloadReceiptsExcelTemplate()),i&&(i.onclick=()=>this.showPpeReceiptsImportModal())},_bindPpeStockExcelToolbar(){const t=document.getElementById("ppe-stock-export-excel-btn"),e=document.getElementById("ppe-stock-template-btn"),i=document.getElementById("ppe-stock-import-btn");t&&(t.onclick=()=>this.exportStockExcel()),e&&(e.onclick=()=>this.downloadStockExcelTemplate()),i&&(i.onclick=()=>this.showPpeStockImportModal())},async exportPPEMatrix(){try{if(Loading.show(),typeof XLSX>"u"){Loading.hide(),Notification.error(this._t("module.ppe.notify.xlsxMissing","\u0645\u0643\u062A\u0628\u0629 SheetJS \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629"));return}const t=AppState.appData.employeePPEMatrix||{},e=AppState.appData.employees||[],i=Object.keys(t).map(r=>{const o=t[r],p=e.filter(l=>l.position===r);return{\u0627\u0644\u0648\u0638\u064A\u0629:r,"\u0639\u062F\u062F \u0627\u0644\u0645\u0648\u0638\u064A\u0646":p.length,"\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629":o.requiredPPE?o.requiredPPE.join(", "):""}}),s=XLSX.utils.json_to_sheet(i),a=XLSX.utils.book_new();XLSX.utils.book_append_sheet(a,s,"\u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"),XLSX.writeFile(a,"\u0645\u0635\u0648\u0629_\u0645\u0647\u0645\u0627\u062A_\u0627\u0644\u0648\u0642\u0627\u064A\u0629_"+new Date().toISOString().slice(0,10)+".xlsx"),Loading.hide(),Notification.success(this._t("module.ppe.notify.matrixExportOk","\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 \u0628\u0646\u062C\u0627\u062D"))}catch(t){Loading.hide(),Notification.error(this._t("module.ppe.notify.matrixExportErr","\u062D\u062F\u062B \u062E\u0637\u0623")+": "+t.message)}},buildStockControlTabHtmlSync(t,e=""){const i=Array.isArray(t)?t:[],s=i.filter(r=>{if(!r)return!1;const o=parseFloat(r.balance||0),p=parseFloat(r.minThreshold||0);return o<p});return`
+            </div>`;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const fileInput = modal.querySelector('#ppe-stock-modal-file');
+        const dlTpl = modal.querySelector('#ppe-stock-modal-download-template');
+        const previewWrap = modal.querySelector('#ppe-stock-import-preview');
+        const previewHead = modal.querySelector('#ppe-stock-preview-head');
+        const previewBody = modal.querySelector('#ppe-stock-preview-body');
+        const previewCount = modal.querySelector('#ppe-stock-preview-count');
+        const confirmBtn = modal.querySelector('#ppe-stock-import-confirm');
+        let selectedFile = null;
+
+        if (dlTpl) {
+            dlTpl.onclick = () => this.downloadStockExcelTemplate();
+        }
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files && e.target.files[0];
+            selectedFile = file || null;
+            confirmBtn.disabled = !selectedFile;
+            if (!file) {
+                previewWrap.classList.add('hidden');
+                return;
+            }
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array', cellDates: true });
+                const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
+                if (!aoa || aoa.length < 2) {
+                    previewWrap.classList.add('hidden');
+                    Notification.warning(this._t('module.ppe.excel.importEmpty', 'الملف فارغ أو لا يحتوي صف بيانات بعد الرؤوس'));
+                    return;
+                }
+                const headers = (aoa[0] || []).map((h) => String(h || '').trim());
+                previewHead.innerHTML = `<tr>${headers.map((h) => `<th>${ut(h)}</th>`).join('')}</tr>`;
+                previewBody.innerHTML = aoa.slice(1, 6).map((row) =>
+                    `<tr>${headers.map((_, i) => `<td>${ut(String(row[i] ?? ''))}</td>`).join('')}</tr>`
+                ).join('');
+                const dataRows = Math.max(0, aoa.length - 1);
+                previewCount.textContent = `${this._t('module.ppe.excel.previewRowCount', 'عدد صفوف البيانات')}: ${dataRows}`;
+                previewWrap.classList.remove('hidden');
+            } catch (err) {
+                Utils.safeError('ppe stock import preview', err);
+                previewWrap.classList.add('hidden');
+                Notification.error(this._t('module.ppe.excel.previewErr', 'تعذّر قراءة الملف للمعاينة'));
+            }
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            modal.remove();
+            await this.importStockExcel(selectedFile);
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    _bindPpeReceiptExcelToolbar() {
+        const exportBtn = document.getElementById('ppe-receipts-export-excel-btn');
+        const tplBtn = document.getElementById('ppe-receipts-template-btn');
+        const importBtn = document.getElementById('ppe-receipts-import-btn');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportReceiptsExcel();
+        }
+        if (tplBtn) {
+            tplBtn.onclick = () => this.downloadReceiptsExcelTemplate();
+        }
+        if (importBtn) {
+            importBtn.onclick = () => this.showPpeReceiptsImportModal();
+        }
+    },
+
+    _bindPpeStockExcelToolbar() {
+        const exportBtn = document.getElementById('ppe-stock-export-excel-btn');
+        const tplBtn = document.getElementById('ppe-stock-template-btn');
+        const importBtn = document.getElementById('ppe-stock-import-btn');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportStockExcel();
+        }
+        if (tplBtn) {
+            tplBtn.onclick = () => this.downloadStockExcelTemplate();
+        }
+        if (importBtn) {
+            importBtn.onclick = () => this.showPpeStockImportModal();
+        }
+    },
+
+    async exportPPEMatrix() {
+        try {
+            Loading.show();
+
+            if (typeof XLSX === 'undefined') {
+                Loading.hide();
+                Notification.error(this._t('module.ppe.notify.xlsxMissing', 'مكتبة SheetJS غير محمّلة. يرجى تحديث الصفحة'));
+                return;
+            }
+
+            const matrix = AppState.appData.employeePPEMatrix || {};
+            const employees = AppState.appData.employees || [];
+
+            const excelData = Object.keys(matrix).map(position => {
+                const matrixData = matrix[position];
+                const positionEmployees = employees.filter(e => e.position === position);
+
+                return {
+                    'الوظية': position,
+                    'عدد الموظين': positionEmployees.length,
+                    'مهمات الوقاية المطلوبة': matrixData.requiredPPE ? matrixData.requiredPPE.join(', ') : ''
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'مصفوفة مهمات الوقاية');
+
+            XLSX.writeFile(wb, 'مصوة_مهمات_الوقاية_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+
+            Loading.hide();
+            Notification.success(this._t('module.ppe.notify.matrixExportOk', 'تم تصدير مصفوفة مهمات الوقاية بنجاح'));
+        } catch (error) {
+            Loading.hide();
+            Notification.error(this._t('module.ppe.notify.matrixExportErr', 'حدث خطأ') + ': ' + error.message);
+        }
+    },
+
+    // ===== PPE Stock Control Functions =====
+
+    /**
+     * بناء محتوى تبويب المخزون بشكل متزامن (للعرض الفوري من الكاش قبل اكتمال الجلب من الخلفية).
+     * @param {string} [hintHtml] رسالة تنبيه اختيارية (مثل مزامنة خلفية)
+     */
+    buildStockControlTabHtmlSync(stockItems, hintHtml = '') {
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const lowStockItems = items.filter((item) => {
+            if (!item) return false;
+            const balance = parseFloat(item.balance || 0);
+            const minThreshold = parseFloat(item.minThreshold || 0);
+            return balance < minThreshold;
+        });
+        const hintBlock = hintHtml ? `<div id="ppe-stock-hint-slot" class="mb-4">${hintHtml}</div>` : '';
+        return `
             <div class="space-y-6" id="ppe-stock-tab-root">
-                ${e?`<div id="ppe-stock-hint-slot" class="mb-4">${e}</div>`:""}
-                ${this.renderStockDashboard(i,s)}
-                ${this.renderStockTable(i)}
+                ${hintBlock}
+                ${this.renderStockDashboard(items, lowStockItems)}
+                ${this.renderStockTable(items)}
             </div>
-        `},async renderStockControlTab(){try{const t=await this.loadStockItems(),e=this.state.stockStaleWarningMsg?`<div role="status" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+        `;
+    },
+
+    async renderStockControlTab() {
+        try {
+            const stockItems = await this.loadStockItems();
+
+            const staleBanner = this.state.stockStaleWarningMsg
+                ? `<div role="status" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
                     <i class="fas fa-info-circle mt-0.5 text-amber-600"></i>
                     <span>${Utils.escapeHTML(this.state.stockStaleWarningMsg)}</span>
-                   </div>`:"";this.state.stockStaleWarningMsg="";const i=this.state.stockLoadHardErrorMsg;if(this.state.stockLoadHardErrorMsg="",!Array.isArray(t))return Utils.safeWarn("\u26A0\uFE0F stockItems \u0644\u064A\u0633\u062A \u0645\u0635\u0641\u0648\u0641\u0629:",t),`
+                   </div>`
+                : '';
+            this.state.stockStaleWarningMsg = '';
+
+            const hardErr = this.state.stockLoadHardErrorMsg;
+            this.state.stockLoadHardErrorMsg = '';
+
+            if (!Array.isArray(stockItems)) {
+                Utils.safeWarn('⚠️ stockItems ليست مصفوفة:', stockItems);
+                return `
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                        <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.loadStockError","\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</p>
+                        <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.loadStockError', 'خطأ في تحميل بيانات المخزون'))}</p>
                         <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                         </button>
                     </div>
-                `;if(t.length===0&&i)return`
+                `;
+            }
+
+            if (stockItems.length === 0 && hardErr) {
+                return `
                     <div class="empty-state">
                         <i class="fas fa-plug text-amber-600 text-4xl mb-4"></i>
-                        <p class="text-gray-700 mb-2 font-semibold">${Utils.escapeHTML(i)}</p>
-                        <p class="text-gray-500 text-sm mb-4">${Utils.escapeHTML(this._t("module.ppe.stock.hardErrorHint","\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u062B\u0645 \u0627\u0636\u063A\u0637 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629."))}</p>
+                        <p class="text-gray-700 mb-2 font-semibold">${Utils.escapeHTML(hardErr)}</p>
+                        <p class="text-gray-500 text-sm mb-4">${Utils.escapeHTML(this._t('module.ppe.stock.hardErrorHint', 'تحقق من الاتصال ثم اضغط إعادة المحاولة.'))}</p>
                         <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                            <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                         </button>
                     </div>
-                `;const s=t.filter(a=>{if(!a)return!1;const r=parseFloat(a.balance||0),o=parseFloat(a.minThreshold||0);return r<o});return`
+                `;
+            }
+
+            const lowStockItems = stockItems.filter(item => {
+                if (!item) return false;
+                const balance = parseFloat(item.balance || 0);
+                const minThreshold = parseFloat(item.minThreshold || 0);
+                return balance < minThreshold;
+            });
+
+            return `
             <div class="space-y-6">
-                ${e}
-                ${this.renderStockDashboard(t,s)}
-                ${this.renderStockTable(t)}
+                ${staleBanner}
+                ${this.renderStockDashboard(stockItems, lowStockItems)}
+                ${this.renderStockTable(stockItems)}
             </div>
-        `}catch(t){return Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A renderStockControlTab:",t),`
+        `;
+        } catch (error) {
+            Utils.safeError('❌ خطأ في renderStockControlTab:', error);
+            return `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t("module.ppe.empty.stockErrorTab","\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}: ${Utils.escapeHTML(String(t.message||t))}</p>
+                    <p class="text-gray-500 mb-4">${Utils.escapeHTML(this._t('module.ppe.empty.stockErrorTab', 'حدث خطأ أثناء تحميل تبويب المخزون'))}: ${Utils.escapeHTML(String(error.message || error))}</p>
                     <button onclick="PPE.switchTab('stock-control')" class="btn-primary">
-                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t("module.common.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629"))}
+                        <i class="fas fa-redo ml-2"></i>${Utils.escapeHTML(this._t('module.common.retry', 'إعادة المحاولة'))}
                     </button>
                 </div>
-            `}},renderStockDashboard(t,e){const i=(l,n)=>this._t(l,n),s=l=>Utils.escapeHTML(l),a=t.length,r=t.reduce((l,n)=>l+parseFloat(n.balance||0),0),o=t.reduce((l,n)=>l+parseFloat(n.stock_IN||0),0),p=t.reduce((l,n)=>l+parseFloat(n.stock_OUT||0),0);return`
+            `;
+        }
+    },
+
+    renderStockDashboard(stockItems, lowStockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const totalItems = stockItems.length;
+        const totalBalance = stockItems.reduce((sum, item) => sum + parseFloat(item.balance || 0), 0);
+        const totalIn = stockItems.reduce((sum, item) => sum + parseFloat(item.stock_IN || 0), 0);
+        const totalOut = stockItems.reduce((sum, item) => sum + parseFloat(item.stock_OUT || 0), 0);
+
+        return `
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">${s(i("module.ppe.stock.dashboard.totalItems","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0623\u0635\u0646\u0627\u0641"))}</p>
-                            <p class="text-2xl font-bold text-gray-800">${a}</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalItems', 'إجمالي الأصناف'))}</p>
+                            <p class="text-2xl font-bold text-gray-800">${totalItems}</p>
                         </div>
                         <div class="text-3xl text-blue-500">
                             <i class="fas fa-boxes"></i>
@@ -1484,8 +4998,8 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">${s(i("module.ppe.stock.dashboard.totalBalance","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0631\u0635\u064A\u062F"))}</p>
-                            <p class="text-2xl font-bold text-gray-800">${r.toFixed(0)}</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalBalance', 'إجمالي الرصيد'))}</p>
+                            <p class="text-2xl font-bold text-gray-800">${totalBalance.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-green-500">
                             <i class="fas fa-check-circle"></i>
@@ -1495,8 +5009,8 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">${s(i("module.ppe.stock.dashboard.totalIn","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u0627\u0631\u062F"))}</p>
-                            <p class="text-2xl font-bold text-gray-800">${o.toFixed(0)}</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalIn', 'إجمالي الوارد'))}</p>
+                            <p class="text-2xl font-bold text-gray-800">${totalIn.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-yellow-500">
                             <i class="fas fa-arrow-down"></i>
@@ -1506,8 +5020,8 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 <div class="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm text-gray-600">${s(i("module.ppe.stock.dashboard.totalOut","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0646\u0635\u0631\u0641"))}</p>
-                            <p class="text-2xl font-bold text-gray-800">${p.toFixed(0)}</p>
+                            <p class="text-sm text-gray-600">${ut(t('module.ppe.stock.dashboard.totalOut', 'إجمالي المنصرف'))}</p>
+                            <p class="text-2xl font-bold text-gray-800">${totalOut.toFixed(0)}</p>
                         </div>
                         <div class="text-3xl text-red-500">
                             <i class="fas fa-arrow-up"></i>
@@ -1515,132 +5029,442 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     </div>
                 </div>
             </div>
-            ${e.length>0?`
+            ${lowStockItems.length > 0 ? `
                 <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded mb-6">
                     <div class="flex items-center">
                         <i class="fas fa-exclamation-triangle text-red-500 text-2xl ml-3"></i>
                         <div>
-                            <h3 class="font-bold text-red-800">${s(i("module.ppe.stock.lowTitle","\u062A\u062D\u0630\u064A\u0631: \u0645\u062E\u0632\u0648\u0646 \u0645\u0646\u062E\u0641\u0636"))}</h3>
-                            <p class="text-sm text-red-700 mt-1">${e.length} ${s(i("module.ppe.stock.lowDesc","\u0635\u0646\u0641/\u0623\u0635\u0646\u0627\u0641 \u062A\u062D\u062A \u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628"))}</p>
+                            <h3 class="font-bold text-red-800">${ut(t('module.ppe.stock.lowTitle', 'تحذير: مخزون منخفض'))}</h3>
+                            <p class="text-sm text-red-700 mt-1">${lowStockItems.length} ${ut(t('module.ppe.stock.lowDesc', 'صنف/أصناف تحت حد إعادة الطلب'))}</p>
                         </div>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
-                        ${e.slice(0,5).map(l=>`
+                        ${lowStockItems.slice(0, 5).map(item => `
                             <span class="badge badge-warning">
-                                ${Utils.escapeHTML(l.itemName||l.itemCode)} (${parseFloat(l.balance||0).toFixed(0)})
+                                ${Utils.escapeHTML(item.itemName || item.itemCode)} (${parseFloat(item.balance || 0).toFixed(0)})
                             </span>
-                        `).join("")}
+                        `).join('')}
                     </div>
                 </div>
-            `:""}
-        `},renderStockTable(t){const e=(l,n)=>this._t(l,n),i=l=>Utils.escapeHTML(l),s=Array.isArray(t)?t:[],a=this._buildExcelToolbarHtml("stock");if(s.length===0)return`
+            ` : ''}
+        `;
+    },
+
+    renderStockTable(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const excelToolbar = this._buildExcelToolbarHtml('stock');
+        if (items.length === 0) {
+            return `
                 <div id="ppe-stock-table-card" class="content-card">
                     <div class="card-body">
-                        ${a}
+                        ${excelToolbar}
                         <div class="empty-state">
                             <i class="fas fa-box-open text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">${i(e("module.ppe.empty.noStock","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0635\u0646\u0627\u0641 \u0641\u064A \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</p>
+                            <p class="text-gray-500">${ut(t('module.ppe.empty.noStock', 'لا توجد أصناف في المخزون'))}</p>
                             <button onclick="PPE.showStockItemForm()" class="btn-primary mt-4">
-                                <i class="fas fa-plus ml-2"></i>${i(e("module.ppe.btn.addStockItem","\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F"))}
+                                <i class="fas fa-plus ml-2"></i>${ut(t('module.ppe.btn.addStockItem', 'إضافة صنف جديد'))}
                             </button>
                         </div>
                     </div>
                 </div>
-            `;const r=this.buildStockFilterRow(s),o=this.getFilteredStockItems(s),p=this.hasActiveStockFilters();return o.length===0&&p?`
+            `;
+        }
+
+        const filterRow = this.buildStockFilterRow(items);
+        const filtered = this.getFilteredStockItems(items);
+        const hasFilters = this.hasActiveStockFilters();
+
+        if (filtered.length === 0 && hasFilters) {
+            return `
                 <div id="ppe-stock-table-card" class="content-card">
                     <div class="card-header">
-                        <h3 class="card-title"><i class="fas fa-list ml-2"></i>${i(e("module.ppe.stock.tableTitle","\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</h3>
+                        <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                     </div>
                     <div class="card-body">
-                        ${a}
-                        <div id="ppe-stock-filters-host">${r}</div>
-                        <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(s)}</div>
+                        ${excelToolbar}
+                        <div id="ppe-stock-filters-host">${filterRow}</div>
+                        <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(items)}</div>
                     </div>
                 </div>
-            `:`
+            `;
+        }
+
+        return `
             <div id="ppe-stock-table-card" class="content-card">
                 <div class="card-header">
-                    <h3 class="card-title"><i class="fas fa-list ml-2"></i>${i(e("module.ppe.stock.tableTitle","\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646"))}</h3>
+                    <h3 class="card-title"><i class="fas fa-list ml-2"></i>${ut(t('module.ppe.stock.tableTitle', 'جدول المخزون'))}</h3>
                 </div>
                 <div class="card-body">
-                    ${a}
-                    <div id="ppe-stock-filters-host">${r}</div>
-                    <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(s)}</div>
+                    ${excelToolbar}
+                    <div id="ppe-stock-filters-host">${filterRow}</div>
+                    <div id="ppe-stock-results-host">${this.buildStockResultsInnerHtml(items)}</div>
                 </div>
             </div>
-        `},buildStockResultsInnerHtml(t){const e=(o,p)=>this._t(o,p),i=o=>Utils.escapeHTML(o),s=Array.isArray(t)?t:[],a=this.getFilteredStockItems(s),r=this.hasActiveStockFilters();return a.length===0&&r?`
+        `;
+    },
+
+    /** نتائج جدول المخزون فقط — بدون إعادة بناء حقل البحث */
+    buildStockResultsInnerHtml(stockItems) {
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const items = Array.isArray(stockItems) ? stockItems : [];
+        const filtered = this.getFilteredStockItems(items);
+        const hasFilters = this.hasActiveStockFilters();
+
+        if (filtered.length === 0 && hasFilters) {
+            return `
                 <div class="empty-state">
                     <i class="fas fa-filter text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500 mb-2">${i(e("module.ppe.filter.noMatch","\u0644\u0627 \u062A\u0648\u062C\u062F \u0646\u062A\u0627\u0626\u062C \u0645\u0637\u0627\u0628\u0642\u0629"))}</p>
+                    <p class="text-gray-500 mb-2">${ut(t('module.ppe.filter.noMatch', 'لا توجد نتائج مطابقة'))}</p>
                     <button type="button" id="ppe-stock-clear-empty-filters" class="btn-secondary mt-2">
-                        <i class="fas fa-undo-alt ml-2"></i>${i(e("module.ppe.filter.clearEmpty","\u0645\u0633\u062D \u0627\u0644\u0641\u0644\u0627\u062A\u0631"))}
+                        <i class="fas fa-undo-alt ml-2"></i>${ut(t('module.ppe.filter.clearEmpty', 'مسح الفلاتر'))}
                     </button>
-                </div>`:`
+                </div>`;
+        }
+
+        return `
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>${i(e("module.ppe.stock.itemCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641"))}</th>
-                                    <th>${i(e("module.ppe.stock.itemName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641"))}</th>
-                                    <th>${i(e("module.ppe.stock.category","\u0627\u0644\u0641\u0626\u0629"))}</th>
-                                    <th>${i(e("module.ppe.stock.in","\u0627\u0644\u0648\u0627\u0631\u062F"))}</th>
-                                    <th>${i(e("module.ppe.stock.out","\u0627\u0644\u0645\u0646\u0635\u0631\u0641"))}</th>
-                                    <th>${i(e("module.ppe.stock.balance","\u0627\u0644\u0631\u0635\u064A\u062F"))}</th>
-                                    <th>${i(e("module.ppe.stock.reorder","\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628"))}</th>
-                                    <th>${i(e("module.ppe.stock.supplier","\u0627\u0644\u0645\u0648\u0631\u062F"))}</th>
-                                    <th>${i(e("module.ppe.table.lastUpdate","\u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B"))}</th>
-                                    <th>${i(e("module.ppe.table.status","\u0627\u0644\u062D\u0627\u0644\u0629"))}</th>
-                                    <th>${i(e("module.ppe.table.actions","\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A"))}</th>
+                                    <th>${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.category', 'الفئة'))}</th>
+                                    <th>${ut(t('module.ppe.stock.in', 'الوارد'))}</th>
+                                    <th>${ut(t('module.ppe.stock.out', 'المنصرف'))}</th>
+                                    <th>${ut(t('module.ppe.stock.balance', 'الرصيد'))}</th>
+                                    <th>${ut(t('module.ppe.stock.reorder', 'حد إعادة الطلب'))}</th>
+                                    <th>${ut(t('module.ppe.stock.supplier', 'المورد'))}</th>
+                                    <th>${ut(t('module.ppe.table.lastUpdate', 'آخر تحديث'))}</th>
+                                    <th>${ut(t('module.ppe.table.status', 'الحالة'))}</th>
+                                    <th>${ut(t('module.ppe.table.actions', 'الإجراءات'))}</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${a.map(o=>{const p=parseFloat(o.balance||0),l=parseFloat(o.minThreshold||0),n=p<l;return`
-                                        <tr class="${n?"bg-red-50":""}" data-item-id="${o.itemId||""}">
-                                            <td class="font-mono font-semibold">${Utils.escapeHTML(o.itemCode||"")}</td>
-                                            <td>${Utils.escapeHTML(o.itemName||"")}</td>
-                                            <td>${Utils.escapeHTML(o.category||"")}</td>
-                                            <td>${parseFloat(o.stock_IN||0).toFixed(0)}</td>
-                                            <td>${parseFloat(o.stock_OUT||0).toFixed(0)}</td>
-                                            <td class="font-bold ${n?"text-red-600":"text-green-600"}">
-                                                ${p.toFixed(0)}
+                                ${filtered.map(item => {
+                                    const balance = parseFloat(item.balance || 0);
+                                    const minThreshold = parseFloat(item.minThreshold || 0);
+                                    const isLowStock = balance < minThreshold;
+                                    const rowClass = isLowStock ? 'bg-red-50' : '';
+                                    
+                                    return `
+                                        <tr class="${rowClass}" data-item-id="${item.itemId || ''}">
+                                            <td class="font-mono font-semibold">${Utils.escapeHTML(item.itemCode || '')}</td>
+                                            <td>${Utils.escapeHTML(item.itemName || '')}</td>
+                                            <td>${Utils.escapeHTML(item.category || '')}</td>
+                                            <td>${parseFloat(item.stock_IN || 0).toFixed(0)}</td>
+                                            <td>${parseFloat(item.stock_OUT || 0).toFixed(0)}</td>
+                                            <td class="font-bold ${isLowStock ? 'text-red-600' : 'text-green-600'}">
+                                                ${balance.toFixed(0)}
                                             </td>
-                                            <td>${l.toFixed(0)}</td>
-                                            <td>${Utils.escapeHTML(o.supplier||"")}</td>
-                                            <td>${o.lastUpdate?Utils.formatDate(o.lastUpdate):"-"}</td>
+                                            <td>${minThreshold.toFixed(0)}</td>
+                                            <td>${Utils.escapeHTML(item.supplier || '')}</td>
+                                            <td>${item.lastUpdate ? Utils.formatDate(item.lastUpdate) : '-'}</td>
                                             <td>
-                                                ${n?`
+                                                ${isLowStock ? `
                                                     <span class="badge badge-warning">
                                                         <i class="fas fa-exclamation-triangle ml-1"></i>
-                                                        ${i(e("module.ppe.status.lowStock","\u0645\u062E\u0632\u0648\u0646 \u0645\u0646\u062E\u0641\u0636"))}
+                                                        ${ut(t('module.ppe.status.lowStock', 'مخزون منخفض'))}
                                                     </span>
-                                                `:`
-                                                    <span class="badge badge-success">${i(e("module.ppe.status.available","\u0645\u062A\u0648\u0641\u0631"))}</span>
+                                                ` : `
+                                                    <span class="badge badge-success">${ut(t('module.ppe.status.available', 'متوفر'))}</span>
                                                 `}
                                             </td>
                                             <td>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="PPE.showStockItemForm('${o.itemId}')" class="btn-icon btn-icon-primary" title="${i(e("module.common.edit","\u062A\u0639\u062F\u064A\u0644"))}">
+                                                    <button onclick="PPE.showStockItemForm('${item.itemId}')" class="btn-icon btn-icon-primary" title="${ut(t('module.common.edit', 'تعديل'))}">
                                                         <i class="fas fa-edit"></i>
                                                     </button>
-                                                    <button onclick="PPE.showStockTransactions('${o.itemId}')" class="btn-icon btn-icon-info" title="${i(e("module.ppe.btn.transactions","\u0627\u0644\u062D\u0631\u0643\u0627\u062A"))}">
+                                                    <button onclick="PPE.showStockTransactions('${item.itemId}')" class="btn-icon btn-icon-info" title="${ut(t('module.ppe.btn.transactions', 'الحركات'))}">
                                                         <i class="fas fa-list"></i>
                                                     </button>
-                                                    <button onclick="PPE.showTransactionForm('${o.itemId}')" class="btn-icon btn-icon-success" title="${i(e("module.ppe.btn.addMovement","\u0625\u0636\u0627\u0641\u0629 \u062D\u0631\u0643\u0629"))}">
+                                                    <button onclick="PPE.showTransactionForm('${item.itemId}')" class="btn-icon btn-icon-success" title="${ut(t('module.ppe.btn.addMovement', 'إضافة حركة'))}">
                                                         <i class="fas fa-plus"></i>
                                                     </button>
-                                                    <button onclick="PPE.deleteStockItem('${o.itemId}')" class="btn-icon btn-icon-danger" title="${i(e("module.ppe.btn.deleteItem","\u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641"))}">
+                                                    <button onclick="PPE.deleteStockItem('${item.itemId}')" class="btn-icon btn-icon-danger" title="${ut(t('module.ppe.btn.deleteItem', 'حذف الصنف'))}">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    `}).join("")}
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
-                    </div>`},_getCurrentStockItems(){return this.state.stockItemsCache&&Array.isArray(this.state.stockItemsCache)&&this.state.stockItemsCache.length?this.state.stockItemsCache:Array.isArray(AppState.appData.ppeStock)?AppState.appData.ppeStock:[]},refreshStockListUI(t={}){const e=document.getElementById("ppe-stock-table-card");if(!e)return;const i=!!(t&&t.forceFull),s=this._ppeCaptureFocus(e),a=this._getCurrentStockItems(),r=document.getElementById("ppe-stock-results-host"),o=document.getElementById("ppe-stock-filters-host");if(!i&&r&&o&&a.length>0){r.innerHTML=this.buildStockResultsInnerHtml(a),this.applyModuleI18n(r),this.bindStockFilters(),this._ppeRestoreFocus(s);return}const p=this.renderStockTable(a),l=document.createElement("div");l.innerHTML=p.trim();const n=l.firstElementChild;n&&(e.replaceWith(n),this.applyModuleI18n(n),this.bindStockFilters(),this._ppeRestoreFocus(s))},_stockFilterTimer:null,bindStockFilters(){if(this.state.activeTab!=="stock-control")return;this.state.filters||(this.state.filters={}),this.state.filters.stock||this.resetStockFilters();const t=s=>{typeof requestAnimationFrame=="function"?requestAnimationFrame(s):setTimeout(s,0)},e=document.getElementById("ppe-stock-search");this._ppeBindOnce(e,"input",s=>{this.state.filters.stock.search=s.target&&s.target.value||"",clearTimeout(this._stockFilterTimer),this._stockFilterTimer=setTimeout(()=>t(()=>this.refreshStockListUI()),180)}),this._ppeBindOnce(document.getElementById("ppe-stock-filter-category"),"change",s=>{this.state.filters.stock.category=s.target&&s.target.value||"",this.refreshStockListUI()}),this._ppeBindOnce(document.getElementById("ppe-stock-filter-supplier"),"change",s=>{this.state.filters.stock.supplier=s.target&&s.target.value||"",this.refreshStockListUI()}),this._ppeBindOnce(document.getElementById("ppe-stock-filter-status"),"change",s=>{this.state.filters.stock.status=s.target&&s.target.value||"",this.refreshStockListUI()}),this._ppeBindOnce(document.getElementById("ppe-stock-date-from"),"change",s=>{this.state.filters.stock.dateFrom=s.target&&s.target.value||"",this.refreshStockListUI()}),this._ppeBindOnce(document.getElementById("ppe-stock-date-to"),"change",s=>{this.state.filters.stock.dateTo=s.target&&s.target.value||"",this.refreshStockListUI()}),this._ppeBindOnce(document.getElementById("ppe-stock-reset-filters"),"click",()=>{this.resetStockFilters(),this.refreshStockListUI({forceFull:!0})});const i=document.getElementById("ppe-stock-clear-empty-filters");i&&(i.onclick=()=>{this.resetStockFilters(),this.refreshStockListUI({forceFull:!0})})},async _fetchPPEStockRpcOnce(t){const e=GoogleIntegration.sendToAppsScript("getAllPPEStockItems",{filters:{}}),i=new Promise((s,a)=>setTimeout(()=>a(new Error(this._t("module.ppe.stock.timeoutRpc","\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u062E\u0627\u062F\u0645 \u0639\u0646\u062F \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646."))),t));return Promise.race([e,i])},_localStockFallbackArrays(){const t=this.state.stockItemsCache,e=Array.isArray(AppState.appData.ppeStock)?AppState.appData.ppeStock:[];return t&&t.length>0?t:e.length>0?e:[]},async loadStockItems(t=!1){try{const e=Date.now(),i=this.state.stockItemsCache&&this.state.stockItemsCacheTime&&e-this.state.stockItemsCacheTime<this.state.stockCacheExpiry;return!t&&i?(Utils.safeLog("\u2705 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0646 Cache"),this.state.stockItemsCache&&!AppState.appData.ppeStock&&(AppState.appData.ppeStock=this.state.stockItemsCache),this.state.stockItemsCache):this._stockLoadInflightPromise?(Utils.safeLog("\u23F3 \u0637\u0644\u0628 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630 \u2014 \u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0640 Promise"),this._stockLoadInflightPromise):(this._stockLoadInflightPromise=(async()=>{try{return await this._loadStockItemsInternal(t)}finally{this._stockLoadInflightPromise=null}})(),this._stockLoadInflightPromise)}catch(e){return this._stockLoadInflightPromise=null,Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A loadStockItems wrapper:",e),[]}},async _loadStockItemsInternal(t=!1){try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){this.state.stockLoadHardErrorMsg="";try{let s=null,a=null;for(let l=0;l<2;l++)try{l>0&&await new Promise(n=>setTimeout(n,700)),s=await this._fetchPPEStockRpcOnce(3e4),a=null;break}catch(n){a=n,s=null}if(s&&s.success){const l=Array.isArray(s.data)?s.data:[];return AppState.appData.ppeStock||(AppState.appData.ppeStock=[]),AppState.appData.ppeStock=l,this.state.stockItemsCache=l,this.state.stockItemsCacheTime=Date.now(),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),l}const r=s&&s.message?String(s.message):"",o=this._localStockFallbackArrays();if(o.length>0)return this.state.stockStaleWarningMsg=r||this._t("module.ppe.stock.staleDataNotice","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645\u061B \u064A\u064F\u0639\u0631\u0636 \u0622\u062E\u0631 \u0645\u062E\u0632\u0651\u0646 \u0645\u062D\u0644\u064A\u0627\u064B. \u064A\u064F\u0633\u062A\u062D\u0633\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0642\u0644\u064A\u0644."),a?Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0628\u0639\u062F \u0625\u0639\u0627\u062F\u0629 \u0645\u062D\u0627\u0648\u0644\u0629\u060C \u0639\u0631\u0636 \u0627\u0644\u0643\u0627\u0634:",a):r&&Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u062E\u0627\u062F\u0645 \u0631\u0641\u0636 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u060C \u0639\u0631\u0636 \u0627\u0644\u0643\u0627\u0634:",r),o;let p=r||a&&a.message||this._t("module.ppe.stock.loadFailedUnknown","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0632\u0648\u0646.");return/Timeout|مهلة/i.test(p||"")&&(p=this._t("module.ppe.stock.loadFailedTimeout","\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0639\u0646\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646. \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0634\u0628\u0643\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u062C\u062F\u062F\u0627\u064B.")),this.state.stockLoadHardErrorMsg=p,Utils.safeWarn("\u26A0\uFE0F \u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0635\u0646\u0627\u0641 \u0645\u062E\u0632\u0648\u0646\u0629 \u0645\u062D\u0644\u064A\u0627\u064B \u0648\u0641\u0634\u0644 \u0627\u0644\u062C\u0644\u0628 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645:",p),[]}catch(s){const a=this._localStockFallbackArrays();return a.length>0?(this.state.stockStaleWarningMsg=this._t("module.ppe.stock.staleDataNotice","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645\u061B \u064A\u064F\u0639\u0631\u0636 \u0622\u062E\u0631 \u0645\u062E\u0632\u0651\u0646 \u0645\u062D\u0644\u064A\u0627\u064B. \u064A\u064F\u0633\u062A\u062D\u0633\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0642\u0644\u064A\u0644."),Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062E\u0632\u0648\u0646\u060C \u0639\u0631\u0636 \u0627\u0644\u0643\u0627\u0634:",s),a):(this.state.stockLoadHardErrorMsg=String(s&&s.message?s.message:s),[])}}return this.state.stockItemsCache?(AppState.appData.ppeStock||(AppState.appData.ppeStock=this.state.stockItemsCache),this.state.stockItemsCache):AppState.appData.ppeStock||[]}catch(e){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646:",e);const i=this._localStockFallbackArrays();return i.length>0?(this.state.stockStaleWarningMsg=this._t("module.ppe.stock.staleDataNotice","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645\u061B \u064A\u064F\u0639\u0631\u0636 \u0622\u062E\u0631 \u0645\u062E\u0632\u0651\u0646 \u0645\u062D\u0644\u064A\u0627\u064B. \u064A\u064F\u0633\u062A\u062D\u0633\u0646 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0642\u0644\u064A\u0644."),i):(this.state.stockLoadHardErrorMsg=String(e&&e.message?e.message:e),[])}},async showStockItemForm(t=null){const e=!!t;let i=null;e&&(i=(await this.loadStockItems()).find(l=>l.itemId===t));const s=(p,l)=>this._t(p,l),a=p=>Utils.escapeHTML(p),r=document.createElement("div");r.className="modal-overlay",r.innerHTML=`
+                    </div>`;
+    },
+
+    /** الحصول على بيانات المخزون الحالية للعرض الجزئي (cache → AppState) */
+    _getCurrentStockItems() {
+        if (this.state.stockItemsCache && Array.isArray(this.state.stockItemsCache) && this.state.stockItemsCache.length) {
+            return this.state.stockItemsCache;
+        }
+        if (Array.isArray(AppState.appData.ppeStock)) {
+            return AppState.appData.ppeStock;
+        }
+        return [];
+    },
+
+    /** إعادة رسم نتائج المخزون فقط (حقول البحث تبقى كما هي) */
+    refreshStockListUI(opts = {}) {
+        const card = document.getElementById('ppe-stock-table-card');
+        if (!card) return;
+        const forceFull = !!(opts && opts.forceFull);
+        const focusMeta = this._ppeCaptureFocus(card);
+        const items = this._getCurrentStockItems();
+        const resultsHost = document.getElementById('ppe-stock-results-host');
+        const filtersHost = document.getElementById('ppe-stock-filters-host');
+
+        if (!forceFull && resultsHost && filtersHost && items.length > 0) {
+            resultsHost.innerHTML = this.buildStockResultsInnerHtml(items);
+            this.applyModuleI18n(resultsHost);
+            this.bindStockFilters();
+            this._ppeRestoreFocus(focusMeta);
+            return;
+        }
+
+        const html = this.renderStockTable(items);
+        const wrap = document.createElement('div');
+        wrap.innerHTML = html.trim();
+        const newCard = wrap.firstElementChild;
+        if (!newCard) return;
+        card.replaceWith(newCard);
+        this.applyModuleI18n(newCard);
+        this.bindStockFilters();
+        this._ppeRestoreFocus(focusMeta);
+    },
+
+    _stockFilterTimer: null,
+
+    bindStockFilters() {
+        if (this.state.activeTab !== 'stock-control') return;
+        if (!this.state.filters) this.state.filters = {};
+        if (!this.state.filters.stock) this.resetStockFilters();
+
+        const run = (fn) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(fn);
+            } else {
+                setTimeout(fn, 0);
+            }
+        };
+
+        const search = document.getElementById('ppe-stock-search');
+        this._ppeBindOnce(search, 'input', (e) => {
+            this.state.filters.stock.search = (e.target && e.target.value) || '';
+            clearTimeout(this._stockFilterTimer);
+            this._stockFilterTimer = setTimeout(() => run(() => this.refreshStockListUI()), 180);
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-category'), 'change', (e) => {
+            this.state.filters.stock.category = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-supplier'), 'change', (e) => {
+            this.state.filters.stock.supplier = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-filter-status'), 'change', (e) => {
+            this.state.filters.stock.status = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-date-from'), 'change', (e) => {
+            this.state.filters.stock.dateFrom = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-date-to'), 'change', (e) => {
+            this.state.filters.stock.dateTo = (e.target && e.target.value) || '';
+            this.refreshStockListUI();
+        });
+        this._ppeBindOnce(document.getElementById('ppe-stock-reset-filters'), 'click', () => {
+            this.resetStockFilters();
+            this.refreshStockListUI({ forceFull: true });
+        });
+        const clearEmpty = document.getElementById('ppe-stock-clear-empty-filters');
+        if (clearEmpty) {
+            clearEmpty.onclick = () => {
+                this.resetStockFilters();
+                this.refreshStockListUI({ forceFull: true });
+            };
+        }
+    },
+
+    /** طلب واحد لقائمة المخزون مع مهلة بالمللي ثوانٍ */
+    async _fetchPPEStockRpcOnce(timeoutMs) {
+        const loadPromise = GoogleIntegration.sendToAppsScript('getAllPPEStockItems', { filters: {} });
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(this._t('module.ppe.stock.timeoutRpc', 'انتهت مهلة الخادم عند قراءة المخزون.'))), timeoutMs)
+        );
+        return Promise.race([loadPromise, timeoutPromise]);
+    },
+
+    _localStockFallbackArrays() {
+        const fromCache = this.state.stockItemsCache;
+        const fromApp = Array.isArray(AppState.appData.ppeStock) ? AppState.appData.ppeStock : [];
+        if (fromCache && fromCache.length > 0) return fromCache;
+        if (fromApp.length > 0) return fromApp;
+        return [];
+    },
+
+    async loadStockItems(forceRefresh = false) {
+        try {
+            const now = Date.now();
+            const cacheValid = this.state.stockItemsCache &&
+                this.state.stockItemsCacheTime &&
+                (now - this.state.stockItemsCacheTime) < this.state.stockCacheExpiry;
+
+            if (!forceRefresh && cacheValid) {
+                Utils.safeLog('✅ استخدام بيانات المخزون من Cache');
+                if (this.state.stockItemsCache && !AppState.appData.ppeStock) {
+                    AppState.appData.ppeStock = this.state.stockItemsCache;
+                }
+                return this.state.stockItemsCache;
+            }
+
+            // ✅ Inflight deduplication — يمنع تشغيل طلبات متوازية متعددة لنفس العملية
+            // (المشكلة: preloadData + renderStockControlTab كانا يستدعيان loadStockItems
+            //  بالتوازي → استدعاءان للخادم → ضغط على الحد المسموح + فتح Circuit Breaker.)
+            if (this._stockLoadInflightPromise) {
+                Utils.safeLog('⏳ طلب تحميل المخزون قيد التنفيذ — مشاركة الـ Promise');
+                return this._stockLoadInflightPromise;
+            }
+
+            // غلاف الـ Promise مع تنظيف تلقائي عند الإكتمال (success أو failure)
+            this._stockLoadInflightPromise = (async () => {
+                try {
+                    return await this._loadStockItemsInternal(forceRefresh);
+                } finally {
+                    this._stockLoadInflightPromise = null;
+                }
+            })();
+            return this._stockLoadInflightPromise;
+        } catch (error) {
+            this._stockLoadInflightPromise = null;
+            Utils.safeError('❌ خطأ في loadStockItems wrapper:', error);
+            return [];
+        }
+    },
+
+    /**
+     * المنطق الأصلي لتحميل المخزون (مُغلَّف بـ inflight dedup في loadStockItems).
+     */
+    async _loadStockItemsInternal(forceRefresh = false) {
+        try {
+            const RPC_MS = 30000;
+            const RETRY_PAUSE_MS = 700;
+
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                this.state.stockLoadHardErrorMsg = '';
+                try {
+                    let result = null;
+                    let networkOrTimeoutErr = null;
+                    for (let attempt = 0; attempt < 2; attempt++) {
+                        try {
+                            if (attempt > 0) {
+                                await new Promise((resolve) => setTimeout(resolve, RETRY_PAUSE_MS));
+                            }
+                            result = await this._fetchPPEStockRpcOnce(RPC_MS);
+                            networkOrTimeoutErr = null;
+                            break;
+                        } catch (e) {
+                            networkOrTimeoutErr = e;
+                            result = null;
+                        }
+                    }
+
+                    if (result && result.success) {
+                        const stockItems = Array.isArray(result.data) ? result.data : [];
+                        if (!AppState.appData.ppeStock) {
+                            AppState.appData.ppeStock = [];
+                        }
+                        AppState.appData.ppeStock = stockItems;
+                        this.state.stockItemsCache = stockItems;
+                        this.state.stockItemsCacheTime = Date.now();
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                            window.DataManager.save();
+                        }
+                        return stockItems;
+                    }
+
+                    const backendMsg = (result && result.message) ? String(result.message) : '';
+                    const local = this._localStockFallbackArrays();
+                    if (local.length > 0) {
+                        this.state.stockStaleWarningMsg = backendMsg || this._t(
+                            'module.ppe.stock.staleDataNotice',
+                            'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                        );
+                        if (networkOrTimeoutErr) {
+                            Utils.safeWarn('⚠️ فشل مزامنة المخزون بعد إعادة محاولة، عرض الكاش:', networkOrTimeoutErr);
+                        } else if (backendMsg) {
+                            Utils.safeWarn('⚠️ الخادم رفض قراءة المخزون، عرض الكاش:', backendMsg);
+                        }
+                        return local;
+                    }
+
+                    let hard = backendMsg ||
+                        (networkOrTimeoutErr && networkOrTimeoutErr.message) ||
+                        this._t('module.ppe.stock.loadFailedUnknown', 'تعذّر تحميل بيانات المخزون.');
+                    if (/Timeout|مهلة/i.test(hard || '')) {
+                        hard = this._t('module.ppe.stock.loadFailedTimeout', 'انتهت مهلة الاتصال عند تحميل المخزون. تحقق من الشبكة وحاول مجدداً.');
+                    }
+                    this.state.stockLoadHardErrorMsg = hard;
+                    Utils.safeWarn('⚠️ لا توجد أصناف مخزونة محلياً وفشل الجلب من الخادم:', hard);
+                    return [];
+                } catch (outer) {
+                    const local = this._localStockFallbackArrays();
+                    if (local.length > 0) {
+                        this.state.stockStaleWarningMsg = this._t(
+                            'module.ppe.stock.staleDataNotice',
+                            'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                        );
+                        Utils.safeWarn('⚠️ خطأ تحميل المخزون، عرض الكاش:', outer);
+                        return local;
+                    }
+                    this.state.stockLoadHardErrorMsg = String(outer && outer.message ? outer.message : outer);
+                    return [];
+                }
+            }
+
+            if (this.state.stockItemsCache) {
+                if (!AppState.appData.ppeStock) {
+                    AppState.appData.ppeStock = this.state.stockItemsCache;
+                }
+                return this.state.stockItemsCache;
+            }
+            return AppState.appData.ppeStock || [];
+        } catch (error) {
+            Utils.safeError('❌ خطأ في تحميل أصناف المخزون:', error);
+            const fb = this._localStockFallbackArrays();
+            if (fb.length > 0) {
+                this.state.stockStaleWarningMsg = this._t(
+                    'module.ppe.stock.staleDataNotice',
+                    'تعذّر تحديث المخزون من الخادم؛ يُعرض آخر مخزّن محلياً. يُستحسن إعادة المحاولة بعد قليل.'
+                );
+                return fb;
+            }
+            this.state.stockLoadHardErrorMsg = String(error && error.message ? error.message : error);
+            return [];
+        }
+    },
+
+    async showStockItemForm(itemId = null) {
+        const isEdit = !!itemId;
+        let stockItem = null;
+        
+        if (isEdit) {
+            const stockItems = await this.loadStockItems();
+            stockItem = stockItems.find(item => item.itemId === itemId);
+        }
+
+        const t = (k, f) => this._t(k, f);
+        const ut = (s) => Utils.escapeHTML(s);
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${a(e?s("module.ppe.title.stockItemEdit","\u062A\u0639\u062F\u064A\u0644 \u0635\u0646\u0641"):s("module.ppe.title.stockItemAdd","\u0625\u0636\u0627\u0641\u0629 \u0635\u0646\u0641 \u062C\u062F\u064A\u062F"))}</h2>
+                    <h2 class="modal-title">${isEdit ? ut(t('module.ppe.title.stockItemEdit', 'تعديل صنف')) : ut(t('module.ppe.title.stockItemAdd', 'إضافة صنف جديد'))}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1649,49 +5473,259 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     <form id="stock-item-form" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${a(s("module.ppe.stock.itemCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641"))} *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.stock.itemCode', 'كود الصنف'))} *</label>
                                 <input type="text" id="stock-item-code" required class="form-input"
-                                    value="${Utils.escapeHTML(i?.itemCode||"")}"
-                                    placeholder="${a(s("module.ppe.placeholder.itemCode",""))}">
+                                    value="${Utils.escapeHTML(stockItem?.itemCode || '')}"
+                                    placeholder="${ut(t('module.ppe.placeholder.itemCode', ''))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${a(s("module.ppe.stock.itemName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641"))} *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.stock.itemName', 'اسم الصنف'))} *</label>
                                 <input type="text" id="stock-item-name" required class="form-input"
-                                    value="${Utils.escapeHTML(i?.itemName||"")}"
-                                    placeholder="${a(s("module.ppe.placeholder.itemName",""))}">
+                                    value="${Utils.escapeHTML(stockItem?.itemName || '')}"
+                                    placeholder="${ut(t('module.ppe.placeholder.itemName', ''))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${a(s("module.ppe.label.category","\u0627\u0644\u0641\u0626\u0629"))}</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.category', 'الفئة'))}</label>
                                 <input type="text" id="stock-item-category" class="form-input"
-                                    value="${Utils.escapeHTML(i?.category||"")}"
-                                    placeholder="${a(s("module.ppe.stock.category","\u0627\u0644\u0641\u0626\u0629"))}">
+                                    value="${Utils.escapeHTML(stockItem?.category || '')}"
+                                    placeholder="${ut(t('module.ppe.stock.category', 'الفئة'))}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${a(s("module.ppe.label.minThreshold","\u062D\u062F \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0637\u0644\u0628 *"))}</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.minThreshold', 'حد إعادة الطلب *'))}</label>
                                 <input type="number" id="stock-item-min-threshold" required class="form-input" min="0"
-                                    value="${i?.minThreshold||0}"
-                                    placeholder="${a(s("module.ppe.stock.reorder",""))}">
+                                    value="${stockItem?.minThreshold || 0}"
+                                    placeholder="${ut(t('module.ppe.stock.reorder', ''))}">
                             </div>
                             <div class="md:col-span-2">
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">${a(s("module.ppe.label.supplier","\u0627\u0644\u0645\u0648\u0631\u062F"))}</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">${ut(t('module.ppe.label.supplier', 'المورد'))}</label>
                                 <input type="text" id="stock-item-supplier" class="form-input"
-                                    value="${Utils.escapeHTML(i?.supplier||"")}"
-                                    placeholder="${a(s("module.ppe.label.supplier",""))}">
+                                    value="${Utils.escapeHTML(stockItem?.supplier || '')}"
+                                    placeholder="${ut(t('module.ppe.label.supplier', ''))}">
                             </div>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${a(s("module.common.cancel","\u0625\u0644\u063A\u0627\u0621"))}</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${ut(t('module.common.cancel', 'إلغاء'))}</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${a(e?s("module.common.saveChanges","\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A"):s("module.ppe.btn.addItem","\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0635\u0646\u0641"))}
+                                <i class="fas fa-save ml-2"></i>${isEdit ? ut(t('module.common.saveChanges', 'حفظ التعديلات')) : ut(t('module.ppe.btn.addItem', 'إضافة الصنف'))}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(r),this.applyModuleI18n(r),r.querySelector("#stock-item-form").addEventListener("submit",async p=>{p.preventDefault(),Loading.show();try{const l=document.getElementById("stock-item-code"),n=document.getElementById("stock-item-name"),d=document.getElementById("stock-item-category"),f=document.getElementById("stock-item-min-threshold"),b=document.getElementById("stock-item-supplier");if(!l||!n||!d||!f||!b){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.fieldsMissing","\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."));return}const c=l.value.trim(),m=n.value.trim();if(c&&(await this.loadStockItems()).find(h=>(e?h.itemId!==i.itemId:!0)&&h.itemCode&&String(h.itemCode).trim().toLowerCase()===c.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0643\u0648\u062F \u0622\u062E\u0631.")),l.focus(),l.style.borderColor="#ef4444";return}if(m&&(await this.loadStockItems()).find(h=>(e?h.itemId!==i.itemId:!0)&&h.itemName&&String(h.itemName).trim().toLowerCase()===m.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0633\u0645 \u0622\u062E\u0631.")),n.focus(),n.style.borderColor="#ef4444";return}const x={itemId:i?.itemId||Utils.generateId("STOCK"),itemCode:c,itemName:n.value.trim(),category:d.value.trim(),minThreshold:parseFloat(f.value)||0,supplier:b.value.trim(),stock_IN:i?.stock_IN||0,stock_OUT:i?.stock_OUT||0,balance:i?.balance||0,lastUpdate:new Date().toISOString(),createdAt:i?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const k=await GoogleIntegration.sendToAppsScript("addOrUpdatePPEStockItem",x);if(k&&k.success){this.clearCache(),r.remove(),Loading.hide(),Notification.success(`\u062A\u0645 ${e?"\u062A\u062D\u062F\u064A\u062B":"\u0625\u0636\u0627\u0641\u0629"} \u0627\u0644\u0635\u0646\u0641 \u0628\u0646\u062C\u0627\u062D`),this.refreshActiveTab();return}else{const u=k?.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0635\u0646\u0641";Notification.error(u),u.includes("\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F")?(l.style.borderColor="#ef4444",l.focus()):u.includes("\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F")&&(n.style.borderColor="#ef4444",n.focus())}}else{if(AppState.appData.ppeStock||(AppState.appData.ppeStock=[]),e){const k=AppState.appData.ppeStock.findIndex(u=>u.itemId===i.itemId);if(k!==-1){if(c&&AppState.appData.ppeStock.find((h,v)=>v!==k&&h.itemCode&&String(h.itemCode).trim().toLowerCase()===c.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0643\u0648\u062F \u0622\u062E\u0631.")),l.focus(),l.style.borderColor="#ef4444";return}if(m&&AppState.appData.ppeStock.find((h,v)=>v!==k&&h.itemName&&String(h.itemName).trim().toLowerCase()===m.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0633\u0645 \u0622\u062E\u0631.")),n.focus(),n.style.borderColor="#ef4444";return}AppState.appData.ppeStock[k]=x}}else{if(c&&AppState.appData.ppeStock.find(u=>u.itemCode&&String(u.itemCode).trim().toLowerCase()===c.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateCode","\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0643\u0648\u062F \u0622\u062E\u0631.")),l.focus(),l.style.borderColor="#ef4444";return}if(m&&AppState.appData.ppeStock.find(u=>u.itemName&&String(u.itemName).trim().toLowerCase()===m.toLowerCase())){Loading.hide(),Notification.error(PPE._t("module.ppe.notify.duplicateName","\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641 \u0645\u0648\u062C\u0648\u062F \u0628\u0627\u0644\u0641\u0639\u0644. \u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0633\u0645 \u0622\u062E\u0631.")),n.focus(),n.style.borderColor="#ef4444";return}AppState.appData.ppeStock.push(x)}typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),this.clearCache(),r.remove(),Loading.hide(),Notification.success(`\u062A\u0645 ${e?"\u062A\u062D\u062F\u064A\u062B":"\u0625\u0636\u0627\u0641\u0629"} \u0627\u0644\u0635\u0646\u0641 \u0628\u0646\u062C\u0627\u062D`),this.refreshActiveTab();return}}catch(l){Notification.error(PPE._t("module.ppe.notify.saveRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623")+": "+l.message)}finally{Loading.hide()}}),r.addEventListener("click",p=>{p.target===r&&r.remove()})},async showTransactionForm(t=null){const e=await this.loadStockItems(),i=t?e.find(r=>r.itemId===t):null,s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `;
+        document.body.appendChild(modal);
+        this.applyModuleI18n(modal);
+
+        const form = modal.querySelector('#stock-item-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            Loading.show();
+
+            try {
+                // فحص العناصر قبل الاستخدام
+                const itemCodeEl = document.getElementById('stock-item-code');
+                const itemNameEl = document.getElementById('stock-item-name');
+                const categoryEl = document.getElementById('stock-item-category');
+                const minThresholdEl = document.getElementById('stock-item-min-threshold');
+                const supplierEl = document.getElementById('stock-item-supplier');
+                
+                if (!itemCodeEl || !itemNameEl || !categoryEl || !minThresholdEl || !supplierEl) {
+                    Loading.hide();
+                    Notification.error(PPE._t('module.ppe.notify.fieldsMissing', 'بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.'));
+                    return;
+                }
+
+                const itemCode = itemCodeEl.value.trim();
+                const itemName = itemNameEl.value.trim();
+                
+                // ✅ التحقق من تكرار كود الصنف في Frontend (عند الإضافة والتحديث)
+                if (itemCode) {
+                    const stockItems = await this.loadStockItems();
+                    const existingItem = stockItems.find(item => 
+                        (isEdit ? item.itemId !== stockItem.itemId : true) && // استثناء الصنف الحالي عند التحديث
+                        item.itemCode && 
+                        String(item.itemCode).trim().toLowerCase() === itemCode.toLowerCase()
+                    );
+                    if (existingItem) {
+                        Loading.hide();
+                        Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
+                        itemCodeEl.focus();
+                        itemCodeEl.style.borderColor = '#ef4444';
+                        return;
+                    }
+                }
+                
+                // ✅ التحقق من تكرار اسم الصنف في Frontend (عند الإضافة والتحديث)
+                if (itemName) {
+                    const stockItems = await this.loadStockItems();
+                    const existingItemByName = stockItems.find(item => 
+                        (isEdit ? item.itemId !== stockItem.itemId : true) && // استثناء الصنف الحالي عند التحديث
+                        item.itemName && 
+                        String(item.itemName).trim().toLowerCase() === itemName.toLowerCase()
+                    );
+                    if (existingItemByName) {
+                        Loading.hide();
+                        Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
+                        itemNameEl.focus();
+                        itemNameEl.style.borderColor = '#ef4444';
+                        return;
+                    }
+                }
+
+                const stockData = {
+                    itemId: stockItem?.itemId || Utils.generateId('STOCK'),
+                    itemCode: itemCode,
+                    itemName: itemNameEl.value.trim(),
+                    category: categoryEl.value.trim(),
+                    minThreshold: parseFloat(minThresholdEl.value) || 0,
+                    supplier: supplierEl.value.trim(),
+                    stock_IN: stockItem?.stock_IN || 0,
+                    stock_OUT: stockItem?.stock_OUT || 0,
+                    balance: stockItem?.balance || 0,
+                    lastUpdate: new Date().toISOString(),
+                    createdAt: stockItem?.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                    const result = await GoogleIntegration.sendToAppsScript('addOrUpdatePPEStockItem', stockData);
+                    if (result && result.success) {
+                        // ✅ مسح Cache لتحديث البيانات في المرة القادمة
+                        this.clearCache();
+                        
+                        // ✅ إغلاق النموذج فوراً
+                        modal.remove();
+                        Loading.hide();
+                        
+                        Notification.success(`تم ${isEdit ? 'تحديث' : 'إضافة'} الصنف بنجاح`);
+                        
+                        // ✅ تحديث التبويب النشط فقط (أسرع من إعادة تحميل كامل)
+                        this.refreshActiveTab();
+                        return; // منع Loading.hide() في finally
+                    } else {
+                        // ✅ عرض رسالة الخطأ من Backend (مثل "كود الصنف موجود")
+                        const errorMessage = result?.message || 'حدث خطأ أثناء حفظ الصنف';
+                        Notification.error(errorMessage);
+                        
+                        // إذا كان الخطأ متعلقاً بكود الصنف أو اسم الصنف، إبراز الحقل المناسب
+                        if (errorMessage.includes('كود الصنف موجود')) {
+                            itemCodeEl.style.borderColor = '#ef4444';
+                            itemCodeEl.focus();
+                        } else if (errorMessage.includes('اسم الصنف موجود')) {
+                            itemNameEl.style.borderColor = '#ef4444';
+                            itemNameEl.focus();
+                        }
+                    }
+                } else {
+                    // Fallback to local storage
+                    if (!AppState.appData.ppeStock) {
+                        AppState.appData.ppeStock = [];
+                    }
+                    if (isEdit) {
+                        const index = AppState.appData.ppeStock.findIndex(item => item.itemId === stockItem.itemId);
+                        if (index !== -1) {
+                            // ✅ التحقق من عدم تكرار كود الصنف عند التحديث (في local storage)
+                            if (itemCode) {
+                                const duplicateCode = AppState.appData.ppeStock.find((item, idx) => 
+                                    idx !== index && 
+                                    item.itemCode && 
+                                    String(item.itemCode).trim().toLowerCase() === itemCode.toLowerCase()
+                                );
+                                if (duplicateCode) {
+                                    Loading.hide();
+                                    Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
+                                    itemCodeEl.focus();
+                                    itemCodeEl.style.borderColor = '#ef4444';
+                                    return;
+                                }
+                            }
+                            // ✅ التحقق من عدم تكرار اسم الصنف عند التحديث (في local storage)
+                            if (itemName) {
+                                const duplicateName = AppState.appData.ppeStock.find((item, idx) => 
+                                    idx !== index && 
+                                    item.itemName && 
+                                    String(item.itemName).trim().toLowerCase() === itemName.toLowerCase()
+                                );
+                                if (duplicateName) {
+                                    Loading.hide();
+                                    Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
+                                    itemNameEl.focus();
+                                    itemNameEl.style.borderColor = '#ef4444';
+                                    return;
+                                }
+                            }
+                            AppState.appData.ppeStock[index] = stockData;
+                        }
+                    } else {
+                        // ✅ التحقق من عدم تكرار كود الصنف عند الإضافة (في local storage)
+                        if (itemCode) {
+                            const duplicateCode = AppState.appData.ppeStock.find(item => 
+                                item.itemCode && 
+                                String(item.itemCode).trim().toLowerCase() === itemCode.toLowerCase()
+                            );
+                            if (duplicateCode) {
+                                Loading.hide();
+                                Notification.error(PPE._t('module.ppe.notify.duplicateCode', 'كود الصنف موجود بالفعل. يرجى استخدام كود آخر.'));
+                                itemCodeEl.focus();
+                                itemCodeEl.style.borderColor = '#ef4444';
+                                return;
+                            }
+                        }
+                        // ✅ التحقق من عدم تكرار اسم الصنف عند الإضافة (في local storage)
+                        if (itemName) {
+                            const duplicateName = AppState.appData.ppeStock.find(item => 
+                                item.itemName && 
+                                String(item.itemName).trim().toLowerCase() === itemName.toLowerCase()
+                            );
+                            if (duplicateName) {
+                                Loading.hide();
+                                Notification.error(PPE._t('module.ppe.notify.duplicateName', 'اسم الصنف موجود بالفعل. يرجى استخدام اسم آخر.'));
+                                itemNameEl.focus();
+                                itemNameEl.style.borderColor = '#ef4444';
+                                return;
+                            }
+                        }
+                        AppState.appData.ppeStock.push(stockData);
+                    }
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    
+                    // ✅ مسح Cache
+                    this.clearCache();
+                    
+                    // ✅ إغلاق النموذج فوراً
+                    modal.remove();
+                    Loading.hide();
+                    
+                    Notification.success(`تم ${isEdit ? 'تحديث' : 'إضافة'} الصنف بنجاح`);
+                    
+                    // ✅ تحديث التبويب النشط فقط
+                    this.refreshActiveTab();
+                    return; // منع Loading.hide() في finally
+                }
+            } catch (error) {
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
+            } finally {
+                Loading.hide();
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    async showTransactionForm(itemId = null) {
+        const stockItems = await this.loadStockItems();
+        const selectedItem = itemId ? stockItems.find(item => item.itemId === itemId) : null;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 600px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">\u0625\u0636\u0627\u0641\u0629 \u062D\u0631\u0643\u0629 (\u0648\u0627\u0631\u062F/\u0645\u0646\u0635\u0631\u0641)</h2>
+                    <h2 class="modal-title">إضافة حركة (وارد/منصرف)</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1699,133 +5733,329 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                 <div class="modal-body">
                     <form id="transaction-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0635\u0646\u0641 *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">الصنف *</label>
                             <select id="transaction-item-id" required class="form-input">
-                                <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0635\u0646\u0641</option>
-                                ${e.map(r=>`
-                                    <option value="${r.itemId}" ${i&&i.itemId===r.itemId?"selected":""}>
-                                        ${Utils.escapeHTML(r.itemCode||"")} - ${Utils.escapeHTML(r.itemName||"")}
+                                <option value="">اختر الصنف</option>
+                                ${stockItems.map(item => `
+                                    <option value="${item.itemId}" ${selectedItem && selectedItem.itemId === item.itemId ? 'selected' : ''}>
+                                        ${Utils.escapeHTML(item.itemCode || '')} - ${Utils.escapeHTML(item.itemName || '')}
                                     </option>
-                                `).join("")}
+                                `).join('')}
                             </select>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0646\u0648\u0639 \u0627\u0644\u062D\u0631\u0643\u0629 *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">نوع الحركة *</label>
                                 <select id="transaction-action" required class="form-input">
-                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
-                                    <option value="IN">\u0648\u0627\u0631\u062F</option>
-                                    <option value="OUT">\u0645\u0646\u0635\u0631\u0641</option>
+                                    <option value="">اختر النوع</option>
+                                    <option value="IN">وارد</option>
+                                    <option value="OUT">منصرف</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0643\u0645\u064A\u0629 *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية *</label>
                                 <input type="number" id="transaction-quantity" required class="form-input" min="1"
-                                    placeholder="\u0627\u0644\u0643\u0645\u064A\u0629">
+                                    placeholder="الكمية">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u062A\u0627\u0631\u064A\u062E *</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">التاريخ *</label>
                                 <input type="date" id="transaction-date" required class="form-input"
-                                    value="${new Date().toISOString().slice(0,10)}">
+                                    value="${new Date().toISOString().slice(0, 10)}">
                             </div>
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">\u0635\u0631\u0641 \u0625\u0644\u0649</label>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">صرف إلى</label>
                                 <input type="text" id="transaction-issued-to" class="form-input"
-                                    placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0644\u0645 (\u0644\u0644\u0645\u0646\u0635\u0631\u0641)">
+                                    placeholder="اسم المستلم (للمنصرف)">
                             </div>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0627\u062D\u0638\u0627\u062A</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات</label>
                             <textarea id="transaction-remarks" class="form-input" rows="3"
-                                placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629"></textarea>
+                                placeholder="ملاحظات إضافية"></textarea>
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u062D\u0631\u0643\u0629
+                                <i class="fas fa-save ml-2"></i>حفظ الحركة
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(s),s.querySelector("#transaction-form").addEventListener("submit",async r=>{r.preventDefault(),Loading.show();try{const o=document.getElementById("transaction-item-id"),p=document.getElementById("transaction-action"),l=document.getElementById("transaction-quantity"),n=document.getElementById("transaction-date"),d=document.getElementById("transaction-issued-to"),f=document.getElementById("transaction-remarks");if(!o||!p||!l||!n||!d||!f){Loading.hide(),Notification.error("\u0628\u0639\u0636 \u0627\u0644\u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const b={itemId:o.value,action:p.value,quantity:parseFloat(l.value)||0,date:new Date(n.value).toISOString(),issuedTo:d.value.trim(),remarks:f.value.trim(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const c=await GoogleIntegration.sendToAppsScript("addPPETransaction",b);if(c&&c.success){this.clearCache(),s.remove(),Loading.hide(),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0631\u0643\u0629 \u0628\u0646\u062C\u0627\u062D"),this.refreshActiveTab();return}else Notification.error(c?.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0631\u0643\u0629")}else{b.id=Utils.generateId("TRANS"),AppState.appData.ppeTransactions||(AppState.appData.ppeTransactions=[]),AppState.appData.ppeTransactions.push(b),AppState.appData.ppeStock||(AppState.appData.ppeStock=[]);const c=AppState.appData.ppeStock.find(m=>m.itemId===b.itemId);c&&(b.action==="IN"?c.stock_IN=parseFloat(c.stock_IN||0)+b.quantity:c.stock_OUT=parseFloat(c.stock_OUT||0)+b.quantity,c.balance=parseFloat(c.stock_IN||0)-parseFloat(c.stock_OUT||0),c.lastUpdate=new Date().toISOString()),this.clearCache(),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),s.remove(),Loading.hide(),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u062D\u0631\u0643\u0629 \u0628\u0646\u062C\u0627\u062D"),this.refreshActiveTab();return}}catch(o){Notification.error(PPE._t("module.ppe.notify.saveRuntimeError","\u062D\u062F\u062B \u062E\u0637\u0623")+": "+o.message)}finally{Loading.hide()}}),s.addEventListener("click",r=>{r.target===s&&s.remove()})},async showStockTransactions(t){if(!t){Notification.error("\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0646\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}Loading.show();try{let e=[];try{e=await this.loadStockItems(),Array.isArray(e)||(e=[])}catch(n){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646:",n),e=AppState.appData.ppeStock||[]}const i=e.find(n=>n&&n.itemId===t);if(!i){Loading.hide(),Notification.error("\u0627\u0644\u0635\u0646\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0623\u0648 \u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644\u0647");return}let s=[];if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)try{const n=await GoogleIntegration.sendToAppsScript("getAllPPETransactions",{filters:{itemId:t}});n&&n.success?s=Array.isArray(n.data)?n.data:[]:(Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062C\u0644\u0628 \u0627\u0644\u062D\u0631\u0643\u0627\u062A \u0645\u0646 Backend\u060C \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629:",n?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"),s=(AppState.appData.ppeTransactions||[]).filter(d=>d&&d.itemId===t))}catch(n){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0640 Backend\u060C \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629:",n),s=(AppState.appData.ppeTransactions||[]).filter(d=>d&&d.itemId===t)}else s=(AppState.appData.ppeTransactions||[]).filter(n=>n&&n.itemId===t);Array.isArray(s)||(s=[]),Loading.hide();const a=document.createElement("div");a.className="modal-overlay",s.sort((n,d)=>{const f=new Date(n.date||n.createdAt||0);return new Date(d.date||d.createdAt||0)-f});const r=s.filter(n=>n.action==="IN").reduce((n,d)=>n+parseFloat(d.quantity||0),0),o=s.filter(n=>n.action==="OUT").reduce((n,d)=>n+parseFloat(d.quantity||0),0),p=r-o;let l="";s.length===0?l=`
+        `;
+        document.body.appendChild(modal);
+
+        const form = modal.querySelector('#transaction-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            Loading.show();
+
+            try {
+                // فحص العناصر قبل الاستخدام
+                const itemIdEl = document.getElementById('transaction-item-id');
+                const actionEl = document.getElementById('transaction-action');
+                const quantityEl = document.getElementById('transaction-quantity');
+                const dateEl = document.getElementById('transaction-date');
+                const issuedToEl = document.getElementById('transaction-issued-to');
+                const remarksEl = document.getElementById('transaction-remarks');
+                
+                if (!itemIdEl || !actionEl || !quantityEl || !dateEl || !issuedToEl || !remarksEl) {
+                    Loading.hide();
+                    Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+                    return;
+                }
+
+                const transactionData = {
+                    itemId: itemIdEl.value,
+                    action: actionEl.value,
+                    quantity: parseFloat(quantityEl.value) || 0,
+                    date: new Date(dateEl.value).toISOString(),
+                    issuedTo: issuedToEl.value.trim(),
+                    remarks: remarksEl.value.trim(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                    const result = await GoogleIntegration.sendToAppsScript('addPPETransaction', transactionData);
+                    if (result && result.success) {
+                        // ✅ مسح Cache لتحديث البيانات في المرة القادمة (لأن الحركات تؤثر على الرصيد)
+                        this.clearCache();
+                        
+                        // ✅ إغلاق النموذج فوراً
+                        modal.remove();
+                        Loading.hide();
+                        
+                        Notification.success('تم إضافة الحركة بنجاح');
+                        
+                        // ✅ تحديث التبويب النشط فقط (أسرع من إعادة تحميل كامل)
+                        this.refreshActiveTab();
+                        return; // منع Loading.hide() في finally
+                    } else {
+                        Notification.error(result?.message || 'حدث خطأ أثناء إضافة الحركة');
+                    }
+                } else {
+                    // Fallback to local storage
+                    transactionData.id = Utils.generateId('TRANS');
+                    if (!AppState.appData.ppeTransactions) {
+                        AppState.appData.ppeTransactions = [];
+                    }
+                    AppState.appData.ppeTransactions.push(transactionData);
+                    
+                    // Update stock balance locally
+                    if (!AppState.appData.ppeStock) {
+                        AppState.appData.ppeStock = [];
+                    }
+                    const stockItem = AppState.appData.ppeStock.find(item => item.itemId === transactionData.itemId);
+                    if (stockItem) {
+                        if (transactionData.action === 'IN') {
+                            stockItem.stock_IN = (parseFloat(stockItem.stock_IN || 0) + transactionData.quantity);
+                        } else {
+                            stockItem.stock_OUT = (parseFloat(stockItem.stock_OUT || 0) + transactionData.quantity);
+                        }
+                        stockItem.balance = parseFloat(stockItem.stock_IN || 0) - parseFloat(stockItem.stock_OUT || 0);
+                        stockItem.lastUpdate = new Date().toISOString();
+                    }
+                    
+                    // ✅ مسح Cache
+                    this.clearCache();
+                    
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    
+                    // ✅ إغلاق النموذج فوراً
+                    modal.remove();
+                    Loading.hide();
+                    
+                    Notification.success('تم إضافة الحركة بنجاح');
+                    
+                    // ✅ تحديث التبويب النشط فقط
+                    this.refreshActiveTab();
+                    return; // منع Loading.hide() في finally
+                }
+            } catch (error) {
+                Notification.error(PPE._t('module.ppe.notify.saveRuntimeError', 'حدث خطأ') + ': ' + error.message);
+            } finally {
+                Loading.hide();
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    async showStockTransactions(itemId) {
+        if (!itemId) {
+            Notification.error('معرف الصنف غير موجود');
+            return;
+        }
+
+        Loading.show();
+
+        try {
+            // الحصول على بيانات الصنف
+            let stockItems = [];
+            try {
+                stockItems = await this.loadStockItems();
+                if (!Array.isArray(stockItems)) {
+                    stockItems = [];
+                }
+            } catch (loadError) {
+                Utils.safeWarn('⚠️ خطأ في تحميل أصناف المخزون:', loadError);
+                stockItems = AppState.appData.ppeStock || [];
+            }
+            
+            const stockItem = stockItems.find(item => item && item.itemId === itemId);
+            
+            if (!stockItem) {
+                Loading.hide();
+                Notification.error('الصنف غير موجود أو لم يتم تحميله');
+                return;
+            }
+
+            // الحصول على الحركات من Backend
+            let transactions = [];
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                try {
+                    const result = await GoogleIntegration.sendToAppsScript('getAllPPETransactions', { filters: { itemId: itemId } });
+                    if (result && result.success) {
+                        transactions = Array.isArray(result.data) ? result.data : [];
+                    } else {
+                        // في حالة فشل الطلب، استخدام البيانات المحلية
+                        Utils.safeWarn('⚠️ فشل جلب الحركات من Backend، استخدام البيانات المحلية:', result?.message || 'خطأ غير معروف');
+                        transactions = (AppState.appData.ppeTransactions || []).filter(t => t && t.itemId === itemId);
+                    }
+                } catch (backendError) {
+                    // في حالة خطأ في الاتصال، استخدام البيانات المحلية
+                    Utils.safeWarn('⚠️ خطأ في الاتصال بـ Backend، استخدام البيانات المحلية:', backendError);
+                    transactions = (AppState.appData.ppeTransactions || []).filter(t => t && t.itemId === itemId);
+                }
+            } else {
+                // Fallback to local storage
+                transactions = (AppState.appData.ppeTransactions || []).filter(t => t && t.itemId === itemId);
+            }
+            
+            // التأكد من أن transactions هي مصفوفة
+            if (!Array.isArray(transactions)) {
+                transactions = [];
+            }
+
+            Loading.hide();
+
+            // إنشاء النافذة المنبثقة
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            
+            // ترتيب الحركات حسب التاريخ (الأحدث أولاً)
+            transactions.sort((a, b) => {
+                const dateA = new Date(a.date || a.createdAt || 0);
+                const dateB = new Date(b.date || b.createdAt || 0);
+                return dateB - dateA;
+            });
+
+            // حساب الإجماليات
+            const totalIn = transactions
+                .filter(t => t.action === 'IN')
+                .reduce((sum, t) => sum + parseFloat(t.quantity || 0), 0);
+            const totalOut = transactions
+                .filter(t => t.action === 'OUT')
+                .reduce((sum, t) => sum + parseFloat(t.quantity || 0), 0);
+            const currentBalance = totalIn - totalOut;
+
+            // بناء جدول الحركات
+            let transactionsTableHtml = '';
+            if (transactions.length === 0) {
+                transactionsTableHtml = `
                     <div class="empty-state py-8">
                         <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u062D\u0631\u0643\u0627\u062A \u0645\u0633\u062C\u0644\u0629 \u0644\u0647\u0630\u0627 \u0627\u0644\u0635\u0646\u0641</p>
+                        <p class="text-gray-500">لا توجد حركات مسجلة لهذا الصنف</p>
                     </div>
-                `:l=`
+                `;
+            } else {
+                transactionsTableHtml = `
                     <div class="table-wrapper" style="overflow-x: auto;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                                    <th>\u0646\u0648\u0639 \u0627\u0644\u062D\u0631\u0643\u0629</th>
-                                    <th>\u0627\u0644\u0643\u0645\u064A\u0629</th>
-                                    <th>\u0635\u0627\u062F\u0631 \u0625\u0644\u0649</th>
-                                    <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
-                                    <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</th>
+                                    <th>التاريخ</th>
+                                    <th>نوع الحركة</th>
+                                    <th>الكمية</th>
+                                    <th>صادر إلى</th>
+                                    <th>ملاحظات</th>
+                                    <th>تاريخ الإنشاء</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${s.map(n=>{const d=n.action==="IN"?"\u0648\u0627\u0631\u062F":"\u0645\u0646\u0635\u0631\u0641",f=n.action==="IN"?"badge-success":"badge-warning",b=n.action==="IN"?"fa-arrow-down":"fa-arrow-up";return`
+                                ${transactions.map(transaction => {
+                                    const actionType = transaction.action === 'IN' ? 'وارد' : 'منصرف';
+                                    const actionClass = transaction.action === 'IN' ? 'badge-success' : 'badge-warning';
+                                    const actionIcon = transaction.action === 'IN' ? 'fa-arrow-down' : 'fa-arrow-up';
+                                    
+                                    return `
                                         <tr>
-                                            <td>${n.date?Utils.formatDate(n.date):"-"}</td>
+                                            <td>${transaction.date ? Utils.formatDate(transaction.date) : '-'}</td>
                                             <td>
-                                                <span class="badge ${f}">
-                                                    <i class="fas ${b} ml-1"></i>
-                                                    ${d}
+                                                <span class="badge ${actionClass}">
+                                                    <i class="fas ${actionIcon} ml-1"></i>
+                                                    ${actionType}
                                                 </span>
                                             </td>
-                                            <td class="font-semibold">${parseFloat(n.quantity||0).toFixed(0)}</td>
-                                            <td>${Utils.escapeHTML(n.issuedTo||"-")}</td>
-                                            <td>${Utils.escapeHTML(n.remarks||"-")}</td>
-                                            <td class="text-sm text-gray-500">${n.createdAt?Utils.formatDate(n.createdAt):"-"}</td>
+                                            <td class="font-semibold">${parseFloat(transaction.quantity || 0).toFixed(0)}</td>
+                                            <td>${Utils.escapeHTML(transaction.issuedTo || '-')}</td>
+                                            <td>${Utils.escapeHTML(transaction.remarks || '-')}</td>
+                                            <td class="text-sm text-gray-500">${transaction.createdAt ? Utils.formatDate(transaction.createdAt) : '-'}</td>
                                         </tr>
-                                    `}).join("")}
+                                    `;
+                                }).join('')}
                             </tbody>
                         </table>
                     </div>
-                `,a.innerHTML=`
+                `;
+            }
+
+            modal.innerHTML = `
                 <div class="modal-content" style="max-width: 1000px;">
                     <div class="modal-header">
                         <h2 class="modal-title">
                             <i class="fas fa-list-alt ml-2"></i>
-                            \u0633\u062C\u0644 \u0627\u0644\u062D\u0631\u0643\u0627\u062A - ${Utils.escapeHTML(i.itemName||i.itemCode||"\u0635\u0646\u0641")}
+                            سجل الحركات - ${Utils.escapeHTML(stockItem.itemName || stockItem.itemCode || 'صنف')}
                         </h2>
                         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body">
-                        <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0635\u0646\u0641 -->
+                        <!-- معلومات الصنف -->
                         <div class="bg-gray-50 rounded-lg p-4 mb-6">
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div>
-                                    <p class="text-xs text-gray-500 mb-1">\u0643\u0648\u062F \u0627\u0644\u0635\u0646\u0641</p>
-                                    <p class="font-semibold text-gray-800">${Utils.escapeHTML(i.itemCode||"-")}</p>
+                                    <p class="text-xs text-gray-500 mb-1">كود الصنف</p>
+                                    <p class="font-semibold text-gray-800">${Utils.escapeHTML(stockItem.itemCode || '-')}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-500 mb-1">\u0627\u0633\u0645 \u0627\u0644\u0635\u0646\u0641</p>
-                                    <p class="font-semibold text-gray-800">${Utils.escapeHTML(i.itemName||"-")}</p>
+                                    <p class="text-xs text-gray-500 mb-1">اسم الصنف</p>
+                                    <p class="font-semibold text-gray-800">${Utils.escapeHTML(stockItem.itemName || '-')}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-500 mb-1">\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u062D\u0627\u0644\u064A</p>
-                                    <p class="font-semibold text-green-600">${parseFloat(i.balance||0).toFixed(0)}</p>
+                                    <p class="text-xs text-gray-500 mb-1">الرصيد الحالي</p>
+                                    <p class="font-semibold text-green-600">${parseFloat(stockItem.balance || 0).toFixed(0)}</p>
                                 </div>
                                 <div>
-                                    <p class="text-xs text-gray-500 mb-1">\u0639\u062F\u062F \u0627\u0644\u062D\u0631\u0643\u0627\u062A</p>
-                                    <p class="font-semibold text-gray-800">${s.length}</p>
+                                    <p class="text-xs text-gray-500 mb-1">عدد الحركات</p>
+                                    <p class="font-semibold text-gray-800">${transactions.length}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- \u0645\u0644\u062E\u0635 \u0627\u0644\u062D\u0631\u0643\u0627\u062A -->
+                        <!-- ملخص الحركات -->
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                             <div class="bg-green-50 border border-green-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-green-700 mb-1">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0648\u0627\u0631\u062F</p>
-                                        <p class="text-2xl font-bold text-green-600">${r.toFixed(0)}</p>
+                                        <p class="text-sm text-green-700 mb-1">إجمالي الوارد</p>
+                                        <p class="text-2xl font-bold text-green-600">${totalIn.toFixed(0)}</p>
                                     </div>
                                     <i class="fas fa-arrow-down text-green-500 text-2xl"></i>
                                 </div>
@@ -1833,8 +6063,8 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                             <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-orange-700 mb-1">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0646\u0635\u0631\u0641</p>
-                                        <p class="text-2xl font-bold text-orange-600">${o.toFixed(0)}</p>
+                                        <p class="text-sm text-orange-700 mb-1">إجمالي المنصرف</p>
+                                        <p class="text-2xl font-bold text-orange-600">${totalOut.toFixed(0)}</p>
                                     </div>
                                     <i class="fas fa-arrow-up text-orange-500 text-2xl"></i>
                                 </div>
@@ -1842,210 +6072,310 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-sm text-blue-700 mb-1">\u0627\u0644\u0631\u0635\u064A\u062F \u0627\u0644\u0645\u062D\u0633\u0648\u0628</p>
-                                        <p class="text-2xl font-bold text-blue-600">${p.toFixed(0)}</p>
+                                        <p class="text-sm text-blue-700 mb-1">الرصيد المحسوب</p>
+                                        <p class="text-2xl font-bold text-blue-600">${currentBalance.toFixed(0)}</p>
                                     </div>
                                     <i class="fas fa-calculator text-blue-500 text-2xl"></i>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- \u062C\u062F\u0648\u0644 \u0627\u0644\u062D\u0631\u0643\u0627\u062A -->
+                        <!-- جدول الحركات -->
                         <div class="mb-4">
                             <h3 class="text-lg font-semibold text-gray-800 mb-3">
                                 <i class="fas fa-table ml-2"></i>
-                                \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u062D\u0631\u0643\u0627\u062A
+                                تفاصيل الحركات
                             </h3>
-                            ${l}
+                            ${transactionsTableHtml}
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                             <i class="fas fa-times ml-2"></i>
-                            \u0625\u063A\u0644\u0627\u0642
+                            إغلاق
                         </button>
-                        <button class="btn-primary" onclick="PPE.showTransactionForm('${t}'); this.closest('.modal-overlay').remove();">
+                        <button class="btn-primary" onclick="PPE.showTransactionForm('${itemId}'); this.closest('.modal-overlay').remove();">
                             <i class="fas fa-plus ml-2"></i>
-                            \u0625\u0636\u0627\u0641\u0629 \u062D\u0631\u0643\u0629 \u062C\u062F\u064A\u062F\u0629
+                            إضافة حركة جديدة
                         </button>
                     </div>
                 </div>
-            `,document.body.appendChild(a),a.addEventListener("click",n=>{n.target===a&&a.remove()})}catch(e){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0633\u062C\u0644 \u0627\u0644\u062D\u0631\u0643\u0627\u062A:",e),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0639\u0631\u0636 \u0633\u062C\u0644 \u0627\u0644\u062D\u0631\u0643\u0627\u062A: "+(e.message||e))}},async deleteStockItem(t){if(!t){Notification.error("\u0645\u0639\u0631\u0641 \u0627\u0644\u0635\u0646\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=(await this.loadStockItems()).find(a=>a&&a.itemId===t);if(!i){Notification.error("\u0627\u0644\u0635\u0646\u0641 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=`\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 "${i.itemName||i.itemCode}"\u061F
+            `;
 
-\u26A0\uFE0F \u062A\u062D\u0630\u064A\u0631: \u0644\u0627 \u064A\u0645\u0643\u0646 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \u0625\u0630\u0627 \u0643\u0627\u0646 \u064A\u062D\u062A\u0648\u064A \u0639\u0644\u0649 \u062D\u0631\u0643\u0627\u062A \u0645\u0633\u062C\u0644\u0629.`;if(confirm(s)){Loading.show();try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const a=await GoogleIntegration.sendToAppsScript("deletePPEStockItem",{itemId:t});a&&a.success?(this.state.stockItemsCache=null,this.state.stockItemsCacheTime=null,Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \u0628\u0646\u062C\u0627\u062D"),await this.load()):Notification.error(a?.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641")}else AppState.appData.ppeStock?(AppState.appData.ppeStock=AppState.appData.ppeStock.filter(a=>a.itemId!==t),this.state.stockItemsCache=null,this.state.stockItemsCacheTime=null,Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641 \u0628\u0646\u062C\u0627\u062D"),await this.load()):Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0629 \u0644\u0644\u062D\u0630\u0641")}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641:",a),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0635\u0646\u0641: "+(a.message||a))}finally{Loading.hide()}}},_ppeAnalyticsPeriod:"0",_ppeAnalyticsCharts:{},async renderPpeAnalysisTab(){return this._ppeEnsureChartJS().catch(()=>{}),`
+            document.body.appendChild(modal);
+
+            // إغلاق النافذة عند النقر خارجها
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في عرض سجل الحركات:', error);
+            Notification.error('حدث خطأ أثناء عرض سجل الحركات: ' + (error.message || error));
+        }
+    },
+
+    async deleteStockItem(itemId) {
+        if (!itemId) {
+            Notification.error('معرف الصنف غير موجود');
+            return;
+        }
+
+        // الحصول على بيانات الصنف لعرض اسمه في رسالة التأكيد
+        const stockItems = await this.loadStockItems();
+        const stockItem = stockItems.find(item => item && item.itemId === itemId);
+        
+        if (!stockItem) {
+            Notification.error('الصنف غير موجود');
+            return;
+        }
+
+        // رسالة تأكيد الحذف
+        const confirmMessage = `هل أنت متأكد من حذف الصنف "${stockItem.itemName || stockItem.itemCode}"؟\n\n` +
+                              `⚠️ تحذير: لا يمكن حذف الصنف إذا كان يحتوي على حركات مسجلة.`;
+
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+
+        Loading.show();
+
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                const result = await GoogleIntegration.sendToAppsScript('deletePPEStockItem', { itemId: itemId });
+                
+                if (result && result.success) {
+                    // ✅ مسح Cache لتحديث البيانات
+                    this.state.stockItemsCache = null;
+                    this.state.stockItemsCacheTime = null;
+                    
+                    Notification.success('تم حذف الصنف بنجاح');
+                    await this.load(); // إعادة تحميل البيانات
+                } else {
+                    Notification.error(result?.message || 'حدث خطأ أثناء حذف الصنف');
+                }
+            } else {
+                // Fallback to local storage
+                if (AppState.appData.ppeStock) {
+                    AppState.appData.ppeStock = AppState.appData.ppeStock.filter(item => item.itemId !== itemId);
+                    // ✅ مسح Cache
+                    this.state.stockItemsCache = null;
+                    this.state.stockItemsCacheTime = null;
+                    
+                    Notification.success('تم حذف الصنف بنجاح');
+                    await this.load();
+                } else {
+                    Notification.error('لا توجد بيانات محلية للحذف');
+                }
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف الصنف:', error);
+            Notification.error('حدث خطأ أثناء حذف الصنف: ' + (error.message || error));
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ✅ تبويب التحليل — PPE Analytics Dashboard
+    // (نفس نمط الحوادث/العيادة/الملاحظات — Chart.js + KPIs + فلاتر + PDF)
+    // ═══════════════════════════════════════════════════════════════════
+
+    _ppeAnalyticsPeriod: '0', // الفترة الافتراضية: الكل
+    _ppeAnalyticsCharts: {},   // ذاكرة Chart instances
+
+    /** قالب لوحة التحليل (HTML) */
+    async renderPpeAnalysisTab() {
+        // تحميل Chart.js مبكراً (لا نُعطّل العرض)
+        this._ppeEnsureChartJS().catch(() => {});
+
+        return `
         <div id="ppe-analytics-root" style="font-family:inherit;">
 
-            <!-- \u2550\u2550\u2550 \u0634\u0631\u064A\u0637 \u0627\u0644\u0623\u062F\u0648\u0627\u062A \u2550\u2550\u2550 -->
+            <!-- ═══ شريط الأدوات ═══ -->
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);border-radius:14px;color:#fff;box-shadow:0 8px 28px rgba(37, 99, 235, 0.32);">
                 <div style="display:flex;align-items:center;gap:12px;">
                     <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;backdrop-filter: blur(8px);">
                         <i class="fas fa-hard-hat" style="font-size:20px;"></i>
                     </div>
                     <div>
-                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">\u0644\u0648\u062D\u0629 \u062A\u062D\u0644\u064A\u0644 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629</h2>
-                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">\u062A\u062D\u0644\u064A\u0644 \u0634\u0627\u0645\u0644 \u2022 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u2022 \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u2022 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u2022 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A \u2022 \u062A\u0635\u062F\u064A\u0631 PDF</p>
+                        <h2 style="margin:0;font-size:1.15rem;font-weight:700;">لوحة تحليل مهمات الوقاية</h2>
+                        <p style="margin:0;font-size:0.75rem;opacity:0.9;">تحليل شامل • الاستلامات • المخزون • المصانع • الإدارات • تصدير PDF</p>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <span style="font-size:0.72rem;opacity:0.85;margin-inline-end:2px;">\u0627\u0644\u0641\u062A\u0631\u0629:</span>
+                    <span style="font-size:0.72rem;opacity:0.85;margin-inline-end:2px;">الفترة:</span>
                     <div style="display:flex;gap:3px;flex-wrap:wrap;">
-                        ${["30","90","180","365","0"].map((t,e)=>{const i=["30 \u064A\u0648\u0645","3 \u0623\u0634\u0647\u0631","6 \u0623\u0634\u0647\u0631","\u0633\u0646\u0629","\u0627\u0644\u0643\u0644"],s=(this._ppeAnalyticsPeriod||"0")===t;return`<button class="ppe-period-btn" data-period="${t}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${s?"#fff":"rgba(255,255,255,0.15)"};color:${s?"#2563EB":"#fff"};">${i[e]}</button>`}).join("")}
+                        ${['30','90','180','365','0'].map((v,i) => {
+                            const labels=['30 يوم','3 أشهر','6 أشهر','سنة','الكل'];
+                            const active=(this._ppeAnalyticsPeriod||'0')===v;
+                            return `<button class="ppe-period-btn" data-period="${v}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.75rem;font-weight:600;transition:all .2s;background:${active?'#fff':'rgba(255,255,255,0.15)'};color:${active?'#2563EB':'#fff'};">${labels[i]}</button>`;
+                        }).join('')}
                     </div>
                     <button id="ppe-toggle-filters-btn" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
-                        <i class="fas fa-sliders-h"></i><span>\u0641\u0644\u0627\u062A\u0631</span><span id="ppe-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-inline-start:2px;">\u25CF</span>
+                        <i class="fas fa-sliders-h"></i><span>فلاتر</span><span id="ppe-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 5px;border-radius:10px;margin-inline-start:2px;">●</span>
                     </button>
                     <button id="ppe-export-pdf-btn" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.25);color:#fff;font-size:0.78rem;font-weight:600;transition:all .2s;display:flex;align-items:center;gap:5px;" onmouseover="this.style.background='rgba(0,0,0,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'">
                         <i class="fas fa-file-pdf"></i><span>PDF</span>
                     </button>
-                    <button id="ppe-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="\u062A\u062D\u062F\u064A\u062B">
+                    <button id="ppe-analytics-refresh" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.78rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'" title="تحديث">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 \u0644\u0648\u062D\u0629 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u2550\u2550\u2550 -->
+            <!-- ═══ لوحة الفلاتر ═══ -->
             <div id="ppe-filter-panel" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-sliders-h" style="color:#2563EB;font-size:14px;"></i>
-                        <span style="font-weight:700;font-size:0.9rem;color:#2563EB;">\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629</span>
+                        <span style="font-weight:700;font-size:0.9rem;color:#2563EB;">الفلاتر التفاعلية</span>
                         <span id="ppe-filter-count" style="background:#dbeafe;color:#115E59;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
                     </div>
                     <button id="ppe-filter-reset-btn" style="padding:4px 12px;border-radius:8px;border:1px solid #bfdbfe;background:#fff;color:#64748b;font-size:0.75rem;cursor:pointer;" onmouseover="this.style.background='#eff6ff';this.style.color='#2563EB'" onmouseout="this.style.background='#fff';this.style.color='#64748b'">
-                        <i class="fas fa-times me-1"></i>\u0645\u0633\u062D \u0627\u0644\u0643\u0644
+                        <i class="fas fa-times me-1"></i>مسح الكل
                     </button>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;">
-                    ${[{id:"ppe-af-status",icon:"fas fa-flag",color:"#0891b2",label:"\u0627\u0644\u062D\u0627\u0644\u0629"},{id:"ppe-af-type",icon:"fas fa-hard-hat",color:"#2563EB",label:"\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629"},{id:"ppe-af-dept",icon:"fas fa-building",color:"#f59e0b",label:"\u0627\u0644\u0625\u062F\u0627\u0631\u0629"},{id:"ppe-af-category",icon:"fas fa-tags",color:"#1d4ed8",label:"\u0627\u0644\u0641\u0626\u0629"},{id:"ppe-af-supplier",icon:"fas fa-truck",color:"#0ea5e9",label:"\u0627\u0644\u0645\u0648\u0631\u062F"},{id:"ppe-af-factory",icon:"fas fa-industry",color:"#3B82F6",label:"\u0627\u0644\u0645\u0635\u0646\u0639"},{id:"ppe-af-location",icon:"fas fa-map-marker-alt",color:"#3b82f6",label:"\u0627\u0644\u0645\u0648\u0642\u0639"}].map(t=>`
+                    ${[
+                        {id:'ppe-af-status',   icon:'fas fa-flag',         color:'#0891b2', label:'الحالة'},
+                        {id:'ppe-af-type',     icon:'fas fa-hard-hat',     color:'#2563EB', label:'نوع المعدة'},
+                        {id:'ppe-af-dept',     icon:'fas fa-building',     color:'#f59e0b', label:'الإدارة'},
+                        {id:'ppe-af-category', icon:'fas fa-tags',         color:'#1d4ed8', label:'الفئة'},
+                        {id:'ppe-af-supplier', icon:'fas fa-truck',        color:'#0ea5e9', label:'المورد'},
+                        {id:'ppe-af-factory',  icon:'fas fa-industry',     color:'#3B82F6', label:'المصنع'},
+                        {id:'ppe-af-location', icon:'fas fa-map-marker-alt', color:'#3b82f6', label:'الموقع'},
+                    ].map(f=>`
                         <div>
                             <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
-                                <i class="${t.icon}" style="color:${t.color};margin-inline-end:4px;"></i>${t.label}
+                                <i class="${f.icon}" style="color:${f.color};margin-inline-end:4px;"></i>${f.label}
                             </label>
-                            <select id="${t.id}" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#bfdbfe'">
-                                <option value="">\u0627\u0644\u0643\u0644</option>
+                            <select id="${f.id}" style="width:100%;padding:7px 10px;border:1.5px solid #bfdbfe;border-radius:8px;font-size:0.82rem;background:#fff;color:#374151;cursor:pointer;" onfocus="this.style.borderColor='#2563EB'" onblur="this.style.borderColor='#bfdbfe'">
+                                <option value="">الكل</option>
                             </select>
                         </div>
-                    `).join("")}
+                    `).join('')}
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 KPI Cards \u2550\u2550\u2550 -->
+            <!-- ═══ KPI Cards ═══ -->
             <div id="ppe-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
                 <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
             </div>
 
-            <!-- \u2550\u2550\u2550 Row: \u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629 \u2550\u2550\u2550 -->
+            <!-- ═══ Row: توزيع المصانع الرئيسية ═══ -->
             <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:16px;">
                 <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-industry" style="color:#3B82F6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u062A\u0648\u0632\u064A\u0639 \u0648\u0646\u0633\u0628 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u062D\u0633\u0628 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629</span>
+                        <span style="font-weight:700;font-size:0.88rem;">توزيع ونسب الاستلامات حسب المصانع الرئيسية</span>
                     </div>
-                    <span style="font-size:0.72rem;color:#64748b;">\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 \u0623\u064A \u0645\u0635\u0646\u0639 \u0644\u062A\u0635\u0641\u064A\u0629 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B</span>
+                    <span style="font-size:0.72rem;color:#64748b;">انقر على أي مصنع لتصفية لوحة التحكم تلقائياً</span>
                 </div>
                 <div id="ppe-factories-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:16px;background:#f8fafc;">
-                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</div>
+                    <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">جارٍ التحميل…</div>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 Row 1: \u0627\u0644\u062D\u0627\u0644\u0629 + \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u2550\u2550\u2550 -->
+            <!-- ═══ Row 1: الحالة + الاتجاه الزمني ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-flag" style="color:#0891b2;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629</span>
+                        <span style="font-weight:700;font-size:0.88rem;">حسب الحالة</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="ppe-chart-status"></canvas>
-                        <div id="ppe-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                        <div id="ppe-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-chart-area" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A (\u0622\u062E\u0631 12 \u0634\u0647\u0631)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">الاتجاه الزمني للاستلامات (آخر 12 شهر)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="ppe-chart-trend"></canvas>
-                        <div id="ppe-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                        <div id="ppe-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 Row 2: \u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629 (\u0642\u0627\u0626\u0645\u0629) + \u0627\u0644\u0625\u062F\u0627\u0631\u0629 (\u0642\u0627\u0626\u0645\u0629) \u2550\u2550\u2550 -->
+            <!-- ═══ Row 2: نوع المعدة (قائمة) + الإدارة (قائمة) ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-hard-hat" style="color:#2563EB;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0623\u0643\u062B\u0631 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0639\u062F\u0627\u062A (\u0623\u0639\u0644\u0649 10)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر أنواع المعدات (أعلى 10)</span>
                     </div>
                     <div id="ppe-types-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</div>
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-building" style="color:#f59e0b;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0623\u0643\u062B\u0631 \u0627\u0644\u0625\u062F\u0627\u0631\u0627\u062A (\u0623\u0639\u0644\u0649 10)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">أكثر الإدارات (أعلى 10)</span>
                     </div>
                     <div id="ppe-depts-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</div>
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 Row 3: \u0627\u0644\u0645\u0648\u0631\u062F (\u0642\u0627\u0626\u0645\u0629) + \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A (\u0642\u0627\u0626\u0645\u0629) \u2550\u2550\u2550 -->
+            <!-- ═══ Row 3: المورد (قائمة) + الموقع الفرعي (قائمة) ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-truck" style="color:#0ea5e9;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0631\u062F (\u0623\u0639\u0644\u0649 8)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب المورد (أعلى 8)</span>
                     </div>
                     <div id="ppe-suppliers-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</div>
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-map-marker-alt" style="color:#3b82f6;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A \u0627\u0644\u0623\u0643\u062B\u0631 \u0646\u0634\u0627\u0637\u0627\u064B (\u0623\u0639\u0644\u0649 10)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">الموقع الفرعي الأكثر نشاطاً (أعلى 10)</span>
                     </div>
                     <div id="ppe-locs-list" style="padding:16px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;">
-                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</div>
+                        <div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">جارٍ التحميل…</div>
                     </div>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 Row 4: \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0629 (Doughnut) + \u0627\u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629 \u2550\u2550\u2550 -->
+            <!-- ═══ Row 4: المخزون حسب الفئة (Doughnut) + المقارنة السنوية ═══ -->
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px;">
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-tags" style="color:#1d4ed8;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u062D\u0633\u0628 \u0627\u0644\u0641\u0626\u0629</span>
+                        <span style="font-weight:700;font-size:0.88rem;">المخزون حسب الفئة</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="ppe-chart-category"></canvas>
-                        <div id="ppe-chart-category-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062E\u0632\u0648\u0646</div>
+                        <div id="ppe-chart-category-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات مخزون</div>
                     </div>
                 </div>
                 <div class="content-card" style="padding:0;overflow:hidden;">
                     <div style="padding:13px 18px 10px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-chart-column" style="color:#2563EB;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0627\u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0633\u0646\u0648\u064A\u0629 \u0644\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A (\u0622\u062E\u0631 3 \u0633\u0646\u0648\u0627\u062A)</span>
+                        <span style="font-weight:700;font-size:0.88rem;">المقارنة السنوية للاستلامات (آخر 3 سنوات)</span>
                     </div>
                     <div style="padding:12px;position:relative;height:260px;">
                         <canvas id="ppe-chart-yearly"></canvas>
-                        <div id="ppe-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>
+                        <div id="ppe-chart-yearly-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.85rem;">لا توجد بيانات</div>
                     </div>
                 </div>
             </div>
 
-            <!-- \u2550\u2550\u2550 \u062C\u062F\u0648\u0644 \u0623\u062D\u062F\u062B \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u2550\u2550\u2550 -->
+            <!-- ═══ جدول أحدث الاستلامات ═══ -->
             <div class="content-card" style="padding:0;overflow:hidden;">
                 <div style="padding:13px 18px 12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
                     <div style="display:flex;align-items:center;gap:8px;">
                         <i class="fas fa-list-ul" style="color:#2563EB;"></i>
-                        <span style="font-weight:700;font-size:0.88rem;">\u0623\u062D\u062F\u062B \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A</span>
+                        <span style="font-weight:700;font-size:0.88rem;">أحدث الاستلامات</span>
                     </div>
                     <span id="ppe-recent-count" style="background:#eff6ff;color:#2563EB;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;"></span>
                 </div>
@@ -2053,98 +6383,685 @@ ${e.receiptNumber||e.id} \u2014 ${e.employeeName||""}`;if(confirm(i)){Loading.sh
                     <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
                         <thead>
                             <tr style="background:#eff6ff;">
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;white-space:nowrap;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">\u0627\u0644\u0643\u0648\u062F</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629</th>
-                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">\u0627\u0644\u0643\u0645\u064A\u0629</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
-                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">\u0627\u0644\u0645\u0635\u0646\u0639</th>
-                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;white-space:nowrap;">التاريخ</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">اسم الموظف</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">الكود</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">نوع المعدة</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">الكمية</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">الإدارة</th>
+                                <th style="padding:9px 12px;text-align:start;font-weight:700;color:#2563EB;">المصنع</th>
+                                <th style="padding:9px 12px;text-align:center;font-weight:700;color:#2563EB;">الحالة</th>
                             </tr>
                         </thead>
                         <tbody id="ppe-recent-tbody">
-                            <tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</td></tr>
+                            <tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">جاري التحميل...</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-        `},async _ppeEnsureChartJS(){return typeof Chart<"u"?!0:document.querySelector('script[src*="chart.js"],script[src*="chartjs"]')?new Promise(e=>{let i=0;const s=setInterval(()=>{typeof Chart<"u"?(clearInterval(s),e(!0)):++i>50&&(clearInterval(s),e(!1))},100)}):new Promise(e=>{const i=document.createElement("script");i.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js",i.onload=()=>e(!0),i.onerror=()=>{const s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js",s.onload=()=>e(!0),s.onerror=()=>e(!1),document.head.appendChild(s)},document.head.appendChild(i)})},_getPpeReceiptsData(){return(Array.isArray(AppState?.appData?.ppe)?AppState.appData.ppe:[]).map(e=>{if(e._factoryDisplay!==void 0)return e;const i=String(e.employeeLocation||e.location||"").trim();let s="\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",a="";if(i){const r=i.indexOf(" - ");r>0?(s=i.substring(0,r).trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",a=i.substring(r+3).trim()):s=i}return e._factoryDisplay=s,e._locationDisplay=a||s,e._deptDisplay=String(e.employeeDepartment||e.department||e.dept||"").trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",e})},_getPpeStockData(){return Array.isArray(AppState?.appData?.ppeStock)?AppState.appData.ppeStock:[]},_getPpeReceiptDate(t){if(!t)return null;const e=t.receiptDate||t.date||t.createdAt||t.timestamp||null;if(!e)return null;try{const i=new Date(e);return isNaN(i.getTime())?null:i}catch{return null}},_normalizePpeStatus(t){const e=String(t||"").trim().toLowerCase();return e==="\u0645\u0633\u062A\u0644\u0645"||e==="received"||e==="\u0645\u0643\u062A\u0645\u0644"?"received":e==="\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645"||e==="pending"||e==="\u0628\u0627\u0646\u062A\u0638\u0627\u0631"?"pending":"other"},async updatePpeAnalyticsDashboard(){const t=document.getElementById("ppe-analytics-root");if(!t)return;const e=this._getPpeReceiptsData(),i=this._getPpeStockData(),s=parseInt(this._ppeAnalyticsPeriod||"0",10),a=s>0?(()=>{const E=new Date;return E.setDate(E.getDate()-s),E})():null,r=a?e.filter(E=>{const S=this._getPpeReceiptDate(E);return S&&S>=a}):e.slice();this._ppePopulateAnalyticsFilters(r,i);const{receipts:o,stock:p}=this._ppeApplyAnalyticsFilters(r,i),l=o.length,n=document.getElementById("ppe-filter-count");n&&(n.textContent=`${l} \u0627\u0633\u062A\u0644\u0627\u0645`);const d=o.reduce((E,S)=>E+(parseFloat(S.quantity)||0),0),f=o.filter(E=>this._normalizePpeStatus(E.status)==="received").length,b=o.filter(E=>this._normalizePpeStatus(E.status)==="pending").length,c=p.filter(E=>{const S=parseFloat(E.balance||0),I=parseFloat(E.minThreshold||0);return I>0&&S<I}),m=p.length,x=c.length,k=new Set(o.map(E=>E.employeeCode||E.employeeName).filter(Boolean)).size,u=new Date,h=o.filter(E=>{const S=this._getPpeReceiptDate(E);return S&&S.getFullYear()===u.getFullYear()&&S.getMonth()===u.getMonth()}).length,v=new Set(o.map(E=>{const S=this._getPpeReceiptDate(E);return S?`${S.getFullYear()}-${S.getMonth()}`:null}).filter(Boolean)),w=v.size>0?(l/v.size).toFixed(1):"0",C=document.getElementById("ppe-kpi-strip");if(C){const E=[{label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A",value:l,icon:"fas fa-receipt",color:"#2563EB",bg:"#eff6ff",border:"#bfdbfe"},{label:"\u0627\u0644\u0643\u0645\u064A\u0627\u062A \u0627\u0644\u0645\u064F\u0633\u062A\u0644\u064E\u0645\u0629",value:d.toFixed(0),icon:"fas fa-cubes",color:"#1D4ED8",bg:"#EFF6FF",border:"#BFDBFE"},{label:"\u0645\u0643\u062A\u0645\u0644\u0629 \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645",value:f,icon:"fas fa-circle-check",color:"#047857",bg:"#ecfdf5",border:"#a7f3d0"},{label:"\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645",value:b,icon:"fas fa-hourglass-half",color:"#b45309",bg:"#fffbeb",border:"#fde68a"},{label:"\u0623\u0635\u0646\u0627\u0641 \u0627\u0644\u0645\u062E\u0632\u0648\u0646",value:m,icon:"fas fa-boxes",color:"#2563EB",bg:"#eff6ff",border:"#bfdbfe"},{label:"\u0645\u0646\u062E\u0641\u0636 \u0627\u0644\u0645\u062E\u0632\u0648\u0646",value:x,icon:"fas fa-triangle-exclamation",color:"#dc2626",bg:"#fef2f2",border:"#fecaca"},{label:"\u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646",value:k,icon:"fas fa-users",color:"#1D4ED8",bg:"#DBEAFE",border:"#BFDBFE"},{label:"\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631",value:h,icon:"fas fa-calendar-day",color:"#db2777",bg:"#fdf2f8",border:"#fbcfe8"},{label:"\u0645\u062A\u0648\u0633\u0637 \u0634\u0647\u0631\u064A",value:w,icon:"fas fa-calendar-check",color:"#1E3A8A",bg:"#DBEAFE",border:"#BFDBFE"}];C.innerHTML=E.map(S=>`
-                <div style="background:${S.bg};border:1px solid ${S.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
-                    <div style="width:38px;height:38px;background:${S.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="${S.icon}" style="color:#fff;font-size:15px;"></i>
+        `;
+    },
+
+    /** تحميل Chart.js عند الحاجة */
+    async _ppeEnsureChartJS() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    /** المصدر الموحَّد لبيانات الاستلامات (مع تطبيع المصنع/الموقع) */
+    _getPpeReceiptsData() {
+        const raw = Array.isArray(AppState?.appData?.ppe) ? AppState.appData.ppe : [];
+        return raw.map(r => {
+            if (r._factoryDisplay !== undefined) return r; // already normalized
+            const loc = String(r.employeeLocation || r.location || '').trim();
+            let factory = 'غير محدد', subLoc = '';
+            if (loc) {
+                const sep = loc.indexOf(' - ');
+                if (sep > 0) {
+                    factory = loc.substring(0, sep).trim() || 'غير محدد';
+                    subLoc = loc.substring(sep + 3).trim();
+                } else {
+                    factory = loc;
+                }
+            }
+            r._factoryDisplay = factory;
+            r._locationDisplay = subLoc || factory;
+            r._deptDisplay = String(r.employeeDepartment || r.department || r.dept || '').trim() || 'غير محدد';
+            return r;
+        });
+    },
+
+    /** المصدر الموحَّد لبيانات المخزون */
+    _getPpeStockData() {
+        return Array.isArray(AppState?.appData?.ppeStock) ? AppState.appData.ppeStock : [];
+    },
+
+    /** استخراج تاريخ الاستلام كـ Date object (مع fallback ذكي) */
+    _getPpeReceiptDate(record) {
+        if (!record) return null;
+        const raw = record.receiptDate || record.date || record.createdAt || record.timestamp || null;
+        if (!raw) return null;
+        try {
+            const d = new Date(raw);
+            return isNaN(d.getTime()) ? null : d;
+        } catch (e) { return null; }
+    },
+
+    /** تطبيع الحالة */
+    _normalizePpeStatus(s) {
+        const v = String(s || '').trim().toLowerCase();
+        if (v === 'مستلم' || v === 'received' || v === 'مكتمل') return 'received';
+        if (v === 'قيد التسليم' || v === 'pending' || v === 'بانتظار') return 'pending';
+        return 'other';
+    },
+
+    /** الدالة الرئيسية: تحديث لوحة التحليل */
+    async updatePpeAnalyticsDashboard() {
+        const root = document.getElementById('ppe-analytics-root');
+        if (!root) return;
+
+        // ── 1. جمع البيانات ──
+        const allReceipts = this._getPpeReceiptsData();
+        const allStock = this._getPpeStockData();
+        const period = parseInt(this._ppeAnalyticsPeriod || '0', 10);
+
+        // ── 2. تصفية بالفترة ──
+        const cutoff = period > 0 ? (() => { const d = new Date(); d.setDate(d.getDate() - period); return d; })() : null;
+        const inPeriod = cutoff
+            ? allReceipts.filter(r => { const d = this._getPpeReceiptDate(r); return d && d >= cutoff; })
+            : allReceipts.slice();
+
+        // ── 3. ملء قوائم الفلاتر ──
+        this._ppePopulateAnalyticsFilters(inPeriod, allStock);
+
+        // ── 4. تطبيق الفلاتر التفاعلية ──
+        const { receipts: filtered, stock: filteredStock } = this._ppeApplyAnalyticsFilters(inPeriod, allStock);
+        const total = filtered.length;
+        const countEl = document.getElementById('ppe-filter-count');
+        if (countEl) countEl.textContent = `${total} استلام`;
+
+        // ── 5. حساب KPIs ──
+        const totalQty = filtered.reduce((sum, r) => sum + (parseFloat(r.quantity) || 0), 0);
+        const receivedCount = filtered.filter(r => this._normalizePpeStatus(r.status) === 'received').length;
+        const pendingCount = filtered.filter(r => this._normalizePpeStatus(r.status) === 'pending').length;
+
+        const lowStockItems = filteredStock.filter(item => {
+            const bal = parseFloat(item.balance || 0);
+            const min = parseFloat(item.minThreshold || 0);
+            return min > 0 && bal < min;
+        });
+        const stockItemsCount = filteredStock.length;
+        const lowStockCount = lowStockItems.length;
+        const uniqueEmployees = new Set(filtered.map(r => r.employeeCode || r.employeeName).filter(Boolean)).size;
+
+        const now = new Date();
+        const thisMonth = filtered.filter(r => {
+            const d = this._getPpeReceiptDate(r);
+            return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        }).length;
+        const monthsSet = new Set(filtered.map(r => {
+            const d = this._getPpeReceiptDate(r);
+            return d ? `${d.getFullYear()}-${d.getMonth()}` : null;
+        }).filter(Boolean));
+        const avgPerMonth = monthsSet.size > 0 ? (total / monthsSet.size).toFixed(1) : '0';
+
+        const kpiEl = document.getElementById('ppe-kpi-strip');
+        if (kpiEl) {
+            const kpis = [
+                { label:'إجمالي الاستلامات', value:total,             icon:'fas fa-receipt',         color:'#2563EB', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'الكميات المُستلَمة',  value:totalQty.toFixed(0),icon:'fas fa-cubes',           color:'#1D4ED8', bg:'#EFF6FF', border:'#BFDBFE' },
+                { label:'مكتملة الاستلام',  value:receivedCount,        icon:'fas fa-circle-check',    color:'#047857', bg:'#ecfdf5', border:'#a7f3d0' },
+                { label:'قيد التسليم',      value:pendingCount,         icon:'fas fa-hourglass-half',  color:'#b45309', bg:'#fffbeb', border:'#fde68a' },
+                { label:'أصناف المخزون',    value:stockItemsCount,      icon:'fas fa-boxes',           color:'#2563EB', bg:'#eff6ff', border:'#bfdbfe' },
+                { label:'منخفض المخزون',    value:lowStockCount,        icon:'fas fa-triangle-exclamation', color:'#dc2626', bg:'#fef2f2', border:'#fecaca' },
+                { label:'الموظفون',         value:uniqueEmployees,      icon:'fas fa-users',           color:'#1D4ED8', bg:'#DBEAFE', border:'#BFDBFE' },
+                { label:'هذا الشهر',        value:thisMonth,            icon:'fas fa-calendar-day',    color:'#db2777', bg:'#fdf2f8', border:'#fbcfe8' },
+                { label:'متوسط شهري',       value:avgPerMonth,          icon:'fas fa-calendar-check',  color:'#1E3A8A', bg:'#DBEAFE', border:'#BFDBFE' },
+            ];
+            kpiEl.innerHTML = kpis.map(k => `
+                <div style="background:${k.bg};border:1px solid ${k.border};border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;transition:all .2s;cursor:default;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:38px;height:38px;background:${k.color};border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${k.icon}" style="color:#fff;font-size:15px;"></i>
                     </div>
                     <div>
-                        <div style="font-size:1.3rem;font-weight:800;color:${S.color};line-height:1;" dir="ltr">${S.value}</div>
-                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${S.label}</div>
+                        <div style="font-size:1.3rem;font-weight:800;color:${k.color};line-height:1;" dir="ltr">${k.value}</div>
+                        <div style="font-size:0.68rem;color:#64748b;margin-top:2px;white-space:nowrap;">${k.label}</div>
                     </div>
-                </div>`).join("")}if(!await this._ppeEnsureChartJS()||typeof Chart>"u"){t.querySelector(".ppe-chart-load-warning")||t.insertAdjacentHTML("afterbegin",'<div class="ppe-chart-load-warning" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0623\u0639\u0644\u0627\u0647 \u0645\u062A\u0627\u062D\u0629.</span></div>');return}const R={received:"\u0645\u0633\u062A\u0644\u0645",pending:"\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645",other:"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"},$={};o.forEach(E=>{const S=R[this._normalizePpeStatus(E?.status)]||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";$[S]=($[S]||0)+1});const _={\u0645\u0633\u062A\u0644\u0645:"rgba(5,150,105,0.85)","\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645":"rgba(245,158,11,0.85)","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F":"rgba(148,163,184,0.8)"};this._ppeDoughnut("ppe-chart-status",Object.keys($),Object.values($),Object.keys($).map(E=>_[E]||"rgba(148,163,184,0.8)")),this._ppeTrend("ppe-chart-trend",e);const q=this._ppeGroupBy(p,E=>String(E.category||"\u0628\u062F\u0648\u0646 \u0641\u0626\u0629").trim(),8),z=["rgba(59,130,246,0.85)","rgba(37, 99, 235, 0.85)","rgba(245,158,11,0.85)","rgba(244,63,94,0.85)","rgba(14,165,233,0.85)","rgba(8,145,178,0.85)","rgba(5,150,105,0.85)","rgba(217,119,6,0.85)"];this._ppeDoughnut("ppe-chart-category",q.labels,q.data,q.labels.map((E,S)=>z[S%z.length])),this._ppeYearly("ppe-chart-yearly",e),this._ppePopulateFactoryCards(o,l),this._ppePopulateAnalyticsLists(o,p,l);const G=o.slice().sort((E,S)=>{const I=this._getPpeReceiptDate(E),j=this._getPpeReceiptDate(S);return(j?j.getTime():0)-(I?I.getTime():0)}).slice(0,20),Z=document.getElementById("ppe-recent-count");Z&&(Z.textContent=`${G.length} \u0627\u0633\u062A\u0644\u0627\u0645`);const te=document.getElementById("ppe-recent-tbody");if(te){const E=S=>{const I=this._normalizePpeStatus(S),j={received:["\u0645\u0633\u062A\u0644\u0645","#ecfdf5","#047857"],pending:["\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645","#fffbeb","#b45309"],other:["\u063A\u064A\u0631 \u0645\u062D\u062F\u062F","#f1f5f9","#475569"]},[Y,K,re]=j[I]||j.other;return`<span style="background:${K};color:${re};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${Y}</span>`};te.innerHTML=G.length===0?'<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0641\u062A\u0631\u0629</td></tr>':G.map((S,I)=>{const j=this._getPpeReceiptDate(S),Y=j?j.toLocaleDateString("ar-EG",{year:"numeric",month:"short",day:"numeric"}):"\u2014",K=I%2===0?"#fff":"#fafafa";return`<tr style="border-bottom:1px solid #f8fafc;background:${K};" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${K}'">
-                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;" dir="ltr">${Y}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(S.employeeName||"\u2014")}</td>
-                        <td style="padding:9px 12px;color:#374151;font-family:monospace;" dir="ltr">${Utils.escapeHTML(S.employeeCode||"\u2014")}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(S.equipmentType||S.type||"\u2014")}</td>
-                        <td style="padding:9px 12px;text-align:center;color:#374151;font-weight:700;" dir="ltr">${parseFloat(S.quantity||0).toFixed(0)}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(S._deptDisplay||S.department||"\u2014")}</td>
-                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(S._factoryDisplay||"\u2014")}</td>
-                        <td style="padding:9px 12px;text-align:center;">${E(S.status)}</td>
-                    </tr>`}).join("")}},_ppePopulateAnalyticsFilters(t,e){const i=(r,o)=>[...new Set(r.map(o).filter(Boolean))].sort(),s=(r,o)=>{const p=document.getElementById(r);if(!p)return;const l=p.value;p.innerHTML='<option value="">\u0627\u0644\u0643\u0644</option>'+o.map(n=>`<option value="${Utils.escapeHTML(String(n))}"${n===l?" selected":""}>${Utils.escapeHTML(String(n))}</option>`).join("")},a=document.getElementById("ppe-af-status");if(a){const r=a.value;a.innerHTML=`<option value="">\u0627\u0644\u0643\u0644</option>
-                <option value="received"${r==="received"?" selected":""}>\u0645\u0633\u062A\u0644\u0645</option>
-                <option value="pending"${r==="pending"?" selected":""}>\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645</option>`}s("ppe-af-type",i(t,r=>String(r.equipmentType||r.type||"").trim())),s("ppe-af-dept",i(t,r=>(r._deptDisplay||"").trim())),s("ppe-af-category",i(e,r=>String(r.category||"").trim())),s("ppe-af-supplier",i(e,r=>String(r.supplier||"").trim())),s("ppe-af-factory",i(t,r=>(r._factoryDisplay||"").trim())),s("ppe-af-location",i(t,r=>(r._locationDisplay||"").trim()))},_ppeApplyAnalyticsFilters(t,e){const i=m=>{const x=document.getElementById(m);return x?x.value.trim():""},s=i("ppe-af-type"),a=i("ppe-af-dept"),r=i("ppe-af-category"),o=i("ppe-af-status"),p=i("ppe-af-supplier"),l=i("ppe-af-factory"),n=i("ppe-af-location"),d=[s,a,r,o,p,l,n].some(m=>m!==""),f=document.getElementById("ppe-filter-badge");f&&(f.style.display=d?"inline":"none");const b=t.filter(m=>!(s&&String(m.equipmentType||m.type||"").trim()!==s||a&&(m._deptDisplay||"").trim()!==a||o&&this._normalizePpeStatus(m?.status)!==o||l&&(m._factoryDisplay||"").trim()!==l||n&&(m._locationDisplay||"").trim()!==n)),c=e.filter(m=>!(r&&String(m.category||"").trim()!==r||p&&String(m.supplier||"").trim()!==p));return{receipts:b,stock:c}},_ppeGroupBy(t,e,i=0){const s={};t.forEach(r=>{const o=e(r)||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";s[o]=(s[o]||0)+1});let a=Object.entries(s).sort((r,o)=>o[1]-r[1]);return i>0&&(a=a.slice(0,i)),{labels:a.map(r=>r[0]),data:a.map(r=>r[1])}},_ppeDoughnut(t,e,i,s){const a=document.getElementById(t),r=document.getElementById(t+"-empty");if(!a)return;if(!i.length||i.reduce((p,l)=>p+l,0)===0){a.style.display="none",r&&(r.style.display="flex");return}r&&(r.style.display="none"),a.style.display="";try{this._ppeAnalyticsCharts[t]&&this._ppeAnalyticsCharts[t].destroy()}catch{}const o=i.reduce((p,l)=>p+l,0);this._ppeAnalyticsCharts[t]=new Chart(a,{type:"doughnut",data:{labels:e,datasets:[{data:i,backgroundColor:s,borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"60%",plugins:{legend:{position:"bottom",labels:{padding:10,font:{size:11},usePointStyle:!0,boxWidth:9}},tooltip:{callbacks:{label:p=>` ${p.label}: ${p.parsed} (${o>0?(p.parsed/o*100).toFixed(1):0}%)`}}}}})},_ppeHBar(t,e,i,s){const a=document.getElementById(t),r=document.getElementById(t+"-empty");if(a){if(!i.length||i.reduce((o,p)=>o+p,0)===0){a.style.display="none",r&&(r.style.display="flex");return}r&&(r.style.display="none"),a.style.display="";try{this._ppeAnalyticsCharts[t]&&this._ppeAnalyticsCharts[t].destroy()}catch{}this._ppeAnalyticsCharts[t]=new Chart(a,{type:"bar",data:{labels:e,datasets:[{data:i,backgroundColor:s||"rgba(37, 99, 235, 0.78)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:o=>` ${o.parsed.x}`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f1f5f9"}},y:{ticks:{font:{size:11},callback:o=>String(e[o]).length>18?String(e[o]).slice(0,17)+"\u2026":e[o]}}}}})}},_ppeTrend(t,e){const i=document.getElementById(t),s=document.getElementById(t+"-empty");if(!i)return;const a=new Date,r=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],o=[];for(let n=11;n>=0;n--){const d=new Date(a.getFullYear(),a.getMonth()-n,1);o.push({y:d.getFullYear(),m:d.getMonth(),label:`${r[d.getMonth()]} ${d.getFullYear()}`})}const p=o.map(n=>e.filter(d=>{const f=this._getPpeReceiptDate(d);return f&&f.getFullYear()===n.y&&f.getMonth()===n.m}).length);if(p.reduce((n,d)=>n+d,0)===0){i.style.display="none",s&&(s.style.display="flex");return}s&&(s.style.display="none"),i.style.display="";try{this._ppeAnalyticsCharts[t]&&this._ppeAnalyticsCharts[t].destroy()}catch{}const l=Math.max(...p);this._ppeAnalyticsCharts[t]=new Chart(i,{type:"bar",data:{labels:o.map(n=>n.label),datasets:[{label:"\u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A",data:p,backgroundColor:p.map(n=>n===l?"rgba(37, 99, 235, 0.9)":"rgba(37, 99, 235, 0.5)"),borderRadius:5,borderSkipped:!1,order:1},{label:"\u0627\u0644\u0627\u062A\u062C\u0627\u0647",data:p,type:"line",borderColor:"rgba(30,58,138,0.9)",backgroundColor:"rgba(30,58,138,0.08)",borderWidth:2.5,pointRadius:4,pointBackgroundColor:"#1E3A8A",tension:.4,fill:!0,order:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f8fafc"}}}}})},_ppeYearly(t,e){const i=document.getElementById(t),s=document.getElementById(t+"-empty");if(!i)return;const a=new Date().getFullYear(),r=[a-2,a-1,a],o=r.map(l=>e.filter(n=>{const d=this._getPpeReceiptDate(n);return d&&d.getFullYear()===l}).length),p=r.map(l=>e.filter(n=>{const d=this._getPpeReceiptDate(n);return d&&d.getFullYear()===l}).reduce((n,d)=>n+(parseFloat(d.quantity)||0),0));if(o.reduce((l,n)=>l+n,0)===0){i.style.display="none",s&&(s.style.display="flex");return}s&&(s.style.display="none"),i.style.display="";try{this._ppeAnalyticsCharts[t]&&this._ppeAnalyticsCharts[t].destroy()}catch{}this._ppeAnalyticsCharts[t]=new Chart(i,{type:"bar",data:{labels:r.map(String),datasets:[{label:"\u0639\u062F\u062F \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A",data:o,backgroundColor:"rgba(37, 99, 235, 0.78)",borderRadius:5,borderSkipped:!1,yAxisID:"y"},{label:"\u0627\u0644\u0643\u0645\u064A\u0627\u062A",data:p,backgroundColor:"rgba(30,58,138,0.78)",borderRadius:5,borderSkipped:!1,yAxisID:"y1"}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:12}}},y:{beginAtZero:!0,position:"right",ticks:{precision:0,font:{size:11}},grid:{color:"#f8fafc"},title:{display:!0,text:"\u0639\u062F\u062F",font:{size:10}}},y1:{beginAtZero:!0,position:"left",ticks:{precision:0,font:{size:11}},grid:{display:!1},title:{display:!0,text:"\u0643\u0645\u064A\u0629",font:{size:10}}}}}})},_ppePopulateFactoryCards(t,e){const i=document.getElementById("ppe-factories-cards");if(!i)return;if(e===0){i.innerHTML='<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>';return}const s=this._ppeGroupBy(t,r=>(r._factoryDisplay||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim(),0),a=[{primary:"#2563EB",light:"#eff6ff",progress:"linear-gradient(90deg, #93c5fd 0%, #2563EB 100%)"},{primary:"#1D4ED8",light:"#EFF6FF",progress:"linear-gradient(90deg, #93C5FD 0%, #1D4ED8 100%)"},{primary:"#1E3A8A",light:"#DBEAFE",progress:"linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)"},{primary:"#f59e0b",light:"#fffbeb",progress:"linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)"},{primary:"#0284c7",light:"#e0f2fe",progress:"linear-gradient(90deg, #7dd3fc 0%, #0284c7 100%)"}];i.innerHTML=s.labels.map((r,o)=>{const p=s.data[o],l=Math.round(p/e*100)||0,n=t.filter(b=>(b._factoryDisplay||"").trim()===r&&this._normalizePpeStatus(b.status)==="received").length,d=t.filter(b=>(b._factoryDisplay||"").trim()===r&&this._normalizePpeStatus(b.status)==="pending").length,f=a[o%a.length];return`
+                </div>`).join('');
+        }
+
+        // ── 6. تحميل Chart.js ──
+        const loaded = await this._ppeEnsureChartJS();
+        if (!loaded || typeof Chart === 'undefined') {
+            const exist = root.querySelector('.ppe-chart-load-warning');
+            if (!exist) {
+                root.insertAdjacentHTML('afterbegin', '<div class="ppe-chart-load-warning" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">تعذّر تحميل مكتبة الرسوم البيانية. الأرقام أعلاه متاحة.</span></div>');
+            }
+            return;
+        }
+
+        // ── 7. الرسوم البيانية ──
+        // الحالة (Doughnut)
+        const statusLabels = { received:'مستلم', pending:'قيد التسليم', other:'غير محدد' };
+        const statusMap = {};
+        filtered.forEach(r => { const k = statusLabels[this._normalizePpeStatus(r?.status)] || 'غير محدد'; statusMap[k] = (statusMap[k]||0)+1; });
+        const statusColors = { 'مستلم':'rgba(5,150,105,0.85)', 'قيد التسليم':'rgba(245,158,11,0.85)', 'غير محدد':'rgba(148,163,184,0.8)' };
+        this._ppeDoughnut('ppe-chart-status', Object.keys(statusMap), Object.values(statusMap), Object.keys(statusMap).map(l=>statusColors[l]||'rgba(148,163,184,0.8)'));
+
+        // الاتجاه الزمني (12 شهر)
+        this._ppeTrend('ppe-chart-trend', allReceipts);
+
+        // الفئة (Doughnut)
+        const categoryMap = this._ppeGroupBy(filteredStock, item => String(item.category || 'بدون فئة').trim(), 8);
+        const categoryPalette = ['rgba(59,130,246,0.85)','rgba(37, 99, 235, 0.85)','rgba(245,158,11,0.85)','rgba(244,63,94,0.85)','rgba(14,165,233,0.85)','rgba(8,145,178,0.85)','rgba(5,150,105,0.85)','rgba(217,119,6,0.85)'];
+        this._ppeDoughnut('ppe-chart-category', categoryMap.labels, categoryMap.data, categoryMap.labels.map((_,i)=>categoryPalette[i % categoryPalette.length]));
+
+        // المقارنة السنوية
+        this._ppeYearly('ppe-chart-yearly', allReceipts);
+
+        // ── 8. ملء كروت المصانع الرئيسية ──
+        this._ppePopulateFactoryCards(filtered, total);
+
+        // ── 9. ملء قوائم HTML (نوع المعدة / الإدارة / المورد / الموقع) ──
+        this._ppePopulateAnalyticsLists(filtered, filteredStock, total);
+
+        // ── 10. جدول أحدث الاستلامات ──
+        const recent = filtered.slice().sort((a, b) => {
+            const da = this._getPpeReceiptDate(a), db = this._getPpeReceiptDate(b);
+            return (db ? db.getTime() : 0) - (da ? da.getTime() : 0);
+        }).slice(0, 20);
+        const recentCountEl = document.getElementById('ppe-recent-count');
+        if (recentCountEl) recentCountEl.textContent = `${recent.length} استلام`;
+        const tbody = document.getElementById('ppe-recent-tbody');
+        if (tbody) {
+            const statusBadge = (st) => {
+                const k = this._normalizePpeStatus(st);
+                const map = {
+                    received: ['مستلم','#ecfdf5','#047857'],
+                    pending:  ['قيد التسليم','#fffbeb','#b45309'],
+                    other:    ['غير محدد','#f1f5f9','#475569']
+                };
+                const [text,bg,c] = map[k] || map.other;
+                return `<span style="background:${bg};color:${c};padding:2px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;">${text}</span>`;
+            };
+            tbody.innerHTML = recent.length === 0
+                ? '<tr><td colspan="8" style="padding:24px;text-align:center;color:#94a3b8;">لا توجد استلامات في هذه الفترة</td></tr>'
+                : recent.map((r, i) => {
+                    const d = this._getPpeReceiptDate(r);
+                    const dateStr = d ? d.toLocaleDateString('ar-EG', { year:'numeric', month:'short', day:'numeric' }) : '—';
+                    const rowBg = i%2===0 ? '#fff' : '#fafafa';
+                    return `<tr style="border-bottom:1px solid #f8fafc;background:${rowBg};" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='${rowBg}'">
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;" dir="ltr">${dateStr}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.employeeName || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;font-family:monospace;" dir="ltr">${Utils.escapeHTML(r.employeeCode || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r.equipmentType || r.type || '—')}</td>
+                        <td style="padding:9px 12px;text-align:center;color:#374151;font-weight:700;" dir="ltr">${parseFloat(r.quantity || 0).toFixed(0)}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r._deptDisplay || r.department || '—')}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(r._factoryDisplay || '—')}</td>
+                        <td style="padding:9px 12px;text-align:center;">${statusBadge(r.status)}</td>
+                    </tr>`;
+                }).join('');
+        }
+    },
+
+    /** ملء قوائم الفلاتر */
+    _ppePopulateAnalyticsFilters(receipts, stock) {
+        const unique = (arr, fn) => [...new Set(arr.map(fn).filter(Boolean))].sort();
+        const fill = (id, values) => {
+            const el = document.getElementById(id); if (!el) return;
+            const cur = el.value;
+            el.innerHTML = '<option value="">الكل</option>' + values.map(v => `<option value="${Utils.escapeHTML(String(v))}"${v===cur?' selected':''}>${Utils.escapeHTML(String(v))}</option>`).join('');
+        };
+        // الحالة ثابتة (canonical)
+        const statusEl = document.getElementById('ppe-af-status');
+        if (statusEl) {
+            const cur = statusEl.value;
+            statusEl.innerHTML = `<option value="">الكل</option>
+                <option value="received"${cur==='received'?' selected':''}>مستلم</option>
+                <option value="pending"${cur==='pending'?' selected':''}>قيد التسليم</option>`;
+        }
+        fill('ppe-af-type',     unique(receipts, r => String(r.equipmentType || r.type || '').trim()));
+        fill('ppe-af-dept',     unique(receipts, r => (r._deptDisplay || '').trim()));
+        fill('ppe-af-category', unique(stock,    item => String(item.category || '').trim()));
+        fill('ppe-af-supplier', unique(stock,    item => String(item.supplier || '').trim()));
+        fill('ppe-af-factory',  unique(receipts, r => (r._factoryDisplay || '').trim()));
+        fill('ppe-af-location', unique(receipts, r => (r._locationDisplay || '').trim()));
+    },
+
+    /** تطبيق الفلاتر التفاعلية على الاستلامات والمخزون */
+    _ppeApplyAnalyticsFilters(receipts, stock) {
+        const get = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+        const fType     = get('ppe-af-type');
+        const fDept     = get('ppe-af-dept');
+        const fCategory = get('ppe-af-category');
+        const fStatus   = get('ppe-af-status');
+        const fSupplier = get('ppe-af-supplier');
+        const fFactory  = get('ppe-af-factory');
+        const fLocation = get('ppe-af-location');
+        const hasAny    = [fType, fDept, fCategory, fStatus, fSupplier, fFactory, fLocation].some(v => v !== '');
+        const badge     = document.getElementById('ppe-filter-badge');
+        if (badge) badge.style.display = hasAny ? 'inline' : 'none';
+
+        const filteredReceipts = receipts.filter(r => {
+            if (fType    && String(r.equipmentType || r.type || '').trim() !== fType) return false;
+            if (fDept    && (r._deptDisplay || '').trim() !== fDept) return false;
+            if (fStatus  && this._normalizePpeStatus(r?.status) !== fStatus) return false;
+            if (fFactory && (r._factoryDisplay || '').trim() !== fFactory) return false;
+            if (fLocation && (r._locationDisplay || '').trim() !== fLocation) return false;
+            return true;
+        });
+        const filteredStock = stock.filter(item => {
+            if (fCategory && String(item.category || '').trim() !== fCategory) return false;
+            if (fSupplier && String(item.supplier || '').trim() !== fSupplier) return false;
+            return true;
+        });
+        return { receipts: filteredReceipts, stock: filteredStock };
+    },
+
+    /** مساعد: تجميع حسب دالة */
+    _ppeGroupBy(arr, fn, limit = 0) {
+        const map = {};
+        arr.forEach(item => { const k = fn(item) || 'غير محدد'; map[k] = (map[k] || 0) + 1; });
+        let entries = Object.entries(map).sort((a, b) => b[1] - a[1]);
+        if (limit > 0) entries = entries.slice(0, limit);
+        return { labels: entries.map(e => e[0]), data: entries.map(e => e[1]) };
+    },
+
+    /** مساعد: Doughnut */
+    _ppeDoughnut(canvasId, labels, data, colors) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        const total = data.reduce((a, b) => a + b, 0);
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'doughnut',
+            data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }] },
+            options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+                plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 }, usePointStyle: true, boxWidth: 9 } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0}%)` } } } }
+        });
+    },
+
+    /** مساعد: HBar */
+    _ppeHBar(canvasId, labels, data, color) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        if (!data.length || data.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels, datasets: [{ data, backgroundColor: color || 'rgba(37, 99, 235, 0.78)', borderRadius: 5, borderSkipped: false }] },
+            options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.x}` } } },
+                scales: { x: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+                    y: { ticks: { font: { size: 11 }, callback: v => String(labels[v]).length > 18 ? String(labels[v]).slice(0, 17) + '…' : labels[v] } } } }
+        });
+    },
+
+    /** مساعد: الاتجاه الزمني (12 شهر) */
+    _ppeTrend(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const now = new Date();
+        const arabicMonths = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+        const months = [];
+        for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), label: `${arabicMonths[d.getMonth()]} ${d.getFullYear()}` }); }
+        const counts = months.map(mo => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === mo.y && d.getMonth() === mo.m; }).length);
+        if (counts.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        const maxC = Math.max(...counts);
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: months.map(m => m.label), datasets: [
+                { label: 'الاستلامات', data: counts, backgroundColor: counts.map(c => c === maxC ? 'rgba(37, 99, 235, 0.9)' : 'rgba(37, 99, 235, 0.5)'), borderRadius: 5, borderSkipped: false, order: 1 },
+                { label: 'الاتجاه', data: counts, type: 'line', borderColor: 'rgba(30,58,138,0.9)', backgroundColor: 'rgba(30,58,138,0.08)', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#1E3A8A', tension: 0.4, fill: true, order: 0 }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45 } }, y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' } } } }
+        });
+    },
+
+    /** مساعد: المقارنة السنوية (3 سنوات — إجمالي + كميات) */
+    _ppeYearly(canvasId, arr) {
+        const canvas = document.getElementById(canvasId), emptyEl = document.getElementById(canvasId + '-empty');
+        if (!canvas) return;
+        const currentYear = new Date().getFullYear();
+        const years = [currentYear - 2, currentYear - 1, currentYear];
+        const totalByYear = years.map(y => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === y; }).length);
+        const qtyByYear = years.map(y => arr.filter(r => { const d = this._getPpeReceiptDate(r); return d && d.getFullYear() === y; }).reduce((sum, r) => sum + (parseFloat(r.quantity) || 0), 0));
+        if (totalByYear.reduce((a, b) => a + b, 0) === 0) { canvas.style.display = 'none'; if (emptyEl) emptyEl.style.display = 'flex'; return; }
+        if (emptyEl) emptyEl.style.display = 'none'; canvas.style.display = '';
+        try { if (this._ppeAnalyticsCharts[canvasId]) this._ppeAnalyticsCharts[canvasId].destroy(); } catch (e) {}
+        this._ppeAnalyticsCharts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: years.map(String), datasets: [
+                { label: 'عدد الاستلامات', data: totalByYear, backgroundColor: 'rgba(37, 99, 235, 0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y' },
+                { label: 'الكميات', data: qtyByYear, backgroundColor: 'rgba(30,58,138,0.78)', borderRadius: 5, borderSkipped: false, yAxisID: 'y1' }
+            ] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { usePointStyle: true, font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+                    y:  { beginAtZero: true, position: 'right', ticks: { precision: 0, font: { size: 11 } }, grid: { color: '#f8fafc' }, title: { display: true, text: 'عدد', font: { size: 10 } } },
+                    y1: { beginAtZero: true, position: 'left', ticks: { precision: 0, font: { size: 11 } }, grid: { display: false }, title: { display: true, text: 'كمية', font: { size: 10 } } }
+                }
+            }
+        });
+    },
+
+    /** ملء كروت المصانع الرئيسية (نفس نمط training) */
+    _ppePopulateFactoryCards(filtered, total) {
+        const el = document.getElementById('ppe-factories-cards');
+        if (!el) return;
+        if (total === 0) {
+            el.innerHTML = `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;grid-column:1/-1;">لا توجد بيانات</div>`;
+            return;
+        }
+        const factoryG = this._ppeGroupBy(filtered, r => (r._factoryDisplay || 'غير محدد').trim(), 0);
+        const colors = [
+            { primary: '#2563EB', light: '#eff6ff', progress: 'linear-gradient(90deg, #93c5fd 0%, #2563EB 100%)' },
+            { primary: '#1D4ED8', light: '#EFF6FF', progress: 'linear-gradient(90deg, #93C5FD 0%, #1D4ED8 100%)' },
+            { primary: '#1E3A8A', light: '#DBEAFE', progress: 'linear-gradient(90deg, #93c5fd 0%, #1E3A8A 100%)' },
+            { primary: '#f59e0b', light: '#fffbeb', progress: 'linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)' },
+            { primary: '#0284c7', light: '#e0f2fe', progress: 'linear-gradient(90deg, #7dd3fc 0%, #0284c7 100%)' },
+        ];
+        el.innerHTML = factoryG.labels.map((label, index) => {
+            const count = factoryG.data[index];
+            const pct = Math.round((count / total) * 100) || 0;
+            const received = filtered.filter(r => (r._factoryDisplay || '').trim() === label && this._normalizePpeStatus(r.status) === 'received').length;
+            const pending = filtered.filter(r => (r._factoryDisplay || '').trim() === label && this._normalizePpeStatus(r.status) === 'pending').length;
+            const theme = colors[index % colors.length];
+            return `
                 <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);transition:all .2s;cursor:pointer;" 
-                     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${f.primary}'" 
+                     onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.08)';this.style.borderColor='${theme.primary}'" 
                      onmouseout="this.style.transform='';this.style.boxShadow='0 1px 3px rgba(0,0,0,0.05)';this.style.borderColor='#e2e8f0'"
-                     onclick="const el = document.getElementById('ppe-af-factory'); if(el){el.value='${Utils.escapeHTML(r)}'; el.dispatchEvent(new Event('change'));}">
+                     onclick="const el = document.getElementById('ppe-af-factory'); if(el){el.value='${Utils.escapeHTML(label)}'; el.dispatchEvent(new Event('change'));}">
                     
                     <div style="display:flex;justify-content:space-between;align-items:center;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <div style="width:36px;height:36px;background:${f.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${f.primary};">
+                            <div style="width:36px;height:36px;background:${theme.light};border-radius:8px;display:flex;align-items:center;justify-content:center;color:${theme.primary};">
                                 <i class="fas fa-industry" style="font-size:16px;"></i>
                             </div>
-                            <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(r)}</span>
+                            <span style="font-size:0.9rem;font-weight:800;color:#1e293b;">${Utils.escapeHTML(label)}</span>
                         </div>
-                        <span style="font-size:1.15rem;font-weight:900;color:${f.primary};">${l}%</span>
+                        <span style="font-size:1.15rem;font-weight:900;color:${theme.primary};">${pct}%</span>
                     </div>
                     
                     <div style="width:100%;height:8px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
-                        <div style="width:${l}%;height:100%;background:${f.progress};border-radius:9999px;"></div>
+                        <div style="width:${pct}%;height:100%;background:${theme.progress};border-radius:9999px;"></div>
                     </div>
                     
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px;border-top:1px solid #f1f5f9;padding-top:12px;">
                         <div style="text-align:center;">
-                            <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">\u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645\u0627\u062A</div>
-                            <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${p}</div>
+                            <div style="font-size:0.65rem;color:#64748b;margin-bottom:2px;">الاستلامات</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#1e293b;">${count}</div>
                         </div>
                         <div style="text-align:center;border-left:1px solid #f1f5f9;border-right:1px solid #f1f5f9;">
-                            <div style="font-size:0.65rem;color:#047857;margin-bottom:2px;">\u0645\u0633\u062A\u0644\u0645\u0629</div>
-                            <div style="font-size:0.85rem;font-weight:800;color:#047857;">${n}</div>
+                            <div style="font-size:0.65rem;color:#047857;margin-bottom:2px;">مستلمة</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#047857;">${received}</div>
                         </div>
                         <div style="text-align:center;">
-                            <div style="font-size:0.65rem;color:#f59e0b;margin-bottom:2px;">\u0642\u064A\u062F \u0627\u0644\u062A\u0633\u0644\u064A\u0645</div>
-                            <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${d}</div>
+                            <div style="font-size:0.65rem;color:#f59e0b;margin-bottom:2px;">قيد التسليم</div>
+                            <div style="font-size:0.85rem;font-weight:800;color:#f59e0b;">${pending}</div>
                         </div>
                     </div>
                 </div>
-            `}).join("")},_ppePopulateAnalyticsLists(t,e,i){const s=n=>Utils.escapeHTML(n),a=(n,d,f,b,c,m)=>n.labels.length?n.labels.map((x,k)=>{const u=n.data[k],h=d>0?Math.round(u/d*100):0,v=m?`onclick="const el = document.getElementById('${m}'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}"`:"";return`
+            `;
+        }).join('');
+    },
+
+    /** ملء قوائم HTML التفاعلية (نوع المعدة / الإدارة / المورد / الموقع) */
+    _ppePopulateAnalyticsLists(filtered, filteredStock, total) {
+        const esc = v => Utils.escapeHTML(v);
+
+        // مساعد: بناء عناصر قائمة تفاعلية
+        const buildListItems = (entries, total, color, gradientFrom, gradientTo, filterId) => {
+            if (!entries.labels.length) return `<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">لا توجد بيانات</div>`;
+            return entries.labels.map((label, idx) => {
+                const count = entries.data[idx];
+                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                const onclick = filterId
+                    ? `onclick="const el = document.getElementById('${filterId}'); if(el){el.value=this.getAttribute('data-value'); el.dispatchEvent(new Event('change'));}"`
+                    : '';
+                return `
                     <div style="display:flex;flex-direction:column;gap:5px;border-bottom:1px solid #f1f5f9;padding-bottom:8px;cursor:pointer;transition:all .2s;" 
                          onmouseover="this.style.transform='translateX(-2px)';" onmouseout="this.style.transform='';"
-                         data-value="${s(x)}"
-                         ${v}>
+                         data-value="${esc(label)}"
+                         ${onclick}>
                         <div style="display:flex;justify-content:space-between;align-items:center;">
-                            <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${s(x)}">${s(x)}</span>
-                            <span style="font-size:0.75rem;font-weight:700;color:${f};flex-shrink:0;">${u} (${h}%)</span>
+                            <span style="font-size:0.78rem;font-weight:700;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(label)}">${esc(label)}</span>
+                            <span style="font-size:0.75rem;font-weight:700;color:${color};flex-shrink:0;">${count} (${pct}%)</span>
                         </div>
                         <div style="width:100%;height:6px;background:#f1f5f9;border-radius:9999px;overflow:hidden;">
-                            <div style="width:${h}%;height:100%;background:linear-gradient(90deg, ${b} 0%, ${c} 100%);border-radius:9999px;"></div>
+                            <div style="width:${pct}%;height:100%;background:linear-gradient(90deg, ${gradientFrom} 0%, ${gradientTo} 100%);border-radius:9999px;"></div>
                         </div>
                     </div>
-                `}).join(""):'<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:40px 0;">\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A</div>',r=document.getElementById("ppe-types-list");if(r){const n=this._ppeGroupBy(t,d=>String(d.equipmentType||d.type||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim(),10);r.innerHTML=a(n,i,"#2563EB","#93c5fd","#2563EB","ppe-af-type")}const o=document.getElementById("ppe-depts-list");if(o){const n=this._ppeGroupBy(t,d=>(d._deptDisplay||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim(),10);o.innerHTML=a(n,i,"#f59e0b","#fcd34d","#f59e0b","ppe-af-dept")}const p=document.getElementById("ppe-suppliers-list");if(p){const n=this._ppeGroupBy(e,f=>String(f.supplier||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim(),8),d=e.length;p.innerHTML=a(n,d,"#0ea5e9","#bae6fd","#0ea5e9","ppe-af-supplier")}const l=document.getElementById("ppe-locs-list");if(l){const n=this._ppeGroupBy(t,d=>(d._locationDisplay||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim(),10);l.innerHTML=a(n,i,"#3b82f6","#93c5fd","#3b82f6","ppe-af-location")}},_ppeBindAnalyticsEvents(){const t=document.getElementById("ppe-analytics-root");if(!t||t.getAttribute("data-ppe-analytics-bound")==="1")return;t.setAttribute("data-ppe-analytics-bound","1"),t.querySelectorAll(".ppe-period-btn").forEach(o=>{o.addEventListener("click",()=>{this._ppeAnalyticsPeriod=o.getAttribute("data-period"),t.querySelectorAll(".ppe-period-btn").forEach(p=>{const l=p===o;p.style.background=l?"#fff":"rgba(255,255,255,0.15)",p.style.color=l?"#2563EB":"#fff"}),this.updatePpeAnalyticsDashboard()})});const e=document.getElementById("ppe-analytics-refresh");e&&e.addEventListener("click",()=>this.updatePpeAnalyticsDashboard());const i=document.getElementById("ppe-export-pdf-btn");i&&i.addEventListener("click",()=>this._ppeExportAnalyticsPDF());const s=document.getElementById("ppe-toggle-filters-btn"),a=document.getElementById("ppe-filter-panel");s&&a&&s.addEventListener("click",()=>{const o=a.style.display!=="none";a.style.display=o?"none":"block",s.style.background=o?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.35)"}),["ppe-af-type","ppe-af-dept","ppe-af-category","ppe-af-status","ppe-af-supplier","ppe-af-factory","ppe-af-location"].forEach(o=>{const p=document.getElementById(o);p&&p.addEventListener("change",()=>this.updatePpeAnalyticsDashboard())});const r=document.getElementById("ppe-filter-reset-btn");r&&r.addEventListener("click",()=>{["ppe-af-type","ppe-af-dept","ppe-af-category","ppe-af-status","ppe-af-supplier","ppe-af-factory","ppe-af-location"].forEach(o=>{const p=document.getElementById(o);p&&(p.value="")}),this.updatePpeAnalyticsDashboard()})},async _ppeExportAnalyticsPDF(){try{const t=document.getElementById("ppe-analytics-root");if(!t){Notification.error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644");return}if((typeof html2canvas>"u"||typeof window.jspdf>"u")&&(Loading.show("\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0623\u062F\u0648\u0627\u062A \u0627\u0644\u062A\u0635\u062F\u064A\u0631\u2026"),await Promise.all([new Promise(l=>{if(typeof html2canvas<"u")return l();const n=document.createElement("script");n.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",n.onload=l,n.onerror=l,document.head.appendChild(n)}),new Promise(l=>{if(typeof window.jspdf<"u")return l();const n=document.createElement("script");n.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",n.onload=l,n.onerror=l,document.head.appendChild(n)})]),Loading.hide()),typeof html2canvas>"u"||typeof window.jspdf>"u"){Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0623\u062F\u0648\u0627\u062A \u0627\u0644\u062A\u0635\u062F\u064A\u0631");return}Loading.show("\u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0627\u0644\u062A\u0642\u0631\u064A\u0631\u2026");const e=String(AppState?.companySettings?.name||"SafetyHub | ICAPP").trim(),i=String(AppState?.companySettings?.secondaryName||"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629").trim(),s=typeof Utils<"u"&&typeof Utils.formatDateTime=="function"?Utils.formatDateTime(new Date):new Date().toLocaleString("ar-EG"),a=document.createElement("div");a.id="ppe-pdf-header-temp",a.style.cssText="background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;",a.innerHTML=`
+                `;
+            }).join('');
+        };
+
+        // نوع المعدة (أعلى 10)
+        const typesEl = document.getElementById('ppe-types-list');
+        if (typesEl) {
+            const typeG = this._ppeGroupBy(filtered, r => String(r.equipmentType || r.type || 'غير محدد').trim(), 10);
+            typesEl.innerHTML = buildListItems(typeG, total, '#2563EB', '#93c5fd', '#2563EB', 'ppe-af-type');
+        }
+
+        // الإدارة (أعلى 10)
+        const deptsEl = document.getElementById('ppe-depts-list');
+        if (deptsEl) {
+            const deptG = this._ppeGroupBy(filtered, r => (r._deptDisplay || 'غير محدد').trim(), 10);
+            deptsEl.innerHTML = buildListItems(deptG, total, '#f59e0b', '#fcd34d', '#f59e0b', 'ppe-af-dept');
+        }
+
+        // المورد (أعلى 8 — من المخزون)
+        const suppliersEl = document.getElementById('ppe-suppliers-list');
+        if (suppliersEl) {
+            const supplierG = this._ppeGroupBy(filteredStock, item => String(item.supplier || 'غير محدد').trim(), 8);
+            const stockTotal = filteredStock.length;
+            suppliersEl.innerHTML = buildListItems(supplierG, stockTotal, '#0ea5e9', '#bae6fd', '#0ea5e9', 'ppe-af-supplier');
+        }
+
+        // الموقع الفرعي (أعلى 10)
+        const locsEl = document.getElementById('ppe-locs-list');
+        if (locsEl) {
+            const locG = this._ppeGroupBy(filtered, r => (r._locationDisplay || 'غير محدد').trim(), 10);
+            locsEl.innerHTML = buildListItems(locG, total, '#3b82f6', '#93c5fd', '#3b82f6', 'ppe-af-location');
+        }
+    },
+
+    /** ربط أحداث لوحة التحليل */
+    _ppeBindAnalyticsEvents() {
+        const root = document.getElementById('ppe-analytics-root');
+        if (!root) return;
+        if (root.getAttribute('data-ppe-analytics-bound') === '1') return;
+        root.setAttribute('data-ppe-analytics-bound', '1');
+
+        // أزرار الفترة
+        root.querySelectorAll('.ppe-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._ppeAnalyticsPeriod = btn.getAttribute('data-period');
+                root.querySelectorAll('.ppe-period-btn').forEach(b => {
+                    const active = b === btn;
+                    b.style.background = active ? '#fff' : 'rgba(255,255,255,0.15)';
+                    b.style.color = active ? '#2563EB' : '#fff';
+                });
+                this.updatePpeAnalyticsDashboard();
+            });
+        });
+
+        // زر تحديث
+        const refreshBtn = document.getElementById('ppe-analytics-refresh');
+        if (refreshBtn) refreshBtn.addEventListener('click', () => this.updatePpeAnalyticsDashboard());
+
+        // زر PDF
+        const pdfBtn = document.getElementById('ppe-export-pdf-btn');
+        if (pdfBtn) pdfBtn.addEventListener('click', () => this._ppeExportAnalyticsPDF());
+
+        // زر تبديل الفلاتر
+        const toggleBtn = document.getElementById('ppe-toggle-filters-btn');
+        const filterPanel = document.getElementById('ppe-filter-panel');
+        if (toggleBtn && filterPanel) {
+            toggleBtn.addEventListener('click', () => {
+                const isOpen = filterPanel.style.display !== 'none';
+                filterPanel.style.display = isOpen ? 'none' : 'block';
+                toggleBtn.style.background = isOpen ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.35)';
+            });
+        }
+
+        // الفلاتر التفاعلية
+        ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier','ppe-af-factory','ppe-af-location'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener('change', () => this.updatePpeAnalyticsDashboard());
+        });
+
+        // زر إعادة تعيين الفلاتر
+        const resetBtn = document.getElementById('ppe-filter-reset-btn');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+                ['ppe-af-type','ppe-af-dept','ppe-af-category','ppe-af-status','ppe-af-supplier','ppe-af-factory','ppe-af-location'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.value = '';
+                });
+                this.updatePpeAnalyticsDashboard();
+            });
+        }
+    },
+
+    /** تصدير لوحة التحليل كـ PDF (نفس نمط incidents._incidentExportPDF) */
+    async _ppeExportAnalyticsPDF() {
+        try {
+            const root = document.getElementById('ppe-analytics-root');
+            if (!root) {
+                Notification.error('لا يمكن العثور على لوحة التحليل');
+                return;
+            }
+
+            // تحميل html2canvas و jsPDF عند الحاجة
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                Loading.show('جاري تحميل أدوات التصدير…');
+                await Promise.all([
+                    new Promise(resolve => {
+                        if (typeof html2canvas !== 'undefined') return resolve();
+                        const s = document.createElement('script');
+                        s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+                        s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+                    }),
+                    new Promise(resolve => {
+                        if (typeof window.jspdf !== 'undefined') return resolve();
+                        const s = document.createElement('script');
+                        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                        s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+                    })
+                ]);
+                Loading.hide();
+            }
+
+            if (typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+                Notification.error('تعذّر تحميل أدوات التصدير');
+                return;
+            }
+
+            Loading.show('جاري تجهيز التقرير…');
+
+            // بناء هيدر برانديد (يُضاف فوق المحتوى مؤقتاً)
+            const companyName = String(AppState?.companySettings?.name || 'SafetyHub | ICAPP').trim();
+            const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
+            const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
+                ? Utils.formatDateTime(new Date())
+                : new Date().toLocaleString('ar-EG');
+
+            const header = document.createElement('div');
+            header.id = 'ppe-pdf-header-temp';
+            header.style.cssText = 'background:linear-gradient(135deg,#2563EB 0%,#1D4ED8 50%,#1E3A8A 100%);color:#fff;padding:18px 24px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-family:Arial,sans-serif;';
+            header.innerHTML = `
                 <div>
-                    <div style="font-size:18px;font-weight:800;margin-bottom:4px;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(e)}</div>
-                    <div style="font-size:13px;opacity:0.95;">${Utils.escapeHTML(i)}</div>
+                    <div style="font-size:18px;font-weight:800;margin-bottom:4px;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName)}</div>
+                    <div style="font-size:13px;opacity:0.95;">${Utils.escapeHTML(secondaryName)}</div>
                 </div>
                 <div style="text-align:end;">
-                    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">\u062A\u0642\u0631\u064A\u0631 \u062A\u062D\u0644\u064A\u0644 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629</div>
-                    <div style="font-size:12px;opacity:0.95;" dir="ltr">${Utils.escapeHTML(s)}</div>
+                    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">تقرير تحليل مهمات الوقاية</div>
+                    <div style="font-size:12px;opacity:0.95;" dir="ltr">${Utils.escapeHTML(exportDateTime)}</div>
                 </div>
-            `,t.insertBefore(a,t.firstChild);const r=await html2canvas(t,{scale:Utils.PdfExport.getOptimalCaptureScale(t.scrollWidth,t.scrollHeight,Utils.PdfExport.DEFAULT_CAPTURE_SCALE),useCORS:!0,backgroundColor:"#ffffff",logging:!1});a.remove();const o=Utils.PdfExport.createPdf({orientation:"portrait",unit:"mm",format:"a4"});if(!o)throw new Error("jsPDF unavailable");Utils.PdfExport.appendCanvasAsPdfPages(o,r,{marginMm:0});const p=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);Utils.PdfExport.savePdf(o,`PPE-Analytics-${p}.pdf`),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062A\u062D\u0644\u064A\u0644 \u0628\u0646\u062C\u0627\u062D")}catch(t){Loading.hide(),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",t),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062A\u0635\u062F\u064A\u0631: "+(t.message||t));const e=document.getElementById("ppe-pdf-header-temp");e&&e.remove()}}};(function(){"use strict";try{typeof window<"u"&&typeof PPE<"u"&&(window.PPE=PPE,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 PPE module loaded and available on window.PPE"))}catch{if(typeof window<"u"&&typeof PPE<"u")try{window.PPE=PPE}catch{}}})();
+            `;
+            root.insertBefore(header, root.firstChild);
+
+            const canvas = await html2canvas(root, {
+                scale: Utils.PdfExport.getOptimalCaptureScale(root.scrollWidth, root.scrollHeight, Utils.PdfExport.DEFAULT_CAPTURE_SCALE),
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+
+            // إزالة الهيدر المؤقت
+            header.remove();
+
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) throw new Error('jsPDF unavailable');
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 0 });
+
+            const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            Utils.PdfExport.savePdf(pdf, `PPE-Analytics-${ts}.pdf`);
+            Loading.hide();
+            Notification.success('تم تصدير تقرير التحليل بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير PDF:', error);
+            Notification.error('حدث خطأ أثناء التصدير: ' + (error.message || error));
+            // محاولة إزالة الهيدر المؤقت في حال فشل
+            const stuck = document.getElementById('ppe-pdf-header-temp');
+            if (stuck) stuck.remove();
+        }
+    }
+};
+
+// ===== Export module to global scope =====
+// تصدير الموديول إلى window فوراً لضمان توافره
+(function () {
+    'use strict';
+    try {
+        if (typeof window !== 'undefined' && typeof PPE !== 'undefined') {
+            window.PPE = PPE;
+            
+            // إشعار عند تحميل الموديول بنجاح
+            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ PPE module loaded and available on window.PPE');
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تصدير PPE:', error);
+        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
+        if (typeof window !== 'undefined' && typeof PPE !== 'undefined') {
+            try {
+                window.PPE = PPE;
+            } catch (e) {
+                console.error('❌ فشل تصدير PPE:', e);
+            }
+        }
+    }
+})();

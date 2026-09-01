@@ -1,3 +1,0 @@
-builtAt: 2026-09-01T17:55:52.989Z
-filesMinified: 96
-esbuild: minify + drop console/debugger + no sourcemap

@@ -1,36 +1,465 @@
-const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t=800,s=800,n=.8){return new Promise((i,o)=>{try{const a=new Image;a.onload=function(){try{let l=a.width,c=a.height;if(l>t||c>s){const v=Math.min(t/l,s/c);l=Math.round(l*v),c=Math.round(c*v)}const p=document.createElement("canvas");p.width=l,p.height=c;const y=p.getContext("2d");y.drawImage(a,0,0,l,c);const d=p.toDataURL("image/jpeg",n);if(d.length>45e3){if(n>.5){const v=p.toDataURL("image/jpeg",.5);if(v.length<=45e3){i(v);return}}if(l>600||c>600){const v=Math.min(600/l,600/c),x=Math.round(l*v),E=Math.round(c*v);p.width=x,p.height=E,y.clearRect(0,0,p.width,p.height),y.drawImage(a,0,0,x,E);const B=p.toDataURL("image/jpeg",.5);i(B);return}}i(d)}catch(l){o(l)}},a.onerror=function(){o(new Error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629"))},a.src=e}catch(a){o(a)}})},currentApprovalCircuitId:null,currentApprovalCircuitSteps:[],formSettingsState:null,formSettingsEventsBound:!1,getPostLoginItems(){const e=AppState?.companySettings?.postLoginItems;if(Array.isArray(e))return e.slice();if(typeof e=="string"&&e.trim()!=="")try{const t=JSON.parse(e);return Array.isArray(t)?t:[]}catch{return[]}return[]},renderPostLoginItemsList(){const e=document.getElementById("post-login-items-list");if(!e)return;const t=this.getPostLoginItems();if(t.length===0){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0639\u0646\u0627\u0635\u0631. \u0627\u0636\u063A\u0637 \xAB\u0625\u0636\u0627\u0641\u0629 \u0639\u0646\u0635\u0631\xBB \u0644\u0628\u062F\u0621 \u0627\u0644\u0625\u0636\u0627\u0641\u0629.</p>';return}const s=t.slice().sort((n,i)=>(n.order??999)-(i.order??999));e.innerHTML=s.map((n,i)=>{const o=Utils.escapeHTML((n.title||"").slice(0,60))||"(\u0628\u062F\u0648\u0646 \u0639\u0646\u0648\u0627\u0646)",a=n.durationSeconds!==void 0?n.durationSeconds:10,l=n.active!==!1,c=n.order??i;return`
-                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white" data-post-login-index="${i}" data-post-login-order="${c}">
+/**
+ * Settings Module
+ * ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬Ù‡ Ù…Ù† app-modules.js
+ */
+// ===== Settings Module =====
+const Settings = {
+    currentApprovalCircuitOwner: '__default__',
+    
+    /**
+     * ضغط الصورة لتقليل الحجم (للتأكد من أن base64 string أقل من 50,000 حرف)
+     * @param {string} imageDataUrl - base64 image data URL
+     * @param {number} maxWidth - الحد الأقصى للعرض (افتراضي: 800px)
+     * @param {number} maxHeight - الحد الأقصى للارتفاع (افتراضي: 800px)
+     * @param {number} quality - جودة JPEG (افتراضي: 0.8 = 80%)
+     * @returns {Promise<string>} - compressed base64 image data URL
+     */
+    async compressLogo(imageDataUrl, maxWidth = 800, maxHeight = 800, quality = 0.8) {
+        return new Promise((resolve, reject) => {
+            try {
+                const img = new Image();
+                img.onload = function() {
+                    try {
+                        // حساب الأبعاد الجديدة مع الحفاظ على النسبة
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxWidth || height > maxHeight) {
+                            const ratio = Math.min(maxWidth / width, maxHeight / height);
+                            width = Math.round(width * ratio);
+                            height = Math.round(height * ratio);
+                        }
+                        
+                        // إنشاء canvas
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        
+                        // رسم الصورة على canvas
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // تحويل إلى JPEG بجودة معينة (أصغر من PNG)
+                        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                        
+                        // التحقق من الحجم (base64 string length)
+                        // حد طول الحقل (قد يفرضه الخادم)
+                        // نهدف إلى أقل من 45,000 حرف (لترك هامش أمان)
+                        if (compressedDataUrl.length > 45000) {
+                            // إذا كان الحجم لا يزال كبيراً، نضغط أكثر
+                            if (quality > 0.5) {
+                                // تقليل الجودة أكثر
+                                const moreCompressed = canvas.toDataURL('image/jpeg', 0.5);
+                                if (moreCompressed.length <= 45000) {
+                                    resolve(moreCompressed);
+                                    return;
+                                }
+                            }
+                            // إذا كان لا يزال كبيراً، نقلل الحجم أكثر
+                            if (width > 600 || height > 600) {
+                                const smallerRatio = Math.min(600 / width, 600 / height);
+                                const smallerWidth = Math.round(width * smallerRatio);
+                                const smallerHeight = Math.round(height * smallerRatio);
+                                canvas.width = smallerWidth;
+                                canvas.height = smallerHeight;
+                                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, smallerWidth, smallerHeight);
+                                const finalCompressed = canvas.toDataURL('image/jpeg', 0.5);
+                                resolve(finalCompressed);
+                                return;
+                            }
+                        }
+                        
+                        resolve(compressedDataUrl);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                img.onerror = function() {
+                    reject(new Error('فشل تحميل الصورة'));
+                };
+                img.src = imageDataUrl;
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+    currentApprovalCircuitId: null,
+    currentApprovalCircuitSteps: [],
+    formSettingsState: null,
+    formSettingsEventsBound: false,
+
+    /** ترجيع مصفوفة تعليمات ما بعد الدخول من إعدادات الشركة (مع تطبيع) */
+    getPostLoginItems() {
+        const raw = AppState?.companySettings?.postLoginItems;
+        if (Array.isArray(raw)) return raw.slice();
+        if (typeof raw === 'string' && raw.trim() !== '') {
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) { return []; }
+        }
+        return [];
+    },
+
+    /** عرض قائمة تعليمات ما بعد الدخول في واجهة الإعدادات */
+    renderPostLoginItemsList() {
+        const listEl = document.getElementById('post-login-items-list');
+        if (!listEl) return;
+        const items = this.getPostLoginItems();
+        if (items.length === 0) {
+            listEl.innerHTML = '<p class="text-sm text-gray-500">لا توجد عناصر. اضغط «إضافة عنصر» لبدء الإضافة.</p>';
+            return;
+        }
+        const sorted = items.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+        listEl.innerHTML = sorted.map((item, idx) => {
+            const title = Utils.escapeHTML((item.title || '').slice(0, 60)) || '(بدون عنوان)';
+            const duration = item.durationSeconds !== undefined ? item.durationSeconds : 10;
+            const active = item.active !== false;
+            const order = item.order ?? idx;
+            return `
+                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white" data-post-login-index="${idx}" data-post-login-order="${order}">
                     <div class="flex-1 min-w-0">
-                        <span class="font-medium text-gray-800">${o}</span>
-                        <span class="text-xs text-gray-500 mr-2">${a} \u062B</span>
-                        ${l?'<span class="text-xs text-green-600">\u0645\u0641\u0639\u0651\u0644</span>':'<span class="text-xs text-gray-400">\u0645\u0639\u0637\u0651\u0644</span>'}
+                        <span class="font-medium text-gray-800">${title}</span>
+                        <span class="text-xs text-gray-500 mr-2">${duration} ث</span>
+                        ${active ? '<span class="text-xs text-green-600">مفعّل</span>' : '<span class="text-xs text-gray-400">معطّل</span>'}
                     </div>
                     <div class="flex items-center gap-1">
-                        <button type="button" class="post-login-edit-btn btn-icon btn-icon-secondary p-2" title="\u062A\u0639\u062F\u064A\u0644" data-index="${i}"><i class="fas fa-edit"></i></button>
-                        <button type="button" class="post-login-delete-btn btn-icon btn-icon-secondary p-2 text-red-600" title="\u062D\u0630\u0641" data-index="${i}"><i class="fas fa-trash"></i></button>
-                        <button type="button" class="post-login-up-btn btn-icon btn-icon-secondary p-2" title="\u0623\u0639\u0644\u0649" data-index="${i}"><i class="fas fa-arrow-up"></i></button>
-                        <button type="button" class="post-login-down-btn btn-icon btn-icon-secondary p-2" title="\u0623\u0633\u0641\u0644" data-index="${i}"><i class="fas fa-arrow-down"></i></button>
+                        <button type="button" class="post-login-edit-btn btn-icon btn-icon-secondary p-2" title="تعديل" data-index="${idx}"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="post-login-delete-btn btn-icon btn-icon-secondary p-2 text-red-600" title="حذف" data-index="${idx}"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="post-login-up-btn btn-icon btn-icon-secondary p-2" title="أعلى" data-index="${idx}"><i class="fas fa-arrow-up"></i></button>
+                        <button type="button" class="post-login-down-btn btn-icon btn-icon-secondary p-2" title="أسفل" data-index="${idx}"><i class="fas fa-arrow-down"></i></button>
                     </div>
-                </div>`}).join("")},parseHelpContent(e){const t={version:1,enabled:!1,introText:"",qaItems:[]};if(!e)return t;try{const s=typeof e=="string"?JSON.parse(e):e;return!s||typeof s!="object"?t:{version:1,enabled:s.enabled===!0,introText:String(s.introText||"").trim(),qaItems:Array.isArray(s.qaItems)?s.qaItems:[]}}catch{return t}},getHelpContentConfig(){return this.parseHelpContent(AppState?.companySettings?.helpContent)},getHelpContentQaItems(){return this.getHelpContentConfig().qaItems.slice().sort((e,t)=>(e.order??999)-(t.order??999))},setHelpContentConfig(e){AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.helpContent=JSON.stringify(e||{version:1,enabled:!1,introText:"",qaItems:[]})},renderHelpContentQaList(){const e=document.getElementById("help-content-qa-list");if(!e)return;const t=this.getHelpContentQaItems();if(!t.length){e.innerHTML='<p class="text-sm text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0633\u0626\u0644\u0629 \u0645\u062E\u0635\u0635\u0629. \u0627\u0636\u063A\u0637 \xAB\u0625\u0636\u0627\u0641\u0629 \u0633\u0624\u0627\u0644\xBB \u0623\u0648 \u0641\u0639\u0651\u0644 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0645\u0646 \u0627\u0644\u0643\u0648\u062F.</p>';return}e.innerHTML=t.map((s,n)=>{const i=Utils.escapeHTML((s.question||"").slice(0,80))||"(\u0628\u062F\u0648\u0646 \u0633\u0624\u0627\u0644)",o=s.active!==!1;return`
-                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white" data-help-qa-index="${n}">
+                </div>`;
+        }).join('');
+    },
+
+    parseHelpContent(raw) {
+        const empty = { version: 1, enabled: false, introText: '', qaItems: [] };
+        if (!raw) return empty;
+        try {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (!parsed || typeof parsed !== 'object') return empty;
+            return {
+                version: 1,
+                enabled: parsed.enabled === true,
+                introText: String(parsed.introText || '').trim(),
+                qaItems: Array.isArray(parsed.qaItems) ? parsed.qaItems : []
+            };
+        } catch (_e) {
+            return empty;
+        }
+    },
+
+    getHelpContentConfig() {
+        return this.parseHelpContent(AppState?.companySettings?.helpContent);
+    },
+
+    getHelpContentQaItems() {
+        return this.getHelpContentConfig().qaItems.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+    },
+
+    setHelpContentConfig(config) {
+        if (!AppState.companySettings) AppState.companySettings = {};
+        AppState.companySettings.helpContent = JSON.stringify(config || { version: 1, enabled: false, introText: '', qaItems: [] });
+    },
+
+    renderHelpContentQaList() {
+        const listEl = document.getElementById('help-content-qa-list');
+        if (!listEl) return;
+        const items = this.getHelpContentQaItems();
+        if (!items.length) {
+            listEl.innerHTML = '<p class="text-sm text-gray-500">لا توجد أسئلة مخصصة. اضغط «إضافة سؤال» أو فعّل المحتوى الافتراضي من الكود.</p>';
+            return;
+        }
+        listEl.innerHTML = items.map((item, idx) => {
+            const q = Utils.escapeHTML((item.question || '').slice(0, 80)) || '(بدون سؤال)';
+            const active = item.active !== false;
+            return `
+                <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-white" data-help-qa-index="${idx}">
                     <div class="flex-1 min-w-0">
-                        <span class="font-medium text-gray-800">${i}</span>
-                        ${o?'<span class="text-xs text-green-600 mr-2">\u0645\u0641\u0639\u0651\u0644</span>':'<span class="text-xs text-gray-400 mr-2">\u0645\u0639\u0637\u0651\u0644</span>'}
-                        ${s.moduleId?`<span class="text-xs text-blue-600">\u0645\u0648\u062F\u064A\u0648\u0644: ${Utils.escapeHTML(s.moduleId)}</span>`:""}
+                        <span class="font-medium text-gray-800">${q}</span>
+                        ${active ? '<span class="text-xs text-green-600 mr-2">مفعّل</span>' : '<span class="text-xs text-gray-400 mr-2">معطّل</span>'}
+                        ${item.moduleId ? `<span class="text-xs text-blue-600">موديول: ${Utils.escapeHTML(item.moduleId)}</span>` : ''}
                     </div>
                     <div class="flex items-center gap-1">
-                        <button type="button" class="help-qa-edit-btn btn-icon btn-icon-secondary p-2" title="\u062A\u0639\u062F\u064A\u0644" data-index="${n}"><i class="fas fa-edit"></i></button>
-                        <button type="button" class="help-qa-delete-btn btn-icon btn-icon-secondary p-2 text-red-600" title="\u062D\u0630\u0641" data-index="${n}"><i class="fas fa-trash"></i></button>
-                        <button type="button" class="help-qa-up-btn btn-icon btn-icon-secondary p-2" title="\u0623\u0639\u0644\u0649" data-index="${n}"><i class="fas fa-arrow-up"></i></button>
-                        <button type="button" class="help-qa-down-btn btn-icon btn-icon-secondary p-2" title="\u0623\u0633\u0641\u0644" data-index="${n}"><i class="fas fa-arrow-down"></i></button>
+                        <button type="button" class="help-qa-edit-btn btn-icon btn-icon-secondary p-2" title="تعديل" data-index="${idx}"><i class="fas fa-edit"></i></button>
+                        <button type="button" class="help-qa-delete-btn btn-icon btn-icon-secondary p-2 text-red-600" title="حذف" data-index="${idx}"><i class="fas fa-trash"></i></button>
+                        <button type="button" class="help-qa-up-btn btn-icon btn-icon-secondary p-2" title="أعلى" data-index="${idx}"><i class="fas fa-arrow-up"></i></button>
+                        <button type="button" class="help-qa-down-btn btn-icon btn-icon-secondary p-2" title="أسفل" data-index="${idx}"><i class="fas fa-arrow-down"></i></button>
                     </div>
-                </div>`}).join("")},async saveHelpContentToBackend(){AppState.companySettings||(AppState.companySettings={});const e=this.getHelpContentConfig();if(this.setHelpContentConfig(e),typeof DataManager<"u"&&DataManager.saveCompanySettings&&DataManager.saveCompanySettings(),!(AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u"))return{success:!0};try{const t=AppState.currentUser||{};return await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:AppState.companySettings.name||"",secondaryName:AppState.companySettings.secondaryName||"",formVersion:AppState.companySettings.formVersion||"1.0",nameFontSize:AppState.companySettings.nameFontSize||16,secondaryNameFontSize:AppState.companySettings.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings.employeeImportHireMonths??3,profileTeamsUrl:AppState.companySettings.profileTeamsUrl||"",profileWhatsAppUrl:AppState.companySettings.profileWhatsAppUrl||"",address:AppState.companySettings.address||"",phone:AppState.companySettings.phone||"",email:AppState.companySettings.email||"",logo:AppState.companySettings.logo||AppState.companyLogo||"",postLoginItems:typeof AppState.companySettings.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings.postLoginItems||[]),helpContent:AppState.companySettings.helpContent||JSON.stringify(e),userData:{email:t.email,name:t.name,role:t.role,permissions:t.permissions}})||{success:!1}}catch(t){return{success:!1,message:t?.message||String(t)}}},initHelpContentTabUI(){const e=this.getHelpContentConfig(),t=document.getElementById("help-content-enabled"),s=document.getElementById("help-content-intro");t&&(t.checked=e.enabled===!0),s&&(s.value=e.introText||""),this.renderHelpContentQaList()},bindHelpContentSettingsEvents(){if(this._helpContentEventsBound){this.initHelpContentTabUI();return}this._helpContentEventsBound=!0;const e=document.getElementById("help-content-qa-form"),t=document.getElementById("help-content-qa-form-title"),s=document.getElementById("help-content-qa-question"),n=document.getElementById("help-content-qa-answer"),i=document.getElementById("help-content-qa-module"),o=document.getElementById("help-content-qa-keywords"),a=document.getElementById("help-content-qa-active"),l=document.getElementById("help-content-qa-list");let c=-1;const p=()=>{e&&e.classList.add("hidden"),c=-1,t&&(t.textContent="\u0625\u0636\u0627\u0641\u0629 \u0633\u0624\u0627\u0644 \u062C\u062F\u064A\u062F"),s&&(s.value=""),n&&(n.value=""),i&&(i.value=""),o&&(o.value=""),a&&(a.checked=!0)},y=()=>{const d=document.getElementById("help-content-enabled"),v=document.getElementById("help-content-intro"),x=this.getHelpContentConfig();x.enabled=d?d.checked:x.enabled,x.introText=v?v.value.trim():x.introText,this.setHelpContentConfig(x)};this.initHelpContentTabUI(),document.getElementById("help-content-add-qa-btn")?.addEventListener("click",()=>{c=-1,t&&(t.textContent="\u0625\u0636\u0627\u0641\u0629 \u0633\u0624\u0627\u0644 \u062C\u062F\u064A\u062F"),s&&(s.value=""),n&&(n.value=""),i&&(i.value=""),o&&(o.value=""),a&&(a.checked=!0),e?.classList.remove("hidden")}),document.getElementById("help-content-qa-cancel-btn")?.addEventListener("click",p),document.getElementById("help-content-qa-save-btn")?.addEventListener("click",()=>{const d=s?.value?.trim()||"",v=n?.value?.trim()||"";if(!d||!v){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0633\u0624\u0627\u0644 \u0648\u0627\u0644\u0625\u062C\u0627\u0628\u0629.");return}const x=this.getHelpContentConfig(),E=this.getHelpContentQaItems(),B=E.length?Math.max(...E.map(b=>b.order??0)):0,I={id:c>=0&&E[c]?.id?E[c].id:"qa-"+Date.now(),question:d,answer:v,moduleId:i?.value?.trim()||"",keywords:o?.value?.trim()||"",active:a?a.checked:!0,order:c>=0?E[c].order??c:B+1};c>=0&&c<E.length?E[c]=I:E.push(I),x.qaItems=E,y(),this.setHelpContentConfig(x),this.renderHelpContentQaList(),p(),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0633\u0624\u0627\u0644 \u0645\u062D\u0644\u064A\u0627\u064B \u2014 \u0627\u0636\u063A\u0637 \xAB\u062D\u0641\u0638 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629\xBB \u0644\u0644\u0646\u0634\u0631.")}),l?.addEventListener("click",d=>{const v=d.target.closest(".help-qa-edit-btn"),x=d.target.closest(".help-qa-delete-btn"),E=d.target.closest(".help-qa-up-btn"),B=d.target.closest(".help-qa-down-btn"),I=v?.dataset?.index??x?.dataset?.index??E?.dataset?.index??B?.dataset?.index;if(I===void 0)return;const b=parseInt(I,10),k=this.getHelpContentConfig(),L=this.getHelpContentQaItems(),T=L[b];if(T){if(v){c=b,t&&(t.textContent="\u062A\u0639\u062F\u064A\u0644 \u0633\u0624\u0627\u0644"),s&&(s.value=T.question||""),n&&(n.value=T.answer||""),i&&(i.value=T.moduleId||""),o&&(o.value=T.keywords||""),a&&(a.checked=T.active!==!1),e?.classList.remove("hidden");return}if(x){if(!confirm("\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u0624\u0627\u0644\u061F"))return;L.splice(b,1),k.qaItems=L,this.setHelpContentConfig(k),this.renderHelpContentQaList();return}if(E&&b>0){const _=L[b].order??b;L[b].order=L[b-1].order??b-1,L[b-1].order=_,k.qaItems=L,this.setHelpContentConfig(k),this.renderHelpContentQaList()}if(B&&b<L.length-1){const _=L[b].order??b;L[b].order=L[b+1].order??b+1,L[b+1].order=_,k.qaItems=L,this.setHelpContentConfig(k),this.renderHelpContentQaList()}}}),document.getElementById("help-content-save-all-btn")?.addEventListener("click",async()=>{y();const d=await this.saveHelpContentToBackend();if(d?.success){if(Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u0628\u0646\u062C\u0627\u062D."),typeof DataManager<"u"&&DataManager.loadCompanySettings)try{await DataManager.loadCompanySettings(!0)}catch{}}else Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0641\u0638: "+(d?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}),document.getElementById("help-content-load-defaults-btn")?.addEventListener("click",()=>{if(!confirm("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0645\u0646 \u0627\u0644\u0646\u0638\u0627\u0645 \u0644\u0644\u062A\u062D\u0631\u064A\u0631\u061F \u0633\u064A\u0633\u062A\u0628\u062F\u0644 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0641\u064A \u0627\u0644\u0648\u0627\u062C\u0647\u0629 (\u0644\u0645 \u064A\u064F\u062D\u0641\u0638 \u0628\u0639\u062F)."))return;if(typeof Help>"u"||typeof Help.getDefaultQaItems!="function"){Notification.error("\u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644.");return}const d=this.getHelpContentConfig();d.enabled=!0,d.qaItems=Help.getDefaultQaItems().map((x,E)=>({id:x.id,question:x.question,answer:x.answer,moduleId:x.moduleId||"",keywords:x.keywords||"",active:!0,order:E+1}));const v=document.getElementById("help-content-enabled");v&&(v.checked=!0),this.setHelpContentConfig(d),this.renderHelpContentQaList(),Notification.info("\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u2014 \u0631\u0627\u062C\u0639 \u062B\u0645 \u0627\u0636\u063A\u0637 \xAB\u062D\u0641\u0638 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629\xBB.")})},async load(){this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0);const e=document.getElementById("settings-section");if(e&&!(typeof Utils>"u")){if(typeof AppState>"u"){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631!");return}try{typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.ensureInitialized();const t=this.isCurrentUserAdmin();if(typeof Permissions<"u"&&(Permissions.formSettingsEventsBound=!1,Permissions._formSettingsBindDone=!1),e.innerHTML=`
+                </div>`;
+        }).join('');
+    },
+
+    async saveHelpContentToBackend() {
+        if (!AppState.companySettings) AppState.companySettings = {};
+        const cfg = this.getHelpContentConfig();
+        this.setHelpContentConfig(cfg);
+        if (typeof DataManager !== 'undefined' && DataManager.saveCompanySettings) {
+            DataManager.saveCompanySettings();
+        }
+        if (!(AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined')) {
+            return { success: true };
+        }
+        try {
+            const userData = AppState.currentUser || {};
+            const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                name: AppState.companySettings.name || '',
+                secondaryName: AppState.companySettings.secondaryName || '',
+                formVersion: AppState.companySettings.formVersion || '1.0',
+                nameFontSize: AppState.companySettings.nameFontSize || 16,
+                secondaryNameFontSize: AppState.companySettings.secondaryNameFontSize || 14,
+                secondaryNameColor: AppState.companySettings.secondaryNameColor || '#6B7280',
+                clinicMonthlyVisitsAlertThreshold: AppState.companySettings.clinicMonthlyVisitsAlertThreshold ?? 10,
+                employeeImportHireMonths: AppState.companySettings.employeeImportHireMonths ?? 3,
+                profileTeamsUrl: AppState.companySettings.profileTeamsUrl || '',
+                profileWhatsAppUrl: AppState.companySettings.profileWhatsAppUrl || '',
+                address: AppState.companySettings.address || '',
+                phone: AppState.companySettings.phone || '',
+                email: AppState.companySettings.email || '',
+                logo: AppState.companySettings.logo || AppState.companyLogo || '',
+                postLoginItems: typeof AppState.companySettings.postLoginItems === 'string'
+                    ? AppState.companySettings.postLoginItems
+                    : JSON.stringify(AppState.companySettings.postLoginItems || []),
+                helpContent: AppState.companySettings.helpContent || JSON.stringify(cfg),
+                userData: { email: userData.email, name: userData.name, role: userData.role, permissions: userData.permissions }
+            });
+            return result || { success: false };
+        } catch (e) {
+            return { success: false, message: e?.message || String(e) };
+        }
+    },
+
+    initHelpContentTabUI() {
+        const cfg = this.getHelpContentConfig();
+        const enabledEl = document.getElementById('help-content-enabled');
+        const introEl = document.getElementById('help-content-intro');
+        if (enabledEl) enabledEl.checked = cfg.enabled === true;
+        if (introEl) introEl.value = cfg.introText || '';
+        this.renderHelpContentQaList();
+    },
+
+    bindHelpContentSettingsEvents() {
+        if (this._helpContentEventsBound) {
+            this.initHelpContentTabUI();
+            return;
+        }
+        this._helpContentEventsBound = true;
+
+        const form = document.getElementById('help-content-qa-form');
+        const formTitle = document.getElementById('help-content-qa-form-title');
+        const qInput = document.getElementById('help-content-qa-question');
+        const aInput = document.getElementById('help-content-qa-answer');
+        const modInput = document.getElementById('help-content-qa-module');
+        const kwInput = document.getElementById('help-content-qa-keywords');
+        const activeInput = document.getElementById('help-content-qa-active');
+        const listEl = document.getElementById('help-content-qa-list');
+        let editingIndex = -1;
+
+        const hideForm = () => {
+            if (form) form.classList.add('hidden');
+            editingIndex = -1;
+            if (formTitle) formTitle.textContent = 'إضافة سؤال جديد';
+            if (qInput) qInput.value = '';
+            if (aInput) aInput.value = '';
+            if (modInput) modInput.value = '';
+            if (kwInput) kwInput.value = '';
+            if (activeInput) activeInput.checked = true;
+        };
+
+        const persistLocalFromUI = () => {
+            const enabledEl = document.getElementById('help-content-enabled');
+            const introEl = document.getElementById('help-content-intro');
+            const cfg = this.getHelpContentConfig();
+            cfg.enabled = enabledEl ? enabledEl.checked : cfg.enabled;
+            cfg.introText = introEl ? introEl.value.trim() : cfg.introText;
+            this.setHelpContentConfig(cfg);
+        };
+
+        this.initHelpContentTabUI();
+
+        document.getElementById('help-content-add-qa-btn')?.addEventListener('click', () => {
+            editingIndex = -1;
+            if (formTitle) formTitle.textContent = 'إضافة سؤال جديد';
+            if (qInput) qInput.value = '';
+            if (aInput) aInput.value = '';
+            if (modInput) modInput.value = '';
+            if (kwInput) kwInput.value = '';
+            if (activeInput) activeInput.checked = true;
+            form?.classList.remove('hidden');
+        });
+        document.getElementById('help-content-qa-cancel-btn')?.addEventListener('click', hideForm);
+
+        document.getElementById('help-content-qa-save-btn')?.addEventListener('click', () => {
+            const question = qInput?.value?.trim() || '';
+            const answer = aInput?.value?.trim() || '';
+            if (!question || !answer) {
+                Notification.error('يرجى إدخال السؤال والإجابة.');
+                return;
+            }
+            const cfg = this.getHelpContentConfig();
+            const items = this.getHelpContentQaItems();
+            const maxOrder = items.length ? Math.max(...items.map(i => i.order ?? 0)) : 0;
+            const row = {
+                id: editingIndex >= 0 && items[editingIndex]?.id ? items[editingIndex].id : ('qa-' + Date.now()),
+                question,
+                answer,
+                moduleId: modInput?.value?.trim() || '',
+                keywords: kwInput?.value?.trim() || '',
+                active: activeInput ? activeInput.checked : true,
+                order: editingIndex >= 0 ? (items[editingIndex].order ?? editingIndex) : maxOrder + 1
+            };
+            if (editingIndex >= 0 && editingIndex < items.length) {
+                items[editingIndex] = row;
+            } else {
+                items.push(row);
+            }
+            cfg.qaItems = items;
+            persistLocalFromUI();
+            this.setHelpContentConfig(cfg);
+            this.renderHelpContentQaList();
+            hideForm();
+            Notification.success('تم إضافة السؤال محلياً — اضغط «حفظ محتوى المساعدة» للنشر.');
+        });
+
+        listEl?.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.help-qa-edit-btn');
+            const deleteBtn = e.target.closest('.help-qa-delete-btn');
+            const upBtn = e.target.closest('.help-qa-up-btn');
+            const downBtn = e.target.closest('.help-qa-down-btn');
+            const index = editBtn?.dataset?.index ?? deleteBtn?.dataset?.index ?? upBtn?.dataset?.index ?? downBtn?.dataset?.index;
+            if (index === undefined) return;
+            const idx = parseInt(index, 10);
+            const cfg = this.getHelpContentConfig();
+            const items = this.getHelpContentQaItems();
+            const item = items[idx];
+            if (!item) return;
+
+            if (editBtn) {
+                editingIndex = idx;
+                if (formTitle) formTitle.textContent = 'تعديل سؤال';
+                if (qInput) qInput.value = item.question || '';
+                if (aInput) aInput.value = item.answer || '';
+                if (modInput) modInput.value = item.moduleId || '';
+                if (kwInput) kwInput.value = item.keywords || '';
+                if (activeInput) activeInput.checked = item.active !== false;
+                form?.classList.remove('hidden');
+                return;
+            }
+            if (deleteBtn) {
+                if (!confirm('حذف هذا السؤال؟')) return;
+                items.splice(idx, 1);
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+                return;
+            }
+            if (upBtn && idx > 0) {
+                const o = items[idx].order ?? idx;
+                items[idx].order = items[idx - 1].order ?? (idx - 1);
+                items[idx - 1].order = o;
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+            }
+            if (downBtn && idx < items.length - 1) {
+                const o = items[idx].order ?? idx;
+                items[idx].order = items[idx + 1].order ?? (idx + 1);
+                items[idx + 1].order = o;
+                cfg.qaItems = items;
+                this.setHelpContentConfig(cfg);
+                this.renderHelpContentQaList();
+            }
+        });
+
+        document.getElementById('help-content-save-all-btn')?.addEventListener('click', async () => {
+            persistLocalFromUI();
+            const res = await this.saveHelpContentToBackend();
+            if (res?.success) {
+                Notification.success('تم حفظ محتوى المساعدة بنجاح.');
+                if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                    try { await DataManager.loadCompanySettings(true); } catch (_e) {}
+                }
+            } else {
+                Notification.error('تعذر الحفظ: ' + (res?.message || 'خطأ غير معروف'));
+            }
+        });
+
+        document.getElementById('help-content-load-defaults-btn')?.addEventListener('click', () => {
+            if (!confirm('استيراد الأسئلة الافتراضية من النظام للتحرير؟ سيستبدل القائمة الحالية في الواجهة (لم يُحفظ بعد).')) return;
+            if (typeof Help === 'undefined' || typeof Help.getDefaultQaItems !== 'function') {
+                Notification.error('موديول المساعدة غير محمّل.');
+                return;
+            }
+            const cfg = this.getHelpContentConfig();
+            cfg.enabled = true;
+            cfg.qaItems = Help.getDefaultQaItems().map((q, i) => ({
+                id: q.id,
+                question: q.question,
+                answer: q.answer,
+                moduleId: q.moduleId || '',
+                keywords: q.keywords || '',
+                active: true,
+                order: i + 1
+            }));
+            const enabledEl = document.getElementById('help-content-enabled');
+            if (enabledEl) enabledEl.checked = true;
+            this.setHelpContentConfig(cfg);
+            this.renderHelpContentQaList();
+            Notification.info('تم الاستيراد — راجع ثم اضغط «حفظ محتوى المساعدة».');
+        });
+    },
+
+    async load() {
+        // إضافة مستمع لتغيير اللغة
+        if (!this._languageChangeListenerAdded) {
+            document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                this.load();
+            });
+            this._languageChangeListenerAdded = true;
+        }
+
+        const section = document.getElementById('settings-section');
+        if (!section) return;
+
+        // التحقق من وجود Utils
+        if (typeof Utils === 'undefined') {
+            console.error('Utils غير متوفر!');
+            return;
+        }
+
+        // التحقق من وجود AppState
+        if (typeof AppState === 'undefined') {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('AppState غير متوفر!');
+            } else {
+                console.error('AppState غير متوفر!');
+            }
+            return;
+        }
+
+        try {
+            if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.ensureInitialized) {
+                ViolationTypesManager.ensureInitialized();
+            }
+            const isAdmin = this.isCurrentUserAdmin();
+
+            if (typeof Permissions !== 'undefined') {
+                Permissions.formSettingsEventsBound = false;
+                Permissions._formSettingsBindDone = false;
+            }
+            // ✅ لا ننتظر تهيئة إعدادات النماذج — الواجهة تُرسم فوراً
+            // (المواقع/الإعدادات تُحمَّل في الخلفية ويُعاد رسم كارت إعدادات النماذج عند الجاهزية)
+
+        section.innerHTML = `
             <div class="section-header">
                 <h1 class="section-title">
                     <i class="fas fa-cog ml-3"></i>
-                    ${I18n.t("settings.title")}
+                    ${I18n.t('settings.title')}
                 </h1>
-                <p class="section-subtitle">${I18n.t("settings.subtitle")}</p>
+                <p class="section-subtitle">${I18n.t('settings.subtitle')}</p>
             </div>
 
             <!-- Tabs Navigation -->
@@ -38,59 +467,59 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 <div class="tabs-nav">
                     <button class="tab-btn active" data-tab="company-data">
                         <i class="fas fa-building ml-2"></i>
-                        ${I18n.t("settings.tabs.company")}
+                        ${I18n.t('settings.tabs.company')}
                     </button>
                     <button class="tab-btn" data-tab="integration">
                         <i class="fas fa-cloud ml-2"></i>
-                        ${I18n.t("settings.tabs.integration")}
+                        ${I18n.t('settings.tabs.integration')}
                     </button>
                     <button class="tab-btn" data-tab="cloud-storage">
                         <i class="fas fa-cloud-upload-alt ml-2"></i>
-                        ${I18n.t("settings.tabs.cloud")}
+                        ${I18n.t('settings.tabs.cloud')}
                     </button>
                     <button class="tab-btn" data-tab="google-drive">
                         <i class="fab fa-google-drive ml-2"></i>
-                        ${I18n.t("settings.tabs.drive")}
+                        ${I18n.t('settings.tabs.drive')}
                     </button>
                     <button class="tab-btn" data-tab="sharepoint">
                         <i class="fab fa-microsoft ml-2"></i>
-                        ${I18n.t("settings.tabs.sharepoint")}
+                        ${I18n.t('settings.tabs.sharepoint')}
                     </button>
                     <button class="tab-btn" data-tab="system-settings">
                         <i class="fas fa-sliders-h ml-2"></i>
-                        ${I18n.t("settings.tabs.system")}
+                        ${I18n.t('settings.tabs.system')}
                     </button>
                     <button class="tab-btn" data-tab="form-settings">
                         <i class="fas fa-file-alt ml-2"></i>
-                        ${I18n.t("settings.tabs.forms")}
+                        ${I18n.t('settings.tabs.forms')}
                     </button>
                     <button class="tab-btn" data-tab="violation-types">
                         <i class="fas fa-tags ml-2"></i>
-                        ${I18n.t("settings.tabs.violations")}
+                        ${I18n.t('settings.tabs.violations')}
                     </button>
                     <button class="tab-btn" data-tab="reports">
                         <i class="fas fa-file-pdf ml-2"></i>
-                        ${I18n.t("settings.tabs.reports")}
+                        ${I18n.t('settings.tabs.reports')}
                     </button>
                     <button class="tab-btn" data-tab="notifications">
                         <i class="fas fa-envelope ml-2"></i>
-                        ${I18n.t("settings.tabs.email")}
+                        ${I18n.t('settings.tabs.email')}
                     </button>
-                    <button class="tab-btn" data-tab="help-content" ${t?"":'style="display:none;"'}>
+                    <button class="tab-btn" data-tab="help-content" ${!isAdmin ? 'style="display:none;"' : ''}>
                         <i class="fas fa-circle-question ml-2"></i>
-                        \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629
+                        محتوى المساعدة
                     </button>
                     <button class="tab-btn" data-tab="permissions">
                         <i class="fas fa-shield-alt ml-2"></i>
-                        ${I18n.t("settings.tabs.permissions")}
+                        ${I18n.t('settings.tabs.permissions')}
                     </button>
                     <button class="tab-btn" data-tab="approval-circuit">
                         <i class="fas fa-project-diagram ml-2"></i>
-                        ${I18n.t("settings.tabs.circuit")}
+                        ${I18n.t('settings.tabs.circuit')}
                     </button>
-                    <button class="tab-btn" data-tab="logs" ${t?"":'style="display:none;"'}>
+                    <button class="tab-btn" data-tab="logs" ${!isAdmin ? 'style="display:none;"' : ''}>
                         <i class="fas fa-history ml-2"></i>
-                        ${I18n.t("settings.tabs.logs")}
+                        ${I18n.t('settings.tabs.logs')}
                     </button>
                 </div>
             </div>
@@ -101,154 +530,154 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 <div class="settings-group-header">
                     <h2 class="settings-group-title">
                         <i class="fas fa-building text-blue-600 ml-2"></i>
-                        ${I18n.t("settings.company.title")}
+                        ${I18n.t('settings.company.title')}
                     </h2>
-                    <p class="settings-group-subtitle">${I18n.t("settings.company.subtitle")}</p>
+                    <p class="settings-group-subtitle">${I18n.t('settings.company.subtitle')}</p>
                 </div>
                 <div class="settings-group-content">
                     <div class="content-card">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-building ml-2"></i>${I18n.t("settings.company.title")}</h2>
+                            <h2 class="card-title"><i class="fas fa-building ml-2"></i>${I18n.t('settings.company.title')}</h2>
                         </div>
                         <div class="card-body space-y-4">
                             <div>
                                 <label for="company-name-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-pen ml-2"></i>
-                                    ${I18n.t("settings.company.name")}
+                                    ${I18n.t('settings.company.name')}
                                 </label>
                                 <input type="text" id="company-name-input" class="form-input"
-                                    placeholder="${I18n.isRTL()?"\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629":"Enter company name"}" value="${Utils.escapeHTML(AppState.companySettings?.name||"")}">
+                                    placeholder="${I18n.isRTL() ? 'أدخل اسم الشركة' : 'Enter company name'}" value="${Utils.escapeHTML(AppState.companySettings?.name || '')}">
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    ${I18n.t("settings.company.nameHint")}
+                                    ${I18n.t('settings.company.nameHint')}
                                 </p>
                             </div>
                             <div>
                                 <label for="company-name-font-size-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-text-height ml-2"></i>
-                                    ${I18n.t("settings.company.fontSize")}
+                                    ${I18n.t('settings.company.fontSize')}
                                 </label>
                                 <div class="flex items-center gap-3">
                                     <input type="number" id="company-name-font-size-input" class="form-input" min="8" max="72" step="1"
-                                        placeholder="${I18n.isRTL()?"\u0645\u062B\u0627\u0644: 16":"e.g., 16"}" value="${AppState.companySettings?.nameFontSize||"16"}">
-                                    <span class="text-xs text-gray-500">${I18n.isRTL()?"\u0628\u0643\u0633\u0644":"px"}</span>
+                                        placeholder="${I18n.isRTL() ? 'مثال: 16' : 'e.g., 16'}" value="${AppState.companySettings?.nameFontSize || '16'}">
+                                    <span class="text-xs text-gray-500">${I18n.isRTL() ? 'بكسل' : 'px'}</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    ${I18n.t("settings.company.fontSizeHint")}
+                                    ${I18n.t('settings.company.fontSizeHint')}
                                 </p>
                             </div>
                             <div>
                                 <label for="company-secondary-name-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-pen-nib ml-2"></i>
-                                    ${I18n.t("settings.company.secondaryName")}
+                                    ${I18n.t('settings.company.secondaryName')}
                                 </label>
                                 <input type="text" id="company-secondary-name-input" class="form-input"
-                                    placeholder="${I18n.isRTL()?"\u0623\u062F\u062E\u0644 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u064A \u0644\u0644\u0634\u0631\u0643\u0629":"Enter secondary company name"}" value="${Utils.escapeHTML(AppState.companySettings?.secondaryName||"")}">
+                                    placeholder="${I18n.isRTL() ? 'أدخل الاسم الإضافي للشركة' : 'Enter secondary company name'}" value="${Utils.escapeHTML(AppState.companySettings?.secondaryName || '')}">
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    ${I18n.t("settings.company.secondaryNameHint")}
+                                    ${I18n.t('settings.company.secondaryNameHint')}
                                 </p>
                             </div>
                             <div>
                                 <label for="company-secondary-name-font-size-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-text-height ml-2"></i>
-                                    \u062D\u062C\u0645 \u062E\u0637 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u064A (\u0628\u0627\u0644\u0628\u0643\u0633\u0644)
+                                    حجم خط الاسم الإضافي (بالبكسل)
                                 </label>
                                 <div class="flex items-center gap-3">
                                     <input type="number" id="company-secondary-name-font-size-input" class="form-input" min="8" max="72" step="1"
-                                        placeholder="\u0645\u062B\u0627\u0644: 14" value="${AppState.companySettings?.secondaryNameFontSize||"14"}">
-                                    <span class="text-xs text-gray-500">\u0628\u0643\u0633\u0644</span>
+                                        placeholder="مثال: 14" value="${AppState.companySettings?.secondaryNameFontSize || '14'}">
+                                    <span class="text-xs text-gray-500">بكسل</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u062D\u062C\u0645 \u0627\u0644\u062E\u0637 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A: 14 \u0628\u0643\u0633\u0644. \u064A\u0645\u0643\u0646\u0643 \u062A\u063A\u064A\u064A\u0631\u0647 \u0645\u0646 8 \u0625\u0644\u0649 72 \u0628\u0643\u0633\u0644.
+                                    حجم الخط الافتراضي: 14 بكسل. يمكنك تغييره من 8 إلى 72 بكسل.
                                 </p>
                             </div>
                             <div>
                                 <span id="company-secondary-name-color-label" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-palette ml-2"></i>
-                                    \u0644\u0648\u0646 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u064A
+                                    لون الاسم الإضافي
                                 </span>
                                 <div class="flex items-center gap-3" role="group" aria-labelledby="company-secondary-name-color-label">
-                                    <label for="company-secondary-name-color-input" class="sr-only">\u0644\u0648\u0646 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u064A (\u0645\u0646\u062A\u0642\u064A)</label>
+                                    <label for="company-secondary-name-color-input" class="sr-only">لون الاسم الإضافي (منتقي)</label>
                                     <input type="color" id="company-secondary-name-color-input" class="form-input" style="width: 80px; height: 40px; cursor: pointer;"
-                                        value="${AppState.companySettings?.secondaryNameColor||"#6B7280"}">
-                                    <label for="company-secondary-name-color-text-input" class="sr-only">\u0644\u0648\u0646 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u064A (\u0643\u0648\u062F)</label>
+                                        value="${AppState.companySettings?.secondaryNameColor || '#6B7280'}">
+                                    <label for="company-secondary-name-color-text-input" class="sr-only">لون الاسم الإضافي (كود)</label>
                                     <input type="text" id="company-secondary-name-color-text-input" class="form-input flex-1"
-                                        placeholder="#6B7280" value="${AppState.companySettings?.secondaryNameColor||"#6B7280"}">
+                                        placeholder="#6B7280" value="${AppState.companySettings?.secondaryNameColor || '#6B7280'}">
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u064A\u0645\u0643\u0646\u0643 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0644\u0648\u0646 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0645\u0646\u062A\u0642\u064A \u0627\u0644\u0623\u0644\u0648\u0627\u0646 \u0623\u0648 \u0625\u062F\u062E\u0627\u0644 \u0643\u0648\u062F \u0627\u0644\u0644\u0648\u0646 \u0645\u0628\u0627\u0634\u0631\u0629 (\u0645\u062B\u0644: #6B7280 \u0623\u0648 rgb(107, 112, 128)).
+                                    يمكنك اختيار اللون باستخدام منتقي الألوان أو إدخال كود اللون مباشرة (مثل: #6B7280 أو rgb(107, 112, 128)).
                                 </p>
                             </div>
                             <div>
                                 <label for="form-version-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-code-branch ml-2"></i>
-                                    \u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 (\u064A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u0647\u064A\u062F\u0631 \u0648\u0627\u0644\u0641\u0648\u062A\u0631)
+                                    رقم الإصدار (يظهر في الهيدر والفوتر)
                                 </label>
                                 <input type="text" id="form-version-input" class="form-input"
-                                    placeholder="\u0645\u062B\u0627\u0644: 1.0" value="${Utils.escapeHTML(AppState.companySettings?.formVersion||"1.0")}">
+                                    placeholder="مثال: 1.0" value="${Utils.escapeHTML(AppState.companySettings?.formVersion || '1.0')}">
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u0633\u064A\u062A\u0645 \u0639\u0631\u0636 \u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0641\u064A \u0627\u0644\u0647\u064A\u062F\u0631 \u0648\u0627\u0644\u0641\u0648\u062A\u0631 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0648\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631.
+                                    سيتم عرض رقم الإصدار في الهيدر والفوتر لجميع النماذج والتقارير.
                                 </p>
                             </div>
                             <div>
                                 <label for="clinic-monthly-visits-threshold-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-hospital ml-2"></i>
-                                    \u062D\u062F \u062A\u0646\u0628\u064A\u0647 \u0632\u064A\u0627\u0631\u0627\u062A \u0627\u0644\u0639\u064A\u0627\u062F\u0629 \u0627\u0644\u0634\u0647\u0631\u064A\u0629
+                                    حد تنبيه زيارات العيادة الشهرية
                                 </label>
                                 <div class="flex items-center gap-3">
                                     <input type="number" id="clinic-monthly-visits-threshold-input" class="form-input" min="1" max="1000" step="1"
-                                        placeholder="10" value="${Math.max(1,Math.min(1e3,parseInt(AppState.companySettings?.clinicMonthlyVisitsAlertThreshold,10)||10))}">
-                                    <span class="text-xs text-gray-500">\u0632\u064A\u0627\u0631\u0629/\u0634\u0647\u0631</span>
+                                        placeholder="10" value="${Math.max(1, Math.min(1000, parseInt(AppState.companySettings?.clinicMonthlyVisitsAlertThreshold, 10) || 10))}">
+                                    <span class="text-xs text-gray-500">زيارة/شهر</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u0639\u0646\u062F \u0648\u0635\u0648\u0644 \u0623\u0648 \u062A\u062C\u0627\u0648\u0632 \u0639\u062F\u062F \u0632\u064A\u0627\u0631\u0627\u062A \u0645\u0648\u0638\u0641/\u0645\u0642\u0627\u0648\u0644 \u0644\u0647\u0630\u0627 \u0627\u0644\u062D\u062F \u0641\u064A \u0627\u0644\u0634\u0647\u0631\u060C \u064A\u0638\u0647\u0631 \u062A\u0646\u0628\u064A\u0647 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u064A\u064F\u0631\u0633\u0644 \u0625\u0634\u0639\u0627\u0631 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645.
+                                    عند وصول أو تجاوز عدد زيارات موظف/مقاول لهذا الحد في الشهر، يظهر تنبيه للمستخدم ويُرسل إشعار لمدير النظام.
                                 </p>
                             </div>
                             <div>
                                 <label for="employee-import-hire-months-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-user-plus ml-2"></i>
-                                    \u0641\u062A\u0631\u0629 \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 (\u0628\u0627\u0644\u0623\u0634\u0647\u0631)
+                                    فترة استيراد الموظفين (بالأشهر)
                                 </label>
                                 <div class="flex items-center gap-3">
                                     <input type="number" id="employee-import-hire-months-input" class="form-input" min="1" max="120" step="1"
-                                        placeholder="3" value="${Math.max(1,Math.min(120,parseInt(AppState.companySettings?.employeeImportHireMonths,10)||3))}">
-                                    <span class="text-xs text-gray-500">\u0634\u0647\u0631</span>
+                                        placeholder="3" value="${Math.max(1, Math.min(120, parseInt(AppState.companySettings?.employeeImportHireMonths, 10) || 3))}">
+                                    <span class="text-xs text-gray-500">شهر</span>
                                 </div>
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u0639\u0646\u062F \u0627\u0633\u062A\u064A\u0631\u0627\u062F Excel: \u064A\u064F\u0642\u0628\u0644 \u0641\u0642\u0637 \u0627\u0644\u062C\u062F\u062F \u0627\u0644\u0630\u064A\u0646 \u062A\u0627\u0631\u064A\u062E \u062A\u0639\u064A\u064A\u0646\u0647\u0645 \u062E\u0644\u0627\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062F\u0629 \u062D\u062A\u0649 \u0627\u0644\u064A\u0648\u0645 (\u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A 3). \u0644\u0627 \u064A\u0624\u062B\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u064A\u0646.
+                                    عند استيراد Excel: يُقبل فقط الجدد الذين تاريخ تعيينهم خلال هذه المدة حتى اليوم (الافتراضي 3). لا يؤثر على الموظفين الموجودين.
                                 </p>
                             </div>
                             <div>
                                 <label for="profile-teams-url-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fab fa-microsoft ml-2"></i>
-                                    \u0631\u0627\u0628\u0637 Microsoft Teams (\u064A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A)
+                                    رابط Microsoft Teams (يظهر في الملف الشخصي)
                                 </label>
                                 <input type="url" id="profile-teams-url-input" class="form-input" dir="ltr"
                                     placeholder="https://teams.microsoft.com/..."
-                                    value="${Utils.escapeHTML(AppState.companySettings?.profileTeamsUrl||"")}">
+                                    value="${Utils.escapeHTML(AppState.companySettings?.profileTeamsUrl || '')}">
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u0631\u0627\u0628\u0637 \u0642\u0646\u0627\u0629 \u0623\u0648 \u0641\u0631\u064A\u0642 \u0623\u0648 \u0627\u062C\u062A\u0645\u0627\u0639 Teams. \u064A\u064F\u0639\u0631\u0636 \u0643\u0623\u064A\u0642\u0648\u0646\u0629 \u0628\u062C\u0627\u0646\u0628 \xAB\u062A\u063A\u064A\u064A\u0631 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631\xBB.
+                                    رابط قناة أو فريق أو اجتماع Teams. يُعرض كأيقونة بجانب «تغيير كلمة المرور».
                                 </p>
                             </div>
                             <div>
                                 <label for="profile-whatsapp-url-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fab fa-whatsapp ml-2"></i>
-                                    \u0631\u0627\u0628\u0637 \u0648\u0627\u062A\u0633\u0627\u0628 (\u064A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A)
+                                    رابط واتساب (يظهر في الملف الشخصي)
                                 </label>
                                 <input type="url" id="profile-whatsapp-url-input" class="form-input" dir="ltr"
-                                    placeholder="https://wa.me/9665xxxxxxxx \u0623\u0648 \u0631\u0627\u0628\u0637 \u0645\u062C\u0645\u0648\u0639\u0629"
-                                    value="${Utils.escapeHTML(AppState.companySettings?.profileWhatsAppUrl||"")}">
+                                    placeholder="https://wa.me/9665xxxxxxxx أو رابط مجموعة"
+                                    value="${Utils.escapeHTML(AppState.companySettings?.profileWhatsAppUrl || '')}">
                                 <p class="text-xs text-gray-500 mt-1">
                                     <i class="fas fa-info-circle ml-1"></i>
-                                    \u0625\u0630\u0627 \u062A\u064F\u0631\u0643 \u0641\u0627\u0631\u063A\u0627\u064B\u060C \u064A\u064F\u0633\u062A\u062E\u062F\u0645 \u0631\u0642\u0645 \u0627\u0644\u0647\u0627\u062A\u0641 \u0645\u0646 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u0644\u0631\u0627\u0628\u0637 wa.me \u0639\u0646\u062F\u0645\u0627 \u064A\u0643\u0648\u0646 \u0627\u0644\u0631\u0642\u0645 \u0635\u0627\u0644\u062D\u0627\u064B.
+                                    إذا تُرك فارغاً، يُستخدم رقم الهاتف من بيانات الموظف لرابط wa.me عندما يكون الرقم صالحاً.
                                 </p>
                             </div>
                             <div class="md:col-span-2 border-t pt-4">
@@ -258,25 +687,25 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                             <span class="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white shadow-md">
                                                 <i class="fas fa-shield-alt text-sm"></i>
                                             </span>
-                                            \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u062D\u062F\u0651 \u0627\u0644\u0623\u062F\u0646\u0649 \u0628\u064A\u0646 \u0627\u0633\u062A\u0644\u0627\u0645\u064E\u064A\u0646 \u0628\u0646\u0641\u0633 \u0627\u0644\u0645\u0648\u0638\u0641 (\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629)
+                                            قواعد الحدّ الأدنى بين استلامَين بنفس الموظف (مهمات الوقاية)
                                         </h3>
                                         <p class="text-xs text-blue-800/85 leading-relaxed max-w-3xl">
-                                            \u062C\u062F\u0651\u062F \u0627\u0644\u062C\u062F\u0648\u0644 \u0644\u0643\u0644 <strong class="font-semibold">\u0635\u0646\u0641</strong> \u0639\u062F\u062F <strong class="font-semibold">\u0627\u0644\u0634\u0647\u0648\u0631</strong> \u0643\u062D\u062F\u0651 \u0623\u062F\u0646\u0649 \u0628\u064A\u0646 \u0627\u0633\u062A\u0644\u0627\u0645 \u0648\u0627\u062D\u062F \u0648\u0627\u0644\u0630\u064A \u0628\u0639\u062F\u0647. \u062B\u0645 \u0627\u062D\u0641\u0638 \u0628\u0640<strong>\xAB\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\xBB</strong> \u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0634\u064A\u062A \u0648\u0627\u0644\u062A\u0637\u0628\u064A\u0642.
+                                            جدّد الجدول لكل <strong class="font-semibold">صنف</strong> عدد <strong class="font-semibold">الشهور</strong> كحدّ أدنى بين استلام واحد والذي بعده. ثم احفظ بـ<strong>«حفظ بيانات الشركة»</strong> لمزامنة الشيت والتطبيق.
                                         </p>
                                         <p class="text-[11px] text-slate-600 mt-2">
                                             <i class="fas fa-database ml-1 text-blue-600"></i>
-                                            \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u064F\u0632\u0627\u062F \u0647\u0646\u0627\u061B \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0645\u0639 \u0627\u0644\u062E\u0627\u062F\u0645 \u0639\u0646\u062F \u0636\u063A\u0637 \xAB\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\xBB \u0623\u0633\u0641\u0644 \u0627\u0644\u0628\u0637\u0627\u0642\u0629.
+                                            البيانات تُزاد هنا؛ التخزين مع الخادم عند ضغط «حفظ بيانات الشركة» أسفل البطاقة.
                                         </p>
                                     </div>
                                     <div class="flex flex-wrap items-center gap-2.5">
                                         <button type="button" id="ppe-download-template-btn" style="font-size:1rem;font-weight:800;" class="btn-primary shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                            <i class="fas fa-file-download"></i> \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0644\u0628
+                                            <i class="fas fa-file-download"></i> تحميل قالب
                                         </button>
                                         <button type="button" id="ppe-import-rules-btn" style="font-size:1rem;font-weight:800;" class="btn-primary shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                            <i class="fas fa-file-import"></i> \u0627\u0633\u062A\u064A\u0631\u0627\u062F
+                                            <i class="fas fa-file-import"></i> استيراد
                                         </button>
                                         <button type="button" id="ppe-add-rule-btn" style="font-size:1rem;font-weight:800;" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                            <i class="fas fa-plus"></i> \u0625\u0636\u0627\u0641\u0629 \u0635\u0641
+                                            <i class="fas fa-plus"></i> إضافة صف
                                         </button>
                                     </div>
                                 </div>
@@ -285,10 +714,10 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                             </div>
                             <div class="flex flex-wrap items-center gap-3 pt-3 mt-1 border-t border-slate-200">
                                 <button type="button" id="save-company-settings-btn" style="font-size:1rem;font-weight:800;" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                    <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629
+                                    <i class="fas fa-save ml-2"></i>حفظ بيانات الشركة
                                 </button>
                                 <button type="button" id="reset-company-name-btn" style="font-size:1rem;font-weight:800;" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                    <i class="fas fa-undo ml-2"></i>\u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A
+                                    <i class="fas fa-undo ml-2"></i>استعادة الاسم الافتراضي
                                 </button>
                             </div>
                         </div>
@@ -296,36 +725,36 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                     
                     <div class="content-card mt-6">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-image ml-2"></i>\u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629</h2>
+                            <h2 class="card-title"><i class="fas fa-image ml-2"></i>شعار الشركة</h2>
                         </div>
                         <div class="card-body space-y-4">
                             <div>
 <label for="company-logo-input" class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-upload ml-2"></i>
-                                    \u0631\u0641\u0639 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629
+                                    رفع شعار الشركة
                                 </label>
                                 <div class="flex items-center gap-4">
-                                    ${AppState.companyLogo?`
+                                    ${AppState.companyLogo ? `
                                         <div class="flex-shrink-0">
-                                            <img src="${AppState.companyLogo}" alt="\u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629" id="company-logo-preview"
+                                            <img src="${AppState.companyLogo}" alt="شعار الشركة" id="company-logo-preview"
                                                 class="w-32 h-32 object-contain border border-gray-300 rounded p-2 bg-white">
                                         </div>
-                                    `:""}
+                                    ` : ''}
                                     <div class="flex-1">
                                         <input type="file" id="company-logo-input" accept="image/*" class="form-input text-sm">
                                         <p class="text-xs text-gray-500 mt-1">
                                             <i class="fas fa-info-circle ml-1"></i>
-                                            \u0633\u064A\u062A\u0645 \u0639\u0631\u0636 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u064A\u0633\u0627\u0631 \u062C\u0645\u064A\u0639 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0648\u0627\u0644\u0635\u0641\u062D\u0627\u062A. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629: 2MB
+                                            سيتم عرض الشعار في يسار جميع النماذج والصفحات. الحد الأقصى لحجم الصورة: 2MB
                                         </p>
                                         <div class="flex items-center gap-2 mt-2">
                                             <button type="button" id="upload-logo-btn" style="font-size:1rem;font-weight:800;" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                                <i class="fas fa-upload ml-2"></i>\u0631\u0641\u0639 \u0627\u0644\u0634\u0639\u0627\u0631
+                                                <i class="fas fa-upload ml-2"></i>رفع الشعار
                                             </button>
-                                            ${AppState.companyLogo?`
+                                            ${AppState.companyLogo ? `
                                                 <button type="button" id="remove-logo-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300 bg-red-600 hover:bg-red-700 text-white text-base font-extrabold px-5 py-3 min-h-[48px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300">
-                                                    <i class="fas fa-trash ml-2"></i>\u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0634\u0639\u0627\u0631
+                                                    <i class="fas fa-trash ml-2"></i>إزالة الشعار
                                                 </button>
-                                            `:""}
+                                            ` : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -335,42 +764,42 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
 
                     <div class="content-card mt-6" id="post-login-items-card">
                         <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-clipboard-list ml-2"></i>\u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0648\u0639\u0631\u0648\u0636 \u0645\u0627 \u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644</h2>
+                            <h2 class="card-title"><i class="fas fa-clipboard-list ml-2"></i>تعليمات وعروض ما بعد تسجيل الدخول</h2>
                         </div>
                         <div class="card-body space-y-4">
                             <p class="text-sm text-gray-600">
                                 <i class="fas fa-info-circle ml-1"></i>
-                                \u062A\u0638\u0647\u0631 \u0647\u0630\u0647 \u0627\u0644\u0646\u0635\u0648\u0635 \u0623\u0648 \u0627\u0644\u0633\u064A\u0627\u0633\u0627\u062A \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0644\u0645\u062F\u0629 \u0645\u062D\u062F\u062F\u0629 (\u0645\u062B\u0644 \u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629). \u064A\u0645\u0643\u0646\u0643 \u0625\u0636\u0627\u0641\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0639\u0646\u0635\u0631 \u0648\u062A\u0631\u062A\u064A\u0628\u0647\u0627.
+                                تظهر هذه النصوص أو السياسات للمستخدم بعد تسجيل الدخول لمدة محددة (مثل سياسة السلامة والصحة المهنية). يمكنك إضافة أكثر من عنصر وترتيبها.
                             </p>
                             <div id="post-login-items-list" class="space-y-3"></div>
                             <div class="flex items-center gap-2 pt-2 border-t">
                                 <button type="button" id="post-login-add-item-btn" style="font-size:1rem;font-weight:800;" class="btn-primary inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 text-base font-extrabold px-6 py-3 min-h-[50px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300">
-                                    <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0639\u0646\u0635\u0631
+                                    <i class="fas fa-plus ml-2"></i>إضافة عنصر
                                 </button>
                             </div>
                             <div id="post-login-item-form" class="hidden mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-3">
-                                <h3 class="font-semibold text-gray-800" id="post-login-form-title">\u0625\u0636\u0627\u0641\u0629 \u0639\u0646\u0635\u0631 \u062C\u062F\u064A\u062F</h3>
+                                <h3 class="font-semibold text-gray-800" id="post-login-form-title">إضافة عنصر جديد</h3>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0639\u0646\u0648\u0627\u0646</label>
-                                    <input type="text" id="post-login-item-title" class="form-input" placeholder="\u0645\u062B\u0627\u0644: \u0633\u064A\u0627\u0633\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629" maxlength="200">
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">العنوان</label>
+                                    <input type="text" id="post-login-item-title" class="form-input" placeholder="مثال: سياسة السلامة والصحة المهنية" maxlength="200">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0646\u0635</label>
-                                    <textarea id="post-login-item-body" class="form-input" rows="4" placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0646\u0635 \u0623\u0648 \u0627\u0644\u0633\u064A\u0627\u0633\u0629..." maxlength="2000"></textarea>
-                                    <p class="text-xs text-gray-500 mt-1">\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2000 \u062D\u0631\u0641</p>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">النص</label>
+                                    <textarea id="post-login-item-body" class="form-input" rows="4" placeholder="أدخل النص أو السياسة..." maxlength="2000"></textarea>
+                                    <p class="text-xs text-gray-500 mt-1">الحد الأقصى 2000 حرف</p>
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">\u0645\u062F\u0629 \u0627\u0644\u0639\u0631\u0636 (\u062B\u0627\u0646\u064A\u0629)</label>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">مدة العرض (ثانية)</label>
                                     <input type="number" id="post-login-item-duration" class="form-input" min="0" max="120" value="10" placeholder="10">
-                                    <p class="text-xs text-gray-500 mt-1">0 = \u062D\u062A\u0649 \u064A\u0636\u063A\u0637 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u062A\u062E\u0637\u064A \u0641\u0642\u0637</p>
+                                    <p class="text-xs text-gray-500 mt-1">0 = حتى يضغط المستخدم تخطي فقط</p>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <input type="checkbox" id="post-login-item-active" class="rounded border-gray-300 text-blue-600" checked>
-                                    <label for="post-login-item-active" class="text-sm text-gray-700">\u0645\u0641\u0639\u0651\u0644 (\u064A\u064F\u0639\u0631\u0636 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646)</label>
+                                    <label for="post-login-item-active" class="text-sm text-gray-700">مفعّل (يُعرض للمستخدمين)</label>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <button type="button" id="post-login-item-save-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-save ml-2"></i>\u062D\u0641\u0638</button>
-                                    <button type="button" id="post-login-item-cancel-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621</button>
+                                    <button type="button" id="post-login-item-save-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-base font-extrabold px-5 py-2.5 min-h-[44px] shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-save ml-2"></i>حفظ</button>
+                                    <button type="button" id="post-login-item-cancel-btn" class="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400 bg-blue-600 hover:bg-blue-700 text-white text-base font-bold px-5 py-2.5 min-h-[44px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"><i class="fas fa-times ml-2"></i>إلغاء</button>
                                 </div>
                             </div>
                         </div>
@@ -379,95 +808,95 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 </div>
             </div>
 
-            <!-- Tab Content: \u0627\u0644\u062A\u0643\u0627\u0645\u0644 \u0648\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 -->
+            <!-- Tab Content: التكامل والمزامنة -->
             <div class="tab-content" id="tab-integration">
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-cloud text-green-600 ml-2"></i>
-                            \u0627\u0644\u062A\u0643\u0627\u0645\u0644 \u0648\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629
+                            التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 SQL \u0648\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بخادم SQL والمزامنة مع قاعدة البيانات</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>\u0627\u0644\u062E\u0627\u062F\u0645 \u0648\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629</h2>
+                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>الخادم والمزامنة</h2>
                             </div>
                             <div class="card-body">
                                 <form id="google-settings-form" class="space-y-6">
                                     <div>
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
-                                                ${AppState.googleConfig.appsScript.enabled?"checked":""}>
-                                            <span class="mr-2 text-sm text-gray-700">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A</span>
+                                                ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بالخادم الخلفي</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-link ml-2"></i>
-                                            \u0631\u0627\u0628\u0637 API \u0644\u0644\u062E\u0627\u062F\u0645 (\u0645\u0637\u0644\u0648\u0628 \u0644\u0644\u0645\u0632\u0627\u0645\u0646\u0629)
+                                            رابط API للخادم (مطلوب للمزامنة)
                                         </label>
                                         <input type="url" id="google-apps-script-url" class="form-input"
-                                            value="${AppState.googleConfig.appsScript.scriptUrl||""}"
+                                            value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
                                             placeholder="https://www.safety-icapp.com/api/exec">
                                     </div>
                                     <div>
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-sheets-enabled" class="rounded border-gray-300 text-blue-600"
-                                                ${AppState.googleConfig.sheets.enabled?"checked":""}>
-                                            <span class="mr-2 text-sm text-gray-700">\u062A\u0641\u0639\u064A\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062C\u062F\u0627\u0648\u0644 (\u0625\u0646 \u064A\u0637\u0644\u0628\u0647\u0627 \u0627\u0644\u062E\u0627\u062F\u0645)</span>
+                                                ${AppState.googleConfig.sheets.enabled ? 'checked' : ''}>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل مزامنة الجداول (إن يطلبها الخادم)</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-table ml-2"></i>
-                                            \u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 / \u0627\u0644\u0645\u0634\u0631\u0648\u0639 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)
+                                            معرف الجدول / المشروع (اختياري)
                                         </label>
                                         <input type="text" id="google-sheets-id" class="form-input"
-                                            value="${AppState.googleConfig.sheets.spreadsheetId||""}"
-                                            placeholder="\u0625\u0646 \u0648\u064F\u062C\u062F \u0641\u064A \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062E\u0627\u062F\u0645">
+                                            value="${AppState.googleConfig.sheets.spreadsheetId || ''}"
+                                            placeholder="إن وُجد في إعدادات الخادم">
                                     </div>
                                     <div class="flex items-center justify-end gap-4 pt-4 border-t">
                                         <button type="button" id="test-connection-btn" class="btn-secondary">
                                             <i class="fas fa-plug ml-2"></i>
-                                            \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644
+                                            اختبار الاتصال
                                         </button>
                                         <button type="submit" class="btn-primary">
                                             <i class="fas fa-save ml-2"></i>
-                                            \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
+                                            حفظ الإعدادات
                                         </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                         
-                        <!-- \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F -->
+                        <!-- المزامنة والإعداد -->
                         <div class="content-card mt-6">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-sync ml-2"></i>\u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0648\u0627\u0644\u0625\u0639\u062F\u0627\u062F</h2>
+                                <h2 class="card-title"><i class="fas fa-sync ml-2"></i>المزامنة والإعداد</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <div>
                                     <p class="text-sm text-gray-600 mb-4">
                                         <i class="fas fa-info-circle ml-2"></i>
-                                        \u0633\u064A\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 (Users, Incidents, NearMiss, PTW, Training, Clinic, Fire Equipment, PPE, ViolationTypes, Violations, Contractors) \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0639 \u0627\u0644\u0631\u0624\u0648\u0633 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629
+                                        سيتم إنشاء جميع الأوراق المطلوبة (Users, Incidents, NearMiss, PTW, Training, Clinic, Fire Equipment, PPE, ViolationTypes, Violations, Contractors) تلقائياً مع الرؤوس الافتراضية
                                     </p>
                                     <button id="initialize-sheets-btn" class="btn-primary w-full">
                                         <i class="fas fa-magic ml-2"></i>
-                                        \u0625\u0646\u0634\u0627\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B
+                                        إنشاء جميع الأوراق تلقائياً
                                     </button>
                                 </div>
                                 <div class="border-t pt-4">
                                     <button id="sync-data-btn" class="btn-primary w-full">
                                         <i class="fas fa-sync ml-2"></i>
-                                        \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 (\u0642\u0631\u0627\u0621\u0629)
+                                        مزامنة البيانات من الخادم (قراءة)
                                     </button>
                                 </div>
                                 <div class="border-t pt-4">
                                     <button id="save-all-data-btn" class="btn-success w-full">
                                         <i class="fas fa-cloud-upload-alt ml-2"></i>
-                                        \u062D\u0641\u0638 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645 (\u0643\u062A\u0627\u0628\u0629)
+                                        حفظ جميع البيانات في الخادم (كتابة)
                                     </button>
                                 </div>
                             </div>
@@ -476,55 +905,55 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 </div>
             </div>
 
-            <!-- Tab Content: \u062A\u0643\u0627\u0645\u0644 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u064A -->
+            <!-- Tab Content: تكامل التخزين السحابي -->
             <div class="tab-content" id="tab-cloud-storage">
-                ${t?this.renderCloudStorageSettings():'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0641\u0642\u0637</p></div>'}
+                ${isAdmin ? this.renderCloudStorageSettings() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
 
-            <!-- Tab Content: \u0627\u0644\u062E\u0627\u062F\u0645 -->
+            <!-- Tab Content: الخادم -->
             <div class="tab-content" id="tab-google-drive">
-                ${t?this.renderGoogleDriveSettings():'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0641\u0642\u0637</p></div>'}
+                ${isAdmin ? this.renderGoogleDriveSettings() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
 
             <!-- Tab Content: Microsoft SharePoint -->
             <div class="tab-content" id="tab-sharepoint">
-                ${t?this.renderSharePointSettings():'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0641\u0642\u0637</p></div>'}
+                ${isAdmin ? this.renderSharePointSettings() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
 
-            <!-- Tab Content: \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0638\u0627\u0645 -->
+            <!-- Tab Content: إعدادات النظام -->
             <div class="tab-content" id="tab-system-settings">
                 ${this.renderSystemVersionCard()}
-                ${this.isCurrentUserAdmin()?this.renderUserPhotoMigrationCard():""}
+                ${this.isCurrentUserAdmin() ? this.renderUserPhotoMigrationCard() : ''}
                 ${this.renderEmergencyContactsCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-sliders-h text-purple-600 ml-2"></i>
-                            \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0638\u0627\u0645
+                            إعدادات النظام
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0648\u0627\u0644\u0623\u0646\u0648\u0627\u0639</p>
+                        <p class="settings-group-subtitle">إعدادات التاريخ والنماذج والأنواع</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-calendar-alt ml-2"></i>\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E</h2>
+                                <h2 class="card-title"><i class="fas fa-calendar-alt ml-2"></i>إعدادات التاريخ</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <div>
                                     <label class="block text-sm font-semibold text-gray-700 mb-2">
                                         <i class="fas fa-calendar-check ml-2"></i>
-                                        \u0646\u0648\u0639 \u0627\u0644\u062A\u0642\u0648\u064A\u0645
+                                        نوع التقويم
                                     </label>
                                     <select id="date-format-select" class="form-input">
-                                        <option value="gregorian" ${AppState.dateFormat==="gregorian"?"selected":""}>\u0627\u0644\u0645\u064A\u0644\u0627\u062F\u064A (Gregorian)</option>
-                                        <option value="hijri" ${AppState.dateFormat==="hijri"?"selected":""}>\u0627\u0644\u0647\u062C\u0631\u064A (Hijri)</option>
+                                        <option value="gregorian" ${AppState.dateFormat === 'gregorian' ? 'selected' : ''}>الميلادي (Gregorian)</option>
+                                        <option value="hijri" ${AppState.dateFormat === 'hijri' ? 'selected' : ''}>الهجري (Hijri)</option>
                                     </select>
                                     <p class="text-xs text-gray-500 mt-1">
                                         <i class="fas fa-info-circle ml-1"></i>
-                                        \u0633\u064A\u062A\u0645 \u062A\u0637\u0628\u064A\u0642 \u0646\u0648\u0639 \u0627\u0644\u062A\u0642\u0648\u064A\u0645 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u062A\u0648\u0627\u0631\u064A\u062E \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645
+                                        سيتم تطبيق نوع التقويم على جميع التواريخ في النظام
                                     </p>
                                     <button type="button" id="save-date-format-btn" class="btn-primary mt-2">
-                                        <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E
+                                        <i class="fas fa-save ml-2"></i>حفظ إعدادات التاريخ
                                     </button>
                                 </div>
                             </div>
@@ -532,65 +961,65 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
 
                         <div class="content-card mt-6">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-clock ml-2"></i>\u062D\u0633\u0627\u0628 \u0625\u062C\u0645\u0627\u0644\u064A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u2014 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645</h2>
+                                <h2 class="card-title"><i class="fas fa-clock ml-2"></i>حساب إجمالي ساعات العمل — لوحة التحكم</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                    \u064A\u064F\u0633\u062A\u062E\u062F\u0645 \u0644\u0643\u0627\u0631\u062A <strong>\u0639\u062F\u062F \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644</strong> \u0648\u0645\u0624\u0634\u0651\u0631\u064A <strong>TRIR</strong> \u0648<strong>AFR</strong> \u0648<strong>FAR</strong> \u0648<strong>FR</strong> \u0648<strong>LTI</strong> (\u0639\u0628\u0631 \u0645\u062D\u0631\u0643 HseMetrics \u0627\u0644\u0645\u0648\u062D\u0651\u062F \u0645\u0639 \u0627\u0644\u0633\u0643\u0648\u0631\u0643\u0627\u0631\u062F).
-                                    \u0625\u0646 \u0644\u0645 \u064A\u064F\u0645\u0644\u0623 \xAB\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u064A\u062F\u0648\u064A\xBB \u064A\u064F\u0642\u062F\u0651\u064E\u0631 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0646: \u0645\u0648\u0638\u0641\u0648\u0646 \u0646\u0634\u0637\u0648\u0646 \xD7 (\u0633\u0627\u0639\u0627\u062A/\u064A\u0648\u0645 \xD7 \u0623\u064A\u0627\u0645/\u0634\u0647\u0631 \xD7 \u0623\u0634\u0647\u0631/\u0633\u0646\u0629) \u0645\u0639 \u0625\u0636\u0627\u0641\u0629 \u0639\u0645\u0627\u0644\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0625\u0646 \u0641\u064F\u0639\u0651\u0644 \u0627\u0644\u062E\u064A\u0627\u0631 \u0648\u0648\u064F\u062C\u062F\u062A \u0623\u0639\u062F\u0627\u062F \u0641\u064A \u0633\u062C\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0627\u0644\u0645\u0639\u062A\u0645\u062F.
+                                    يُستخدم لكارت <strong>عدد ساعات العمل</strong> ومؤشّري <strong>TRIR</strong> و<strong>AFR</strong> و<strong>FAR</strong> و<strong>FR</strong> و<strong>LTI</strong> (عبر محرك HseMetrics الموحّد مع السكوركارد).
+                                    إن لم يُملأ «إجمالي الساعات اليدوي» يُقدَّر الإجمالي من: موظفون نشطون × (ساعات/يوم × أيام/شهر × أشهر/سنة) مع إضافة عمالة المقاولين إن فُعّل الخيار ووُجدت أعداد في سجل المقاول المعتمد.
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div class="md:col-span-2">
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-total-override">\u0625\u062C\u0645\u0627\u0644\u064A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644 (\u064A\u062F\u0648\u064A \u2014 \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062A\u0642\u062F\u064A\u0631)</label>
-                                        <input type="text" id="wh-total-override" class="form-input" placeholder="\u0627\u062A\u0631\u0643\u0647 \u0641\u0627\u0631\u063A\u0627\u064B \u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u0642\u062F\u064A\u0631 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A" inputmode="decimal" autocomplete="off" />
-                                        <p class="text-xs text-gray-500 mt-1">\u064A\u064F\u062D\u0641\u0638 \u0641\u064A \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u062D\u0644\u064A \u062A\u062D\u062A \u0627\u0644\u0645\u0641\u062A\u0627\u062D <code class="text-xs">hse_total_work_hours</code>. \u0641\u0627\u0631\u063A = \u062D\u0630\u0641 \u0627\u0644\u064A\u062F\u0648\u064A.</p>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-total-override">إجمالي ساعات العمل (يدوي — يتجاوز التقدير)</label>
+                                        <input type="text" id="wh-total-override" class="form-input" placeholder="اتركه فارغاً لاستخدام التقدير التلقائي" inputmode="decimal" autocomplete="off" />
+                                        <p class="text-xs text-gray-500 mt-1">يُحفظ في التخزين المحلي تحت المفتاح <code class="text-xs">hse_total_work_hours</code>. فارغ = حذف اليدوي.</p>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-hours-per-day">\u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u064A\u0648\u0645\u064A\u0627\u064B</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-hours-per-day">ساعات العمل يومياً</label>
                                         <input type="number" id="wh-hours-per-day" class="form-input" min="1" max="24" step="0.25" placeholder="8" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-days-per-month">\u0623\u064A\u0627\u0645 \u0627\u0644\u0639\u0645\u0644 \u0641\u064A \u0627\u0644\u0634\u0647\u0631</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-days-per-month">أيام العمل في الشهر</label>
                                         <input type="number" id="wh-days-per-month" class="form-input" min="1" max="31" step="1" placeholder="22" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-months-per-year">\u0639\u062F\u062F \u0627\u0644\u0623\u0634\u0647\u0631 \u0641\u064A \u0627\u0644\u0633\u0646\u0629 (\u0644\u0644\u062A\u0642\u062F\u064A\u0631)</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-months-per-year">عدد الأشهر في السنة (للتقدير)</label>
                                         <input type="number" id="wh-months-per-year" class="form-input" min="1" max="12" step="1" placeholder="12" />
                                     </div>
                                     <div class="flex items-center pt-6">
                                         <input type="checkbox" id="wh-include-contractors" class="form-checkbox h-5 w-5" />
-                                        <label for="wh-include-contractors" class="mr-2 text-sm font-medium text-gray-800">\u0625\u0636\u0627\u0641\u0629 \u0639\u0645\u0627\u0644\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u064A\u0646 (\u0645\u0646 \u062D\u0642\u0648\u0644 \u0631\u0642\u0645\u064A\u0629 \u0641\u064A \u0627\u0644\u0633\u062C\u0644 \u0625\u0646 \u0648\u064F\u062C\u062F\u062A)</label>
+                                        <label for="wh-include-contractors" class="mr-2 text-sm font-medium text-gray-800">إضافة عمالة المقاولين المعتمدين (من حقول رقمية في السجل إن وُجدت)</label>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-trir">\u0645\u0636\u0627\u0639\u0641 TRIR</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-trir">مضاعف TRIR</label>
                                         <input type="number" id="wh-multiplier-trir" class="form-input" min="1" step="1000" placeholder="200000" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-afr">\u0645\u0636\u0627\u0639\u0641 AFR</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-afr">مضاعف AFR</label>
                                         <input type="number" id="wh-multiplier-afr" class="form-input" min="1" step="1000" placeholder="1000000" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-far">\u0645\u0636\u0627\u0639\u0641 FAR</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-far">مضاعف FAR</label>
                                         <input type="number" id="wh-multiplier-far" class="form-input" min="1" step="1000000" placeholder="100000000" />
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-sr">\u0645\u0636\u0627\u0639\u0641 SR</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-sr">مضاعف SR</label>
                                         <input type="number" id="wh-multiplier-sr" class="form-input" min="1" step="1000" placeholder="1000000" />
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-ir">\u0645\u0636\u0627\u0639\u0641 IR</label>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2" for="wh-multiplier-ir">مضاعف IR</label>
                                         <input type="number" id="wh-multiplier-ir" class="form-input" min="1" step="1000" placeholder="1000000" />
                                     </div>
                                 </div>
                                 <p class="text-xs text-gray-500">
-                                    \u0627\u0644\u0645\u0641\u0627\u062A\u064A\u062D: <code>hse_hours_per_day</code>\u060C <code>hse_work_days_per_month</code>\u060C <code>hse_multiplier_trir/afr/far/sr/ir</code>.
+                                    المفاتيح: <code>hse_hours_per_day</code>، <code>hse_work_days_per_month</code>، <code>hse_multiplier_trir/afr/far/sr/ir</code>.
                                 </p>
                                 <button type="button" id="save-work-hours-settings-btn" class="btn-primary">
-                                    <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644
+                                    <i class="fas fa-save ml-2"></i>حفظ إعدادات ساعات العمل
                                 </button>
                             </div>
                         </div>
@@ -602,10 +1031,10 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                     <div class="settings-group-header">
                         <h3 class="settings-group-title">
                             <i class="fas fa-database ml-2"></i>
-                            \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629
+                            إدارة النسخ الاحتياطية
                         </h3>
                         <p class="settings-group-subtitle">
-                            \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u0644\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0648\u0625\u0646\u0634\u0627\u0621 \u0646\u0633\u062E \u064A\u062F\u0648\u064A\u0629
+                            إدارة النسخ الاحتياطية للبيانات وإنشاء نسخ يدوية
                         </p>
                     </div>
                     <div class="settings-group-content">
@@ -613,42 +1042,42 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
                             <h4 class="text-lg font-semibold mb-4 flex items-center">
                                 <i class="fas fa-chart-bar ml-2 text-blue-600"></i>
-                                \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629
+                                إحصائيات النسخ الاحتياطية
                             </h4>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0646\u0633\u062E</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">إجمالي النسخ</p>
                                     <p class="text-xl font-bold" id="total-backups-count">0</p>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0646\u0627\u062C\u062D\u0629</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">النسخ الناجحة</p>
                                     <p class="text-xl font-bold text-green-600" id="successful-backups-count">0</p>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0641\u0627\u0634\u0644\u0629</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">النسخ الفاشلة</p>
                                     <p class="text-xl font-bold text-red-600" id="failed-backups-count">0</p>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0645\u0639\u062F\u0644 \u0627\u0644\u0646\u062C\u0627\u062D</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">معدل النجاح</p>
                                     <p class="text-xl font-bold" id="backup-success-rate">0%</p>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0622\u062E\u0631 \u0646\u0633\u062E\u0629</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">آخر نسخة</p>
                                     <p class="text-sm" id="last-backup-time">-</p>
                                 </div>
                                 <div class="bg-gray-50 dark:bg-gray-700 rounded p-4">
-                                    <p class="text-sm text-gray-600 dark:text-gray-400">\u0627\u0644\u0645\u0633\u0627\u062D\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0629</p>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400">المساحة المستخدمة</p>
                                     <p class="text-sm font-bold" id="backup-storage-used">0 Bytes</p>
                                 </div>
                             </div>
                             <div class="mt-4 flex gap-2">
                                 <button id="create-manual-backup-btn" class="btn btn-primary">
                                     <i class="fas fa-database ml-2"></i>
-                                    \u0625\u0646\u0634\u0627\u0621 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629 \u064A\u062F\u0648\u064A\u0629
+                                    إنشاء نسخة احتياطية يدوية
                                 </button>
                                 <button id="refresh-backups-btn" class="btn btn-secondary">
                                     <i class="fas fa-sync-alt ml-2"></i>
-                                    \u062A\u062D\u062F\u064A\u062B
+                                    تحديث
                                 </button>
                             </div>
                         </div>
@@ -657,37 +1086,37 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
                             <h4 class="text-lg font-semibold mb-4 flex items-center">
                                 <i class="fas fa-cog ml-2 text-green-600"></i>
-                                \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629
+                                إعدادات النسخ الاحتياطية
                             </h4>
                             <div class="space-y-4">
                                 <div class="flex items-center">
                                     <input type="checkbox" id="auto-backup-enabled" class="form-checkbox">
-                                    <label for="auto-backup-enabled" class="mr-2">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A</label>
+                                    <label for="auto-backup-enabled" class="mr-2">تفعيل النسخ الاحتياطي التلقائي</label>
                                 </div>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label class="block text-sm font-medium mb-2">\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0644\u0646\u0633\u062E</label>
+                                        <label class="block text-sm font-medium mb-2">الحد الأقصى للنسخ</label>
                                         <input type="number" id="max-backup-files" class="form-input" value="30" min="1" max="100">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-medium mb-2">\u0645\u062F\u0629 \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 (\u0628\u0627\u0644\u0623\u064A\u0627\u0645)</label>
+                                        <label class="block text-sm font-medium mb-2">مدة الاحتفاظ (بالأيام)</label>
                                         <input type="number" id="retention-days" class="form-input" value="30" min="1" max="365">
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-4">
                                     <label class="flex items-center">
                                         <input type="checkbox" id="notify-on-backup" class="form-checkbox" checked>
-                                        <span class="mr-2">\u0625\u0634\u0639\u0627\u0631 \u0639\u0646\u062F \u0625\u0646\u0634\u0627\u0621 \u0646\u0633\u062E\u0629 \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629</span>
+                                        <span class="mr-2">إشعار عند إنشاء نسخة احتياطية</span>
                                     </label>
                                     <label class="flex items-center">
                                         <input type="checkbox" id="notify-on-failure" class="form-checkbox" checked>
-                                        <span class="mr-2">\u0625\u0634\u0639\u0627\u0631 \u0639\u0646\u062F \u0641\u0634\u0644 \u0627\u0644\u0646\u0633\u062E</span>
+                                        <span class="mr-2">إشعار عند فشل النسخ</span>
                                     </label>
                                 </div>
                                 <div class="flex gap-2">
                                     <button id="save-backup-settings-btn" class="btn btn-primary">
                                         <i class="fas fa-save ml-2"></i>
-                                        \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
+                                        حفظ الإعدادات
                                     </button>
                                 </div>
                             </div>
@@ -697,47 +1126,47 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                             <h4 class="text-lg font-semibold mb-4 flex items-center">
                                 <i class="fas fa-list ml-2 text-purple-600"></i>
-                                \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0646\u0633\u062E \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629
+                                قائمة النسخ الاحتياطية
                             </h4>
                             <div id="backups-list" class="space-y-3 max-h-96 overflow-y-auto">
-                                <p class="text-gray-500 text-center py-4">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</p>
+                                <p class="text-gray-500 text-center py-4">جاري التحميل...</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Tab Content: \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C -->
+            <!-- Tab Content: إعدادات النماذج -->
             <div class="tab-content" id="tab-form-settings">
-                ${t&&typeof Permissions?.renderFormSettingsCard=="function"?Permissions.renderFormSettingsCard():'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0641\u0642\u0637</p></div>'}
+                ${isAdmin && typeof Permissions?.renderFormSettingsCard === 'function' ? Permissions.renderFormSettingsCard() : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
 
-            <!-- Tab Content: \u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A -->
+            <!-- Tab Content: إدارة أنواع المخالفات -->
             <div class="tab-content" id="tab-violation-types">
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-tags text-purple-600 ml-2"></i>
-                            \u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A
+                            إدارة أنواع المخالفات
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645</p>
+                        <p class="settings-group-subtitle">إدارة أنواع المخالفات في النظام</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header flex items-center justify-between flex-wrap gap-2">
-                                <h2 class="card-title"><i class="fas fa-tags ml-2"></i>\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h2>
+                                <h2 class="card-title"><i class="fas fa-tags ml-2"></i>إدارة أنواع المخالفات</h2>
                                 <div class="flex flex-wrap gap-2 items-center">
-                                    <button type="button" id="export-violation-types-btn" class="btn-secondary" title="\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0625\u0644\u0649 \u0645\u0644\u0641 Excel">
+                                    <button type="button" id="export-violation-types-btn" class="btn-secondary" title="تصدير القائمة إلى ملف Excel">
                                         <i class="fas fa-file-export ml-2 text-green-700"></i>
-                                        \u062A\u0635\u062F\u064A\u0631 \u0625\u0644\u0649 Excel
+                                        تصدير إلى Excel
                                     </button>
                                     <button type="button" id="import-violation-types-btn" class="btn-secondary">
                                         <i class="fas fa-file-excel ml-2 text-green-700"></i>
-                                        \u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u0646 Excel
+                                        استيراد من Excel
                                     </button>
                                     <button type="button" id="add-violation-type-btn" class="btn-primary">
                                         <i class="fas fa-plus ml-2"></i>
-                                        \u0625\u0636\u0627\u0641\u0629 \u0646\u0648\u0639 \u0645\u062E\u0627\u0644\u0641\u0629
+                                        إضافة نوع مخالفة
                                     </button>
                                 </div>
                             </div>
@@ -751,75 +1180,77 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 </div>
             </div>
 
-            <!-- Tab Content: \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A -->
+            <!-- Tab Content: التقارير والإشعارات -->
             <div class="tab-content" id="tab-reports">
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-file-pdf text-red-600 ml-2"></i>
-                            \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A
+                            التقارير والإشعارات
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0627\u0631\u064A\u0631 PDF \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                        <p class="settings-group-subtitle">إنشاء تقارير PDF لجميع البيانات</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-file-pdf ml-2"></i>\u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631</h2>
+                                <h2 class="card-title"><i class="fas fa-file-pdf ml-2"></i>إنشاء التقارير</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 mb-4">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0627\u0631\u064A\u0631 PDF \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A
+                                    إنشاء تقارير PDF لجميع البيانات
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <button id="generate-incidents-report-btn" class="btn-secondary w-full">
                                         <i class="fas fa-file-pdf ml-2"></i>
-                                        \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B
+                                        تقرير الحوادث
                                     </button>
                                     <button id="generate-training-report-btn" class="btn-secondary w-full">
                                         <i class="fas fa-file-pdf ml-2"></i>
-                                        \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062A\u062F\u0631\u064A\u0628
+                                        تقرير التدريب
                                     </button>
                                     <button id="generate-ptw-report-btn" class="btn-secondary w-full">
                                         <i class="fas fa-file-pdf ml-2"></i>
-                                        \u062A\u0642\u0631\u064A\u0631 \u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644
+                                        تقرير تصاريح العمل
                                     </button>
                                     <button id="generate-full-report-btn" class="btn-primary w-full">
                                         <i class="fas fa-file-pdf ml-2"></i>
-                                        \u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 (\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A)
+                                        تقرير شامل (جميع البيانات)
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        ${t?`
+                        ${isAdmin ? `
                         <div class="content-card mt-4">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-calendar-check ml-2"></i>\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0634\u0647\u0631\u064A</h2>
+                                <h2 class="card-title"><i class="fas fa-calendar-check ml-2"></i>تقرير السلامة الشهري</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <p class="text-sm text-gray-600 mb-2">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    \u062A\u0642\u0631\u064A\u0631 PDF \u0628\u0646\u0645\u0637 \u0645\u0648\u062D\u0651\u062F \u2014 \u062D\u062F\u0651\u062F \u0627\u0644\u0641\u062A\u0631\u0629 \u0645\u0646 / \u0625\u0644\u0649 \u2014 \u0645\u0648\u0642\u0639 \u0648\u0627\u062D\u062F \u0623\u0648 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u0627\u0642\u0639
+                                    تقرير PDF بنمط موحّد — حدّد الفترة من / إلى — موقع واحد أو جميع المواقع
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
-                                        <label for="monthly-safety-from" class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0646 \u062A\u0627\u0631\u064A\u062E</label>
+                                        <label for="monthly-safety-from" class="block text-sm font-semibold text-gray-700 mb-2">من تاريخ</label>
                                         <input type="date" id="monthly-safety-from" class="form-input w-full" value="${this.getMonthlySafetyDefaultFromDate()}">
                                     </div>
                                     <div>
-                                        <label for="monthly-safety-to" class="block text-sm font-semibold text-gray-700 mb-2">\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E</label>
+                                        <label for="monthly-safety-to" class="block text-sm font-semibold text-gray-700 mb-2">إلى تاريخ</label>
                                         <input type="date" id="monthly-safety-to" class="form-input w-full" value="${this.getMonthlySafetyDefaultToDate()}">
                                     </div>
                                     <div>
-                                        <label for="monthly-safety-site" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0635\u0646\u0639 / \u0627\u0644\u0645\u0648\u0642\u0639</label>
+                                        <label for="monthly-safety-site" class="block text-sm font-semibold text-gray-700 mb-2">المصنع / الموقع</label>
                                         <select id="monthly-safety-site" class="form-input w-full">
-                                            ${typeof Reports<"u"&&Reports.renderMonthlySafetySiteOptions?Reports.renderMonthlySafetySiteOptions("ar"):'<option value="factory-1">\u0645\u0635\u0646\u0639 1</option><option value="factory-2">\u0645\u0635\u0646\u0639 2</option><option value="warehouse-1">\u0627\u0644\u0645\u062E\u0627\u0632\u0646</option>'}
+                                            ${typeof Reports !== 'undefined' && Reports.renderMonthlySafetySiteOptions
+                                                ? Reports.renderMonthlySafetySiteOptions('ar')
+                                                : '<option value="factory-1">مصنع 1</option><option value="factory-2">مصنع 2</option><option value="warehouse-1">المخازن</option>'}
                                         </select>
                                     </div>
                                     <div>
-                                        <label for="monthly-safety-lang" class="block text-sm font-semibold text-gray-700 mb-2">\u0644\u063A\u0629 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</label>
+                                        <label for="monthly-safety-lang" class="block text-sm font-semibold text-gray-700 mb-2">لغة التقرير</label>
                                         <select id="monthly-safety-lang" class="form-input w-full">
-                                            <option value="ar">\u0627\u0644\u0639\u0631\u0628\u064A\u0629</option>
+                                            <option value="ar">العربية</option>
                                             <option value="en">English</option>
                                         </select>
                                     </div>
@@ -827,7 +1258,7 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 <div class="flex flex-wrap gap-3">
                                     <button type="button" id="generate-monthly-safety-report-ar-btn" class="btn-primary" data-msr-lang="ar">
                                         <i class="fas fa-download ml-2"></i>
-                                        \u062A\u062D\u0645\u064A\u0644 PDF (\u0639\u0631\u0628\u064A)
+                                        تحميل PDF (عربي)
                                     </button>
                                     <button type="button" id="generate-monthly-safety-report-en-btn" class="btn-secondary" data-msr-lang="en">
                                         <i class="fas fa-download ml-2"></i>
@@ -836,28 +1267,28 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 </div>
                             </div>
                         </div>
-                        `:""}
+                        ` : ''}
                     </div>
                 </div>
             </div>
 
-            <!-- Tab Content: \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0629 -->
+            <!-- Tab Content: إدارة الإشعارات الإلكترونية -->
             <div class="tab-content" id="tab-notifications">
-                ${t?`
+                ${isAdmin ? `
                 <div class="settings-group mt-6 email-settings-panel">
                     <div class="email-settings-hero">
                         <div class="email-settings-hero-copy">
-                            <p class="email-settings-eyebrow">\u0645\u0631\u0643\u0632 \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A</p>
+                            <p class="email-settings-eyebrow">مركز الإشعارات</p>
                             <h2 class="email-settings-hero-title">
                                 <i class="fas fa-envelope-open-text"></i>
-                                \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0627\u0644\u0628\u0631\u064A\u062F \u0627\u0644\u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A
+                                إشعارات البريد الإلكتروني
                             </h2>
-                            <p class="email-settings-hero-sub">\u062A\u0634\u063A\u064A\u0644 \u0633\u0631\u064A\u0639 \xB7 \u0645\u0633\u062A\u0644\u0645\u0648\u0646 \xB7 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \xB7 \u0627\u062E\u062A\u0628\u0627\u0631 \u0641\u0648\u0631\u064A</p>
+                            <p class="email-settings-hero-sub">تشغيل سريع · مستلمون · أنواع المحتوى · اختبار فوري</p>
                         </div>
                         <label class="email-settings-switch email-settings-switch-hero" for="email-settings-global-enabled">
                             <input type="checkbox" id="email-settings-global-enabled">
                             <span class="email-settings-switch-ui" aria-hidden="true"></span>
-                            <span class="email-settings-switch-label">\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0646\u0638\u0627\u0645</span>
+                            <span class="email-settings-switch-label">تشغيل النظام</span>
                         </label>
                     </div>
 
@@ -865,11 +1296,11 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="email-settings-status-main">
                             <span class="email-settings-status-dot" aria-hidden="true"></span>
                             <div>
-                                <p class="email-settings-status-title" id="email-settings-status-title">\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026</p>
-                                <p class="email-settings-status-hint" id="email-settings-status-hint">\u2014</p>
+                                <p class="email-settings-status-title" id="email-settings-status-title">جاري التحميل…</p>
+                                <p class="email-settings-status-hint" id="email-settings-status-hint">—</p>
                             </div>
                         </div>
-                        <span class="email-settings-sync-badge" id="email-settings-sync-badge" hidden>\u0645\u0632\u0627\u0645\u0646\u0629\u2026</span>
+                        <span class="email-settings-sync-badge" id="email-settings-sync-badge" hidden>مزامنة…</span>
                     </div>
 
                     <div class="email-settings-stats" id="email-settings-stats" aria-live="polite"></div>
@@ -879,34 +1310,34 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                             <div class="content-card email-settings-card">
                                 <div class="card-body space-y-3">
                                     <div class="email-settings-card-head">
-                                        <h3 class="email-settings-card-title"><i class="fas fa-users ml-2"></i>\u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0648\u0646 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0648\u0646</h3>
-                                        <p class="email-settings-card-desc">\u064A\u064F\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0644\u0643\u0644 \u0646\u0648\u0639 \u0628\u0644\u0627 \u0645\u0633\u062A\u0644\u0645\u064A\u0646 \u062E\u0627\u0635\u064A\u0646 \u2014 \u0627\u0636\u063A\u0637 \xD7 \u0644\u062D\u0630\u0641 \u0634\u0631\u064A\u062D\u0629</p>
+                                        <h3 class="email-settings-card-title"><i class="fas fa-users ml-2"></i>المستلمون الافتراضيون</h3>
+                                        <p class="email-settings-card-desc">يُستخدمون لكل نوع بلا مستلمين خاصين — اضغط × لحذف شريحة</p>
                                     </div>
                                     <div class="email-settings-chip-editor">
                                         <div id="email-settings-default-chips" class="email-settings-chips" aria-live="polite"></div>
                                         <div class="email-settings-chip-add">
-                                            <input type="text" id="email-settings-default-recipients" class="form-input email-settings-recipients-input" placeholder="\u0623\u0636\u0641 \u0625\u064A\u0645\u064A\u0644 \u062B\u0645 Enter" dir="ltr" autocomplete="email">
-                                            <button type="button" id="email-settings-add-recipient-btn" class="btn-secondary btn-sm" title="\u0625\u0636\u0627\u0641\u0629">
+                                            <input type="text" id="email-settings-default-recipients" class="form-input email-settings-recipients-input" placeholder="أضف إيميل ثم Enter" dir="ltr" autocomplete="email">
+                                            <button type="button" id="email-settings-add-recipient-btn" class="btn-secondary btn-sm" title="إضافة">
                                                 <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
                                     </div>
-                                    <p class="email-settings-help"><i class="fas fa-info-circle ml-1"></i>\u064A\u0645\u0643\u0646 \u0644\u0635\u0642 \u0639\u062F\u0629 \u0625\u064A\u0645\u064A\u0644\u0627\u062A \u0645\u0641\u0635\u0648\u0644\u0629 \u0628\u0641\u0627\u0635\u0644\u0629 \u062F\u0641\u0639\u0629 \u0648\u0627\u062D\u062F\u0629.</p>
+                                    <p class="email-settings-help"><i class="fas fa-info-circle ml-1"></i>يمكن لصق عدة إيميلات مفصولة بفاصلة دفعة واحدة.</p>
                                 </div>
                             </div>
                             <div class="content-card email-settings-card email-settings-card-test">
                                 <div class="card-body space-y-3">
                                     <div class="email-settings-card-head">
-                                        <h3 class="email-settings-card-title"><i class="fas fa-bolt ml-2"></i>\u0627\u062E\u062A\u0628\u0627\u0631 \u0633\u0631\u064A\u0639</h3>
-                                        <p class="email-settings-card-desc">\u062A\u0623\u0643\u062F \u0645\u0646 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u062E\u0644\u0627\u0644 \u062B\u0648\u0627\u0646\u064D</p>
+                                        <h3 class="email-settings-card-title"><i class="fas fa-bolt ml-2"></i>اختبار سريع</h3>
+                                        <p class="email-settings-card-desc">تأكد من صلاحية الإرسال خلال ثوانٍ</p>
                                     </div>
                                     <div class="email-settings-test-row">
                                         <input type="email" id="email-settings-test-to" class="form-input flex-1" placeholder="your@email.com" dir="ltr">
                                         <button type="button" id="email-settings-test-btn" class="btn-primary email-settings-test-send">
-                                            <i class="fas fa-paper-plane ml-2"></i>\u0625\u0631\u0633\u0627\u0644 \u062A\u062C\u0631\u064A\u0628\u064A
+                                            <i class="fas fa-paper-plane ml-2"></i>إرسال تجريبي
                                         </button>
                                     </div>
-                                    <p class="email-settings-help" id="email-settings-test-hint">\u0644\u0627 \u064A\u062D\u062A\u0627\u062C \u062A\u0641\u0639\u064A\u0644 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u2014 \u064A\u062E\u062A\u0628\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0641\u0642\u0637.</p>
+                                    <p class="email-settings-help" id="email-settings-test-hint">لا يحتاج تفعيل أنواع المحتوى — يختبر الاتصال فقط.</p>
                                 </div>
                             </div>
                         </div>
@@ -914,192 +1345,192 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="content-card email-settings-card">
                             <div class="card-header email-settings-modules-header">
                                 <div>
-                                    <h2 class="card-title mb-1"><i class="fas fa-sliders-h ml-2"></i>\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062D\u062A\u0648\u0649</h2>
-                                    <p class="email-settings-summary" id="email-settings-modules-summary">\u2014</p>
+                                    <h2 class="card-title mb-1"><i class="fas fa-sliders-h ml-2"></i>أنواع المحتوى</h2>
+                                    <p class="email-settings-summary" id="email-settings-modules-summary">—</p>
                                 </div>
                                 <div class="email-settings-toolbar">
-                                    <input type="search" id="email-settings-module-filter" class="form-input email-settings-search" placeholder="\u0628\u062D\u062B \u0628\u0627\u0644\u0627\u0633\u0645\u2026">
-                                    <button type="button" id="email-settings-enable-visible-btn" class="btn-secondary btn-sm" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0638\u0627\u0647\u0631\u0629">
-                                        <i class="fas fa-check-double ml-1"></i>\u062A\u0641\u0639\u064A\u0644
+                                    <input type="search" id="email-settings-module-filter" class="form-input email-settings-search" placeholder="بحث بالاسم…">
+                                    <button type="button" id="email-settings-enable-visible-btn" class="btn-secondary btn-sm" title="تفعيل الأنواع الظاهرة">
+                                        <i class="fas fa-check-double ml-1"></i>تفعيل
                                     </button>
-                                    <button type="button" id="email-settings-manual-visible-btn" class="btn-secondary btn-sm" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u064A\u062F\u0648\u064A \u0644\u0644\u0638\u0627\u0647\u0631">
-                                        <i class="fas fa-hand-pointer ml-1"></i>\u064A\u062F\u0648\u064A
+                                    <button type="button" id="email-settings-manual-visible-btn" class="btn-secondary btn-sm" title="تفعيل الإرسال اليدوي للظاهر">
+                                        <i class="fas fa-hand-pointer ml-1"></i>يدوي
                                     </button>
-                                    <button type="button" id="email-settings-auto-visible-btn" class="btn-secondary btn-sm" title="\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u0644\u0644\u0638\u0627\u0647\u0631">
-                                        <i class="fas fa-bolt ml-1"></i>\u062A\u0644\u0642\u0627\u0626\u064A
+                                    <button type="button" id="email-settings-auto-visible-btn" class="btn-secondary btn-sm" title="تفعيل التلقائي للظاهر">
+                                        <i class="fas fa-bolt ml-1"></i>تلقائي
                                     </button>
-                                    <button type="button" id="email-settings-disable-visible-btn" class="btn-secondary btn-sm" title="\u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0638\u0627\u0647\u0631\u0629">
-                                        <i class="fas fa-ban ml-1"></i>\u0625\u064A\u0642\u0627\u0641
+                                    <button type="button" id="email-settings-disable-visible-btn" class="btn-secondary btn-sm" title="إيقاف الأنواع الظاهرة">
+                                        <i class="fas fa-ban ml-1"></i>إيقاف
                                     </button>
                                 </div>
                             </div>
                             <div class="card-body pt-3">
-                                <div class="email-settings-group-filters" id="email-settings-group-filters" role="tablist" aria-label="\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A"></div>
-                                <div class="email-settings-status-filters" id="email-settings-status-filters" role="tablist" aria-label="\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u0629"></div>
+                                <div class="email-settings-group-filters" id="email-settings-group-filters" role="tablist" aria-label="تصفية المجموعات"></div>
+                                <div class="email-settings-status-filters" id="email-settings-status-filters" role="tablist" aria-label="تصفية الحالة"></div>
                                 <div class="email-settings-legend">
-                                    <span><i class="fas fa-power-off"></i> \u0645\u0641\u0639\u0651\u0644</span>
-                                    <span><i class="fas fa-hand-pointer"></i> \u064A\u062F\u0648\u064A = \u0632\u0631 \u0645\u0646 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644</span>
-                                    <span><i class="fas fa-bolt"></i> \u062A\u0644\u0642\u0627\u0626\u064A = \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638</span>
-                                    <span><i class="fas fa-chevron-down"></i> \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0648\u0646 \u0627\u0644\u062E\u0627\u0635\u0648\u0646 \u0645\u0637\u0648\u064A\u0629 \u2014 \u0627\u0636\u063A\u0637 \u0644\u0644\u062A\u0648\u0633\u064A\u0639</span>
+                                    <span><i class="fas fa-power-off"></i> مفعّل</span>
+                                    <span><i class="fas fa-hand-pointer"></i> يدوي = زر من التفاصيل</span>
+                                    <span><i class="fas fa-bolt"></i> تلقائي = عند الحفظ</span>
+                                    <span><i class="fas fa-chevron-down"></i> المستلمون الخاصون مطوية — اضغط للتوسيع</span>
                                 </div>
                                 <div id="email-settings-modules-list" class="email-settings-modules-list"></div>
                             </div>
                         </div>
 
                         <div class="email-settings-sticky-bar" id="email-settings-sticky-bar">
-                            <span class="email-settings-dirty" id="email-settings-dirty-hint" hidden>\u062A\u0648\u062C\u062F \u062A\u063A\u064A\u064A\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u062D\u0641\u0648\u0638\u0629</span>
+                            <span class="email-settings-dirty" id="email-settings-dirty-hint" hidden>توجد تغييرات غير محفوظة</span>
                             <div class="email-settings-sticky-actions">
                                 <button type="button" id="email-settings-reload-btn" class="btn-secondary">
-                                    <i class="fas fa-sync ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644
+                                    <i class="fas fa-sync ml-2"></i>إعادة تحميل
                                 </button>
                                 <button type="button" id="email-settings-save-btn" class="btn-primary email-settings-save-glow">
-                                    <i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
+                                    <i class="fas fa-save ml-2"></i>حفظ الإعدادات
                                 </button>
                             </div>
                         </div>
                     </div>
                 </div>
-                `:`
+                ` : `
                 <div class="settings-group mt-6">
                     <div class="email-settings-locked">
                         <i class="fas fa-lock"></i>
-                        <p>\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0628\u0631\u064A\u062F \u0645\u062A\u0627\u062D\u0629 \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637.</p>
+                        <p>إعدادات البريد متاحة لمدير النظام فقط.</p>
                     </div>
                 </div>
                 `}
             </div>
 
-            <!-- Tab Content: \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u0648 Q&A -->
+            <!-- Tab Content: محتوى المساعدة و Q&A -->
             <div class="tab-content" id="tab-help-content">
-                ${t?`
+                ${isAdmin ? `
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-circle-question text-teal-600 ml-2"></i>
-                            \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u0648\u0623\u0633\u0626\u0644\u0629 \u0648\u0623\u062C\u0648\u0628\u0629 (Q&amp;A)
+                            محتوى المساعدة وأسئلة وأجوبة (Q&amp;A)
                         </h2>
-                        <p class="settings-group-subtitle">\u062A\u062E\u0635\u064A\u0635 \u0646\u0635 \u0627\u0644\u0645\u0642\u062F\u0645\u0629 \u0648\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u2014 \u0645\u0639 \u0628\u0642\u0627\u0621 \u0627\u0644\u062F\u0644\u064A\u0644 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0627\u064B</p>
+                        <p class="settings-group-subtitle">تخصيص نص المقدمة وأسئلة المساعدة للمستخدمين — مع بقاء الدليل الافتراضي احتياطياً</p>
                     </div>
                     <div class="settings-group-content space-y-4">
                         <div class="content-card">
                             <div class="card-body space-y-4">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input type="checkbox" id="help-content-enabled" class="rounded border-gray-300 text-teal-600">
-                                    <span class="text-sm font-semibold text-gray-800">\u062A\u0641\u0639\u064A\u0644 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 \u0627\u0644\u0645\u062E\u0635\u0635</span>
+                                    <span class="text-sm font-semibold text-gray-800">تفعيل محتوى المساعدة المخصص</span>
                                 </label>
-                                <p class="text-xs text-gray-500">\u0639\u0646\u062F \u0627\u0644\u062A\u0641\u0639\u064A\u0644: \u062A\u064F\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0623\u062F\u0646\u0627\u0647 (\u0625\u0646 \u0648\u064F\u062C\u062F\u062A) \u0648\u0646\u0635 \u0627\u0644\u0645\u0642\u062F\u0645\u0629. \u0625\u0646 \u0644\u0645 \u062A\u064F\u0636\u0641 \u0623\u0633\u0626\u0644\u0629\u060C \u064A\u0628\u0642\u0649 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0645\u0646 \u0627\u0644\u0646\u0638\u0627\u0645.</p>
+                                <p class="text-xs text-gray-500">عند التفعيل: تُستخدم الأسئلة أدناه (إن وُجدت) ونص المقدمة. إن لم تُضف أسئلة، يبقى المحتوى الافتراضي من النظام.</p>
                                 <div>
-                                    <label class="block text-sm font-semibold text-gray-700 mb-1">\u0646\u0635 \u0645\u0642\u062F\u0645\u0629 \u0635\u0641\u062D\u0629 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
-                                    <textarea id="help-content-intro" class="form-input" rows="3" maxlength="500" placeholder="\u0646\u0635 \u064A\u0638\u0647\u0631 \u0623\u0639\u0644\u0649 \u0635\u0641\u062D\u0629 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629..."></textarea>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1">نص مقدمة صفحة المساعدة (اختياري)</label>
+                                    <textarea id="help-content-intro" class="form-input" rows="3" maxlength="500" placeholder="نص يظهر أعلى صفحة المساعدة..."></textarea>
                                 </div>
                             </div>
                         </div>
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-comments ml-2"></i>\u0623\u0633\u0626\u0644\u0629 \u0648\u0623\u062C\u0648\u0628\u0629 \u0645\u062E\u0635\u0635\u0629</h2>
+                                <h2 class="card-title"><i class="fas fa-comments ml-2"></i>أسئلة وأجوبة مخصصة</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <div id="help-content-qa-list" class="space-y-3"></div>
                                 <button type="button" id="help-content-add-qa-btn" class="btn-primary">
-                                    <i class="fas fa-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0633\u0624\u0627\u0644
+                                    <i class="fas fa-plus ml-2"></i>إضافة سؤال
                                 </button>
                                 <div id="help-content-qa-form" class="hidden mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50 space-y-3">
-                                    <h3 class="font-semibold text-gray-800" id="help-content-qa-form-title">\u0625\u0636\u0627\u0641\u0629 \u0633\u0624\u0627\u0644 \u062C\u062F\u064A\u062F</h3>
+                                    <h3 class="font-semibold text-gray-800" id="help-content-qa-form-title">إضافة سؤال جديد</h3>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0633\u0624\u0627\u0644</label>
-                                        <input type="text" id="help-content-qa-question" class="form-input" maxlength="300" placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u0633\u0624\u0627\u0644...">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">السؤال</label>
+                                        <input type="text" id="help-content-qa-question" class="form-input" maxlength="300" placeholder="اكتب السؤال...">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0625\u062C\u0627\u0628\u0629</label>
-                                        <textarea id="help-content-qa-answer" class="form-input" rows="4" maxlength="3000" placeholder="\u0627\u0643\u062A\u0628 \u0627\u0644\u0625\u062C\u0627\u0628\u0629..."></textarea>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">الإجابة</label>
+                                        <textarea id="help-content-qa-answer" class="form-input" rows="4" maxlength="3000" placeholder="اكتب الإجابة..."></textarea>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-1">\u0631\u0628\u0637 \u0628\u0645\u0648\u062F\u064A\u0648\u0644 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A \u2014 slug \u0645\u062B\u0644 clinic)</label>
-                                        <input type="text" id="help-content-qa-module" class="form-input" maxlength="80" placeholder="\u0645\u062B\u0627\u0644: clinic \u0623\u0648 profile">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">ربط بموديول (اختياري — slug مثل clinic)</label>
+                                        <input type="text" id="help-content-qa-module" class="form-input" maxlength="80" placeholder="مثال: clinic أو profile">
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-1">\u0643\u0644\u0645\u0627\u062A \u0628\u062D\u062B (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
-                                        <input type="text" id="help-content-qa-keywords" class="form-input" maxlength="200" placeholder="\u0643\u0644\u0645\u0627\u062A \u0644\u0644\u0628\u062D\u062B \u062F\u0627\u062E\u0644 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629">
+                                        <label class="block text-sm font-semibold text-gray-700 mb-1">كلمات بحث (اختياري)</label>
+                                        <input type="text" id="help-content-qa-keywords" class="form-input" maxlength="200" placeholder="كلمات للبحث داخل المساعدة">
                                     </div>
                                     <label class="flex items-center gap-2">
                                         <input type="checkbox" id="help-content-qa-active" class="rounded border-gray-300 text-teal-600" checked>
-                                        <span class="text-sm text-gray-700">\u0645\u0641\u0639\u0651\u0644</span>
+                                        <span class="text-sm text-gray-700">مفعّل</span>
                                     </label>
                                     <div class="flex gap-2">
-                                        <button type="button" id="help-content-qa-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0633\u0624\u0627\u0644</button>
-                                        <button type="button" id="help-content-qa-cancel-btn" class="btn-secondary"><i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621</button>
+                                        <button type="button" id="help-content-qa-save-btn" class="btn-primary"><i class="fas fa-save ml-2"></i>حفظ السؤال</button>
+                                        <button type="button" id="help-content-qa-cancel-btn" class="btn-secondary"><i class="fas fa-times ml-2"></i>إلغاء</button>
                                     </div>
                                 </div>
                                 <div class="flex flex-wrap gap-2 pt-2 border-t">
                                     <button type="button" id="help-content-save-all-btn" class="btn-success">
-                                        <i class="fas fa-cloud-upload-alt ml-2"></i>\u062D\u0641\u0638 \u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629
+                                        <i class="fas fa-cloud-upload-alt ml-2"></i>حفظ محتوى المساعدة
                                     </button>
-                                    <button type="button" id="help-content-load-defaults-btn" class="btn-secondary" title="\u0646\u0633\u062E \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0644\u0644\u062A\u062D\u0631\u064A\u0631">
-                                        <i class="fas fa-copy ml-2"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0627\u0644\u0623\u0633\u0626\u0644\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0644\u0644\u062A\u062D\u0631\u064A\u0631
+                                    <button type="button" id="help-content-load-defaults-btn" class="btn-secondary" title="نسخ الأسئلة الافتراضية للتحرير">
+                                        <i class="fas fa-copy ml-2"></i>استيراد الأسئلة الافتراضية للتحرير
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                `:'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637</p></div>'}
+                ` : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح لمدير النظام فقط</p></div>'}
             </div>
 
-            <!-- Tab Content: \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A -->
+            <!-- Tab Content: الصلاحيات والاعتمادات -->
             <div class="tab-content" id="tab-permissions">
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-shield-alt text-orange-600 ml-2"></i>
-                            \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A
+                            الصلاحيات والاعتمادات
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0648\u062F\u0648\u0627\u0626\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</p>
+                        <p class="settings-group-subtitle">إدارة الصلاحيات ودوائر الاعتماد</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-shield-alt ml-2"></i>\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A</h2>
+                                <h2 class="card-title"><i class="fas fa-shield-alt ml-2"></i>إدارة الصلاحيات</h2>
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="bg-blue-50 border border-blue-200 rounded p-4 mb-4">
                                     <p class="text-sm text-blue-800 mb-2">
                                         <i class="fas fa-info-circle ml-2"></i>
-                                        <strong>\u0645\u0644\u0627\u062D\u0638\u0629 \u0645\u0647\u0645\u0629:</strong>
+                                        <strong>ملاحظة مهمة:</strong>
                                     </p>
                                     <ul class="text-sm text-blue-700 list-disc mr-6 space-y-1">
-                                        <li>\u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0642\u0633\u0645 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0645\u062D\u0638\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0627\u0644\u0639\u0627\u062F\u064A\u064A\u0646</li>
-                                        <li>\u0641\u0642\u0637 \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646 \u0648\u0627\u0644\u0645\u0633\u0624\u0648\u0644\u0648\u0646 \u0627\u0644\u0645\u0635\u0631\u062D \u0644\u0647\u0645 \u064A\u0645\u0643\u0646\u0647\u0645 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</li>
-                                        <li>\u064A\u0645\u0643\u0646 \u0625\u062F\u0627\u0631\u0629 \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0648\u0635\u0648\u0644 \u0645\u0646 \u0642\u0633\u0645 "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646" \u0639\u0646\u062F \u0625\u0636\u0627\u0641\u0629 \u0623\u0648 \u062A\u0639\u062F\u064A\u0644 \u0645\u0633\u062A\u062E\u062F\u0645</li>
-                                        <li>\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629: \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646 \u0641\u0642\u0637 \u064A\u0645\u0643\u0646\u0647\u0645 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A</li>
+                                        <li>الوصول إلى قسم الإعدادات محظور على المستخدمين العاديين</li>
+                                        <li>فقط المديرون والمسؤولون المصرح لهم يمكنهم الوصول إلى الإعدادات</li>
+                                        <li>يمكن إدارة صلاحيات الوصول من قسم "المستخدمين" عند إضافة أو تعديل مستخدم</li>
+                                        <li>الصلاحيات الافتراضية: المديرون فقط يمكنهم الوصول إلى الإعدادات</li>
                                     </ul>
                                 </div>
                                 
                                 <div class="border rounded p-4">
                                     <h3 class="text-lg font-semibold mb-4">
                                         <i class="fas fa-users-cog ml-2"></i>
-                                        \u0645\u0646 \u064A\u0645\u0643\u0646\u0647 \u0627\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
+                                        من يمكنه الوصول إلى الإعدادات
                                     </h3>
                                     <div class="space-y-3">
                                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-shield text-blue-600 ml-3"></i>
-                                                <span class="font-semibold">\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 (Admin)</span>
+                                                <span class="font-semibold">مدير النظام (Admin)</span>
                                             </div>
-                                            <span class="badge badge-success">\u0635\u0644\u0627\u062D\u064A\u0629 \u0643\u0627\u0645\u0644\u0629</span>
+                                            <span class="badge badge-success">صلاحية كاملة</span>
                                         </div>
                                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-check text-green-600 ml-3"></i>
-                                                <span class="font-semibold">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0627\u0644\u0645\u0635\u0631\u062D \u0644\u0647\u0645</span>
+                                                <span class="font-semibold">المستخدمون المصرح لهم</span>
                                             </div>
-                                            <span class="badge badge-info">\u062D\u0633\u0628 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A</span>
+                                            <span class="badge badge-info">حسب الصلاحيات</span>
                                         </div>
                                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded">
                                             <div class="flex items-center">
                                                 <i class="fas fa-user-times text-red-600 ml-3"></i>
-                                                <span class="font-semibold">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0627\u0644\u0639\u0627\u062F\u064A\u0648\u0646</span>
+                                                <span class="font-semibold">المستخدمون العاديون</span>
                                             </div>
-                                            <span class="badge badge-warning">\u063A\u064A\u0631 \u0645\u0635\u0631\u062D</span>
+                                            <span class="badge badge-warning">غير مصرح</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1107,24 +1538,24 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 <div class="border-t pt-4 mt-4">
                                     <h3 class="text-lg font-semibold mb-4">
                                         <i class="fas fa-key ml-2"></i>
-                                        \u0643\u064A\u0641\u064A\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A
+                                        كيفية إدارة الصلاحيات
                                     </h3>
                                     <div class="space-y-2 text-sm text-gray-700">
                                         <p class="flex items-start">
                                             <i class="fas fa-check-circle text-green-600 ml-2 mt-1"></i>
-                                            <span>\u0627\u0630\u0647\u0628 \u0625\u0644\u0649 \u0642\u0633\u0645 "\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646" \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u062C\u0627\u0646\u0628\u064A\u0629</span>
+                                            <span>اذهب إلى قسم "المستخدمين" من القائمة الجانبية</span>
                                         </p>
                                         <p class="flex items-start">
                                             <i class="fas fa-check-circle text-green-600 ml-2 mt-1"></i>
-                                            <span>\u0627\u0636\u063A\u0637 \u0639\u0644\u0649 "\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062A\u062E\u062F\u0645 \u062C\u062F\u064A\u062F" \u0623\u0648 \u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0648\u062C\u0648\u062F \u0644\u0644\u062A\u062D\u0631\u064A\u0631</span>
+                                            <span>اضغط على "إضافة مستخدم جديد" أو اختر مستخدم موجود للتحرير</span>
                                         </p>
                                         <p class="flex items-start">
                                             <i class="fas fa-check-circle text-green-600 ml-2 mt-1"></i>
-                                            <span>\u0641\u064A \u0642\u0633\u0645 "\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u0644\u0648\u062D\u062F\u0627\u062A"\u060C \u062D\u062F\u062F "\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A" \u0644\u0625\u0639\u0637\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0648\u0635\u0648\u0644</span>
+                                            <span>في قسم "صلاحيات الوصول للوحدات"، حدد "الإعدادات" لإعطاء المستخدم صلاحية الوصول</span>
                                         </p>
                                         <p class="flex items-start">
                                             <i class="fas fa-check-circle text-green-600 ml-2 mt-1"></i>
-                                            <span>\u0627\u062D\u0641\u0638 \u0627\u0644\u062A\u063A\u064A\u064A\u0631\u0627\u062A \u0644\u062A\u0637\u0628\u064A\u0642 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u062C\u062F\u064A\u062F\u0629</span>
+                                            <span>احفظ التغييرات لتطبيق الصلاحيات الجديدة</span>
                                         </p>
                                     </div>
                                 </div>
@@ -1132,7 +1563,7 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 <div class="border-t pt-4 mt-4">
                                     <h3 class="text-lg font-semibold mb-4">
                                         <i class="fas fa-list-check ml-2"></i>
-                                        \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646
+                                        الصلاحيات الحالية للمستخدمين
                                     </h3>
                                     <div id="users-permissions-list" class="space-y-2">
                                         ${this.renderUsersPermissionsList()}
@@ -1144,22 +1575,22 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 </div>
             </div>
 
-            <!-- Tab Content: \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A -->
+            <!-- Tab Content: دائرة الاعتمادات والصلاحيات -->
             <div class="tab-content" id="tab-approval-circuit">
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-project-diagram text-orange-600 ml-2"></i>
-                            \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A
+                            دائرة الاعتمادات والصلاحيات
                         </h2>
-                        <p class="settings-group-subtitle">\u0625\u062F\u0627\u0631\u0629 \u062F\u0648\u0627\u0626\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A</p>
+                        <p class="settings-group-subtitle">إدارة دوائر الاعتماد والصلاحيات</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header flex items-center justify-between">
                                 <h2 class="card-title">
                                     <i class="fas fa-project-diagram ml-2"></i>
-                                    \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A \u0648\u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A
+                                    دائرة الاعتمادات والصلاحيات
                                 </h2>
                                 <span class="badge badge-info" id="approval-circuit-active-label" style="display:none;"></span>
                             </div>
@@ -1168,24 +1599,24 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-user-circle ml-2"></i>
-                                            \u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062E\u0627\u0635 \u0628\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645
+                                            مسار الاعتماد الخاص بالمستخدم
                                         </label>
                                         <select id="approval-owner-select" class="form-input">
                                             ${this.renderApprovalOwnerOptions()}
                                         </select>
                                         <p class="text-xs text-gray-500 mt-1">
                                             <i class="fas fa-info-circle ml-1"></i>
-                                            \u0641\u064A \u062D\u0627\u0644 \u0639\u062F\u0645 \u062A\u062D\u062F\u064A\u062F \u0645\u0633\u0627\u0631 \u062E\u0627\u0635 \u0628\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A.
+                                            في حال عدم تحديد مسار خاص بالمستخدم سيتم استخدام المسار الافتراضي.
                                         </p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-signature ml-2"></i>
-                                            \u0627\u0633\u0645 \u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F
+                                            اسم مسار الاعتماد
                                         </label>
-                                        <input type="text" id="approval-circuit-name" class="form-input" placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0627\u0631 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)">
+                                        <input type="text" id="approval-circuit-name" class="form-input" placeholder="اسم المسار (اختياري)">
                                         <p class="text-xs text-gray-500 mt-1">
-                                            \u064A\u0638\u0647\u0631 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0627\u0631 \u0644\u0644\u062A\u0633\u0647\u064A\u0644 \u0639\u0646\u062F \u0625\u062F\u0627\u0631\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0633\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F.
+                                            يظهر اسم المسار للتسهيل عند إدارة أكثر من مسار اعتماد.
                                         </p>
                                     </div>
                                 </div>
@@ -1197,21 +1628,21 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 <div class="flex flex-wrap items-center gap-3">
                                     <button type="button" id="add-approval-step-btn" class="btn-secondary">
                                         <i class="fas fa-plus ml-2"></i>
-                                        \u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062A\u0648\u0649 \u0627\u0639\u062A\u0645\u0627\u062F
+                                        إضافة مستوى اعتماد
                                     </button>
                                     <span class="text-xs text-gray-500">
-                                        \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0633\u062A\u0648\u0649 \u0627\u0639\u062A\u0645\u0627\u062F \u0648\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0633\u0624\u0648\u0644\u064A\u0646 \u0639\u0646 \u0643\u0644 \u0645\u0633\u062A\u0648\u0649.
+                                        يمكن إضافة أكثر من مستوى اعتماد وتحديد المسؤولين عن كل مستوى.
                                     </span>
                                 </div>
 
                                 <div class="flex items-center justify-end gap-3 border-t pt-4">
                                     <button type="button" id="delete-approval-circuit-btn" class="btn-secondary">
                                         <i class="fas fa-trash ml-2"></i>
-                                        \u062D\u0630\u0641 \u0627\u0644\u0645\u0633\u0627\u0631
+                                        حذف المسار
                                     </button>
                                     <button type="button" id="save-approval-circuit-btn" class="btn-primary">
                                         <i class="fas fa-save ml-2"></i>
-                                        \u062D\u0641\u0638 \u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F
+                                        حفظ مسار الاعتماد
                                     </button>
                                 </div>
                             </div>
@@ -1220,208 +1651,416 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 </div>
             </div>
 
-            <!-- Tab Content: \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0648\u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629 -->
+            <!-- Tab Content: السجلات والمراقبة -->
             <div class="tab-content" id="tab-logs">
-                ${t?`
+                ${isAdmin ? `
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
                             <i class="fas fa-history text-indigo-600 ml-2"></i>
-                            \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0648\u0627\u0644\u0645\u0631\u0627\u0642\u0628\u0629
+                            السجلات والمراقبة
                         </h2>
-                        <p class="settings-group-subtitle">\u0639\u0631\u0636 \u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0646\u0634\u0627\u0637\u0627\u062A \u0648\u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</p>
+                        <p class="settings-group-subtitle">عرض سجلات النشاطات وحركات المستخدمين</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">
                             <div class="card-header">
                                 <h2 class="card-title">
                                     <i class="fas fa-history ml-2"></i>
-                                    \u0633\u062C\u0644 \u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646
+                                    سجل حركات المستخدمين
                                 </h2>
                             </div>
                             <div class="card-body">
                                 <p class="text-sm text-gray-600 mb-4">
                                     <i class="fas fa-info-circle ml-2"></i>
-                                    \u0639\u0631\u0636 \u0633\u062C\u0644 \u0643\u0627\u0645\u0644 \u0644\u062C\u0645\u064A\u0639 \u062D\u0631\u0643\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0646\u0638\u0627\u0645. \u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u0641\u0644\u062A\u0631\u0629 \u0648\u0627\u0644\u0628\u062D\u062B \u0648\u0627\u0644\u062A\u0635\u062F\u064A\u0631.
+                                    عرض سجل كامل لجميع حركات المستخدمين داخل النظام. يمكنك الفلترة والبحث والتصدير.
                                 </p>
                                 <button type="button" id="view-activity-log-btn" class="btn-primary w-full">
                                     <i class="fas fa-history ml-2"></i>
-                                    \u0639\u0631\u0636 \u0633\u062C\u0644 \u0627\u0644\u0646\u0634\u0627\u0637
+                                    عرض سجل النشاط
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- \u2705 \u0645\u062A\u0627\u0628\u0639\u0629 \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 -->
+                    <!-- ✅ متابعة إصدارات المستخدمين -->
                     <div class="settings-group-content mt-4">
                         <div class="content-card" style="border: 1px solid rgba(15,118,110,0.18);">
                             <div class="card-header" style="background: linear-gradient(135deg, rgba(15,118,110,0.08), rgba(30,58,138,0.06)); border-bottom: 1px solid rgba(15,118,110,0.18);">
                                 <h2 class="card-title" style="color: #0F766E;">
                                     <i class="fas fa-code-branch ml-2"></i>
-                                    \u0645\u062A\u0627\u0628\u0639\u0629 \u0625\u0635\u062F\u0627\u0631\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646
+                                    متابعة إصدارات المستخدمين
                                 </h2>
                             </div>
                             <div class="card-body">
                                 <p class="text-sm text-gray-600 mb-4">
                                     <i class="fas fa-info-circle ml-2 text-teal-600"></i>
-                                    \u0645\u0639\u0631\u0641\u0629 \u0623\u064A \u0625\u0635\u062F\u0627\u0631 \u0645\u0646 \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u064A\u0639\u0645\u0644 \u0639\u0644\u064A\u0647 \u0643\u0644 \u0645\u0633\u062A\u062E\u062F\u0645\u060C \u0622\u062E\u0631 \u0645\u0631\u0629 \u0641\u062A\u062D \u0641\u064A\u0647\u0627 \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u060C
-                                    \u0648\u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u062C\u0645\u064A\u0639 \u064A\u0639\u0645\u0644 \u0639\u0644\u0649 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0623\u062D\u062F\u062B.
+                                    معرفة أي إصدار من التطبيق يعمل عليه كل مستخدم، آخر مرة فتح فيها التطبيق،
+                                    والتأكد من أن الجميع يعمل على الإصدار الأحدث.
                                 </p>
                                 <button type="button" id="view-user-versions-btn" class="btn-primary w-full" style="background: linear-gradient(135deg, #0F766E, #1E3A8A);">
                                     <i class="fas fa-code-branch ml-2"></i>
-                                    \u0641\u062A\u062D \u0644\u0648\u062D\u0629 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A
+                                    فتح لوحة متابعة الإصدارات
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- \u2705 \u0645\u0631\u0627\u0642\u0628\u0629 \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u0639\u0645\u0644\u0627\u0621 -->
+                    <!-- ✅ مراقبة أخطاء العملاء -->
                     <div class="settings-group-content mt-4">
                         <div class="content-card" style="border: 1px solid rgba(185,28,28,0.22);">
                             <div class="card-header" style="background: linear-gradient(135deg, rgba(185,28,28,0.08), rgba(127,29,29,0.06)); border-bottom: 1px solid rgba(185,28,28,0.18);">
                                 <h2 class="card-title" style="color: #b91c1c;">
                                     <i class="fas fa-bug ml-2"></i>
-                                    \u0645\u0631\u0627\u0642\u0628\u0629 \u0623\u062E\u0637\u0627\u0621 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646
+                                    مراقبة أخطاء المستخدمين
                                 </h2>
                             </div>
                             <div class="card-body">
                                 <p class="text-sm text-gray-600 mb-4">
                                     <i class="fas fa-info-circle ml-2 text-red-600"></i>
-                                    \u062A\u0633\u062C\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A \u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u062E\u0637\u0623 \u0627\u0644\u0638\u0627\u0647\u0631\u0629 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646\u060C \u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0628\u0627\u0634\u0631\u0629\u060C \u0648\u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u062E\u0637\u0623 \u0625\u0644\u0649 \u0628\u0644\u0627\u063A \u0645\u0634\u0643\u0644\u0629.
+                                    تسجيل تلقائي لرسائل الخطأ الظاهرة للمستخدمين، متابعة مباشرة، وتحويل الخطأ إلى بلاغ مشكلة.
                                 </p>
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
                                     <button type="button" id="view-client-errors-btn" class="btn-primary w-full" style="background: linear-gradient(135deg, #b91c1c, #7f1d1d);">
                                         <i class="fas fa-bug ml-2"></i>
-                                        \u0641\u062A\u062D \u0644\u0648\u062D\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0623\u062E\u0637\u0627\u0621
+                                        فتح لوحة مراقبة الأخطاء
                                     </button>
                                     <button type="button" id="open-client-errors-section-btn" class="btn-secondary w-full">
                                         <i class="fas fa-broadcast-tower ml-2"></i>
-                                        \u0627\u0644\u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u0645\u0628\u0627\u0634\u0631
+                                        التبويب المباشر
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                `:'<div class="settings-group mt-6"><p class="text-gray-600">\u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631\u064A\u0646 \u0641\u0642\u0637</p></div>'}
+                ` : '<div class="settings-group mt-6"><p class="text-gray-600">هذا القسم متاح للمديرين فقط</p></div>'}
             </div>
-        `,this.setupEventListeners(),setTimeout(()=>{this.setupTabsNavigation();const s=document.getElementById("users-permissions-list");s&&typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(s,{onFetchFail:n=>{try{const i=document.createElement("i");i.className="fas fa-user text-gray-600",n.replaceWith(i)}catch{}}})},0),typeof Permissions<"u"&&typeof Permissions.initFormSettingsState=="function"&&Promise.resolve().then(async()=>{try{await Permissions.initFormSettingsState(),t&&document.getElementById("form-settings-card")&&(typeof Permissions.refreshFormSettingsUI=="function"&&Permissions.refreshFormSettingsUI(),typeof Permissions.bindFormSettingsEvents=="function"&&await Permissions.bindFormSettingsEvents())}catch(s){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u0647\u064A\u0626\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",s)}}),t&&typeof Permissions<"u"){let s=0;const n=15,i=setInterval(()=>{s++;const o=document.getElementById("form-settings-card");if(o||s>=n)if(clearInterval(i),o&&!Permissions._formSettingsBindDone){Permissions._formSettingsBindDone=!0;try{typeof Permissions.bindFormSettingsEvents=="function"&&(Permissions.bindFormSettingsEvents(),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0623\u062D\u062F\u0627\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C"))}catch(a){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 \u0623\u062D\u062F\u0627\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",a)}}else!o&&s>=n&&Utils.safeWarn("\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 form-settings-card \u0628\u0639\u062F "+n+" \u0645\u062D\u0627\u0648\u0644\u0629")},100)}}catch(t){typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A:",t),e&&(e.innerHTML=`
+        `;
+        this.setupEventListeners();
+        // تأخير بسيط لضمان تحميل DOM قبل تهيئة التبويبات
+        setTimeout(() => {
+            this.setupTabsNavigation();
+            const permList = document.getElementById('users-permissions-list');
+            if (permList && typeof Utils.hydrateDriveProxyImages === 'function') {
+                Utils.hydrateDriveProxyImages(permList, {
+                    onFetchFail: (img) => {
+                        try {
+                            const i = document.createElement('i');
+                            i.className = 'fas fa-user text-gray-600';
+                            img.replaceWith(i);
+                        } catch (e) { /* ignore */ }
+                    }
+                });
+            }
+        }, 0);
+
+        // ✅ تحميل بيانات إعدادات النماذج (المواقع) في الخلفية — لا تحجب الواجهة
+        // الواجهة معروضة بالكامل أعلاه؛ هذا يحدّث كارت form-settings فقط عند جاهزية البيانات
+        if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+            Promise.resolve().then(async () => {
+                try {
+                    await Permissions.initFormSettingsState();
+                    if (isAdmin && document.getElementById('form-settings-card')) {
+                        if (typeof Permissions.refreshFormSettingsUI === 'function') {
+                            Permissions.refreshFormSettingsUI();
+                        }
+                        if (typeof Permissions.bindFormSettingsEvents === 'function') {
+                            await Permissions.bindFormSettingsEvents();
+                        }
+                    }
+                } catch (e) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                        Utils.safeWarn('⚠️ تعذر تهيئة إعدادات النماذج في الخلفية:', e);
+                    }
+                }
+            });
+        }
+
+        // تهيئة إعدادات النماذج بعد تحميل الإعدادات
+        if (isAdmin && typeof Permissions !== 'undefined') {
+            let attempts = 0;
+            const maxAttempts = 15;
+            const checkInterval = setInterval(() => {
+                attempts++;
+                const card = document.getElementById('form-settings-card');
+                if (card || attempts >= maxAttempts) {
+                    clearInterval(checkInterval);
+                    if (card && !Permissions._formSettingsBindDone) {
+                        Permissions._formSettingsBindDone = true;
+                        try {
+                            if (typeof Permissions.bindFormSettingsEvents === 'function') {
+                                Permissions.bindFormSettingsEvents();
+                                Utils.safeLog('✅ تم تهيئة أحداث إعدادات النماذج');
+                            }
+                        } catch (error) {
+                            Utils.safeError('❌ خطأ في تهيئة أحداث إعدادات النماذج:', error);
+                        }
+                    } else if (!card && attempts >= maxAttempts) {
+                        Utils.safeWarn('⚠️ لم يتم العثور على form-settings-card بعد ' + maxAttempts + ' محاولة');
+                    }
+                }
+            }, 100);
+        }
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ خطأ في تحميل مديول الإعدادات:', error);
+            } else {
+                console.error('❌ خطأ في تحميل مديول الإعدادات:', error);
+            }
+            if (section) {
+                section.innerHTML = `
                     <div class="content-card">
                         <div class="card-body">
                             <div class="empty-state">
                                 <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
-                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                                <p class="text-gray-500 mb-4">حدث خطأ أثناء تحميل البيانات</p>
                                 <button onclick="Settings.load()" class="btn-primary">
                                     <i class="fas fa-redo ml-2"></i>
-                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                                    إعادة المحاولة
                                 </button>
                             </div>
                         </div>
                     </div>
-                `)}}},isCurrentUserAdmin(){if(typeof Permissions?.isCurrentUserAdmin=="function")try{return Permissions.isCurrentUserAdmin()}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u062F\u064A\u062F \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0639\u0628\u0631 Permissions.isCurrentUserAdmin:",e)}return(AppState.currentUser?.role||"").toLowerCase()==="admin"},renderSystemVersionCard(){const e=typeof AppState<"u"&&AppState.appVersion?String(AppState.appVersion).trim():"\u2014",t=typeof I18n<"u"&&I18n.currentLang==="en"||document.documentElement.lang==="en",s=e==="\u2014"?e:t?`Version${e}`:`V.${e}`;return`
+                `;
+            }
+        }
+    },
+
+    isCurrentUserAdmin() {
+        if (typeof Permissions?.isCurrentUserAdmin === 'function') {
+            try {
+                return Permissions.isCurrentUserAdmin();
+            } catch (error) {
+                Utils.safeWarn('⚠️ تعذر تحديد صلاحيات المستخدم عبر Permissions.isCurrentUserAdmin:', error);
+            }
+        }
+        return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+    },
+
+    renderSystemVersionCard() {
+        const version = (typeof AppState !== 'undefined' && AppState.appVersion)
+            ? String(AppState.appVersion).trim()
+            : '—';
+        const isEn = (typeof I18n !== 'undefined' && I18n.currentLang === 'en') || (document.documentElement.lang === 'en');
+        const label = version === '—' ? version : (isEn ? `Version${version}` : `V.${version}`);
+        return `
             <div class="content-card mt-6">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-code-branch ml-2"></i>\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u0646\u0638\u0627\u0645</h2>
+                    <h2 class="card-title"><i class="fas fa-code-branch ml-2"></i>إصدار النظام</h2>
                 </div>
                 <div class="card-body space-y-3">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        \u064A\u0639\u0631\u0636 \u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A \u0627\u0644\u0645\u062B\u0628\u0651\u062A \u0639\u0644\u0649 \u062C\u0647\u0627\u0632\u0643. \u0639\u0646\u062F \u0646\u0634\u0631 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0633\u064A\u0638\u0647\u0631 \u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0628\u0639\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644.
+                        يعرض الإصدار الحالي المثبّت على جهازك. عند نشر تحديث جديد سيظهر إشعار تلقائي بعد تسجيل الدخول.
                     </p>
                     <div style="display:flex;align-items:center;flex-wrap:wrap;gap:12px;">
                         <div style="padding:10px 14px;border-radius:10px;background:#f8fafc;border:1px solid #e2e8f0;">
-                            <span style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A</span>
-                            <strong id="settings-app-version-value" dir="ltr" style="font-size:1.15rem;color:#0f766e;">${Utils.escapeHTML(s)}</strong>
+                            <span style="font-size:0.75rem;color:#64748b;font-weight:600;display:block;margin-bottom:4px;">الإصدار الحالي</span>
+                            <strong id="settings-app-version-value" dir="ltr" style="font-size:1.15rem;color:#0f766e;">${Utils.escapeHTML(label)}</strong>
                         </div>
                         <button type="button" id="settings-check-app-update-btn" class="btn-secondary btn-sm" style="align-self:flex-end;">
-                            <i class="fas fa-sync-alt ml-2"></i>\u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A
+                            <i class="fas fa-sync-alt ml-2"></i>التحقق من التحديثات
                         </button>
                     </div>
                 </div>
-            </div>`},renderUserPhotoMigrationCard(){return`
+            </div>`;
+    },
+
+    renderUserPhotoMigrationCard() {
+        return `
             <div class="content-card mt-6" id="user-photo-migration-card">
                 <div class="card-header">
-                    <h2 class="card-title"><i class="fas fa-images ml-2"></i>\u062A\u0631\u062D\u064A\u0644 \u0635\u0648\u0631 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0625\u0644\u0649 SQL</h2>
+                    <h2 class="card-title"><i class="fas fa-images ml-2"></i>ترحيل صور المستخدمين إلى SQL</h2>
                 </div>
                 <div class="card-body space-y-4">
                     <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        \u064A\u062D\u0648\u0651\u0644 \u0635\u0648\u0631 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 \u0631\u0648\u0627\u0628\u0637 Drive \u0623\u0648 base64 \u0627\u0644\u0645\u0636\u0645\u0651\u0646 \u0625\u0644\u0649 \u0645\u0631\u0627\u062C\u0639 <code dir="ltr">FILE_*</code> \u0641\u064A \u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A.
-                        \u0627\u0644\u062A\u0631\u062D\u064A\u0644 \u064A\u0639\u0645\u0644 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629 (\u0635\u0648\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0643\u0644 \u062B\u0627\u0646\u064A\u0629 \u062A\u0642\u0631\u064A\u0628\u0627\u064B) \u0648\u064A\u0645\u0643\u0646 \u0625\u064A\u0642\u0627\u0641\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A.
+                        يحوّل صور المستخدمين من روابط Drive أو base64 المضمّن إلى مراجع <code dir="ltr">FILE_*</code> في جدول المرفقات.
+                        الترحيل يعمل في الخلفية (صورة واحدة كل ثانية تقريباً) ويمكن إيقافه في أي وقت.
                     </p>
                     <div id="user-photo-migration-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
                     <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                         <div id="user-photo-migration-progress-bar" class="bg-teal-600 h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
                     </div>
-                    <p id="user-photo-migration-status" class="text-sm text-gray-700">\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u0631\u062D\u064A\u0644.</p>
+                    <p id="user-photo-migration-status" class="text-sm text-gray-700">جاهز للترحيل.</p>
                     <div class="flex flex-wrap items-center gap-2">
                         <button type="button" id="user-photo-migration-start-btn" class="btn-primary">
-                            <i class="fas fa-play ml-2"></i>\u0628\u062F\u0621 \u0627\u0644\u062A\u0631\u062D\u064A\u0644
+                            <i class="fas fa-play ml-2"></i>بدء الترحيل
                         </button>
                         <button type="button" id="user-photo-migration-stop-btn" class="btn-secondary" disabled>
-                            <i class="fas fa-stop ml-2"></i>\u0625\u064A\u0642\u0627\u0641
+                            <i class="fas fa-stop ml-2"></i>إيقاف
                         </button>
                         <button type="button" id="user-photo-migration-refresh-btn" class="btn-secondary btn-sm">
-                            <i class="fas fa-sync-alt ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062D\u0635\u0627\u0621
+                            <i class="fas fa-sync-alt ml-2"></i>تحديث الإحصاء
                         </button>
                     </div>
                     <div id="user-photo-migration-log" class="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto" style="display:none;"></div>
                 </div>
             </div>
-        `},refreshUserPhotoMigrationStats(){const e=document.getElementById("user-photo-migration-stats");if(!e)return;const t=typeof Users<"u"&&typeof Users.getUserPhotoMigrationStats=="function"?Users.getUserPhotoMigrationStats():{total:0,linked:0,needsMigration:0,drive_url:0,inline_base64:0};e.innerHTML=`
-            <div class="p-2 rounded bg-slate-50 border"><span class="text-gray-500 block">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646</span><strong>${t.total||0}</strong></div>
-            <div class="p-2 rounded bg-green-50 border border-green-100"><span class="text-gray-500 block">\u0645\u0631\u0628\u0648\u0637\u0629 FILE_*</span><strong>${t.linked||0}</strong></div>
-            <div class="p-2 rounded bg-amber-50 border border-amber-100"><span class="text-gray-500 block">\u062A\u062D\u062A\u0627\u062C \u062A\u0631\u062D\u064A\u0644</span><strong>${t.needsMigration||0}</strong></div>
-            <div class="p-2 rounded bg-blue-50 border border-blue-100"><span class="text-gray-500 block">Drive / base64</span><strong>${(t.drive_url||0)+(t.inline_base64||0)}</strong></div>
-        `;const s=document.getElementById("user-photo-migration-status");s&&!(typeof Users<"u"&&Users._photoMigrationRunning)&&(s.textContent=(t.needsMigration||0)>0?`\u064A\u0648\u062C\u062F ${t.needsMigration} \u0635\u0648\u0631\u0629 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u062A\u0631\u062D\u064A\u0644.`:"\u0643\u0644 \u0627\u0644\u0635\u0648\u0631 \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 \u0645\u0631\u0628\u0648\u0637\u0629 \u0623\u0648 \u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631 \u0644\u0644\u062A\u0631\u062D\u064A\u0644.")},bindUserPhotoMigrationEvents(){if(!this.isCurrentUserAdmin())return;this.refreshUserPhotoMigrationStats();const e=document.getElementById("user-photo-migration-start-btn"),t=document.getElementById("user-photo-migration-stop-btn"),s=document.getElementById("user-photo-migration-refresh-btn"),n=document.getElementById("user-photo-migration-progress-bar"),i=document.getElementById("user-photo-migration-status"),o=document.getElementById("user-photo-migration-log");s&&!s.dataset.bound&&(s.dataset.bound="1",s.addEventListener("click",()=>this.refreshUserPhotoMigrationStats())),t&&!t.dataset.bound&&(t.dataset.bound="1",t.addEventListener("click",()=>{typeof Users<"u"&&typeof Users.stopUserPhotoMigration=="function"&&Users.stopUserPhotoMigration(),t.disabled=!0,i&&(i.textContent="\u062C\u0627\u0631\u064A \u0625\u064A\u0642\u0627\u0641 \u0627\u0644\u062A\u0631\u062D\u064A\u0644 \u0628\u0639\u062F \u0625\u0646\u0647\u0627\u0621 \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629...")})),e&&!e.dataset.bound&&(e.dataset.bound="1",e.addEventListener("click",async()=>{if(typeof Users>"u"||typeof Users.migrateAllUserPhotosToFileRefs!="function"){Notification.error("\u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D.");return}const a=Users.getUserPhotoMigrationStats();if(!a.needsMigration){Notification.info("\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631 \u062A\u062D\u062A\u0627\u062C \u062A\u0631\u062D\u064A\u0644.");return}if(!confirm(`\u0633\u064A\u062A\u0645 \u062A\u0631\u062D\u064A\u0644 ${a.needsMigration} \u0635\u0648\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629.
-\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629\u061F`))return;e.disabled=!0,t&&(t.disabled=!1),o&&(o.style.display="block",o.innerHTML="");const l=y=>{if(!o)return;const d=document.createElement("div");d.textContent=y,o.appendChild(d),o.scrollTop=o.scrollHeight},c=await Users.migrateAllUserPhotosToFileRefs({onProgress:y=>{const d=y.total?Math.round(y.processed/y.total*100):0;n&&(n.style.width=d+"%"),i&&(i.textContent=`\u0627\u0644\u062A\u0642\u062F\u0645: ${y.processed}/${y.total} \u2014 \u0646\u062C\u062D ${y.ok} \u2014 Drive \u062E\u0627\u0635 ${y.drive_private} \u2014 \u0641\u0634\u0644 ${y.failed}`),y.current&&l(`${y.index}/${y.total} \u2014 ${y.current.name||y.current.email||y.current.id}: ${y.details[y.details.length-1]?.message||""}`)}});e.disabled=!1,t&&(t.disabled=!0),n&&(n.style.width="100%");const p=c?.report||{};i&&(i.textContent=c?.aborted?`\u062A\u0645 \u0627\u0644\u0625\u064A\u0642\u0627\u0641 \u2014 \u0646\u062C\u062D ${p.ok||0} \u0645\u0646 ${p.processed||0}.`:`\u0627\u0643\u062A\u0645\u0644 \u2014 \u0646\u062C\u062D ${p.ok||0} \u2014 Drive \u062E\u0627\u0635 ${p.drive_private||0} \u2014 \u0641\u0634\u0644 ${p.failed||0}.`),this.refreshUserPhotoMigrationStats(),p.ok>0?Notification.success(`\u062A\u0645 \u062A\u0631\u062D\u064A\u0644 ${p.ok} \u0635\u0648\u0631\u0629 \u0628\u0646\u062C\u0627\u062D.`):(p.drive_private||0)>0?Notification.warning("\u0628\u0639\u0636 \u0635\u0648\u0631 Drive \u062E\u0627\u0635\u0629 \u2014 \u064A\u064F\u0639\u0627\u062F \u0631\u0641\u0639\u0647\u0627 \u064A\u062F\u0648\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0645\u0644\u0641 \u0627\u0644\u0634\u062E\u0635\u064A."):Notification.info("\u0644\u0645 \u064A\u064F\u0631\u062D\u0651\u064E\u0644 \u0623\u064A \u0645\u0644\u0641 \u062C\u062F\u064A\u062F.")}))},renderEmergencyContactsCard(){return`
+        `;
+    },
+
+    refreshUserPhotoMigrationStats() {
+        const statsEl = document.getElementById('user-photo-migration-stats');
+        if (!statsEl) return;
+        const stats = (typeof Users !== 'undefined' && typeof Users.getUserPhotoMigrationStats === 'function')
+            ? Users.getUserPhotoMigrationStats()
+            : { total: 0, linked: 0, needsMigration: 0, drive_url: 0, inline_base64: 0 };
+        statsEl.innerHTML = `
+            <div class="p-2 rounded bg-slate-50 border"><span class="text-gray-500 block">إجمالي المستخدمين</span><strong>${stats.total || 0}</strong></div>
+            <div class="p-2 rounded bg-green-50 border border-green-100"><span class="text-gray-500 block">مربوطة FILE_*</span><strong>${stats.linked || 0}</strong></div>
+            <div class="p-2 rounded bg-amber-50 border border-amber-100"><span class="text-gray-500 block">تحتاج ترحيل</span><strong>${stats.needsMigration || 0}</strong></div>
+            <div class="p-2 rounded bg-blue-50 border border-blue-100"><span class="text-gray-500 block">Drive / base64</span><strong>${(stats.drive_url || 0) + (stats.inline_base64 || 0)}</strong></div>
+        `;
+        const statusEl = document.getElementById('user-photo-migration-status');
+        if (statusEl && !(typeof Users !== 'undefined' && Users._photoMigrationRunning)) {
+            statusEl.textContent = (stats.needsMigration || 0) > 0
+                ? `يوجد ${stats.needsMigration} صورة بانتظار الترحيل.`
+                : 'كل الصور الموجودة مربوطة أو لا توجد صور للترحيل.';
+        }
+    },
+
+    bindUserPhotoMigrationEvents() {
+        if (!this.isCurrentUserAdmin()) return;
+        this.refreshUserPhotoMigrationStats();
+
+        const startBtn = document.getElementById('user-photo-migration-start-btn');
+        const stopBtn = document.getElementById('user-photo-migration-stop-btn');
+        const refreshBtn = document.getElementById('user-photo-migration-refresh-btn');
+        const progressBar = document.getElementById('user-photo-migration-progress-bar');
+        const statusEl = document.getElementById('user-photo-migration-status');
+        const logEl = document.getElementById('user-photo-migration-log');
+
+        if (refreshBtn && !refreshBtn.dataset.bound) {
+            refreshBtn.dataset.bound = '1';
+            refreshBtn.addEventListener('click', () => this.refreshUserPhotoMigrationStats());
+        }
+
+        if (stopBtn && !stopBtn.dataset.bound) {
+            stopBtn.dataset.bound = '1';
+            stopBtn.addEventListener('click', () => {
+                if (typeof Users !== 'undefined' && typeof Users.stopUserPhotoMigration === 'function') {
+                    Users.stopUserPhotoMigration();
+                }
+                stopBtn.disabled = true;
+                if (statusEl) statusEl.textContent = 'جاري إيقاف الترحيل بعد إنهاء الصورة الحالية...';
+            });
+        }
+
+        if (startBtn && !startBtn.dataset.bound) {
+            startBtn.dataset.bound = '1';
+            startBtn.addEventListener('click', async () => {
+                if (typeof Users === 'undefined' || typeof Users.migrateAllUserPhotosToFileRefs !== 'function') {
+                    Notification.error('موديول المستخدمين غير متاح.');
+                    return;
+                }
+                const stats = Users.getUserPhotoMigrationStats();
+                if (!stats.needsMigration) {
+                    Notification.info('لا توجد صور تحتاج ترحيل.');
+                    return;
+                }
+                if (!confirm(`سيتم ترحيل ${stats.needsMigration} صورة في الخلفية.\nالمتابعة؟`)) return;
+
+                startBtn.disabled = true;
+                if (stopBtn) stopBtn.disabled = false;
+                if (logEl) {
+                    logEl.style.display = 'block';
+                    logEl.innerHTML = '';
+                }
+
+                const appendLog = (line) => {
+                    if (!logEl) return;
+                    const div = document.createElement('div');
+                    div.textContent = line;
+                    logEl.appendChild(div);
+                    logEl.scrollTop = logEl.scrollHeight;
+                };
+
+                const result = await Users.migrateAllUserPhotosToFileRefs({
+                    onProgress: (p) => {
+                        const pct = p.total ? Math.round((p.processed / p.total) * 100) : 0;
+                        if (progressBar) progressBar.style.width = pct + '%';
+                        if (statusEl) {
+                            statusEl.textContent = `التقدم: ${p.processed}/${p.total} — نجح ${p.ok} — Drive خاص ${p.drive_private} — فشل ${p.failed}`;
+                        }
+                        if (p.current) {
+                            appendLog(`${p.index}/${p.total} — ${p.current.name || p.current.email || p.current.id}: ${p.details[p.details.length - 1]?.message || ''}`);
+                        }
+                    }
+                });
+
+                startBtn.disabled = false;
+                if (stopBtn) stopBtn.disabled = true;
+                if (progressBar) progressBar.style.width = '100%';
+
+                const rep = result?.report || {};
+                if (statusEl) {
+                    statusEl.textContent = result?.aborted
+                        ? `تم الإيقاف — نجح ${rep.ok || 0} من ${rep.processed || 0}.`
+                        : `اكتمل — نجح ${rep.ok || 0} — Drive خاص ${rep.drive_private || 0} — فشل ${rep.failed || 0}.`;
+                }
+                this.refreshUserPhotoMigrationStats();
+                if (rep.ok > 0) {
+                    Notification.success(`تم ترحيل ${rep.ok} صورة بنجاح.`);
+                } else if ((rep.drive_private || 0) > 0) {
+                    Notification.warning('بعض صور Drive خاصة — يُعاد رفعها يدوياً من الملف الشخصي.');
+                } else {
+                    Notification.info('لم يُرحَّل أي ملف جديد.');
+                }
+            });
+        }
+    },
+
+    renderEmergencyContactsCard() {
+        return `
             <div class="content-card mt-6" id="card-hse-emergency-contacts">
                 <div class="card-header flex justify-between items-center" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(185, 28, 28, 0.04));">
                     <h2 class="card-title text-red-600">
                         <i class="fas fa-phone-volume ml-2"></i>
-                        \u0623\u0631\u0642\u0627\u0645 \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0648\u0627\u0644\u0642\u0648\u0645\u064A\u0629 (One-Tap SOS)
+                        أرقام وخطوط الطوارئ الميدانية والقومية (One-Tap SOS)
                     </h2>
                     <span class="badge badge-success text-xs font-bold" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px;">
-                        <i class="fas fa-cloud ml-1"></i> \u0645\u0632\u0627\u0645\u0646\u0629 \u0633\u062D\u0627\u0628\u064A\u0629 \u0645\u0639 HSE_Settings
+                        <i class="fas fa-cloud ml-1"></i> مزامنة سحابية مع HSE_Settings
                     </span>
                 </div>
                 <div class="card-body space-y-4">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        \u064A\u062A\u0645 \u062A\u0639\u0645\u064A\u0645 \u0647\u0630\u0647 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0644\u0649 <strong>\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0627\u0644\u0645\u0648\u062D\u062F\u0629</strong> \u0648\u062C\u0645\u064A\u0639 \u0646\u0645\u0627\u0630\u062C \u0627\u0644\u0628\u0644\u0627\u063A\u0627\u062A \u0648\u0627\u0644\u062A\u0641\u062A\u064A\u0634 \u0648\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0632\u0648\u0627\u0631 \u0644\u0644\u0645\u0635\u0646\u0639. \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0647\u0646\u0627 \u064A\u064F\u062D\u0641\u0638 \u0645\u0628\u0627\u0634\u0631\u0629 \u0641\u064A \u0634\u064A\u062A <code>HSE_Settings</code> \u0628\u0627\u0644\u0633\u062D\u0627\u0628\u0629.
+                        يتم تعميم هذه الأرقام تلقائياً على <strong>بوابة النماذج الميدانية الموحدة</strong> وجميع نماذج البلاغات والتفتيش وبوابة الزوار للمصنع. التعديل هنا يُحفظ مباشرة في شيت <code>HSE_Settings</code> بالسحابة.
                     </p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u{1F3E5} \u0639\u064A\u0627\u062F\u0629 \u0627\u0644\u0645\u0635\u0646\u0639 (\u0637\u0648\u0627\u0631\u0626 \u0648\u0625\u0633\u0639\u0627\u0641\u0627\u062A)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🏥 عيادة المصنع (طوارئ وإسعافات)</label>
                             <input type="tel" id="settings-clinic-phone" class="form-input font-mono" placeholder="01000000001" dir="ltr" />
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u{1F6E1}\uFE0F \u063A\u0631\u0641\u0629 \u0639\u0645\u0644\u064A\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (HSE)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🛡️ غرفة عمليات السلامة (HSE)</label>
                             <input type="tel" id="settings-hse-phone" class="form-input font-mono" placeholder="01000000002" dir="ltr" />
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u{1F692} \u0641\u0631\u064A\u0642 \u0645\u0643\u0627\u0641\u062D\u0629 \u0627\u0644\u062D\u0631\u064A\u0642</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🚒 فريق مكافحة الحريق</label>
                             <input type="tel" id="settings-fire-phone" class="form-input font-mono" placeholder="01000000003" dir="ltr" />
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u{1F6C2} \u0623\u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0627\u062A \u0648\u0627\u0644\u062D\u0631\u0627\u0633\u0627\u062A</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">🛂 أمن البوابات والحراسات</label>
                             <input type="tel" id="settings-security-phone" class="form-input font-mono" placeholder="01000000004" dir="ltr" />
                         </div>
                     </div>
 
                     <div class="border-t border-gray-200 pt-4 mt-2">
                         <h3 class="text-xs font-bold text-gray-700 uppercase mb-3">
-                            <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0627\u0644\u0642\u0648\u0645\u064A\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629
+                            <i class="fas fa-tower-broadcast text-blue-500 ml-1"></i> أرقام الطوارئ القومية المعتمدة
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">\u{1F691} \u0627\u0644\u0625\u0633\u0639\u0627\u0641</label>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🚑 الإسعاف</label>
                                 <input type="tel" id="settings-ambulance-phone" class="form-input font-mono" placeholder="123" dir="ltr" />
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">\u{1F525} \u0627\u0644\u0645\u0637\u0627\u0641\u0626</label>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🔥 المطافئ</label>
                                 <input type="tel" id="settings-natfire-phone" class="form-input font-mono" placeholder="180" dir="ltr" />
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-gray-700 mb-1">\u{1F694} \u0634\u0631\u0637\u0629 \u0627\u0644\u0646\u062C\u062F\u0629</label>
+                                <label class="block text-xs font-semibold text-gray-700 mb-1">🚔 شرطة النجدة</label>
                                 <input type="tel" id="settings-police-phone" class="form-input font-mono" placeholder="122" dir="ltr" />
                             </div>
                         </div>
@@ -1429,115 +2068,2121 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
 
                     <div class="flex justify-end gap-3 pt-2">
                         <button type="button" id="btn-save-emergency-contacts" class="btn-primary" style="background: linear-gradient(135deg, #1e40af, #2563eb);">
-                            <i class="fas fa-cloud-arrow-up ml-2"></i>\u062D\u0641\u0638 \u0648\u062A\u0639\u0645\u064A\u0645 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0633\u062D\u0627\u0628\u064A\u0627\u064B
+                            <i class="fas fa-cloud-arrow-up ml-2"></i>حفظ وتعميم أرقام الطوارئ سحابياً
                         </button>
                     </div>
                 </div>
-            </div>`},async loadEmergencyContactsSettings(){try{const e=document.getElementById("settings-clinic-phone"),t=document.getElementById("settings-hse-phone"),s=document.getElementById("settings-fire-phone"),n=document.getElementById("settings-security-phone"),i=document.getElementById("settings-ambulance-phone"),o=document.getElementById("settings-natfire-phone"),a=document.getElementById("settings-police-phone");let l=null;try{const c=localStorage.getItem("HSE_EMERGENCY_CONTACTS_CACHE");c&&(l=JSON.parse(c))}catch{}if(l||(l={clinicPhone:"01000000001",hsePhone:"01000000002",firePhone:"01000000003",securityPhone:"01000000004",ambulancePhone:"123",nationalFirePhone:"180",policePhone:"122"}),e&&(e.value=l.clinicPhone||""),t&&(t.value=l.hsePhone||""),s&&(s.value=l.firePhone||""),n&&(n.value=l.securityPhone||""),i&&(i.value=l.ambulancePhone||"123"),o&&(o.value=l.nationalFirePhone||"180"),a&&(a.value=l.policePhone||"122"),typeof GoogleIntegration<"u"&&typeof GoogleIntegration.sendRequest=="function"){const c=await GoogleIntegration.sendRequest({action:"getHseEmergencyContacts"});if(c&&c.success&&c.contacts){l=c.contacts;try{localStorage.setItem("HSE_EMERGENCY_CONTACTS_CACHE",JSON.stringify(l))}catch{}e&&(e.value=l.clinicPhone||""),t&&(t.value=l.hsePhone||""),s&&(s.value=l.firePhone||""),n&&(n.value=l.securityPhone||""),i&&(i.value=l.ambulancePhone||"123"),o&&(o.value=l.nationalFirePhone||"180"),a&&(a.value=l.policePhone||"122")}}}catch{}},async saveEmergencyContactsSettings(){const e=document.getElementById("settings-clinic-phone"),t=document.getElementById("settings-hse-phone"),s=document.getElementById("settings-fire-phone"),n=document.getElementById("settings-security-phone"),i=document.getElementById("settings-ambulance-phone"),o=document.getElementById("settings-natfire-phone"),a=document.getElementById("settings-police-phone"),l=document.getElementById("btn-save-emergency-contacts"),c={clinicPhone:e?e.value.trim():"01000000001",hsePhone:t?t.value.trim():"01000000002",firePhone:s?s.value.trim():"01000000003",securityPhone:n?n.value.trim():"01000000004",ambulancePhone:i?i.value.trim():"123",nationalFirePhone:o?o.value.trim():"180",policePhone:a?a.value.trim():"122"};try{l&&(l.disabled=!0,l.innerHTML='<i class="fas fa-circle-notch fa-spin ml-2"></i>\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638 \u0628\u0627\u0644\u0633\u062D\u0627\u0628\u0629...');try{localStorage.setItem("HSE_EMERGENCY_CONTACTS_CACHE",JSON.stringify(c))}catch{}if(typeof GoogleIntegration<"u"&&typeof GoogleIntegration.sendRequest=="function"){const p=await GoogleIntegration.sendRequest({action:"saveHseEmergencyContacts",data:{...c,adminPin:"2026",updatedBy:AppState&&AppState.currentUser&&(AppState.currentUser.name||AppState.currentUser.username)||"\u0645\u062F\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629"}});if(p&&p.success)typeof Notification<"u"&&typeof Notification.success=="function"?Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0648\u062A\u0639\u0645\u064A\u0645 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0628\u0646\u062C\u0627\u062D \u0648\u0645\u0632\u0627\u0645\u0646\u062A\u0647\u0627 \u0628\u0634\u064A\u062A HSE_Settings"):alert("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0648\u062A\u0639\u0645\u064A\u0645 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0628\u0646\u062C\u0627\u062D \u0648\u0645\u0632\u0627\u0645\u0646\u062A\u0647\u0627 \u0628\u0634\u064A\u062A HSE_Settings");else throw new Error(p&&p.message||"\u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0641\u0638")}else typeof Notification<"u"&&typeof Notification.success=="function"&&Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0645\u062D\u0644\u064A\u0627\u064B")}catch(p){typeof Notification<"u"&&typeof Notification.error=="function"?Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u062D\u0627\u0628\u064A: "+(p.message||p)):alert("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u062D\u0627\u0628\u064A: "+p.message)}finally{l&&(l.disabled=!1,l.innerHTML='<i class="fas fa-cloud-arrow-up ml-2"></i>\u062D\u0641\u0638 \u0648\u062A\u0639\u0645\u064A\u0645 \u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0637\u0648\u0627\u0631\u0626 \u0633\u062D\u0627\u0628\u064A\u0627\u064B')}},setupTabsNavigation(){const e=document.querySelectorAll(".tab-btn"),t=document.querySelectorAll(".tab-content");e.forEach(n=>{n.addEventListener("click",()=>{const i=n.getAttribute("data-tab");e.forEach(a=>a.classList.remove("active")),t.forEach(a=>a.classList.remove("active")),n.classList.add("active");const o=document.getElementById(`tab-${i}`);o&&o.classList.add("active"),i==="form-settings"&&this.isCurrentUserAdmin()&&typeof Permissions<"u"&&typeof Permissions.bindFormSettingsEvents=="function"&&Permissions.bindFormSettingsEvents().catch(a=>{Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",a)}),i==="system-settings"&&this.isCurrentUserAdmin()&&(this.loadEmergencyContactsSettings(),this.bindUserPhotoMigrationEvents()),i==="help-content"&&this.isCurrentUserAdmin()&&Settings.bindHelpContentSettingsEvents(),i==="notifications"&&this.isCurrentUserAdmin()&&this.ensureEmailSettingsLoaded(!1)})});const s=document.querySelector(".tab-content.active");if(s){const n=s.id.replace("tab-",""),i=document.querySelector(`.tab-btn[data-tab="${n}"]`);i&&(e.forEach(o=>o.classList.remove("active")),i.classList.add("active"))}else{const n=e[0];n&&n.click()}},setupEventListeners(){this.isCurrentUserAdmin()&&typeof BackupUI<"u"&&setTimeout(()=>{BackupUI.init()},500),setTimeout(()=>{const e=document.getElementById("google-settings-form");e&&e.addEventListener("submit",r=>this.handleSubmit(r));const t=document.getElementById("test-connection-btn");t&&t.addEventListener("click",()=>this.testConnection());const s=document.getElementById("sync-data-btn");s&&s.addEventListener("click",()=>GoogleIntegration.syncData({silent:!1,showLoader:!0,notifyOnSuccess:!0,notifyOnError:!0,includeUsersSheet:!0}));const n=document.getElementById("initialize-sheets-btn");n&&n.addEventListener("click",()=>Settings.initializeSheets());const i=document.getElementById("save-all-data-btn");i&&i.addEventListener("click",async()=>{confirm(`\u0647\u0644 \u062A\u0631\u064A\u062F \u062D\u0641\u0638 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645\u061F
-\u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u0628\u062F\u0627\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629 \u0647\u0646\u0627\u0643.`)&&await GoogleIntegration.saveAllToSheets()});const o=document.getElementById("generate-incidents-report-btn");o&&o.addEventListener("click",()=>Settings.generateReport("incidents"));const a=document.getElementById("generate-training-report-btn");a&&a.addEventListener("click",()=>Settings.generateReport("training"));const l=document.getElementById("generate-ptw-report-btn");l&&l.addEventListener("click",()=>Settings.generateReport("ptw"));const c=document.getElementById("generate-full-report-btn");c&&c.addEventListener("click",()=>Settings.generateReport("full"));const p=document.getElementById("generate-monthly-safety-report-ar-btn"),y=document.getElementById("generate-monthly-safety-report-en-btn");p&&p.addEventListener("click",()=>Settings.generateMonthlySafetyReport("ar")),y&&y.addEventListener("click",()=>Settings.generateMonthlySafetyReport("en"));const d=document.getElementById("settings-check-app-update-btn");d&&d.addEventListener("click",async()=>{if(typeof UI<"u"&&typeof UI.updateAppVersionDisplay=="function"&&UI.updateAppVersionDisplay(),typeof UI<"u"&&typeof UI._checkServerVersion=="function"){d.disabled=!0;try{await UI._checkServerVersion(),typeof Notification<"u"&&Notification.info("\u062A\u0645 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u062A\u062D\u062F\u064A\u062B\u0627\u062A. \u0625\u0646 \u0648\u064F\u062C\u062F \u0625\u0635\u062F\u0627\u0631 \u0623\u062D\u062F\u062B \u0633\u064A\u0638\u0647\u0631 \u0625\u0634\u0639\u0627\u0631.")}finally{d.disabled=!1}}else typeof Notification<"u"&&Notification.info("\u0627\u0644\u0625\u0635\u062F\u0627\u0631 \u0627\u0644\u062D\u0627\u0644\u064A: "+(AppState.appVersion||"\u2014"))});const v=document.getElementById("upload-logo-btn"),x=document.getElementById("company-logo-input"),E=document.getElementById("remove-logo-btn");v&&x&&(v.addEventListener("click",()=>{x.click()}),x.addEventListener("change",async r=>{const m=r.target.files[0];if(!m)return;if(m.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB");return}const u=new FileReader;u.onload=async S=>{let g=S.target.result;try{g=await Settings.compressLogo(g),Utils.safeLog("\u2705 \u062A\u0645 \u0636\u063A\u0637 \u0627\u0644\u0634\u0639\u0627\u0631 (\u0627\u0644\u062D\u062C\u0645 \u0627\u0644\u0646\u0647\u0627\u0626\u064A: "+g.length+" \u062D\u0631\u0641)")}catch(f){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0636\u063A\u0637 \u0627\u0644\u0634\u0639\u0627\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0623\u0635\u0644\u064A\u0629:",f)}if(AppState.companyLogo=g,AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.logo=g,localStorage.setItem("company_logo",g),localStorage.setItem("hse_company_logo",g),typeof window.DataManager<"u"&&window.DataManager.saveCompanySettings&&window.DataManager.saveCompanySettings(),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const f=AppState.currentUser||{},h=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:AppState.companySettings?.name||"",secondaryName:AppState.companySettings?.secondaryName||"",formVersion:AppState.companySettings?.formVersion||"1.0",nameFontSize:AppState.companySettings?.nameFontSize||16,secondaryNameFontSize:AppState.companySettings?.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings?.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings?.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings?.employeeImportHireMonths??3,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:g,postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:f.email,name:f.name,role:f.role,permissions:f.permissions}});if(h&&h.success)Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),h.data&&typeof DataManager.applyCompanySettingsFromServer=="function"&&DataManager.applyCompanySettingsFromServer(h.data,{preserveLocalLogo:!0,updateUI:!0});else{const A=h?.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A";Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",A),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: "+A)}}catch(f){const h=f?.message||f?.toString()||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",f),Notification.error("\u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: "+h)}typeof UI<"u"&&UI.updateLoginLogo&&UI.updateLoginLogo(),typeof UI<"u"&&UI.updateCompanyLogoHeader&&UI.updateCompanyLogoHeader(),typeof UI<"u"&&UI.updateDashboardLogo&&UI.updateDashboardLogo(),window.dispatchEvent(new CustomEvent("companyLogoUpdated",{detail:{logoUrl:g}})),Notification.success("\u062A\u0645 \u0631\u0641\u0639 \u0627\u0644\u0634\u0639\u0627\u0631 \u0628\u0646\u062C\u0627\u062D"),Settings.load()},u.onerror=()=>{Notification.error("\u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0635\u0648\u0631\u0629")},u.readAsDataURL(m)})),E&&E.addEventListener("click",async()=>{if(confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u0632\u0627\u0644\u0629 \u0634\u0639\u0627\u0631 \u0627\u0644\u0634\u0631\u0643\u0629\u061F")){if(AppState.companyLogo="",AppState.companySettings&&(AppState.companySettings.logo=""),localStorage.removeItem("company_logo"),localStorage.removeItem("hse_company_logo"),typeof window.DataManager<"u"&&window.DataManager.saveCompanySettings&&window.DataManager.saveCompanySettings(),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const r=AppState.currentUser||{},m=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:AppState.companySettings?.name||"",secondaryName:AppState.companySettings?.secondaryName||"",formVersion:AppState.companySettings?.formVersion||"1.0",nameFontSize:AppState.companySettings?.nameFontSize||16,secondaryNameFontSize:AppState.companySettings?.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings?.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings?.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings?.employeeImportHireMonths??3,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:"",clearLogo:!0,postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:r.email,name:r.name,role:r.role,permissions:r.permissions}});m&&m.success?Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"):Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",m?.message)}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",r)}typeof UI<"u"&&UI.updateLoginLogo&&UI.updateLoginLogo(),typeof UI<"u"&&UI.updateCompanyLogoHeader&&UI.updateCompanyLogoHeader(),typeof UI<"u"&&UI.updateDashboardLogo&&UI.updateDashboardLogo(),window.dispatchEvent(new CustomEvent("companyLogoUpdated",{detail:{logoUrl:""}})),Notification.success("\u062A\u0645 \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0634\u0639\u0627\u0631"),Settings.load()}});const B=document.getElementById("date-format-select"),I=document.getElementById("save-date-format-btn");I&&B&&I.addEventListener("click",()=>{AppState.dateFormat=B.value,typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0628\u0646\u062C\u0627\u062D")});const b=document.getElementById("wh-total-override"),k=document.getElementById("wh-hours-per-day"),L=document.getElementById("wh-days-per-month"),T=document.getElementById("wh-months-per-year"),_=document.getElementById("wh-include-contractors"),et=document.getElementById("wh-multiplier-trir"),st=document.getElementById("wh-multiplier-afr"),it=document.getElementById("wh-multiplier-far"),at=document.getElementById("wh-multiplier-sr"),nt=document.getElementById("wh-multiplier-ir"),ct=document.getElementById("save-work-hours-settings-btn");(()=>{try{if(b&&(b.value=localStorage.getItem("hse_total_work_hours")||""),k&&(k.value=localStorage.getItem("hse_hours_per_day")||""),L&&(L.value=localStorage.getItem("hse_work_days_per_month")||""),T&&(T.value=localStorage.getItem("hse_work_months_per_year")||""),et&&(et.value=localStorage.getItem("hse_multiplier_trir")||""),st&&(st.value=localStorage.getItem("hse_multiplier_afr")||""),it&&(it.value=localStorage.getItem("hse_multiplier_far")||""),at&&(at.value=localStorage.getItem("hse_multiplier_sr")||""),nt&&(nt.value=localStorage.getItem("hse_multiplier_ir")||""),_){const r=localStorage.getItem("hse_work_hours_include_contractors");r===null||String(r).trim()===""?_.checked=!0:_.checked=r!=="0"&&String(r).toLowerCase()!=="false"&&String(r).toLowerCase()!=="no"}}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0628\u0626\u0629 \u062D\u0642\u0648\u0644 \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644:",r)}})(),ct&&ct.addEventListener("click",()=>{try{const r=b&&String(b.value).trim();if(!r)localStorage.removeItem("hse_total_work_hours");else{const u=parseFloat(r.replace(/,/g,""));Number.isFinite(u)&&u>0?localStorage.setItem("hse_total_work_hours",String(u)):localStorage.removeItem("hse_total_work_hours")}const m=(u,S)=>{if(!S)return;const g=String(S.value).trim();if(g===""){localStorage.removeItem(u);return}const f=parseFloat(g.replace(/,/g,""));Number.isFinite(f)&&f>0?localStorage.setItem(u,String(f)):localStorage.removeItem(u)};m("hse_hours_per_day",k),m("hse_work_days_per_month",L),m("hse_work_months_per_year",T),m("hse_multiplier_trir",et),m("hse_multiplier_afr",st),m("hse_multiplier_far",it),m("hse_multiplier_sr",at),m("hse_multiplier_ir",nt),localStorage.setItem("hse_work_hours_include_contractors",_&&_.checked?"1":"0"),typeof Dashboard<"u"&&typeof Dashboard.updateKPIs=="function"&&Dashboard.updateKPIs(),typeof SafetyPerformanceKPIs<"u"&&typeof SafetyPerformanceKPIs.updateAllKPIs=="function"&&SafetyPerformanceKPIs.updateAllKPIs(),typeof SafetyPerformanceKPIs<"u"&&typeof SafetyPerformanceKPIs.queueScorecardRefresh=="function"&&SafetyPerformanceKPIs.queueScorecardRefresh(!0),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644 \u0648\u062A\u062D\u062F\u064A\u062B \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645")}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644:",r),Notification.error("\u062A\u0639\u0630\u0631 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0633\u0627\u0639\u0627\u062A \u0627\u0644\u0639\u0645\u0644")}});const dt=document.getElementById("btn-save-emergency-contacts");dt&&dt.addEventListener("click",()=>{this.saveEmergencyContactsSettings()}),this.isCurrentUserAdmin()&&(this.loadEmergencyContactsSettings(),this.bindUserPhotoMigrationEvents());const G=document.getElementById("company-name-input"),W=document.getElementById("company-name-font-size-input"),X=document.getElementById("company-secondary-name-input"),J=document.getElementById("company-secondary-name-font-size-input"),$=document.getElementById("company-secondary-name-color-input"),D=document.getElementById("company-secondary-name-color-text-input"),pt=document.getElementById("form-version-input"),mt=document.getElementById("clinic-monthly-visits-threshold-input"),ut=document.getElementById("employee-import-hire-months-input"),gt=document.getElementById("profile-teams-url-input"),ft=document.getElementById("profile-whatsapp-url-input"),U=document.getElementById("ppe-eligibility-rules-container"),yt=document.getElementById("ppe-add-rule-btn"),bt=document.getElementById("ppe-download-template-btn"),ht=document.getElementById("ppe-import-rules-btn"),O=document.getElementById("ppe-rules-import-file"),vt=document.getElementById("save-company-settings-btn"),M={items:[],rules:[]},Mt=r=>{let m=[];if(!r)return[];try{let u=r;if(typeof r=="string"&&(u=r.trim()?JSON.parse(r):[]),!Array.isArray(u))return[];m=u.filter(Boolean)}catch{return[]}return m.map(function(u){if(!u||typeof u!="object")return null;const S=String(u.equipmentType||u.itemName||"").trim();let g=parseInt(u.months,10);const f=parseInt(u.days,10)||0;return(isNaN(g)||g<0)&&(g=0),g=Math.min(120,g),g<1&&f>0&&(g=Math.min(120,Math.max(1,Math.ceil(f/30)))),S?{equipmentType:S,months:g,days:0}:null}).filter(Boolean)},_t=r=>{const m=(r||"").trim(),u=['<option value="">\u2014 \u0627\u062E\u062A\u0631 \u0627\u0644\u0635\u0646\u0641 \u2014</option>'];return M.items.forEach(S=>{const g=(S||"").toString(),f=Utils.escapeHTML(g),h=g.trim()===m?" selected":"";u.push(`<option value="${f}"${h}>${f}</option>`)}),u.join("")},Q=()=>{if(!U)return;const r=U.scrollTop||0,m=window.scrollY||window.pageYOffset||0,u=g=>`
+            </div>`;
+    },
+
+    async loadEmergencyContactsSettings() {
+        try {
+            const cClinic = document.getElementById('settings-clinic-phone');
+            const cHse = document.getElementById('settings-hse-phone');
+            const cFire = document.getElementById('settings-fire-phone');
+            const cSec = document.getElementById('settings-security-phone');
+            const cAmb = document.getElementById('settings-ambulance-phone');
+            const cNatFire = document.getElementById('settings-natfire-phone');
+            const cPol = document.getElementById('settings-police-phone');
+
+            let contacts = null;
+            try {
+                const raw = localStorage.getItem('HSE_EMERGENCY_CONTACTS_CACHE');
+                if (raw) contacts = JSON.parse(raw);
+            } catch(e) {}
+
+            if (!contacts) {
+                contacts = {
+                    clinicPhone: '01000000001',
+                    hsePhone: '01000000002',
+                    firePhone: '01000000003',
+                    securityPhone: '01000000004',
+                    ambulancePhone: '123',
+                    nationalFirePhone: '180',
+                    policePhone: '122'
+                };
+            }
+
+            if (cClinic) cClinic.value = contacts.clinicPhone || '';
+            if (cHse) cHse.value = contacts.hsePhone || '';
+            if (cFire) cFire.value = contacts.firePhone || '';
+            if (cSec) cSec.value = contacts.securityPhone || '';
+            if (cAmb) cAmb.value = contacts.ambulancePhone || '123';
+            if (cNatFire) cNatFire.value = contacts.nationalFirePhone || '180';
+            if (cPol) cPol.value = contacts.policePhone || '122';
+
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                const res = await GoogleIntegration.sendRequest({ action: 'getHseEmergencyContacts' });
+                if (res && res.success && res.contacts) {
+                    contacts = res.contacts;
+                    try { localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(contacts)); } catch(e) {}
+                    if (cClinic) cClinic.value = contacts.clinicPhone || '';
+                    if (cHse) cHse.value = contacts.hsePhone || '';
+                    if (cFire) cFire.value = contacts.firePhone || '';
+                    if (cSec) cSec.value = contacts.securityPhone || '';
+                    if (cAmb) cAmb.value = contacts.ambulancePhone || '123';
+                    if (cNatFire) cNatFire.value = contacts.nationalFirePhone || '180';
+                    if (cPol) cPol.value = contacts.policePhone || '122';
+                }
+            }
+        } catch(err) {
+            console.warn('loadEmergencyContactsSettings error:', err);
+        }
+    },
+
+    async saveEmergencyContactsSettings() {
+        const cClinic = document.getElementById('settings-clinic-phone');
+        const cHse = document.getElementById('settings-hse-phone');
+        const cFire = document.getElementById('settings-fire-phone');
+        const cSec = document.getElementById('settings-security-phone');
+        const cAmb = document.getElementById('settings-ambulance-phone');
+        const cNatFire = document.getElementById('settings-natfire-phone');
+        const cPol = document.getElementById('settings-police-phone');
+        const btn = document.getElementById('btn-save-emergency-contacts');
+
+        const updated = {
+            clinicPhone: cClinic ? cClinic.value.trim() : '01000000001',
+            hsePhone: cHse ? cHse.value.trim() : '01000000002',
+            firePhone: cFire ? cFire.value.trim() : '01000000003',
+            securityPhone: cSec ? cSec.value.trim() : '01000000004',
+            ambulancePhone: cAmb ? cAmb.value.trim() : '123',
+            nationalFirePhone: cNatFire ? cNatFire.value.trim() : '180',
+            policePhone: cPol ? cPol.value.trim() : '122'
+        };
+
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-circle-notch fa-spin ml-2"></i>جاري الحفظ بالسحابة...';
+            }
+
+            try { localStorage.setItem('HSE_EMERGENCY_CONTACTS_CACHE', JSON.stringify(updated)); } catch(e) {}
+
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                const res = await GoogleIntegration.sendRequest({
+                    action: 'saveHseEmergencyContacts',
+                    data: {
+                        ...updated,
+                        adminPin: '2026',
+                        updatedBy: (AppState && AppState.currentUser && (AppState.currentUser.name || AppState.currentUser.username)) || 'مدير السلامة والصحة المهنية'
+                    }
+                });
+
+                if (res && res.success) {
+                    if (typeof Notification !== 'undefined' && typeof Notification.success === 'function') {
+                        Notification.success('تم حفظ وتعميم أرقام الطوارئ بنجاح ومزامنتها بشيت HSE_Settings');
+                    } else {
+                        alert('✅ تم حفظ وتعميم أرقام الطوارئ بنجاح ومزامنتها بشيت HSE_Settings');
+                    }
+                } else {
+                    throw new Error((res && res.message) || 'تعذر الحفظ');
+                }
+            } else {
+                if (typeof Notification !== 'undefined' && typeof Notification.success === 'function') {
+                    Notification.success('تم حفظ أرقام الطوارئ محلياً');
+                }
+            }
+        } catch(err) {
+            if (typeof Notification !== 'undefined' && typeof Notification.error === 'function') {
+                Notification.error('تعذر الحفظ السحابي: ' + (err.message || err));
+            } else {
+                alert('⚠️ تعذر الحفظ السحابي: ' + err.message);
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-arrow-up ml-2"></i>حفظ وتعميم أرقام الطوارئ سحابياً';
+            }
+        }
+    },
+
+    setupTabsNavigation() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const targetTab = button.getAttribute('data-tab');
+
+                // Remove active class from all buttons and contents
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                button.classList.add('active');
+                const targetContent = document.getElementById(`tab-${targetTab}`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
+                }
+                
+                // ✅ إصلاح: تحميل بيانات إعدادات النماذج فوراً عند فتح التبويب
+                if (targetTab === 'form-settings' && this.isCurrentUserAdmin()) {
+                    if (typeof Permissions !== 'undefined' && typeof Permissions.bindFormSettingsEvents === 'function') {
+                        Permissions.bindFormSettingsEvents().catch(error => {
+                            Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
+                        });
+                    }
+                }
+                if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {
+                    this.loadEmergencyContactsSettings();
+                    this.bindUserPhotoMigrationEvents();
+                }
+                if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
+                    Settings.bindHelpContentSettingsEvents();
+                }
+                if (targetTab === 'notifications' && this.isCurrentUserAdmin()) {
+                    this.ensureEmailSettingsLoaded(false);
+                }
+            });
+        });
+
+        // Activate first tab by default if no tab content is active
+        const activeContent = document.querySelector('.tab-content.active');
+        if (!activeContent) {
+            const firstTab = tabButtons[0];
+            if (firstTab) {
+                firstTab.click();
+            }
+        } else {
+            // Ensure the corresponding button is also active
+            const activeTabId = activeContent.id.replace('tab-', '');
+            const correspondingButton = document.querySelector(`.tab-btn[data-tab="${activeTabId}"]`);
+            if (correspondingButton) {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                correspondingButton.classList.add('active');
+            }
+        }
+    },
+
+    setupEventListeners() {
+        // تهيئة واجهة النسخ الاحتياطية (للمديرين فقط)
+        if (this.isCurrentUserAdmin() && typeof BackupUI !== 'undefined') {
+            setTimeout(() => {
+                BackupUI.init();
+            }, 500);
+        }
+        setTimeout(() => {
+            const form = document.getElementById('google-settings-form');
+            if (form) {
+                form.addEventListener('submit', (e) => this.handleSubmit(e));
+            }
+            const testBtn = document.getElementById('test-connection-btn');
+            if (testBtn) {
+                testBtn.addEventListener('click', () => this.testConnection());
+            }
+            const syncBtn = document.getElementById('sync-data-btn');
+            if (syncBtn) {
+                syncBtn.addEventListener('click', () => GoogleIntegration.syncData({
+                    silent: false,
+                    showLoader: true,
+                    notifyOnSuccess: true,
+                    notifyOnError: true,
+                    includeUsersSheet: true
+                }));
+            }
+            const initializeBtn = document.getElementById('initialize-sheets-btn');
+            if (initializeBtn) {
+                initializeBtn.addEventListener('click', () => Settings.initializeSheets());
+            }
+            const saveAllBtn = document.getElementById('save-all-data-btn');
+            if (saveAllBtn) {
+                saveAllBtn.addEventListener('click', async () => {
+                    if (confirm('هل تريد حفظ جميع البيانات في الخادم؟\nسيتم استبدال البيانات الموجودة هناك.')) {
+                        await GoogleIntegration.saveAllToSheets();
+                    }
+                });
+            }
+            // أزرار التقارير
+            const generateIncidentsBtn = document.getElementById('generate-incidents-report-btn');
+            if (generateIncidentsBtn) {
+                generateIncidentsBtn.addEventListener('click', () => Settings.generateReport('incidents'));
+            }
+            const generateTrainingBtn = document.getElementById('generate-training-report-btn');
+            if (generateTrainingBtn) {
+                generateTrainingBtn.addEventListener('click', () => Settings.generateReport('training'));
+            }
+            const generatePTWBtn = document.getElementById('generate-ptw-report-btn');
+            if (generatePTWBtn) {
+                generatePTWBtn.addEventListener('click', () => Settings.generateReport('ptw'));
+            }
+            const generateFullBtn = document.getElementById('generate-full-report-btn');
+            if (generateFullBtn) {
+                generateFullBtn.addEventListener('click', () => Settings.generateReport('full'));
+            }
+            const generateMonthlySafetyArBtn = document.getElementById('generate-monthly-safety-report-ar-btn');
+            const generateMonthlySafetyEnBtn = document.getElementById('generate-monthly-safety-report-en-btn');
+            if (generateMonthlySafetyArBtn) {
+                generateMonthlySafetyArBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport('ar'));
+            }
+            if (generateMonthlySafetyEnBtn) {
+                generateMonthlySafetyEnBtn.addEventListener('click', () => Settings.generateMonthlySafetyReport('en'));
+            }
+
+            const checkUpdateBtn = document.getElementById('settings-check-app-update-btn');
+            if (checkUpdateBtn) {
+                checkUpdateBtn.addEventListener('click', async () => {
+                    if (typeof UI !== 'undefined' && typeof UI.updateAppVersionDisplay === 'function') {
+                        UI.updateAppVersionDisplay();
+                    }
+                    if (typeof UI !== 'undefined' && typeof UI._checkServerVersion === 'function') {
+                        checkUpdateBtn.disabled = true;
+                        try {
+                            await UI._checkServerVersion();
+                            if (typeof Notification !== 'undefined') {
+                                Notification.info('تم التحقق من التحديثات. إن وُجد إصدار أحدث سيظهر إشعار.');
+                            }
+                        } finally {
+                            checkUpdateBtn.disabled = false;
+                        }
+                    } else if (typeof Notification !== 'undefined') {
+                        Notification.info('الإصدار الحالي: ' + (AppState.appVersion || '—'));
+                    }
+                });
+            }
+
+            // Logo upload
+            const uploadLogoBtn = document.getElementById('upload-logo-btn');
+            const logoInput = document.getElementById('company-logo-input');
+            const removeLogoBtn = document.getElementById('remove-logo-btn');
+
+            if (uploadLogoBtn && logoInput) {
+                uploadLogoBtn.addEventListener('click', () => {
+                    logoInput.click();
+                });
+
+                logoInput.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    if (file.size > 2 * 1024 * 1024) {
+                        Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = async (event) => {
+                        let logoDataUrl = event.target.result;
+                        
+                        // ✅ ضغط الصورة لتقليل الحجم (للتأكد من أن base64 string أقل من 50,000 حرف)
+                        try {
+                            logoDataUrl = await Settings.compressLogo(logoDataUrl);
+                            Utils.safeLog('✅ تم ضغط الشعار (الحجم النهائي: ' + logoDataUrl.length + ' حرف)');
+                        } catch (compressError) {
+                            Utils.safeWarn('⚠️ فشل ضغط الشعار، سيتم استخدام الصورة الأصلية:', compressError);
+                            // في حالة الفشل، نستخدم الصورة الأصلية
+                        }
+                        
+                        AppState.companyLogo = logoDataUrl;
+                        // تحديث الشعار في AppState.companySettings أيضاً
+                        if (!AppState.companySettings) {
+                            AppState.companySettings = {};
+                        }
+                        AppState.companySettings.logo = logoDataUrl;
+                        // حفظ الشعار في localStorage للمزامنة مع favicon
+                        localStorage.setItem('company_logo', logoDataUrl);
+                        localStorage.setItem('hse_company_logo', logoDataUrl);
+                        // حفظ إعدادات الشركة (بما في ذلك الشعار) في localStorage
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.saveCompanySettings) {
+                            window.DataManager.saveCompanySettings();
+                        }
+                        // حفظ البيانات باستخدام window.DataManager
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                            window.DataManager.save();
+                        } else {
+                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                        }
+                        
+                        // حفظ الشعار في قاعدة البيانات عند التحميل الأول
+                        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                            try {
+                                const userData = AppState.currentUser || {};
+                                const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                    name: AppState.companySettings?.name || '',
+                                    secondaryName: AppState.companySettings?.secondaryName || '',
+                                    formVersion: AppState.companySettings?.formVersion || '1.0',
+                                    nameFontSize: AppState.companySettings?.nameFontSize || 16,
+                                    secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
+                                    secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
+                                    clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
+                                    address: AppState.companySettings?.address || '',
+                                    phone: AppState.companySettings?.phone || '',
+                                    email: AppState.companySettings?.email || '',
+                                    logo: logoDataUrl,
+                                    postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                    userData: {
+                                        email: userData.email,
+                                        name: userData.name,
+                                        role: userData.role,
+                                        permissions: userData.permissions
+                                    }
+                                });
+
+                                if (result && result.success) {
+                                    Utils.safeLog('✅ تم حفظ الشعار في قاعدة البيانات بنجاح');
+                                    Notification.success('تم حفظ الشعار في قاعدة البيانات بنجاح');
+                                    if (result.data && typeof DataManager.applyCompanySettingsFromServer === 'function') {
+                                        DataManager.applyCompanySettingsFromServer(result.data, {
+                                            preserveLocalLogo: true,
+                                            updateUI: true
+                                        });
+                                    }
+                                } else {
+                                    const errorMsg = result?.message || 'فشل حفظ الشعار في قاعدة البيانات';
+                                    Utils.safeWarn('⚠️ فشل حفظ الشعار في قاعدة البيانات:', errorMsg);
+                                    Notification.error('فشل حفظ الشعار في قاعدة البيانات: ' + errorMsg);
+                                }
+                            } catch (error) {
+                                const errorMsg = error?.message || error?.toString() || 'خطأ غير معروف';
+                                Utils.safeWarn('⚠️ خطأ أثناء حفظ الشعار في قاعدة البيانات:', error);
+                                Notification.error('خطأ أثناء حفظ الشعار في قاعدة البيانات: ' + errorMsg);
+                            }
+                        }
+                        
+                        // تحديث شعار تسجيل الدخول
+                        if (typeof UI !== 'undefined' && UI.updateLoginLogo) {
+                            UI.updateLoginLogo();
+                        }
+                        
+                        // تحديث الهيدر
+                        if (typeof UI !== 'undefined' && UI.updateCompanyLogoHeader) {
+                            UI.updateCompanyLogoHeader();
+                        }
+                        
+                        // تحديث لوحة التحكم
+                        if (typeof UI !== 'undefined' && UI.updateDashboardLogo) {
+                            UI.updateDashboardLogo();
+                        }
+                        
+                        // إرسال حدث لتحديث favicon
+                        window.dispatchEvent(new CustomEvent('companyLogoUpdated', { detail: { logoUrl: logoDataUrl } }));
+                        Notification.success('تم رفع الشعار بنجاح');
+                        Settings.load();
+                    };
+                    reader.onerror = () => {
+                        Notification.error('فشل قراءة الصورة');
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            if (removeLogoBtn) {
+                removeLogoBtn.addEventListener('click', async () => {
+                    if (confirm('هل تريد إزالة شعار الشركة؟')) {
+                        AppState.companyLogo = '';
+                        // إزالة الشعار من AppState.companySettings أيضاً
+                        if (AppState.companySettings) {
+                            AppState.companySettings.logo = '';
+                        }
+                        // إزالة الشعار من localStorage
+                        localStorage.removeItem('company_logo');
+                        localStorage.removeItem('hse_company_logo');
+                        // حفظ إعدادات الشركة (بما في ذلك الشعار) في localStorage
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.saveCompanySettings) {
+                            window.DataManager.saveCompanySettings();
+                        }
+                        // حفظ البيانات باستخدام window.DataManager
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                            window.DataManager.save();
+                        } else {
+                            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                        }
+                        
+                        // حفظ إزالة الشعار في قاعدة البيانات
+                        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                            try {
+                                const userData = AppState.currentUser || {};
+                                const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                    name: AppState.companySettings?.name || '',
+                                    secondaryName: AppState.companySettings?.secondaryName || '',
+                                    formVersion: AppState.companySettings?.formVersion || '1.0',
+                                    nameFontSize: AppState.companySettings?.nameFontSize || 16,
+                                    secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
+                                    secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
+                                    clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
+                                    address: AppState.companySettings?.address || '',
+                                    phone: AppState.companySettings?.phone || '',
+                                    email: AppState.companySettings?.email || '',
+                                    logo: '',
+                                    clearLogo: true,
+                                    postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                    userData: {
+                                        email: userData.email,
+                                        name: userData.name,
+                                        role: userData.role,
+                                        permissions: userData.permissions
+                                    }
+                                });
+
+                                if (result && result.success) {
+                                    Utils.safeLog('✅ تم حذف الشعار من قاعدة البيانات بنجاح');
+                                } else {
+                                    Utils.safeWarn('⚠️ فشل حذف الشعار من قاعدة البيانات:', result?.message);
+                                }
+                            } catch (error) {
+                                Utils.safeWarn('⚠️ خطأ أثناء حذف الشعار من قاعدة البيانات:', error);
+                            }
+                        }
+                        
+                        // تحديث شعار تسجيل الدخول
+                        if (typeof UI !== 'undefined' && UI.updateLoginLogo) {
+                            UI.updateLoginLogo();
+                        }
+                        
+                        // تحديث الهيدر
+                        if (typeof UI !== 'undefined' && UI.updateCompanyLogoHeader) {
+                            UI.updateCompanyLogoHeader();
+                        }
+                        
+                        // تحديث لوحة التحكم
+                        if (typeof UI !== 'undefined' && UI.updateDashboardLogo) {
+                            UI.updateDashboardLogo();
+                        }
+                        
+                        // إرسال حدث لتحديث favicon
+                        window.dispatchEvent(new CustomEvent('companyLogoUpdated', { detail: { logoUrl: '' } }));
+                        Notification.success('تم إزالة الشعار');
+                        Settings.load();
+                    }
+                });
+            }
+
+            // Date format
+            const dateFormatSelect = document.getElementById('date-format-select');
+            const saveDateFormatBtn = document.getElementById('save-date-format-btn');
+
+            if (saveDateFormatBtn && dateFormatSelect) {
+                saveDateFormatBtn.addEventListener('click', () => {
+                    AppState.dateFormat = dateFormatSelect.value;
+                    // حفظ البيانات باستخدام window.DataManager
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        } else {
+            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+        }
+                    Notification.success('تم حفظ إعدادات التاريخ بنجاح');
+                });
+            }
+
+            // إعدادات ساعات العمل — لوحة التحكم (تُخزَّن في localStorage)
+            const whTotalEl = document.getElementById('wh-total-override');
+            const whDayEl = document.getElementById('wh-hours-per-day');
+            const whDpmEl = document.getElementById('wh-days-per-month');
+            const whMoEl = document.getElementById('wh-months-per-year');
+            const whIncEl = document.getElementById('wh-include-contractors');
+            const whMultTrirEl = document.getElementById('wh-multiplier-trir');
+            const whMultAfrEl = document.getElementById('wh-multiplier-afr');
+            const whMultFarEl = document.getElementById('wh-multiplier-far');
+            const whMultSrEl = document.getElementById('wh-multiplier-sr');
+            const whMultIrEl = document.getElementById('wh-multiplier-ir');
+            const saveWorkHoursBtn = document.getElementById('save-work-hours-settings-btn');
+
+            const fillWorkHoursSettingsInputs = () => {
+                try {
+                    if (whTotalEl) whTotalEl.value = localStorage.getItem('hse_total_work_hours') || '';
+                    if (whDayEl) whDayEl.value = localStorage.getItem('hse_hours_per_day') || '';
+                    if (whDpmEl) whDpmEl.value = localStorage.getItem('hse_work_days_per_month') || '';
+                    if (whMoEl) whMoEl.value = localStorage.getItem('hse_work_months_per_year') || '';
+                    if (whMultTrirEl) whMultTrirEl.value = localStorage.getItem('hse_multiplier_trir') || '';
+                    if (whMultAfrEl) whMultAfrEl.value = localStorage.getItem('hse_multiplier_afr') || '';
+                    if (whMultFarEl) whMultFarEl.value = localStorage.getItem('hse_multiplier_far') || '';
+                    if (whMultSrEl) whMultSrEl.value = localStorage.getItem('hse_multiplier_sr') || '';
+                    if (whMultIrEl) whMultIrEl.value = localStorage.getItem('hse_multiplier_ir') || '';
+                    if (whIncEl) {
+                        const v = localStorage.getItem('hse_work_hours_include_contractors');
+                        if (v === null || String(v).trim() === '') {
+                            whIncEl.checked = true;
+                        } else {
+                            whIncEl.checked = v !== '0' && String(v).toLowerCase() !== 'false' && String(v).toLowerCase() !== 'no';
+                        }
+                    }
+                } catch (e) {
+                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعبئة حقول ساعات العمل:', e);
+                }
+            };
+            fillWorkHoursSettingsInputs();
+
+            if (saveWorkHoursBtn) {
+                saveWorkHoursBtn.addEventListener('click', () => {
+                    try {
+                        const totRaw = whTotalEl && String(whTotalEl.value).trim();
+                        if (!totRaw) {
+                            localStorage.removeItem('hse_total_work_hours');
+                        } else {
+                            const n = parseFloat(totRaw.replace(/,/g, ''));
+                            if (Number.isFinite(n) && n > 0) {
+                                localStorage.setItem('hse_total_work_hours', String(n));
+                            } else {
+                                localStorage.removeItem('hse_total_work_hours');
+                            }
+                        }
+
+                        const savePositiveOpt = (key, el) => {
+                            if (!el) return;
+                            const raw = String(el.value).trim();
+                            if (raw === '') {
+                                localStorage.removeItem(key);
+                                return;
+                            }
+                            const num = parseFloat(raw.replace(/,/g, ''));
+                            if (Number.isFinite(num) && num > 0) {
+                                localStorage.setItem(key, String(num));
+                            } else {
+                                localStorage.removeItem(key);
+                            }
+                        };
+
+                        savePositiveOpt('hse_hours_per_day', whDayEl);
+                        savePositiveOpt('hse_work_days_per_month', whDpmEl);
+                        savePositiveOpt('hse_work_months_per_year', whMoEl);
+                        savePositiveOpt('hse_multiplier_trir', whMultTrirEl);
+                        savePositiveOpt('hse_multiplier_afr', whMultAfrEl);
+                        savePositiveOpt('hse_multiplier_far', whMultFarEl);
+                        savePositiveOpt('hse_multiplier_sr', whMultSrEl);
+                        savePositiveOpt('hse_multiplier_ir', whMultIrEl);
+
+                        localStorage.setItem('hse_work_hours_include_contractors', whIncEl && whIncEl.checked ? '1' : '0');
+
+                        if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateKPIs === 'function') {
+                            Dashboard.updateKPIs();
+                        }
+                        if (typeof SafetyPerformanceKPIs !== 'undefined' && typeof SafetyPerformanceKPIs.updateAllKPIs === 'function') {
+                            SafetyPerformanceKPIs.updateAllKPIs();
+                        }
+                        if (typeof SafetyPerformanceKPIs !== 'undefined' && typeof SafetyPerformanceKPIs.queueScorecardRefresh === 'function') {
+                            SafetyPerformanceKPIs.queueScorecardRefresh(true);
+                        }
+                        Notification.success('تم حفظ إعدادات ساعات العمل وتحديث لوحة التحكم');
+                    } catch (err) {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ حفظ إعدادات ساعات العمل:', err);
+                        Notification.error('تعذر حفظ إعدادات ساعات العمل');
+                    }
+                });
+            }
+
+            // إعدادات أرقام الطوارئ الميدانية والقومية (One-Tap SOS)
+            const saveEmergencyContactsBtn = document.getElementById('btn-save-emergency-contacts');
+            if (saveEmergencyContactsBtn) {
+                saveEmergencyContactsBtn.addEventListener('click', () => {
+                    this.saveEmergencyContactsSettings();
+                });
+            }
+            if (this.isCurrentUserAdmin()) {
+                this.loadEmergencyContactsSettings();
+                this.bindUserPhotoMigrationEvents();
+            }
+
+            const companyNameInput = document.getElementById('company-name-input');
+            const companyNameFontSizeInput = document.getElementById('company-name-font-size-input');
+            const companySecondaryNameInput = document.getElementById('company-secondary-name-input');
+            const companySecondaryNameFontSizeInput = document.getElementById('company-secondary-name-font-size-input');
+            const companySecondaryNameColorInput = document.getElementById('company-secondary-name-color-input');
+            const companySecondaryNameColorTextInput = document.getElementById('company-secondary-name-color-text-input');
+            const formVersionInput = document.getElementById('form-version-input');
+            const clinicMonthlyVisitsThresholdInput = document.getElementById('clinic-monthly-visits-threshold-input');
+            const employeeImportHireMonthsInput = document.getElementById('employee-import-hire-months-input');
+            const profileTeamsUrlInput = document.getElementById('profile-teams-url-input');
+            const profileWhatsAppUrlInput = document.getElementById('profile-whatsapp-url-input');
+            const ppeEligibilityRulesContainer = document.getElementById('ppe-eligibility-rules-container');
+            const ppeAddRuleBtn = document.getElementById('ppe-add-rule-btn');
+            const ppeDownloadTemplateBtn = document.getElementById('ppe-download-template-btn');
+            const ppeImportRulesBtn = document.getElementById('ppe-import-rules-btn');
+            const ppeRulesImportFileInput = document.getElementById('ppe-rules-import-file');
+            const saveCompanySettingsBtn = document.getElementById('save-company-settings-btn');
+
+            // ====== إدارة قواعد استحقاق PPE لكل صنف ======
+            const ppeRulesState = {
+                items: [],
+                rules: []
+            };
+
+            const parsePpeRules = (raw) => {
+                let parsed = [];
+                if (!raw) return [];
+                try {
+                    let arr = raw;
+                    if (typeof raw === 'string') {
+                        arr = raw.trim() ? JSON.parse(raw) : [];
+                    }
+                    if (!Array.isArray(arr)) return [];
+                    parsed = arr.filter(Boolean);
+                } catch (e) {
+                    return [];
+                }
+                return parsed.map(function (rule) {
+                    if (!rule || typeof rule !== 'object') return null;
+                    const equipmentType = String(rule.equipmentType || rule.itemName || '').trim();
+                    let months = parseInt(rule.months, 10);
+                    const legacyDays = parseInt(rule.days, 10) || 0;
+                    if (isNaN(months) || months < 0) months = 0;
+                    months = Math.min(120, months);
+                    if (months < 1 && legacyDays > 0) {
+                        months = Math.min(120, Math.max(1, Math.ceil(legacyDays / 30)));
+                    }
+                    if (!equipmentType) return null;
+                    return { equipmentType: equipmentType, months: months, days: 0 };
+                }).filter(Boolean);
+            };
+
+            const buildPpeItemSelectOptions = (selectedValue) => {
+                const sel = (selectedValue || '').trim();
+                const parts = ['<option value="">— اختر الصنف —</option>'];
+                ppeRulesState.items.forEach((item) => {
+                    const v = (item || '').toString();
+                    const esc = Utils.escapeHTML(v);
+                    const isSel = v.trim() === sel ? ' selected' : '';
+                    parts.push(`<option value="${esc}"${isSel}>${esc}</option>`);
+                });
+                return parts.join('');
+            };
+
+            const renderPpeRulesRows = () => {
+                if (!ppeEligibilityRulesContainer) return;
+                const prevScrollTop = ppeEligibilityRulesContainer.scrollTop || 0;
+                const prevPageY = window.scrollY || window.pageYOffset || 0;
+                const tableShell = (bodyRowsHtml) => `
                     <div class="rounded-xl overflow-hidden border border-blue-200/70 shadow-md ring-1 ring-blue-900/5 bg-white min-h-[8rem]">
                         <div class="overflow-x-auto">
                             <table class="w-full text-sm ppe-eligibility-rules-table table-fixed">
                                 <thead>
                                     <tr class="bg-gradient-to-l from-blue-700 via-blue-600 to-indigo-600 text-white">
                                         <th class="px-3 py-3 text-center font-bold w-12 border-b border-white/20">#</th>
-                                        <th class="px-3 py-3 text-right font-bold min-w-[12rem] border-b border-white/20">\u0646\u0648\u0639 \u0627\u0644\u0635\u0646\u0641</th>
-                                        <th class="px-3 py-3 text-center font-bold w-40 border-b border-white/20">\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u062F\u0646\u0649 (\u0634\u0647\u0648\u0631)</th>
-                                        <th class="px-3 py-3 text-center font-bold w-52 border-b border-white/20">\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                                        <th class="px-3 py-3 text-right font-bold min-w-[12rem] border-b border-white/20">نوع الصنف</th>
+                                        <th class="px-3 py-3 text-center font-bold w-40 border-b border-white/20">الحد الأدنى (شهور)</th>
+                                        <th class="px-3 py-3 text-center font-bold w-52 border-b border-white/20">إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${g}
+                                    ${bodyRowsHtml}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                `;if(!M.rules.length){U.innerHTML=u(`
+                `;
+
+                if (!ppeRulesState.rules.length) {
+                    ppeEligibilityRulesContainer.innerHTML = tableShell(`
                         <tr>
                             <td colspan="4" class="px-4 py-10 text-center text-sm text-slate-500 bg-gradient-to-b from-slate-50 to-white">
                                 <i class="fas fa-table text-2xl text-teal-300 mb-2 block"></i>
-                                \u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0641\u0648\u0641 \u0628\u0639\u062F. \u0627\u0636\u063A\u0637 <strong class="text-teal-700">\xAB\u0625\u0636\u0627\u0641\u0629 \u0635\u0641\xBB</strong> \u062B\u0645 \u0627\u062E\u062A\u0631 \u0627\u0644\u0635\u0646\u0641 \u0648\u0639\u062F\u062F \u0627\u0644\u0634\u0647\u0648\u0631\u060C \u0648\u0628\u0639\u062F\u0647\u0627 <strong class="text-teal-700">\xAB\u062D\u0641\u0638 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629\xBB</strong>.
+                                لا توجد صفوف بعد. اضغط <strong class="text-teal-700">«إضافة صف»</strong> ثم اختر الصنف وعدد الشهور، وبعدها <strong class="text-teal-700">«حفظ بيانات الشركة»</strong>.
                             </td>
                         </tr>
-                    `),U.scrollTop=r,window.scrollTo({top:m});return}const S=M.rules.map((g,f)=>{const h=_t(g.equipmentType),A=Math.max(0,Math.min(120,parseInt(g.months,10)||0));return`
-                    <tr class="ppe-rule-row hover:bg-blue-50/50 transition-colors" data-index="${f}">
-                        <td class="px-3 py-3 text-center text-slate-500 font-semibold">${f+1}</td>
+                    `);
+                    ppeEligibilityRulesContainer.scrollTop = prevScrollTop;
+                    window.scrollTo({ top: prevPageY });
+                    return;
+                }
+
+                const rowsHtml = ppeRulesState.rules.map((rule, idx) => {
+                    const optionsHtml = buildPpeItemSelectOptions(rule.equipmentType);
+                    const monthsVal = Math.max(0, Math.min(120, parseInt(rule.months, 10) || 0));
+                    return `
+                    <tr class="ppe-rule-row hover:bg-blue-50/50 transition-colors" data-index="${idx}">
+                        <td class="px-3 py-3 text-center text-slate-500 font-semibold">${idx + 1}</td>
                         <td class="px-3 py-3 align-middle min-w-[10rem]">
-                            <select class="form-input ppe-rule-item w-full text-sm border-blue-200/80 focus:ring-blue-500">${h}</select>
+                            <select class="form-input ppe-rule-item w-full text-sm border-blue-200/80 focus:ring-blue-500">${optionsHtml}</select>
                         </td>
                         <td class="px-3 py-3 align-middle text-center">
                             <div class="inline-flex items-center justify-center gap-1">
                                 <input type="number" class="form-input ppe-rule-months w-24 text-center text-sm border-blue-200/80 font-bold tabular-nums"
-                                    min="1" max="120" step="1" inputmode="numeric" value="${A||""}" placeholder="1">
-                                <span class="text-xs text-slate-500 whitespace-nowrap">\u0634\u0647\u0631\u064B\u0627</span>
+                                    min="1" max="120" step="1" inputmode="numeric" value="${monthsVal || ''}" placeholder="1">
+                                <span class="text-xs text-slate-500 whitespace-nowrap">شهرًا</span>
                             </div>
                         </td>
                         <td class="px-3 py-3 text-center align-middle">
                             <div class="inline-flex items-center justify-center gap-2 flex-wrap">
                                 <button type="button" class="ppe-rule-edit inline-flex items-center justify-center gap-1.5 rounded-xl border border-blue-300 bg-blue-600 text-white hover:bg-blue-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-300"
-                                    title="\u062A\u0639\u062F\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u0635\u0641">
-                                    <i class="fas fa-pen"></i> \u062A\u0639\u062F\u064A\u0644
+                                    title="تعديل هذا الصف">
+                                    <i class="fas fa-pen"></i> تعديل
                                 </button>
                                 <button type="button" class="ppe-rule-remove inline-flex items-center justify-center gap-1.5 rounded-xl border border-red-300 bg-red-600 text-white hover:bg-red-700 text-sm font-extrabold px-4 py-2.5 min-h-[42px] shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-300"
-                                    title="\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0635\u0641">
-                                    <i class="fas fa-trash-alt"></i> \u062D\u0630\u0641
+                                    title="حذف هذا الصف">
+                                    <i class="fas fa-trash-alt"></i> حذف
                                 </button>
                             </div>
                         </td>
-                    </tr>`}).join("");U.innerHTML=u(S),U.scrollTop=r,window.scrollTo({top:m}),U.querySelectorAll(".ppe-rule-remove").forEach((g,f)=>{g.addEventListener("click",()=>{M.rules.splice(f,1),Q()})}),U.querySelectorAll(".ppe-rule-edit").forEach((g,f)=>{g.addEventListener("click",()=>{const h=U.querySelector(`.ppe-rule-row[data-index="${f}"]`);if(!h)return;h.classList.add("bg-blue-100","ring-1","ring-blue-300");const A=h.querySelector(".ppe-rule-item"),C=h.querySelector(".ppe-rule-months");A?A.focus():C&&C.focus(),setTimeout(()=>h.classList.remove("bg-blue-100","ring-1","ring-blue-300"),1200)})})},Dt=()=>{if(!U)return[];const r=Array.from(U.querySelectorAll(".ppe-rule-row")),m=new Set,u=[];return r.forEach(S=>{const g=S.querySelector(".ppe-rule-item"),f=S.querySelector(".ppe-rule-months"),h=(g?.value||"").trim();if(!h||m.has(h))return;let A=parseInt(f?.value,10);isNaN(A)||A<1||(A=Math.min(120,A),m.add(h),u.push({equipmentType:h,months:A,days:0}))}),u},Nt=()=>{if(!U)return Array.isArray(M.rules)?[...M.rules]:[];const r=Array.from(U.querySelectorAll(".ppe-rule-row"));return r.length?r.map(m=>{const u=m.querySelector(".ppe-rule-item"),S=m.querySelector(".ppe-rule-months"),g=(u?.value||"").trim();let f=parseInt(S?.value,10);return(isNaN(f)||f<1)&&(f=12),f=Math.min(120,f),{equipmentType:g,months:f,days:0}}):Array.isArray(M.rules)?[...M.rules]:[]},St=r=>{const m=[],u=new Set;return(Array.isArray(r)?r:[]).forEach(S=>{if(!S||typeof S!="object")return;const g=String(S.equipmentType||S.itemName||S["\u0646\u0648\u0639 \u0627\u0644\u0635\u0646\u0641"]||S.\u0627\u0644\u0635\u0646\u0641||"").trim();let f=parseInt(S.months??S.\u0627\u0644\u0634\u0647\u0648\u0631??S.months,10);!g||u.has(g)||isNaN(f)||f<1||(f=Math.min(120,f),u.add(g),m.push({equipmentType:g,months:f,days:0}))}),m},$t=r=>{const m=String(r||"").split(/\r?\n/).map(g=>g.trim()).filter(Boolean);if(!m.length)return[];const S=m.filter((g,f)=>f!==0||!/الصنف|نوع|months|month|الشهور/i.test(g)).map(g=>{const f=g.includes("	")?"	":",",h=g.split(f).map(A=>A.trim()).filter(Boolean);return h.length<2?null:{equipmentType:h[0],months:h[1]}}).filter(Boolean);return St(S)},Pt=async r=>{if(!r)return;const m=(r.name||"").toLowerCase();let u=[];if(m.endsWith(".xlsx")||m.endsWith(".xls")){if(typeof XLSX>"u"){Notification.error("\u0644\u0627 \u064A\u0645\u0643\u0646 \u0642\u0631\u0627\u0621\u0629 Excel \u062D\u0627\u0644\u064A\u0627\u064B. \u0627\u0633\u062A\u062E\u062F\u0645 CSV \u0623\u0648 \u0641\u0639\u0651\u0644 \u0645\u0643\u062A\u0628\u0629 XLSX.");return}const S=await r.arrayBuffer(),g=XLSX.read(S,{type:"array"}),f=g.SheetNames&&g.SheetNames[0];if(!f){Notification.error("\u0645\u0644\u0641 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0644\u0627 \u064A\u062D\u062A\u0648\u064A \u0623\u0648\u0631\u0627\u0642 \u0628\u064A\u0627\u0646\u0627\u062A.");return}const h=g.Sheets[f],A=XLSX.utils.sheet_to_json(h,{defval:""});u=St(A)}else{const S=await r.text();u=$t(S)}if(!u.length){Notification.warning("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0635\u0641\u0648\u0641 \u0635\u0627\u0644\u062D\u0629 \u0644\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F. \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0642\u0627\u0644\u0628: \u0627\u0644\u0635\u0646\u0641,\u0627\u0644\u0634\u0647\u0648\u0631");return}M.rules=u,Q(),Notification.success(`\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F ${u.length} \u0642\u0627\u0639\u062F\u0629 \u0628\u0646\u062C\u0627\u062D.`)},Ft=async()=>{let r=[];try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript){const m=await GoogleIntegration.sendToAppsScript("getPPEItemsList",{});m&&m.success&&Array.isArray(m.data)&&(r=m.data.map(u=>(u&&(u.itemName||u.name)||"").toString().trim()).filter(Boolean))}}catch{r=[]}if(!r.length){const m=AppState.appData&&AppState.appData.ppe||[];r=[...new Set(m.map(u=>(u.equipmentType||"").toString().trim()).filter(Boolean))]}r.length||(r=["\u062E\u0648\u0630\u0629 \u0623\u0645\u0627\u0646","\u0646\u0638\u0627\u0631\u0627\u062A \u0648\u0642\u0627\u064A\u0629","\u0642\u0641\u0627\u0632\u0627\u062A","\u0623\u062D\u0630\u064A\u0629 \u0623\u0645\u0627\u0646","\u0633\u062A\u0631\u0629 \u0639\u0627\u0643\u0633\u0629","\u0633\u062F\u0627\u062F\u0627\u062A \u0623\u0630\u0646","\u0643\u0645\u0627\u0645\u0629","\u0628\u062F\u0644\u0629 \u0648\u0627\u0642\u064A\u0629","\u062D\u0632\u0627\u0645 \u0623\u0645\u0627\u0646","\u0645\u0639\u062F\u0627\u062A \u062D\u0645\u0627\u064A\u0629 \u062A\u0646\u0641\u0633\u064A\u0629"]),M.items=Array.from(new Set(r)).sort((m,u)=>m.localeCompare(u,"ar"))};(async()=>(M.rules=Mt(AppState.companySettings?.ppeEligibilityRules),await Ft(),Q()))(),yt&&yt.addEventListener("click",()=>{M.rules=Nt(),M.rules.push({equipmentType:"",months:12,days:0}),Q();const r=Array.from(U?.querySelectorAll(".ppe-rule-row")||[]),m=r[r.length-1],u=m?m.querySelector(".ppe-rule-item"):null;u&&typeof u.focus=="function"&&setTimeout(()=>u.focus(),0)}),bt&&bt.addEventListener("click",()=>{const m="\uFEFF"+[["\u0627\u0644\u0635\u0646\u0641","\u0627\u0644\u0634\u0647\u0648\u0631"],["\u062E\u0648\u0630\u0629 \u0623\u0645\u0627\u0646","12"],["\u0646\u0638\u0627\u0631\u0627\u062A \u0648\u0642\u0627\u064A\u0629","6"]].map(f=>f.join(",")).join(`
-`),u=new Blob([m],{type:"text/csv;charset=utf-8;"}),S=URL.createObjectURL(u),g=document.createElement("a");g.href=S,g.download="ppe-eligibility-template.csv",document.body.appendChild(g),g.click(),g.remove(),URL.revokeObjectURL(S)}),ht&&O&&(ht.addEventListener("click",()=>O.click()),O.addEventListener("change",async()=>{const r=O.files&&O.files[0];try{await Pt(r)}catch(m){Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: "+(m?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}finally{O.value=""}}));const xt=document.getElementById("reset-company-name-btn");$&&D&&($.addEventListener("input",()=>{D.value=$.value}),D.addEventListener("input",()=>{const r=D.value.trim();/^#[0-9A-Fa-f]{6}$/.test(r)&&($.value=r)})),vt&&G&&vt.addEventListener("click",async()=>{const r=G.value.trim();if(!r){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629.");return}const m=X?X.value.trim():"",u=pt&&pt.value.trim()||"1.0";let S=16;if(W){const w=parseInt(W.value,10);!isNaN(w)&&w>=8&&w<=72&&(S=w)}let g=14;if(J){const w=parseInt(J.value,10);!isNaN(w)&&w>=8&&w<=72&&(g=w)}let f="#6B7280";D&&D.value.trim()?f=D.value.trim():$&&(f=$.value);let h=10;if(mt){const w=parseInt(mt.value,10);!isNaN(w)&&w>=1&&w<=1e3&&(h=w)}let A=3;if(ut){const w=parseInt(ut.value,10);!isNaN(w)&&w>=1&&w<=120&&(A=w)}const C=gt?gt.value.trim():"",q=ft?ft.value.trim():"";if(U){const w=Array.from(U.querySelectorAll(".ppe-rule-row"));for(const N of w){const Tt=(N.querySelector(".ppe-rule-item")?.value||"").trim(),rt=N.querySelector(".ppe-rule-months")?.value,tt=parseInt(rt,10);if(Tt&&(isNaN(tt)||tt<1)){Notification.error("\u064A\u064F\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0639\u062F\u062F \u0634\u0647\u0648\u0631 \u0635\u0627\u0644\u062D (\u0645\u0646 1 \u0625\u0644\u0649 120) \u0644\u0643\u0644 \u0635\u0646\u0641 \u0645\u062D\u062F\u062F \u0641\u064A \u062C\u062F\u0648\u0644 \u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629.");return}if(!Tt&&rt!==""&&rt!==void 0&&!isNaN(tt)&&tt>=1){Notification.error("\u064A\u064F\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u0635\u0646\u0641 \u0644\u0643\u0644 \u0635\u0641 \u0641\u064A\u0647 \u0639\u062F\u062F \u0634\u0647\u0648\u0631 \u0641\u064A \u062C\u062F\u0648\u0644 \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642.");return}}}const ot=Dt(),K=JSON.stringify(ot),Z=String(AppState.companySettings?.logo||AppState.companyLogo||localStorage.getItem("hse_company_logo")||localStorage.getItem("company_logo")||"").trim();AppState.companySettings=Object.assign({},AppState.companySettings,{name:r,secondaryName:m,formVersion:u,nameFontSize:S,secondaryNameFontSize:g,secondaryNameColor:f,clinicMonthlyVisitsAlertThreshold:h,employeeImportHireMonths:A,profileTeamsUrl:C,profileWhatsAppUrl:q,ppeEligibilityRules:K,logo:Z}),Z&&(AppState.companyLogo=Z),DataManager.saveCompanySettings();let lt=!0;if(AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const w=AppState.currentUser||{},N=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:r,secondaryName:m,formVersion:u,nameFontSize:S,secondaryNameFontSize:g,secondaryNameColor:f,clinicMonthlyVisitsAlertThreshold:h,employeeImportHireMonths:A,profileTeamsUrl:C,profileWhatsAppUrl:q,ppeEligibilityRules:K,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:Z,postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:w.email,name:w.name,role:w.role,permissions:w.permissions}});N&&N.success?(Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645 \u0628\u0646\u062C\u0627\u062D"),N.data&&typeof DataManager.applyCompanySettingsFromServer=="function"&&DataManager.applyCompanySettingsFromServer(N.data,{preserveLocalLogo:!0,allowClearLogo:!1,updateUI:!1})):(Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645:",N?.message),lt=!1,Notification.error("\u062A\u0639\u0630\u0631 \u062D\u0641\u0638 \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A: "+(N?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")))}catch(w){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0645\u0632\u0627\u0645\u0646\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0645\u0639 \u0627\u0644\u062E\u0627\u062F\u0645:",w),lt=!1,Notification.error("\u062A\u0639\u0630\u0631 \u062D\u0641\u0638 \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0627\u0633\u062A\u062D\u0642\u0627\u0642 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A (\u0627\u062A\u0635\u0627\u0644/\u062E\u0627\u062F\u0645): "+(w?.message||"\u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."))}lt&&(typeof UI<"u"&&(typeof UI.updateCompanyBranding=="function"&&UI.updateCompanyBranding(),typeof UI.updateCompanyLogoHeader=="function"&&UI.updateCompanyLogoHeader(),typeof UI.updateLoginLogo=="function"&&UI.updateLoginLogo()),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0628\u0646\u062C\u0627\u062D"),Settings.load())}),AppState.companySettings||(AppState.companySettings={}),Array.isArray(AppState.companySettings.postLoginItems)||(AppState.companySettings.postLoginItems=Settings.getPostLoginItems()),Settings.renderPostLoginItemsList();const It=document.getElementById("post-login-items-list"),Et=document.getElementById("post-login-add-item-btn"),z=document.getElementById("post-login-item-form"),j=document.getElementById("post-login-form-title"),P=document.getElementById("post-login-item-title"),F=document.getElementById("post-login-item-body"),R=document.getElementById("post-login-item-duration"),H=document.getElementById("post-login-item-active"),wt=document.getElementById("post-login-item-save-btn"),At=document.getElementById("post-login-item-cancel-btn");let V=-1;const Lt=()=>{z&&z.classList.add("hidden"),V=-1,j&&(j.textContent="\u0625\u0636\u0627\u0641\u0629 \u0639\u0646\u0635\u0631 \u062C\u062F\u064A\u062F"),P&&(P.value=""),F&&(F.value=""),R&&(R.value="10"),H&&(H.checked=!0)},Y=async()=>{if(AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.postLoginItems=Settings.getPostLoginItems(),typeof DataManager<"u"&&DataManager.saveCompanySettings&&DataManager.saveCompanySettings(),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const r=AppState.currentUser||{},m={name:AppState.companySettings.name||"",secondaryName:AppState.companySettings.secondaryName||"",formVersion:AppState.companySettings.formVersion||"1.0",nameFontSize:AppState.companySettings.nameFontSize||16,secondaryNameFontSize:AppState.companySettings.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings.employeeImportHireMonths??3,address:AppState.companySettings.address||"",phone:AppState.companySettings.phone||"",email:AppState.companySettings.email||"",logo:AppState.companySettings.logo||AppState.companyLogo||"",postLoginItems:typeof AppState.companySettings.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings.postLoginItems||[]),userData:{email:r.email,name:r.name,role:r.role,permissions:r.permissions}};await GoogleIntegration.sendToAppsScript("saveCompanySettings",m)}catch(r){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u062A\u0639\u0644\u064A\u0645\u0627\u062A \u0645\u0627 \u0628\u0639\u062F \u0627\u0644\u062F\u062E\u0648\u0644:",r)}};Et&&Et.addEventListener("click",()=>{V=-1,j&&(j.textContent="\u0625\u0636\u0627\u0641\u0629 \u0639\u0646\u0635\u0631 \u062C\u062F\u064A\u062F"),P&&(P.value=""),F&&(F.value=""),R&&(R.value="10"),H&&(H.checked=!0),z&&z.classList.remove("hidden")}),At&&At.addEventListener("click",Lt),wt&&P&&F&&wt.addEventListener("click",async()=>{const r=P.value.trim(),m=F.value.trim(),u=parseInt(R?.value,10),S=H?H.checked:!0;if(!r){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0639\u0646\u0648\u0627\u0646.");return}const f=Settings.getPostLoginItems().slice().sort((A,C)=>(A.order??999)-(C.order??999)),h=f.length?Math.max(...f.map(A=>A.order??0)):0;V>=0&&V<f.length?f[V]={title:r,body:m,durationSeconds:isNaN(u)?10:Math.min(120,Math.max(0,u)),order:f[V].order??V,active:S}:f.push({title:r,body:m,durationSeconds:isNaN(u)?10:Math.min(120,Math.max(0,u)),order:h+1,active:S}),AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.postLoginItems=f,await Y(),Lt(),Settings.renderPostLoginItemsList(),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0639\u0646\u0635\u0631.")}),It&&It.addEventListener("click",async r=>{const m=r.target.closest(".post-login-edit-btn"),u=r.target.closest(".post-login-delete-btn"),S=r.target.closest(".post-login-up-btn"),g=r.target.closest(".post-login-down-btn"),f=m?.dataset?.index??u?.dataset?.index??S?.dataset?.index??g?.dataset?.index;if(f===void 0)return;const h=parseInt(f,10),C=Settings.getPostLoginItems().slice().sort((ot,K)=>(ot.order??999)-(K.order??999)),q=C[h];if(q){if(m){V=h,j&&(j.textContent="\u062A\u0639\u062F\u064A\u0644 \u0639\u0646\u0635\u0631"),P&&(P.value=q.title||""),F&&(F.value=q.body||""),R&&(R.value=String(q.durationSeconds??10)),H&&(H.checked=q.active!==!1),z&&z.classList.remove("hidden");return}if(u){if(!confirm("\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0639\u0646\u0635\u0631\u061F"))return;C.splice(h,1),AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.postLoginItems=C,await Y(),Settings.renderPostLoginItemsList(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0639\u0646\u0635\u0631.");return}if(S&&h>0){[C[h-1].order,C[h].order]=[C[h].order,C[h-1].order],AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.postLoginItems=C,await Y(),Settings.renderPostLoginItemsList();return}g&&h<C.length-1&&([C[h].order,C[h+1].order]=[C[h+1].order,C[h].order],AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.postLoginItems=C,await Y(),Settings.renderPostLoginItemsList())}}),this.isCurrentUserAdmin()&&Settings.bindHelpContentSettingsEvents(),xt&&G&&xt.addEventListener("click",async()=>{if(confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0644\u0644\u0634\u0631\u0643\u0629\u061F")){if(AppState.companySettings=Object.assign({},AppState.companySettings,{name:DEFAULT_COMPANY_NAME,nameFontSize:16,secondaryNameFontSize:14,secondaryNameColor:"#6B7280"}),G.value=DEFAULT_COMPANY_NAME,X&&(AppState.companySettings.secondaryName="",X.value=""),W&&(W.value="16"),J&&(J.value="14"),$&&($.value="#6B7280"),D&&(D.value="#6B7280"),DataManager.saveCompanySettings(),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const r=AppState.currentUser||{},m=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:DEFAULT_COMPANY_NAME,secondaryName:"",formVersion:"1.0",nameFontSize:16,secondaryNameFontSize:14,secondaryNameColor:"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings?.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings?.employeeImportHireMonths??3,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:AppState.companySettings?.logo||AppState.companyLogo||"",postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:r.email,name:r.name,role:r.role,permissions:r.permissions}});m&&m.success?Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645 \u0628\u0646\u062C\u0627\u062D"):Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645:",m?.message)}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0645\u0632\u0627\u0645\u0646\u0629 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0645\u0639 \u0627\u0644\u062E\u0627\u062F\u0645:",r)}typeof UI<"u"&&typeof UI.updateCompanyBranding=="function"&&UI.updateCompanyBranding(),typeof DataManager<"u"&&DataManager.loadCompanySettings&&setTimeout(async()=>{try{await DataManager.loadCompanySettings(!0),Utils.safeLog("\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0628\u0639\u062F \u0627\u0644\u0627\u0633\u062A\u0639\u0627\u062F\u0629")}catch(r){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629:",r)}},100),Notification.success("\u062A\u0645\u062A \u0627\u0633\u062A\u0639\u0627\u062F\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629"),Settings.load()}});const Ct=document.getElementById("view-activity-log-btn");Ct&&Ct.addEventListener("click",()=>{UserActivityLog.showModal()});const kt=document.getElementById("view-user-versions-btn");kt&&kt.addEventListener("click",()=>{typeof UserVersionsAdmin<"u"&&UserVersionsAdmin.open?UserVersionsAdmin.open():Notification.error("\u0644\u0648\u062D\u0629 \u0645\u062A\u0627\u0628\u0639\u0629 \u0627\u0644\u0625\u0635\u062F\u0627\u0631\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u062D\u0627\u0648\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.")});const Bt=document.getElementById("view-client-errors-btn");Bt&&Bt.addEventListener("click",()=>{typeof ClientErrorsAdmin<"u"&&ClientErrorsAdmin.open?ClientErrorsAdmin.open():Notification.error("\u0644\u0648\u062D\u0629 \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0623\u062E\u0637\u0627\u0621 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u062D\u0627\u0648\u0644 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629.")});const Ut=document.getElementById("open-client-errors-section-btn");if(Ut&&Ut.addEventListener("click",()=>{typeof UI<"u"&&typeof UI.showSection=="function"?UI.showSection("client-errors"):typeof ClientErrorsAdmin<"u"&&ClientErrorsAdmin.open?ClientErrorsAdmin.open():location.hash="#client-errors"}),this.isCurrentUserAdmin()&&typeof Permissions?.bindFormSettingsEvents=="function"&&Permissions.bindFormSettingsEvents(),this.isCurrentUserAdmin()){this._emailSettingsUiReady=!1,this.bindEmailSettingsEvents();const r=document.getElementById("tab-notifications");r&&r.classList.contains("active")&&this.ensureEmailSettingsLoaded(!1)}this.bindViolationTypesEvents(),this.initializeApprovalCircuitsUI(),this.bindCloudStorageSettingsEvents()},100)},ensureEmailSettingsLoaded(e){return!this.isCurrentUserAdmin()||!document.getElementById("email-settings-modules-list")?null:this._emailSettingsLoadingPromise&&!e?this._emailSettingsLoadingPromise:(this._emailSettingsLoadingPromise=this.loadEmailSettingsUI({force:!!e}).catch(t=>{}).finally(()=>{this._emailSettingsLoadingPromise=null}),this._emailSettingsLoadingPromise)},applyEmailSettingsDraftToUI(e){this._emailSettingsDraft=e||(typeof EmailDispatch<"u"?EmailDispatch.getDefaultSettings():{globalEnabled:!1,defaultRecipients:[],modules:{}}),this._emailSettingsStatusFilter=this._emailSettingsStatusFilter||"all";const t=document.getElementById("email-settings-global-enabled"),s=document.getElementById("email-settings-default-recipients");t&&(t.checked=!!this._emailSettingsDraft.globalEnabled),s&&(s.value=""),this.renderEmailDefaultChips(),this.renderEmailGroupFilters(),this.renderEmailStatusFilters(),this.updateEmailSettingsStatusBanner(),this.renderEmailStatsStrip(),this.renderEmailModulesList(document.getElementById("email-settings-module-filter")?.value||"")},async loadEmailSettingsUI(e){const s=!!(e||{}).force;if(!document.getElementById("email-settings-modules-list"))return;this._emailSettingsGroupFilter=this._emailSettingsGroupFilter||"all",this._emailSettingsStatusFilter=this._emailSettingsStatusFilter||"all";const i=document.getElementById("email-settings-sync-badge");i&&(i.hidden=!1,i.textContent="\u0645\u0632\u0627\u0645\u0646\u0629\u2026");const o=typeof EmailDispatch<"u"?EmailDispatch.getCachedSettings()||EmailDispatch.getDefaultSettings():{globalEnabled:!1,defaultRecipients:[],modules:{}};this._emailSettingsHydrating=!0,this.applyEmailSettingsDraftToUI(o),this._emailSettingsHydrating=!1,this.setEmailSettingsDirty(!1);const a=document.getElementById("email-settings-modules-summary"),l=a?a.textContent:"";a&&(a.textContent=(l||"\u2014")+" \xB7 \u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u2026");try{let c=o;if(typeof EmailDispatch<"u")c=await EmailDispatch.loadSettings(s);else if(typeof GoogleIntegration<"u"){const p=await GoogleIntegration.sendToAppsScript("getEmailSettings",{__timeoutMs:25e3});c=p&&p.data?p.data:o}if(!document.getElementById("email-settings-modules-list"))return;this._emailSettingsHydrating=!0,this.applyEmailSettingsDraftToUI(c||o),this._emailSettingsHydrating=!1,this.setEmailSettingsDirty(!1),this._emailSettingsUiReady=!0,i&&(i.textContent="\u0645\u062D\u062F\u0651\u062B",setTimeout(()=>{i&&(i.hidden=!0)},1200))}catch{this._emailSettingsHydrating=!1,a&&(a.textContent="\u062A\u0639\u0630\u0651\u0631 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u2014 \u0639\u0631\u0636 \u0645\u062D\u0644\u064A \u0645\u0624\u0642\u062A"),i&&(i.textContent="\u0645\u062D\u0644\u064A",i.hidden=!1),Notification?.warning?.("\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u062F\u064A\u062B \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0628\u0631\u064A\u062F \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645\u061B \u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u062D\u0627\u0644\u064A \u0645\u0624\u0642\u062A.")}},parseEmailListText(e){return String(e||"").split(/[,;\s]+/).map(t=>t.trim().toLowerCase()).filter(t=>t.includes("@"))},getEmailDefaultRecipientsList(){const e=this._emailSettingsDraft||{};return Array.isArray(e.defaultRecipients)?e.defaultRecipients.slice():[]},setEmailDefaultRecipientsList(e){this._emailSettingsDraft||(this._emailSettingsDraft={modules:{}});const t=[],s=new Set;(e||[]).forEach(n=>{const i=String(n||"").trim().toLowerCase();!i.includes("@")||s.has(i)||(s.add(i),t.push(i))}),this._emailSettingsDraft.defaultRecipients=t.slice(0,50),this.renderEmailDefaultChips(),this.renderEmailStatsStrip(),this.setEmailSettingsDirty(!0)},addEmailDefaultRecipientsFromInput(){const e=document.getElementById("email-settings-default-recipients");if(!e)return;const t=this.parseEmailListText(e.value);if(!t.length)return;const s=this.getEmailDefaultRecipientsList().concat(t);this.setEmailDefaultRecipientsList(s),e.value="",e.focus()},renderEmailDefaultChips(){const e=document.getElementById("email-settings-default-chips");if(!e)return;const t=this.getEmailDefaultRecipientsList();if(!t.length){e.innerHTML='<span class="email-settings-chip email-settings-chip-muted">\u0644\u0627 \u0645\u0633\u062A\u0644\u0645\u064A\u0646 \u0628\u0639\u062F \u2014 \u0623\u0636\u0641 \u0625\u064A\u0645\u064A\u0644\u0627\u064B \u0628\u0627\u0644\u0623\u0633\u0641\u0644</span>';return}e.innerHTML=t.map(s=>`<span class="email-settings-chip" dir="ltr">
-                ${Utils.escapeHTML(s)}
-                <button type="button" class="email-settings-chip-x" data-email-chip="${Utils.escapeHTML(s)}" title="\u062D\u0630\u0641" aria-label="\u062D\u0630\u0641 ${Utils.escapeHTML(s)}">&times;</button>
-            </span>`).join("")},renderEmailStatsStrip(){const e=document.getElementById("email-settings-stats");if(!e||!this._emailSettingsDraft)return;const t=this._emailSettingsDraft.modules||{},s=Object.keys(t),n=s.filter(c=>t[c].enabled).length,i=s.filter(c=>t[c].enabled&&t[c].manualSend).length,o=s.filter(c=>t[c].enabled&&t[c].autoSend).length,a=this.getEmailDefaultRecipientsList().length,l=!!this._emailSettingsDraft.globalEnabled;e.innerHTML=`
-            <div class="email-stat-card${l?" is-hot":""}"><span class="email-stat-num">${l?"ON":"OFF"}</span><span class="email-stat-label">\u0627\u0644\u0646\u0638\u0627\u0645</span></div>
-            <div class="email-stat-card"><span class="email-stat-num">${n}</span><span class="email-stat-label">\u0645\u0641\u0639\u0651\u0644</span></div>
-            <div class="email-stat-card"><span class="email-stat-num">${i}</span><span class="email-stat-label">\u064A\u062F\u0648\u064A</span></div>
-            <div class="email-stat-card"><span class="email-stat-num">${o}</span><span class="email-stat-label">\u062A\u0644\u0642\u0627\u0626\u064A</span></div>
-            <div class="email-stat-card"><span class="email-stat-num">${a}</span><span class="email-stat-label">\u0645\u0633\u062A\u0644\u0645\u0648\u0646</span></div>
-        `},setEmailSettingsDirty(e){if(this._emailSettingsHydrating&&e)return;this._emailSettingsDirty=!!e;const t=document.getElementById("email-settings-dirty-hint"),s=document.getElementById("email-settings-sticky-bar");t&&(t.hidden=!e),s&&s.classList.toggle("is-dirty",!!e)},updateEmailSettingsStatusBanner(){const t=!!(this._emailSettingsDraft||{}).globalEnabled||!!document.getElementById("email-settings-global-enabled")?.checked,s=document.getElementById("email-settings-status-banner"),n=document.getElementById("email-settings-status-title"),i=document.getElementById("email-settings-status-hint");s&&s.classList.toggle("is-on",t),n&&(n.textContent=t?"\u0646\u0638\u0627\u0645 \u0627\u0644\u0628\u0631\u064A\u062F \u0645\u0641\u0639\u0651\u0644":"\u0646\u0638\u0627\u0645 \u0627\u0644\u0628\u0631\u064A\u062F \u0645\u062A\u0648\u0642\u0641"),i&&(i.textContent=t?"\u0632\u0631 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u064A\u0638\u0647\u0631 \u0641\u064A \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644 \u0644\u0644\u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u0641\u0639\u0651\u0644\u0629 \u064A\u062F\u0648\u064A\u0627\u064B. \u0627\u0644\u062A\u0644\u0642\u0627\u0626\u064A \u064A\u0639\u0645\u0644 \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638 \u0625\u0646 \u0643\u0627\u0646 \u0645\u0641\u0639\u0651\u0644\u0627\u064B.":"\u0639\u0646\u062F \u0627\u0644\u0625\u064A\u0642\u0627\u0641: \u0644\u0627 \u0632\u0631 \u064A\u062F\u0648\u064A \u0648\u0644\u0627 \u0625\u0631\u0633\u0627\u0644 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 \u0647\u0630\u0647 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A."),this.renderEmailStatsStrip()},updateEmailModulesSummary(){const e=document.getElementById("email-settings-modules-summary");if(!e||!this._emailSettingsDraft)return;const t=this._emailSettingsDraft.modules||{},s=Object.keys(t),n=s.filter(a=>t[a].enabled).length,i=s.filter(a=>t[a].enabled&&t[a].manualSend).length,o=s.filter(a=>t[a].enabled&&t[a].autoSend).length;e.textContent=`${n} \u0645\u0641\u0639\u0651\u0644 \u0645\u0646 ${s.length} \xB7 \u064A\u062F\u0648\u064A ${i} \xB7 \u062A\u0644\u0642\u0627\u0626\u064A ${o}`,this.renderEmailStatsStrip()},renderEmailGroupFilters(){const e=document.getElementById("email-settings-group-filters");if(!e||!this._emailSettingsDraft)return;const t=typeof EmailDispatch<"u"&&EmailDispatch.GROUP_LABELS?EmailDispatch.GROUP_LABELS:{ops:"\u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",clinic:"\u0627\u0644\u0639\u064A\u0627\u062F\u0629",reports:"\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631",system:"\u0627\u0644\u0646\u0638\u0627\u0645"},s=this._emailSettingsDraft.modules||{},n={all:Object.keys(s).length};Object.keys(s).forEach(a=>{const l=s[a].group||"ops";n[l]=(n[l]||0)+1});const i=this._emailSettingsGroupFilter||"all",o=[{id:"all",label:"\u0627\u0644\u0643\u0644"}].concat(Object.keys(t).filter(a=>n[a]).map(a=>({id:a,label:t[a]})));e.innerHTML=o.map(a=>`
-            <button type="button" class="email-settings-group-chip${i===a.id?" is-active":""}" data-email-group="${Utils.escapeHTML(a.id)}">
-                ${Utils.escapeHTML(a.label)}
-                <span class="email-settings-group-count">${n[a.id]||0}</span>
+                    </tr>`;
+                }).join('');
+
+                ppeEligibilityRulesContainer.innerHTML = tableShell(rowsHtml);
+                ppeEligibilityRulesContainer.scrollTop = prevScrollTop;
+                window.scrollTo({ top: prevPageY });
+
+                ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-remove').forEach((btn, idx) => {
+                    btn.addEventListener('click', () => {
+                        ppeRulesState.rules.splice(idx, 1);
+                        renderPpeRulesRows();
+                    });
+                });
+
+                ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-edit').forEach((btn, idx) => {
+                    btn.addEventListener('click', () => {
+                        const row = ppeEligibilityRulesContainer.querySelector(`.ppe-rule-row[data-index="${idx}"]`);
+                        if (!row) return;
+                        row.classList.add('bg-blue-100', 'ring-1', 'ring-blue-300');
+                        const itemSelect = row.querySelector('.ppe-rule-item');
+                        const monthsInput = row.querySelector('.ppe-rule-months');
+                        if (itemSelect) {
+                            itemSelect.focus();
+                        } else if (monthsInput) {
+                            monthsInput.focus();
+                        }
+                        setTimeout(() => row.classList.remove('bg-blue-100', 'ring-1', 'ring-blue-300'), 1200);
+                    });
+                });
+            };
+
+            const collectPpeRulesFromUI = () => {
+                if (!ppeEligibilityRulesContainer) return [];
+                const rows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                const seen = new Set();
+                const out = [];
+                rows.forEach((row) => {
+                    const itemSel = row.querySelector('.ppe-rule-item');
+                    const monthsEl = row.querySelector('.ppe-rule-months');
+                    const equipmentType = (itemSel?.value || '').trim();
+                    if (!equipmentType || seen.has(equipmentType)) return;
+                    let months = parseInt(monthsEl?.value, 10);
+                    if (isNaN(months) || months < 1) return;
+                    months = Math.min(120, months);
+                    seen.add(equipmentType);
+                    out.push({ equipmentType: equipmentType, months: months, days: 0 });
+                });
+                return out;
+            };
+
+            // قراءة جميع الصفوف من الواجهة كما هي (حتى الصفوف غير المكتملة)
+            // لاستخدامها قبل إعادة الرسم حتى لا تضيع القيم المدخلة حديثاً.
+            const collectPpeRulesDraftFromUI = () => {
+                if (!ppeEligibilityRulesContainer) return Array.isArray(ppeRulesState.rules) ? [...ppeRulesState.rules] : [];
+                const rows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                if (!rows.length) return Array.isArray(ppeRulesState.rules) ? [...ppeRulesState.rules] : [];
+                return rows.map((row) => {
+                    const itemSel = row.querySelector('.ppe-rule-item');
+                    const monthsEl = row.querySelector('.ppe-rule-months');
+                    const equipmentType = (itemSel?.value || '').trim();
+                    let months = parseInt(monthsEl?.value, 10);
+                    if (isNaN(months) || months < 1) months = 12;
+                    months = Math.min(120, months);
+                    return { equipmentType, months, days: 0 };
+                });
+            };
+
+            const normalizeImportedRules = (input) => {
+                const out = [];
+                const seen = new Set();
+                (Array.isArray(input) ? input : []).forEach((row) => {
+                    if (!row || typeof row !== 'object') return;
+                    const equipmentType = String(row.equipmentType || row.itemName || row['نوع الصنف'] || row['الصنف'] || '').trim();
+                    let months = parseInt(row.months ?? row['الشهور'] ?? row['months'], 10);
+                    if (!equipmentType || seen.has(equipmentType)) return;
+                    if (isNaN(months) || months < 1) return;
+                    months = Math.min(120, months);
+                    seen.add(equipmentType);
+                    out.push({ equipmentType, months, days: 0 });
+                });
+                return out;
+            };
+
+            const parseRulesFromText = (text) => {
+                const rows = String(text || '').split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+                if (!rows.length) return [];
+                const dataRows = rows.filter((line, idx) => idx !== 0 || !/الصنف|نوع|months|month|الشهور/i.test(line));
+                const parsed = dataRows.map((line) => {
+                    const sep = line.includes('\t') ? '\t' : ',';
+                    const parts = line.split(sep).map((p) => p.trim()).filter(Boolean);
+                    if (parts.length < 2) return null;
+                    return { equipmentType: parts[0], months: parts[1] };
+                }).filter(Boolean);
+                return normalizeImportedRules(parsed);
+            };
+
+            const importPpeRulesFromFile = async (file) => {
+                if (!file) return;
+                const name = (file.name || '').toLowerCase();
+                let importedRules = [];
+                if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                    if (typeof XLSX === 'undefined') {
+                        Notification.error('لا يمكن قراءة Excel حالياً. استخدم CSV أو فعّل مكتبة XLSX.');
+                        return;
+                    }
+                    const buffer = await file.arrayBuffer();
+                    const wb = XLSX.read(buffer, { type: 'array' });
+                    const firstSheet = wb.SheetNames && wb.SheetNames[0];
+                    if (!firstSheet) {
+                        Notification.error('ملف الاستيراد لا يحتوي أوراق بيانات.');
+                        return;
+                    }
+                    const ws = wb.Sheets[firstSheet];
+                    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                    importedRules = normalizeImportedRules(rows);
+                } else {
+                    const text = await file.text();
+                    importedRules = parseRulesFromText(text);
+                }
+                if (!importedRules.length) {
+                    Notification.warning('لم يتم العثور على صفوف صالحة للاستيراد. تأكد من القالب: الصنف,الشهور');
+                    return;
+                }
+                ppeRulesState.rules = importedRules;
+                renderPpeRulesRows();
+                Notification.success(`تم استيراد ${importedRules.length} قاعدة بنجاح.`);
+            };
+
+            const loadPpeItemsForRules = async () => {
+                let items = [];
+                try {
+                    if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
+                        const result = await GoogleIntegration.sendToAppsScript('getPPEItemsList', {});
+                        if (result && result.success && Array.isArray(result.data)) {
+                            items = result.data
+                                .map(it => (it && (it.itemName || it.name) || '').toString().trim())
+                                .filter(Boolean);
+                        }
+                    }
+                } catch (e) {
+                    items = [];
+                }
+                if (!items.length) {
+                    const ppeList = (AppState.appData && AppState.appData.ppe) || [];
+                    items = [...new Set(ppeList.map(p => (p.equipmentType || '').toString().trim()).filter(Boolean))];
+                }
+                if (!items.length) {
+                    items = ['خوذة أمان', 'نظارات وقاية', 'قفازات', 'أحذية أمان', 'سترة عاكسة', 'سدادات أذن', 'كمامة', 'بدلة واقية', 'حزام أمان', 'معدات حماية تنفسية'];
+                }
+                ppeRulesState.items = Array.from(new Set(items)).sort((a, b) => a.localeCompare(b, 'ar'));
+            };
+
+            (async () => {
+                ppeRulesState.rules = parsePpeRules(AppState.companySettings?.ppeEligibilityRules);
+                await loadPpeItemsForRules();
+                renderPpeRulesRows();
+            })();
+
+            if (ppeAddRuleBtn) {
+                ppeAddRuleBtn.addEventListener('click', () => {
+                    // مزامنة الحالة من واجهة المستخدم قبل إضافة صف جديد لتجنب تفريغ الصف السابق.
+                    ppeRulesState.rules = collectPpeRulesDraftFromUI();
+                    ppeRulesState.rules.push({ equipmentType: '', months: 12, days: 0 });
+                    renderPpeRulesRows();
+                    // تثبيت تجربة الاستخدام: تركيز مباشر على آخر صف دون قفز بصري.
+                    const rows = Array.from(ppeEligibilityRulesContainer?.querySelectorAll('.ppe-rule-row') || []);
+                    const lastRow = rows[rows.length - 1];
+                    const lastItem = lastRow ? lastRow.querySelector('.ppe-rule-item') : null;
+                    if (lastItem && typeof lastItem.focus === 'function') {
+                        setTimeout(() => lastItem.focus(), 0);
+                    }
+                });
+            }
+            if (ppeDownloadTemplateBtn) {
+                ppeDownloadTemplateBtn.addEventListener('click', () => {
+                    const sampleRows = [
+                        ['الصنف', 'الشهور'],
+                        ['خوذة أمان', '12'],
+                        ['نظارات وقاية', '6']
+                    ];
+                    const csv = '\uFEFF' + sampleRows.map((r) => r.join(',')).join('\n');
+                    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'ppe-eligibility-template.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                });
+            }
+            if (ppeImportRulesBtn && ppeRulesImportFileInput) {
+                ppeImportRulesBtn.addEventListener('click', () => ppeRulesImportFileInput.click());
+                ppeRulesImportFileInput.addEventListener('change', async () => {
+                    const file = ppeRulesImportFileInput.files && ppeRulesImportFileInput.files[0];
+                    try {
+                        await importPpeRulesFromFile(file);
+                    } catch (e) {
+                        Notification.error('فشل الاستيراد: ' + (e?.message || 'خطأ غير معروف'));
+                    } finally {
+                        ppeRulesImportFileInput.value = '';
+                    }
+                });
+            }
+            const resetCompanyNameBtn = document.getElementById('reset-company-name-btn');
+
+            // مزامنة منتقي الألوان مع حقل النص
+            if (companySecondaryNameColorInput && companySecondaryNameColorTextInput) {
+                companySecondaryNameColorInput.addEventListener('input', () => {
+                    companySecondaryNameColorTextInput.value = companySecondaryNameColorInput.value;
+                });
+                companySecondaryNameColorTextInput.addEventListener('input', () => {
+                    const colorValue = companySecondaryNameColorTextInput.value.trim();
+                    if (/^#[0-9A-Fa-f]{6}$/.test(colorValue)) {
+                        companySecondaryNameColorInput.value = colorValue;
+                    }
+                });
+            }
+
+            if (saveCompanySettingsBtn && companyNameInput) {
+                saveCompanySettingsBtn.addEventListener('click', async () => {
+                    const newName = companyNameInput.value.trim();
+                    if (!newName) {
+                        Notification.error('يرجى إدخال اسم الشركة.');
+                        return;
+                    }
+
+                    const secondaryName = companySecondaryNameInput ? companySecondaryNameInput.value.trim() : '';
+                    const formVersion = formVersionInput ? formVersionInput.value.trim() || '1.0' : '1.0';
+
+                    // الحصول على حجم الخط للاسم الأساسي
+                    let nameFontSize = 16;
+                    if (companyNameFontSizeInput) {
+                        const fontSizeValue = parseInt(companyNameFontSizeInput.value, 10);
+                        if (!isNaN(fontSizeValue) && fontSizeValue >= 8 && fontSizeValue <= 72) {
+                            nameFontSize = fontSizeValue;
+                        }
+                    }
+
+                    // الحصول على حجم الخط للاسم الإضافي
+                    let secondaryNameFontSize = 14;
+                    if (companySecondaryNameFontSizeInput) {
+                        const fontSizeValue = parseInt(companySecondaryNameFontSizeInput.value, 10);
+                        if (!isNaN(fontSizeValue) && fontSizeValue >= 8 && fontSizeValue <= 72) {
+                            secondaryNameFontSize = fontSizeValue;
+                        }
+                    }
+
+                    // الحصول على لون الاسم الإضافي
+                    let secondaryNameColor = '#6B7280';
+                    if (companySecondaryNameColorTextInput && companySecondaryNameColorTextInput.value.trim()) {
+                        secondaryNameColor = companySecondaryNameColorTextInput.value.trim();
+                    } else if (companySecondaryNameColorInput) {
+                        secondaryNameColor = companySecondaryNameColorInput.value;
+                    }
+
+                    let clinicMonthlyVisitsAlertThreshold = 10;
+                    if (clinicMonthlyVisitsThresholdInput) {
+                        const v = parseInt(clinicMonthlyVisitsThresholdInput.value, 10);
+                        if (!isNaN(v) && v >= 1 && v <= 1000) clinicMonthlyVisitsAlertThreshold = v;
+                    }
+
+                    let employeeImportHireMonths = 3;
+                    if (employeeImportHireMonthsInput) {
+                        const hm = parseInt(employeeImportHireMonthsInput.value, 10);
+                        if (!isNaN(hm) && hm >= 1 && hm <= 120) employeeImportHireMonths = hm;
+                    }
+
+                    const profileTeamsUrl = profileTeamsUrlInput ? profileTeamsUrlInput.value.trim() : '';
+                    const profileWhatsAppUrl = profileWhatsAppUrlInput ? profileWhatsAppUrlInput.value.trim() : '';
+
+                    if (ppeEligibilityRulesContainer) {
+                        const ruleRows = Array.from(ppeEligibilityRulesContainer.querySelectorAll('.ppe-rule-row'));
+                        for (const row of ruleRows) {
+                            const eq = (row.querySelector('.ppe-rule-item')?.value || '').trim();
+                            const moRaw = row.querySelector('.ppe-rule-months')?.value;
+                            const mo = parseInt(moRaw, 10);
+                            if (eq && (isNaN(mo) || mo < 1)) {
+                                Notification.error('يُرجى إدخال عدد شهور صالح (من 1 إلى 120) لكل صنف محدد في جدول استحقاق مهمات الوقاية.');
+                                return;
+                            }
+                            if (!eq && moRaw !== '' && moRaw !== undefined && !isNaN(mo) && mo >= 1) {
+                                Notification.error('يُرجى اختيار نوع الصنف لكل صف فيه عدد شهور في جدول الاستحقاق.');
+                                return;
+                            }
+                        }
+                    }
+
+                    const ppeEligibilityRulesArray = collectPpeRulesFromUI();
+                    const ppeEligibilityRules = JSON.stringify(ppeEligibilityRulesArray);
+
+                    const logoForSave = String(
+                        AppState.companySettings?.logo
+                        || AppState.companyLogo
+                        || localStorage.getItem('hse_company_logo')
+                        || localStorage.getItem('company_logo')
+                        || ''
+                    ).trim();
+
+                    AppState.companySettings = Object.assign({}, AppState.companySettings, {
+                        name: newName,
+                        secondaryName,
+                        formVersion,
+                        nameFontSize,
+                        secondaryNameFontSize,
+                        secondaryNameColor,
+                        clinicMonthlyVisitsAlertThreshold,
+                        employeeImportHireMonths,
+                        profileTeamsUrl,
+                        profileWhatsAppUrl,
+                        ppeEligibilityRules,
+                        logo: logoForSave
+                    });
+                    if (logoForSave) AppState.companyLogo = logoForSave;
+                    DataManager.saveCompanySettings();
+                    
+                    // حفظ في الخادم إذا كان متاحاً
+                    let backendSyncSucceeded = true;
+                    if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                        try {
+                            const userData = AppState.currentUser || {};
+                            const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                name: newName,
+                                secondaryName,
+                                formVersion,
+                                nameFontSize,
+                                secondaryNameFontSize,
+                                secondaryNameColor,
+                                clinicMonthlyVisitsAlertThreshold,
+                                employeeImportHireMonths,
+                                profileTeamsUrl,
+                                profileWhatsAppUrl,
+                                ppeEligibilityRules,
+                                address: AppState.companySettings?.address || '',
+                                phone: AppState.companySettings?.phone || '',
+                                email: AppState.companySettings?.email || '',
+                                logo: logoForSave,
+                                postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                userData: {
+                                    email: userData.email,
+                                    name: userData.name,
+                                    role: userData.role,
+                                    permissions: userData.permissions
+                                }
+                            });
+
+                            if (result && result.success) {
+                                Utils.safeLog('✅ تم حفظ إعدادات الشركة في الخادم بنجاح');
+                                if (result.data && typeof DataManager.applyCompanySettingsFromServer === 'function') {
+                                    DataManager.applyCompanySettingsFromServer(result.data, {
+                                        preserveLocalLogo: true,
+                                        allowClearLogo: false,
+                                        updateUI: false
+                                    });
+                                }
+                            } else {
+                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
+                                backendSyncSucceeded = false;
+                                Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات: ' + (result?.message || 'خطأ غير معروف'));
+                            }
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
+                            backendSyncSucceeded = false;
+                            Notification.error('تعذر حفظ قواعد الاستحقاق في قاعدة البيانات (اتصال/خادم): ' + (error?.message || 'يرجى المحاولة مرة أخرى.'));
+                        }
+                    }
+                    if (!backendSyncSucceeded) return;
+
+                    if (typeof UI !== 'undefined') {
+                        if (typeof UI.updateCompanyBranding === 'function') UI.updateCompanyBranding();
+                        if (typeof UI.updateCompanyLogoHeader === 'function') UI.updateCompanyLogoHeader();
+                        if (typeof UI.updateLoginLogo === 'function') UI.updateLoginLogo();
+                    }
+                    Notification.success('تم تحديث بيانات الشركة بنجاح');
+                    Settings.load();
+                });
+            }
+
+            // تعليمات ما بعد الدخول: عرض القائمة وربط الأحداث
+            if (!AppState.companySettings) AppState.companySettings = {};
+            if (!Array.isArray(AppState.companySettings.postLoginItems)) {
+                AppState.companySettings.postLoginItems = Settings.getPostLoginItems();
+            }
+            Settings.renderPostLoginItemsList();
+
+            const postLoginList = document.getElementById('post-login-items-list');
+            const postLoginAddBtn = document.getElementById('post-login-add-item-btn');
+            const postLoginForm = document.getElementById('post-login-item-form');
+            const postLoginFormTitle = document.getElementById('post-login-form-title');
+            const postLoginItemTitle = document.getElementById('post-login-item-title');
+            const postLoginItemBody = document.getElementById('post-login-item-body');
+            const postLoginItemDuration = document.getElementById('post-login-item-duration');
+            const postLoginItemActive = document.getElementById('post-login-item-active');
+            const postLoginItemSaveBtn = document.getElementById('post-login-item-save-btn');
+            const postLoginItemCancelBtn = document.getElementById('post-login-item-cancel-btn');
+
+            let postLoginEditingIndex = -1;
+
+            const hidePostLoginForm = () => {
+                if (postLoginForm) postLoginForm.classList.add('hidden');
+                postLoginEditingIndex = -1;
+                if (postLoginFormTitle) postLoginFormTitle.textContent = 'إضافة عنصر جديد';
+                if (postLoginItemTitle) postLoginItemTitle.value = '';
+                if (postLoginItemBody) postLoginItemBody.value = '';
+                if (postLoginItemDuration) postLoginItemDuration.value = '10';
+                if (postLoginItemActive) postLoginItemActive.checked = true;
+            };
+
+            const savePostLoginToStateAndBackend = async () => {
+                if (!AppState.companySettings) AppState.companySettings = {};
+                AppState.companySettings.postLoginItems = Settings.getPostLoginItems();
+                if (typeof DataManager !== 'undefined' && DataManager.saveCompanySettings) {
+                    DataManager.saveCompanySettings();
+                }
+                if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                    try {
+                        const userData = AppState.currentUser || {};
+                        const payload = {
+                            name: AppState.companySettings.name || '',
+                            secondaryName: AppState.companySettings.secondaryName || '',
+                            formVersion: AppState.companySettings.formVersion || '1.0',
+                            nameFontSize: AppState.companySettings.nameFontSize || 16,
+                            secondaryNameFontSize: AppState.companySettings.secondaryNameFontSize || 14,
+                            secondaryNameColor: AppState.companySettings.secondaryNameColor || '#6B7280',
+                            clinicMonthlyVisitsAlertThreshold: AppState.companySettings.clinicMonthlyVisitsAlertThreshold ?? 10,
+                employeeImportHireMonths: AppState.companySettings.employeeImportHireMonths ?? 3,
+                            address: AppState.companySettings.address || '',
+                            phone: AppState.companySettings.phone || '',
+                            email: AppState.companySettings.email || '',
+                            logo: AppState.companySettings.logo || AppState.companyLogo || '',
+                            postLoginItems: typeof AppState.companySettings.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings.postLoginItems || []),
+                            userData: { email: userData.email, name: userData.name, role: userData.role, permissions: userData.permissions }
+                        };
+                        await GoogleIntegration.sendToAppsScript('saveCompanySettings', payload);
+                    } catch (e) { Utils.safeWarn('⚠️ فشل مزامنة تعليمات ما بعد الدخول:', e); }
+                }
+            };
+
+            if (postLoginAddBtn) {
+                postLoginAddBtn.addEventListener('click', () => {
+                    postLoginEditingIndex = -1;
+                    if (postLoginFormTitle) postLoginFormTitle.textContent = 'إضافة عنصر جديد';
+                    if (postLoginItemTitle) postLoginItemTitle.value = '';
+                    if (postLoginItemBody) postLoginItemBody.value = '';
+                    if (postLoginItemDuration) postLoginItemDuration.value = '10';
+                    if (postLoginItemActive) postLoginItemActive.checked = true;
+                    if (postLoginForm) postLoginForm.classList.remove('hidden');
+                });
+            }
+            if (postLoginItemCancelBtn) {
+                postLoginItemCancelBtn.addEventListener('click', hidePostLoginForm);
+            }
+            if (postLoginItemSaveBtn && postLoginItemTitle && postLoginItemBody) {
+                postLoginItemSaveBtn.addEventListener('click', async () => {
+                    const title = postLoginItemTitle.value.trim();
+                    const body = postLoginItemBody.value.trim();
+                    const duration = parseInt(postLoginItemDuration?.value, 10);
+                    const active = postLoginItemActive ? postLoginItemActive.checked : true;
+                    if (!title) {
+                        Notification.error('يرجى إدخال العنوان.');
+                        return;
+                    }
+                    const items = Settings.getPostLoginItems();
+                    const sorted = items.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+                    const maxOrder = sorted.length ? Math.max(...sorted.map(i => i.order ?? 0)) : 0;
+                    if (postLoginEditingIndex >= 0 && postLoginEditingIndex < sorted.length) {
+                        sorted[postLoginEditingIndex] = { title, body, durationSeconds: isNaN(duration) ? 10 : Math.min(120, Math.max(0, duration)), order: sorted[postLoginEditingIndex].order ?? postLoginEditingIndex, active };
+                    } else {
+                        sorted.push({ title, body, durationSeconds: isNaN(duration) ? 10 : Math.min(120, Math.max(0, duration)), order: maxOrder + 1, active });
+                    }
+                    if (!AppState.companySettings) AppState.companySettings = {};
+                    AppState.companySettings.postLoginItems = sorted;
+                    await savePostLoginToStateAndBackend();
+                    hidePostLoginForm();
+                    Settings.renderPostLoginItemsList();
+                    Notification.success('تم حفظ العنصر.');
+                });
+            }
+
+            if (postLoginList) {
+                postLoginList.addEventListener('click', async (e) => {
+                    const editBtn = e.target.closest('.post-login-edit-btn');
+                    const deleteBtn = e.target.closest('.post-login-delete-btn');
+                    const upBtn = e.target.closest('.post-login-up-btn');
+                    const downBtn = e.target.closest('.post-login-down-btn');
+                    const index = editBtn?.dataset?.index ?? deleteBtn?.dataset?.index ?? upBtn?.dataset?.index ?? downBtn?.dataset?.index;
+                    if (index === undefined) return;
+                    const idx = parseInt(index, 10);
+                    const items = Settings.getPostLoginItems();
+                    const sorted = items.slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+                    const item = sorted[idx];
+                    if (!item) return;
+
+                    if (editBtn) {
+                        postLoginEditingIndex = idx;
+                        if (postLoginFormTitle) postLoginFormTitle.textContent = 'تعديل عنصر';
+                        if (postLoginItemTitle) postLoginItemTitle.value = item.title || '';
+                        if (postLoginItemBody) postLoginItemBody.value = item.body || '';
+                        if (postLoginItemDuration) postLoginItemDuration.value = String(item.durationSeconds ?? 10);
+                        if (postLoginItemActive) postLoginItemActive.checked = item.active !== false;
+                        if (postLoginForm) postLoginForm.classList.remove('hidden');
+                        return;
+                    }
+                    if (deleteBtn) {
+                        if (!confirm('حذف هذا العنصر؟')) return;
+                        sorted.splice(idx, 1);
+                        if (!AppState.companySettings) AppState.companySettings = {};
+                        AppState.companySettings.postLoginItems = sorted;
+                        await savePostLoginToStateAndBackend();
+                        Settings.renderPostLoginItemsList();
+                        Notification.success('تم حذف العنصر.');
+                        return;
+                    }
+                    if (upBtn && idx > 0) {
+                        [sorted[idx - 1].order, sorted[idx].order] = [sorted[idx].order, sorted[idx - 1].order];
+                        if (!AppState.companySettings) AppState.companySettings = {};
+                        AppState.companySettings.postLoginItems = sorted;
+                        await savePostLoginToStateAndBackend();
+                        Settings.renderPostLoginItemsList();
+                        return;
+                    }
+                    if (downBtn && idx < sorted.length - 1) {
+                        [sorted[idx].order, sorted[idx + 1].order] = [sorted[idx + 1].order, sorted[idx].order];
+                        if (!AppState.companySettings) AppState.companySettings = {};
+                        AppState.companySettings.postLoginItems = sorted;
+                        await savePostLoginToStateAndBackend();
+                        Settings.renderPostLoginItemsList();
+                    }
+                });
+            }
+
+            if (this.isCurrentUserAdmin()) {
+                Settings.bindHelpContentSettingsEvents();
+            }
+
+            if (resetCompanyNameBtn && companyNameInput) {
+                resetCompanyNameBtn.addEventListener('click', async () => {
+                    if (!confirm('هل تريد استعادة الاسم الافتراضي للشركة؟')) {
+                        return;
+                    }
+
+                    AppState.companySettings = Object.assign({}, AppState.companySettings, {
+                        name: DEFAULT_COMPANY_NAME,
+                        nameFontSize: 16,
+                        secondaryNameFontSize: 14,
+                        secondaryNameColor: '#6B7280'
+                    });
+                    companyNameInput.value = DEFAULT_COMPANY_NAME;
+                    if (companySecondaryNameInput) {
+                        AppState.companySettings.secondaryName = '';
+                        companySecondaryNameInput.value = '';
+                    }
+                    if (companyNameFontSizeInput) {
+                        companyNameFontSizeInput.value = '16';
+                    }
+                    if (companySecondaryNameFontSizeInput) {
+                        companySecondaryNameFontSizeInput.value = '14';
+                    }
+                    if (companySecondaryNameColorInput) {
+                        companySecondaryNameColorInput.value = '#6B7280';
+                    }
+                    if (companySecondaryNameColorTextInput) {
+                        companySecondaryNameColorTextInput.value = '#6B7280';
+                    }
+                    DataManager.saveCompanySettings();
+                    
+                    // حفظ في الخادم إذا كان متاحاً
+                    if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                        try {
+                            const userData = AppState.currentUser || {};
+                            const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                name: DEFAULT_COMPANY_NAME,
+                                secondaryName: '',
+                                formVersion: '1.0',
+                                nameFontSize: 16,
+                                secondaryNameFontSize: 14,
+                                secondaryNameColor: '#6B7280',
+                                clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
+                                address: AppState.companySettings?.address || '',
+                                phone: AppState.companySettings?.phone || '',
+                                email: AppState.companySettings?.email || '',
+                                logo: AppState.companySettings?.logo || AppState.companyLogo || '',
+                                postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                userData: {
+                                    email: userData.email,
+                                    name: userData.name,
+                                    role: userData.role,
+                                    permissions: userData.permissions
+                                }
+                            });
+
+                            if (result && result.success) {
+                                Utils.safeLog('✅ تم حفظ إعدادات الشركة الافتراضية في الخادم بنجاح');
+                            } else {
+                                Utils.safeWarn('⚠️ فشل حفظ إعدادات الشركة في الخادم:', result?.message);
+                            }
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ أثناء مزامنة إعدادات الشركة مع الخادم:', error);
+                        }
+                    }
+                    
+                    if (typeof UI !== 'undefined' && typeof UI.updateCompanyBranding === 'function') {
+                        UI.updateCompanyBranding();
+                    }
+                    // إعادة تحميل إعدادات الشركة من المصدر بعد الاستعادة (نفس زمن تحميل الشعار)
+                    if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                        setTimeout(async () => {
+                            try {
+                                await DataManager.loadCompanySettings(true);
+                                Utils.safeLog('✅ تم تحميل إعدادات الشركة بعد الاستعادة');
+                            } catch (reloadError) {
+                                Utils.safeWarn('⚠️ فشل إعادة تحميل إعدادات الشركة:', reloadError);
+                            }
+                        }, 100);
+                    }
+                    Notification.success('تمت استعادة بيانات الشركة الافتراضية');
+                    Settings.load();
+                });
+            }
+
+            // Activity Log Button
+            const viewActivityLogBtn = document.getElementById('view-activity-log-btn');
+            if (viewActivityLogBtn) {
+                viewActivityLogBtn.addEventListener('click', () => {
+                    UserActivityLog.showModal();
+                });
+            }
+
+            // ✅ User Versions Admin Button
+            const viewUserVersionsBtn = document.getElementById('view-user-versions-btn');
+            if (viewUserVersionsBtn) {
+                viewUserVersionsBtn.addEventListener('click', () => {
+                    if (typeof UserVersionsAdmin !== 'undefined' && UserVersionsAdmin.open) {
+                        UserVersionsAdmin.open();
+                    } else {
+                        Notification.error('لوحة متابعة الإصدارات غير متاحة. حاول تحديث الصفحة.');
+                    }
+                });
+            }
+
+            // ✅ Client Errors Admin
+            const viewClientErrorsBtn = document.getElementById('view-client-errors-btn');
+            if (viewClientErrorsBtn) {
+                viewClientErrorsBtn.addEventListener('click', () => {
+                    if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.open) {
+                        ClientErrorsAdmin.open();
+                    } else {
+                        Notification.error('لوحة مراقبة الأخطاء غير متاحة. حاول تحديث الصفحة.');
+                    }
+                });
+            }
+            const openClientErrorsSectionBtn = document.getElementById('open-client-errors-section-btn');
+            if (openClientErrorsSectionBtn) {
+                openClientErrorsSectionBtn.addEventListener('click', () => {
+                    if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
+                        UI.showSection('client-errors');
+                    } else if (typeof ClientErrorsAdmin !== 'undefined' && ClientErrorsAdmin.open) {
+                        ClientErrorsAdmin.open();
+                    } else {
+                        location.hash = '#client-errors';
+                    }
+                });
+            }
+
+            // إعدادات النماذج - ربط الأحداث لمرة واحدة
+            if (this.isCurrentUserAdmin() && typeof Permissions?.bindFormSettingsEvents === 'function') {
+                Permissions.bindFormSettingsEvents();
+            }
+
+            // إعدادات البريد (مدير النظام) — ربط أحداث فقط؛ التحميل عند فتح التبويب
+            if (this.isCurrentUserAdmin()) {
+                this._emailSettingsUiReady = false;
+                this.bindEmailSettingsEvents();
+                const notificationsTab = document.getElementById('tab-notifications');
+                if (notificationsTab && notificationsTab.classList.contains('active')) {
+                    this.ensureEmailSettingsLoaded(false);
+                }
+            }
+
+            this.bindViolationTypesEvents();
+            this.initializeApprovalCircuitsUI();
+            this.bindCloudStorageSettingsEvents();
+        }, 100);
+    },
+
+    ensureEmailSettingsLoaded(force) {
+        if (!this.isCurrentUserAdmin()) return null;
+        if (!document.getElementById('email-settings-modules-list')) return null;
+        if (this._emailSettingsLoadingPromise && !force) {
+            return this._emailSettingsLoadingPromise;
+        }
+        this._emailSettingsLoadingPromise = this.loadEmailSettingsUI({ force: !!force })
+            .catch((e) => console.error(e))
+            .finally(() => {
+                this._emailSettingsLoadingPromise = null;
+            });
+        return this._emailSettingsLoadingPromise;
+    },
+
+    applyEmailSettingsDraftToUI(data) {
+        this._emailSettingsDraft = data || (typeof EmailDispatch !== 'undefined'
+            ? EmailDispatch.getDefaultSettings()
+            : { globalEnabled: false, defaultRecipients: [], modules: {} });
+        this._emailSettingsStatusFilter = this._emailSettingsStatusFilter || 'all';
+        const globalEl = document.getElementById('email-settings-global-enabled');
+        const recipientsEl = document.getElementById('email-settings-default-recipients');
+        if (globalEl) globalEl.checked = !!this._emailSettingsDraft.globalEnabled;
+        if (recipientsEl) recipientsEl.value = '';
+        this.renderEmailDefaultChips();
+        this.renderEmailGroupFilters();
+        this.renderEmailStatusFilters();
+        this.updateEmailSettingsStatusBanner();
+        this.renderEmailStatsStrip();
+        this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+    },
+
+    async loadEmailSettingsUI(options) {
+        const opts = options || {};
+        const force = !!opts.force;
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (!listEl) return;
+        this._emailSettingsGroupFilter = this._emailSettingsGroupFilter || 'all';
+        this._emailSettingsStatusFilter = this._emailSettingsStatusFilter || 'all';
+
+        const syncBadge = document.getElementById('email-settings-sync-badge');
+        if (syncBadge) {
+            syncBadge.hidden = false;
+            syncBadge.textContent = 'مزامنة…';
+        }
+
+        const instant = (typeof EmailDispatch !== 'undefined'
+            ? (EmailDispatch.getCachedSettings() || EmailDispatch.getDefaultSettings())
+            : { globalEnabled: false, defaultRecipients: [], modules: {} });
+        this._emailSettingsHydrating = true;
+        this.applyEmailSettingsDraftToUI(instant);
+        this._emailSettingsHydrating = false;
+        this.setEmailSettingsDirty(false);
+
+        const summaryEl = document.getElementById('email-settings-modules-summary');
+        const prevSummary = summaryEl ? summaryEl.textContent : '';
+        if (summaryEl) summaryEl.textContent = (prevSummary || '—') + ' · جاري المزامنة…';
+
+        try {
+            let data = instant;
+            if (typeof EmailDispatch !== 'undefined') {
+                data = await EmailDispatch.loadSettings(force);
+            } else if (typeof GoogleIntegration !== 'undefined') {
+                const res = await GoogleIntegration.sendToAppsScript('getEmailSettings', { __timeoutMs: 25000 });
+                data = res && res.data ? res.data : instant;
+            }
+            if (!document.getElementById('email-settings-modules-list')) return;
+            this._emailSettingsHydrating = true;
+            this.applyEmailSettingsDraftToUI(data || instant);
+            this._emailSettingsHydrating = false;
+            this.setEmailSettingsDirty(false);
+            this._emailSettingsUiReady = true;
+            if (syncBadge) {
+                syncBadge.textContent = 'محدّث';
+                setTimeout(() => { if (syncBadge) syncBadge.hidden = true; }, 1200);
+            }
+        } catch (e) {
+            console.error(e);
+            this._emailSettingsHydrating = false;
+            if (summaryEl) summaryEl.textContent = 'تعذّر المزامنة — عرض محلي مؤقت';
+            if (syncBadge) {
+                syncBadge.textContent = 'محلي';
+                syncBadge.hidden = false;
+            }
+            Notification?.warning?.('تعذّر تحديث إعدادات البريد من الخادم؛ العرض الحالي مؤقت.');
+        }
+    },
+
+    parseEmailListText(raw) {
+        return String(raw || '')
+            .split(/[,;\s]+/)
+            .map((s) => s.trim().toLowerCase())
+            .filter((s) => s.includes('@'));
+    },
+
+    getEmailDefaultRecipientsList() {
+        const draft = this._emailSettingsDraft || {};
+        return Array.isArray(draft.defaultRecipients) ? draft.defaultRecipients.slice() : [];
+    },
+
+    setEmailDefaultRecipientsList(list) {
+        if (!this._emailSettingsDraft) this._emailSettingsDraft = { modules: {} };
+        const unique = [];
+        const seen = new Set();
+        (list || []).forEach((email) => {
+            const e = String(email || '').trim().toLowerCase();
+            if (!e.includes('@') || seen.has(e)) return;
+            seen.add(e);
+            unique.push(e);
+        });
+        this._emailSettingsDraft.defaultRecipients = unique.slice(0, 50);
+        this.renderEmailDefaultChips();
+        this.renderEmailStatsStrip();
+        this.setEmailSettingsDirty(true);
+    },
+
+    addEmailDefaultRecipientsFromInput() {
+        const input = document.getElementById('email-settings-default-recipients');
+        if (!input) return;
+        const added = this.parseEmailListText(input.value);
+        if (!added.length) return;
+        const next = this.getEmailDefaultRecipientsList().concat(added);
+        this.setEmailDefaultRecipientsList(next);
+        input.value = '';
+        input.focus();
+    },
+
+    renderEmailDefaultChips() {
+        const wrap = document.getElementById('email-settings-default-chips');
+        if (!wrap) return;
+        const emails = this.getEmailDefaultRecipientsList();
+        if (!emails.length) {
+            wrap.innerHTML = '<span class="email-settings-chip email-settings-chip-muted">لا مستلمين بعد — أضف إيميلاً بالأسفل</span>';
+            return;
+        }
+        wrap.innerHTML = emails.map((email) =>
+            `<span class="email-settings-chip" dir="ltr">
+                ${Utils.escapeHTML(email)}
+                <button type="button" class="email-settings-chip-x" data-email-chip="${Utils.escapeHTML(email)}" title="حذف" aria-label="حذف ${Utils.escapeHTML(email)}">&times;</button>
+            </span>`
+        ).join('');
+    },
+
+    renderEmailStatsStrip() {
+        const wrap = document.getElementById('email-settings-stats');
+        if (!wrap || !this._emailSettingsDraft) return;
+        const modules = this._emailSettingsDraft.modules || {};
+        const keys = Object.keys(modules);
+        const enabled = keys.filter((k) => modules[k].enabled).length;
+        const manual = keys.filter((k) => modules[k].enabled && modules[k].manualSend).length;
+        const auto = keys.filter((k) => modules[k].enabled && modules[k].autoSend).length;
+        const recipients = this.getEmailDefaultRecipientsList().length;
+        const on = !!this._emailSettingsDraft.globalEnabled;
+        wrap.innerHTML = `
+            <div class="email-stat-card${on ? ' is-hot' : ''}"><span class="email-stat-num">${on ? 'ON' : 'OFF'}</span><span class="email-stat-label">النظام</span></div>
+            <div class="email-stat-card"><span class="email-stat-num">${enabled}</span><span class="email-stat-label">مفعّل</span></div>
+            <div class="email-stat-card"><span class="email-stat-num">${manual}</span><span class="email-stat-label">يدوي</span></div>
+            <div class="email-stat-card"><span class="email-stat-num">${auto}</span><span class="email-stat-label">تلقائي</span></div>
+            <div class="email-stat-card"><span class="email-stat-num">${recipients}</span><span class="email-stat-label">مستلمون</span></div>
+        `;
+    },
+
+    setEmailSettingsDirty(dirty) {
+        if (this._emailSettingsHydrating && dirty) return;
+        this._emailSettingsDirty = !!dirty;
+        const hint = document.getElementById('email-settings-dirty-hint');
+        const bar = document.getElementById('email-settings-sticky-bar');
+        if (hint) hint.hidden = !dirty;
+        if (bar) bar.classList.toggle('is-dirty', !!dirty);
+    },
+
+    updateEmailSettingsStatusBanner() {
+        const draft = this._emailSettingsDraft || {};
+        const on = !!draft.globalEnabled || !!document.getElementById('email-settings-global-enabled')?.checked;
+        const banner = document.getElementById('email-settings-status-banner');
+        const title = document.getElementById('email-settings-status-title');
+        const hint = document.getElementById('email-settings-status-hint');
+        if (banner) banner.classList.toggle('is-on', on);
+        if (title) title.textContent = on ? 'نظام البريد مفعّل' : 'نظام البريد متوقف';
+        if (hint) {
+            hint.textContent = on
+                ? 'زر الإرسال يظهر في التفاصيل للأنواع المفعّلة يدوياً. التلقائي يعمل عند الحفظ إن كان مفعّلاً.'
+                : 'عند الإيقاف: لا زر يدوي ولا إرسال تلقائي من هذه الإعدادات.';
+        }
+        this.renderEmailStatsStrip();
+    },
+
+    updateEmailModulesSummary() {
+        const el = document.getElementById('email-settings-modules-summary');
+        if (!el || !this._emailSettingsDraft) return;
+        const modules = this._emailSettingsDraft.modules || {};
+        const keys = Object.keys(modules);
+        const enabled = keys.filter((k) => modules[k].enabled).length;
+        const manual = keys.filter((k) => modules[k].enabled && modules[k].manualSend).length;
+        const auto = keys.filter((k) => modules[k].enabled && modules[k].autoSend).length;
+        el.textContent = `${enabled} مفعّل من ${keys.length} · يدوي ${manual} · تلقائي ${auto}`;
+        this.renderEmailStatsStrip();
+    },
+
+    renderEmailGroupFilters() {
+        const wrap = document.getElementById('email-settings-group-filters');
+        if (!wrap || !this._emailSettingsDraft) return;
+        const groupLabels = (typeof EmailDispatch !== 'undefined' && EmailDispatch.GROUP_LABELS)
+            ? EmailDispatch.GROUP_LABELS
+            : { ops: 'التشغيل والسلامة', clinic: 'العيادة', reports: 'التقارير', system: 'النظام' };
+        const modules = this._emailSettingsDraft.modules || {};
+        const counts = { all: Object.keys(modules).length };
+        Object.keys(modules).forEach((key) => {
+            const g = modules[key].group || 'ops';
+            counts[g] = (counts[g] || 0) + 1;
+        });
+        const active = this._emailSettingsGroupFilter || 'all';
+        const items = [{ id: 'all', label: 'الكل' }].concat(
+            Object.keys(groupLabels).filter((g) => counts[g]).map((g) => ({ id: g, label: groupLabels[g] }))
+        );
+        wrap.innerHTML = items.map((item) => `
+            <button type="button" class="email-settings-group-chip${active === item.id ? ' is-active' : ''}" data-email-group="${Utils.escapeHTML(item.id)}">
+                ${Utils.escapeHTML(item.label)}
+                <span class="email-settings-group-count">${counts[item.id] || 0}</span>
             </button>
-        `).join("")},renderEmailStatusFilters(){const e=document.getElementById("email-settings-status-filters");if(!e)return;const t=this._emailSettingsStatusFilter||"all",s=[{id:"all",label:"\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A"},{id:"enabled",label:"\u0645\u0641\u0639\u0651\u0644"},{id:"disabled",label:"\u0645\u062A\u0648\u0642\u0641"},{id:"manual",label:"\u064A\u062F\u0648\u064A"},{id:"auto",label:"\u062A\u0644\u0642\u0627\u0626\u064A"}];e.innerHTML=s.map(n=>`
-            <button type="button" class="email-settings-status-chip${t===n.id?" is-active":""}" data-email-status="${n.id}">
-                ${n.label}
+        `).join('');
+    },
+
+    renderEmailStatusFilters() {
+        const wrap = document.getElementById('email-settings-status-filters');
+        if (!wrap) return;
+        const active = this._emailSettingsStatusFilter || 'all';
+        const items = [
+            { id: 'all', label: 'كل الحالات' },
+            { id: 'enabled', label: 'مفعّل' },
+            { id: 'disabled', label: 'متوقف' },
+            { id: 'manual', label: 'يدوي' },
+            { id: 'auto', label: 'تلقائي' }
+        ];
+        wrap.innerHTML = items.map((item) => `
+            <button type="button" class="email-settings-status-chip${active === item.id ? ' is-active' : ''}" data-email-status="${item.id}">
+                ${item.label}
             </button>
-        `).join("")},renderEmailModulesList(e){const t=document.getElementById("email-settings-modules-list");if(!t||!this._emailSettingsDraft)return;const s=String(e||"").trim().toLowerCase(),n=this._emailSettingsGroupFilter||"all",i=this._emailSettingsStatusFilter||"all",o=this._emailSettingsDraft.modules||{},a=typeof EmailDispatch<"u"&&EmailDispatch.GROUP_LABELS?EmailDispatch.GROUP_LABELS:{ops:"\u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",clinic:"\u0627\u0644\u0639\u064A\u0627\u062F\u0629",reports:"\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631",system:"\u0627\u0644\u0646\u0638\u0627\u0645"},l=Object.keys(o).sort((y,d)=>{const v=o[y].group||"ops",x=o[d].group||"ops";return v!==x?v.localeCompare(x):String(o[y].labelAr||y).localeCompare(String(o[d].labelAr||d),"ar")});let c="",p="";l.forEach(y=>{const d=o[y],v=d.labelAr||y,x=d.group||"ops";if(n!=="all"&&x!==n||s&&!v.toLowerCase().includes(s)&&!y.toLowerCase().includes(s)||i==="enabled"&&!d.enabled||i==="disabled"&&d.enabled||i==="manual"&&!(d.enabled&&d.manualSend)||i==="auto"&&!(d.enabled&&d.autoSend))return;x!==p&&(p=x,c+=`<div class="email-settings-group-title">${Utils.escapeHTML(a[x]||x)}</div>`);const E=(d.recipients||[]).join(", "),B=!!d.enabled,I=!!(d.recipients&&d.recipients.length);c+=`
-                <div class="email-module-row${B?" is-enabled":""}" data-module-key="${Utils.escapeHTML(y)}">
+        `).join('');
+    },
+
+    renderEmailModulesList(filterText) {
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (!listEl || !this._emailSettingsDraft) return;
+        const q = String(filterText || '').trim().toLowerCase();
+        const groupFilter = this._emailSettingsGroupFilter || 'all';
+        const statusFilter = this._emailSettingsStatusFilter || 'all';
+        const modules = this._emailSettingsDraft.modules || {};
+        const groupLabels = (typeof EmailDispatch !== 'undefined' && EmailDispatch.GROUP_LABELS)
+            ? EmailDispatch.GROUP_LABELS
+            : { ops: 'التشغيل والسلامة', clinic: 'العيادة', reports: 'التقارير', system: 'النظام' };
+        const keys = Object.keys(modules).sort((a, b) => {
+            const ga = modules[a].group || 'ops';
+            const gb = modules[b].group || 'ops';
+            if (ga !== gb) return ga.localeCompare(gb);
+            return String(modules[a].labelAr || a).localeCompare(String(modules[b].labelAr || b), 'ar');
+        });
+        let html = '';
+        let lastGroup = '';
+        keys.forEach((key) => {
+            const m = modules[key];
+            const label = m.labelAr || key;
+            const group = m.group || 'ops';
+            if (groupFilter !== 'all' && group !== groupFilter) return;
+            if (q && !label.toLowerCase().includes(q) && !key.toLowerCase().includes(q)) return;
+            if (statusFilter === 'enabled' && !m.enabled) return;
+            if (statusFilter === 'disabled' && m.enabled) return;
+            if (statusFilter === 'manual' && !(m.enabled && m.manualSend)) return;
+            if (statusFilter === 'auto' && !(m.enabled && m.autoSend)) return;
+            if (group !== lastGroup) {
+                lastGroup = group;
+                html += `<div class="email-settings-group-title">${Utils.escapeHTML(groupLabels[group] || group)}</div>`;
+            }
+            const rec = (m.recipients || []).join(', ');
+            const on = !!m.enabled;
+            const hasCustom = !!(m.recipients && m.recipients.length);
+            html += `
+                <div class="email-module-row${on ? ' is-enabled' : ''}" data-module-key="${Utils.escapeHTML(key)}">
                     <div class="email-module-row-top">
                         <div class="email-module-identity">
-                            <span class="email-module-name">${Utils.escapeHTML(v)}</span>
-                            <span class="email-module-key" dir="ltr">${Utils.escapeHTML(y)}</span>
+                            <span class="email-module-name">${Utils.escapeHTML(label)}</span>
+                            <span class="email-module-key" dir="ltr">${Utils.escapeHTML(key)}</span>
                         </div>
                         <div class="email-module-toggles">
-                            <label class="email-toggle${d.enabled?" is-checked":""}" title="\u062A\u0641\u0639\u064A\u0644 \u0647\u0630\u0627 \u0627\u0644\u0646\u0648\u0639">
-                                <input type="checkbox" class="em-enabled" ${d.enabled?"checked":""}>
-                                <span>\u0645\u0641\u0639\u0651\u0644</span>
+                            <label class="email-toggle${m.enabled ? ' is-checked' : ''}" title="تفعيل هذا النوع">
+                                <input type="checkbox" class="em-enabled" ${m.enabled ? 'checked' : ''}>
+                                <span>مفعّل</span>
                             </label>
-                            <label class="email-toggle${d.manualSend?" is-checked":""}${B?"":" is-disabled"}" title="\u0632\u0631 \u0625\u0631\u0633\u0627\u0644 \u0645\u0646 \u0634\u0627\u0634\u0629 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
-                                <input type="checkbox" class="em-manual" ${d.manualSend?"checked":""} ${B?"":"disabled"}>
-                                <span>\u064A\u062F\u0648\u064A</span>
+                            <label class="email-toggle${m.manualSend ? ' is-checked' : ''}${on ? '' : ' is-disabled'}" title="زر إرسال من شاشة التفاصيل">
+                                <input type="checkbox" class="em-manual" ${m.manualSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
+                                <span>يدوي</span>
                             </label>
-                            <label class="email-toggle${d.autoSend?" is-checked":""}${B?"":" is-disabled"}" title="\u0625\u0631\u0633\u0627\u0644 \u062A\u0644\u0642\u0627\u0626\u064A \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638">
-                                <input type="checkbox" class="em-auto" ${d.autoSend?"checked":""} ${B?"":"disabled"}>
-                                <span>\u062A\u0644\u0642\u0627\u0626\u064A</span>
+                            <label class="email-toggle${m.autoSend ? ' is-checked' : ''}${on ? '' : ' is-disabled'}" title="إرسال تلقائي عند الحفظ">
+                                <input type="checkbox" class="em-auto" ${m.autoSend ? 'checked' : ''} ${on ? '' : 'disabled'}>
+                                <span>تلقائي</span>
                             </label>
                         </div>
                     </div>
-                    <button type="button" class="email-module-recipients-toggle${I?" has-custom":""}" data-toggle-recipients="1">
+                    <button type="button" class="email-module-recipients-toggle${hasCustom ? ' has-custom' : ''}" data-toggle-recipients="1">
                         <i class="fas fa-chevron-down"></i>
-                        \u0645\u0633\u062A\u0644\u0645\u0648\u0646 \u062E\u0627\u0635\u0648\u0646 ${I?`(${d.recipients.length})`:"(\u0627\u062E\u062A\u064A\u0627\u0631\u064A)"}
+                        مستلمون خاصون ${hasCustom ? `(${m.recipients.length})` : '(اختياري)'}
                     </button>
                     <div class="email-module-recipients-wrap" hidden>
-                        <input type="text" class="form-input w-full text-sm em-recipients" placeholder="\u0641\u0627\u0631\u063A = \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u064A\u0646 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u064A\u0646" value="${Utils.escapeHTML(E)}" dir="ltr">
+                        <input type="text" class="form-input w-full text-sm em-recipients" placeholder="فارغ = استخدام المستلمين الافتراضيين" value="${Utils.escapeHTML(rec)}" dir="ltr">
                     </div>
-                </div>`}),t.innerHTML=c||'<p class="email-settings-empty">\u0644\u0627 \u0646\u062A\u0627\u0626\u062C \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0628\u062D\u062B \u0623\u0648 \u0627\u0644\u062A\u0635\u0641\u064A\u0629</p>',this.updateEmailModulesSummary(),this.syncEmailToggleClasses(t),t.querySelectorAll(".email-module-row").forEach(y=>{const d=y.querySelector(".em-enabled");d&&d.addEventListener("change",()=>{const v=d.checked;y.classList.toggle("is-enabled",v),y.querySelectorAll(".em-manual, .em-auto").forEach(x=>{x.disabled=!v}),this.syncEmailToggleClasses(y),this.collectEmailSettingsFromUI(),this.updateEmailModulesSummary(),this.setEmailSettingsDirty(!0)})})},syncEmailToggleClasses(e){!e||typeof e.querySelectorAll!="function"||e.querySelectorAll(".email-toggle").forEach(t=>{const s=t.querySelector('input[type="checkbox"]');s&&(t.classList.toggle("is-checked",!!s.checked),t.classList.toggle("is-disabled",!!s.disabled))})},applyEmailBulkVisible(e,t){this.collectEmailSettingsFromUI(),document.querySelectorAll("#email-settings-modules-list .email-module-row").forEach(n=>{const i=n.getAttribute("data-module-key");if(!i||!this._emailSettingsDraft?.modules?.[i])return;const o=this._emailSettingsDraft.modules[i];if(t==="manual"){o.enabled||(o.enabled=!0),o.manualSend=!0;return}if(t==="auto"){o.enabled||(o.enabled=!0),o.autoSend=!0;return}o.enabled=!!e,e&&(o.manualSend=!0)}),this.renderEmailModulesList(document.getElementById("email-settings-module-filter")?.value||""),this.setEmailSettingsDirty(!0)},collectEmailSettingsFromUI(){const e=this._emailSettingsDraft||{modules:{}};return e.globalEnabled=!!document.getElementById("email-settings-global-enabled")?.checked,Array.isArray(e.defaultRecipients)||(e.defaultRecipients=this.parseEmailListText(document.getElementById("email-settings-default-recipients")?.value||"")),document.querySelectorAll("#email-settings-modules-list .email-module-row").forEach(t=>{const s=t.getAttribute("data-module-key");if(!s||!e.modules[s])return;e.modules[s].enabled=!!t.querySelector(".em-enabled")?.checked,e.modules[s].manualSend=!!t.querySelector(".em-manual")?.checked,e.modules[s].autoSend=!!t.querySelector(".em-auto")?.checked;const n=t.querySelector(".em-recipients")?.value||"";e.modules[s].recipients=this.parseEmailListText(n)}),this._emailSettingsDraft=e,e},bindEmailSettingsEvents(){const e=document.getElementById("email-settings-save-btn");if(!e||e.dataset.emailBound==="1")return;e.dataset.emailBound="1";const t=()=>{this._emailSettingsHydrating||(this.collectEmailSettingsFromUI(),this.updateEmailSettingsStatusBanner(),this.renderEmailDefaultChips(),this.updateEmailModulesSummary(),this.setEmailSettingsDirty(!0))},s=document.getElementById("email-settings-global-enabled");s&&s.addEventListener("change",()=>{t()});const n=document.getElementById("email-settings-default-recipients"),i=document.getElementById("email-settings-add-recipient-btn");n&&(n.addEventListener("keydown",I=>{(I.key==="Enter"||I.key===",")&&(I.preventDefault(),this.addEmailDefaultRecipientsFromInput())}),n.addEventListener("paste",()=>{setTimeout(()=>this.addEmailDefaultRecipientsFromInput(),0)})),i&&i.addEventListener("click",()=>this.addEmailDefaultRecipientsFromInput());const o=document.getElementById("email-settings-default-chips");o&&o.addEventListener("click",I=>{const b=I.target.closest("[data-email-chip]");if(!b)return;const k=b.getAttribute("data-email-chip"),L=this.getEmailDefaultRecipientsList().filter(T=>T!==k);this.setEmailDefaultRecipientsList(L)});const a=document.getElementById("email-settings-module-filter");if(a){let I=null;a.addEventListener("input",()=>{clearTimeout(I),I=setTimeout(()=>{this.collectEmailSettingsFromUI(),this.renderEmailModulesList(a.value)},120)})}const l=document.getElementById("email-settings-group-filters");l&&l.addEventListener("click",I=>{const b=I.target.closest("[data-email-group]");b&&(this.collectEmailSettingsFromUI(),this._emailSettingsGroupFilter=b.getAttribute("data-email-group")||"all",this.renderEmailGroupFilters(),this.renderEmailModulesList(a?.value||""))});const c=document.getElementById("email-settings-status-filters");c&&c.addEventListener("click",I=>{const b=I.target.closest("[data-email-status]");b&&(this.collectEmailSettingsFromUI(),this._emailSettingsStatusFilter=b.getAttribute("data-email-status")||"all",this.renderEmailStatusFilters(),this.renderEmailModulesList(a?.value||""))});const p=document.getElementById("email-settings-enable-visible-btn");p&&p.addEventListener("click",()=>this.applyEmailBulkVisible(!0));const y=document.getElementById("email-settings-disable-visible-btn");y&&y.addEventListener("click",()=>this.applyEmailBulkVisible(!1));const d=document.getElementById("email-settings-manual-visible-btn");d&&d.addEventListener("click",()=>this.applyEmailBulkVisible(!0,"manual"));const v=document.getElementById("email-settings-auto-visible-btn");v&&v.addEventListener("click",()=>this.applyEmailBulkVisible(!0,"auto"));const x=document.getElementById("email-settings-modules-list");x&&(x.addEventListener("change",I=>{if(!I.target.matches(".em-manual, .em-auto, .em-recipients"))return;const b=I.target.closest(".email-module-row");b&&I.target.matches(".em-manual, .em-auto")&&this.syncEmailToggleClasses(b),t()}),x.addEventListener("input",I=>{I.target.matches(".em-recipients")&&this.setEmailSettingsDirty(!0)}),x.addEventListener("click",I=>{const b=I.target.closest("[data-toggle-recipients]");if(!b)return;const L=b.closest(".email-module-row")?.querySelector(".email-module-recipients-wrap");if(!L)return;const T=L.hasAttribute("hidden");T?L.removeAttribute("hidden"):L.setAttribute("hidden",""),b.classList.toggle("is-open",T)})),e.addEventListener("click",async()=>{const I=this.collectEmailSettingsFromUI();e.disabled=!0;try{const b=AppState.currentUser||{},k=await GoogleIntegration.sendToAppsScript("saveEmailSettings",{settings:I,userData:b});k&&k.success?(AppState.notificationEmails=(I.defaultRecipients||[]).slice(),typeof EmailDispatch<"u"&&(EmailDispatch.invalidateCache(),EmailDispatch._settings=k.data||I),this._emailSettingsDraft=k.data||I,this.setEmailSettingsDirty(!1),this.updateEmailSettingsStatusBanner(),this.updateEmailModulesSummary(),Notification.success(k.message||"\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0628\u0631\u064A\u062F")):Notification.error(k&&k.message||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638")}catch(b){Notification.error("\u062E\u0637\u0623: "+(b.message||b))}finally{e.disabled=!1}});const E=document.getElementById("email-settings-reload-btn");E&&E.addEventListener("click",()=>this.ensureEmailSettingsLoaded(!0));const B=document.getElementById("email-settings-test-btn");B&&B.addEventListener("click",async()=>{const I=document.getElementById("email-settings-test-to")?.value?.trim();if(!I||!I.includes("@")){Notification.error("\u0623\u062F\u062E\u0644 \u0625\u064A\u0645\u064A\u0644 \u0635\u062D\u064A\u062D \u0644\u0644\u0627\u062E\u062A\u0628\u0627\u0631");return}B.disabled=!0;try{const b=await GoogleIntegration.sendToAppsScript("sendTestEmail",{to:I,userData:AppState.currentUser||{}});b&&b.success?Notification.success(b.message||"\u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A"):Notification.error(b&&b.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u062C\u0631\u064A\u0628\u064A")}catch(b){Notification.error(String(b.message||b))}finally{B.disabled=!1}})},removeNotificationEmail(e){AppState.notificationEmails&&AppState.notificationEmails[e]!=null&&AppState.notificationEmails.splice(e,1)},bindCloudStorageSettingsEvents(){const e=document.getElementById("onedrive-settings-form");e&&e.addEventListener("submit",async a=>{a.preventDefault();const l=document.getElementById("onedrive-enabled")?.checked||!1,c=document.getElementById("onedrive-client-id")?.value.trim()||"",p=document.getElementById("onedrive-client-secret")?.value.trim()||"";AppState.cloudStorageConfig.onedrive.enabled=l,AppState.cloudStorageConfig.onedrive.clientId=c,p&&(AppState.cloudStorageConfig.onedrive.clientSecret=p),DataManager.saveCloudStorageConfig(),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A OneDrive \u0628\u0646\u062C\u0627\u062D"),this.load()});const t=document.getElementById("onedrive-authorize-btn");t&&t.addEventListener("click",async()=>{try{await CloudStorageIntegration.authorize("onedrive"),this.load()}catch(a){Notification.error(a.message||"\u0641\u0634\u0644 \u0631\u0628\u0637 OneDrive")}});const s=document.getElementById("googledrive-settings-form");s&&s.addEventListener("submit",async a=>{a.preventDefault();const l=document.getElementById("googledrive-enabled")?.checked||!1,c=document.getElementById("googledrive-client-id")?.value.trim()||"",p=document.getElementById("googledrive-client-secret")?.value.trim()||"";AppState.cloudStorageConfig.googleDrive.enabled=l,AppState.cloudStorageConfig.googleDrive.clientId=c,p&&(AppState.cloudStorageConfig.googleDrive.clientSecret=p),DataManager.saveCloudStorageConfig(),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062E\u0627\u062F\u0645 \u0628\u0646\u062C\u0627\u062D"),this.load()});const n=document.getElementById("googledrive-authorize-btn");n&&n.addEventListener("click",async()=>{try{await CloudStorageIntegration.authorize("googleDrive"),this.load()}catch(a){Notification.error(a.message||"\u0641\u0634\u0644 \u0631\u0628\u0637 \u0627\u0644\u062E\u0627\u062F\u0645")}});const i=document.getElementById("sharepoint-settings-form");i&&i.addEventListener("submit",async a=>{a.preventDefault();const l=document.getElementById("sharepoint-enabled")?.checked||!1,c=document.getElementById("sharepoint-client-id")?.value.trim()||"",p=document.getElementById("sharepoint-client-secret")?.value.trim()||"",y=document.getElementById("sharepoint-tenant-id")?.value.trim()||"",d=document.getElementById("sharepoint-site-url")?.value.trim()||"";AppState.cloudStorageConfig.sharepoint.enabled=l,AppState.cloudStorageConfig.sharepoint.clientId=c,p&&(AppState.cloudStorageConfig.sharepoint.clientSecret=p),AppState.cloudStorageConfig.sharepoint.tenantId=y,AppState.cloudStorageConfig.sharepoint.siteUrl=d,DataManager.saveCloudStorageConfig(),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A SharePoint \u0628\u0646\u062C\u0627\u062D"),this.load()});const o=document.getElementById("sharepoint-authorize-btn");o&&o.addEventListener("click",async()=>{try{await CloudStorageIntegration.authorize("sharepoint"),this.load()}catch(a){Notification.error(a.message||"\u0641\u0634\u0644 \u0631\u0628\u0637 SharePoint")}})},renderCloudStorageSettings(){const e=AppState.cloudStorageConfig.onedrive,t=AppState.cloudStorageConfig.googleDrive,s=AppState.cloudStorageConfig.sharepoint,n=e.enabled&&e.clientId&&e.accessToken?"success":"warning",i=t.enabled&&t.clientId&&t.accessToken?"success":"warning",o=s.enabled&&s.clientId&&s.accessToken?"success":"warning";return`
+                </div>`;
+        });
+        listEl.innerHTML = html || '<p class="email-settings-empty">لا نتائج مطابقة للبحث أو التصفية</p>';
+        this.updateEmailModulesSummary();
+        this.syncEmailToggleClasses(listEl);
+        listEl.querySelectorAll('.email-module-row').forEach((row) => {
+            const enabledCb = row.querySelector('.em-enabled');
+            if (!enabledCb) return;
+            enabledCb.addEventListener('change', () => {
+                const onNow = enabledCb.checked;
+                row.classList.toggle('is-enabled', onNow);
+                row.querySelectorAll('.em-manual, .em-auto').forEach((cb) => {
+                    cb.disabled = !onNow;
+                });
+                this.syncEmailToggleClasses(row);
+                this.collectEmailSettingsFromUI();
+                this.updateEmailModulesSummary();
+                this.setEmailSettingsDirty(true);
+            });
+        });
+    },
+
+    syncEmailToggleClasses(root) {
+        if (!root || typeof root.querySelectorAll !== 'function') return;
+        root.querySelectorAll('.email-toggle').forEach((label) => {
+            const input = label.querySelector('input[type="checkbox"]');
+            if (!input) return;
+            label.classList.toggle('is-checked', !!input.checked);
+            label.classList.toggle('is-disabled', !!input.disabled);
+        });
+    },
+
+    applyEmailBulkVisible(enable, mode) {
+        this.collectEmailSettingsFromUI();
+        const rows = document.querySelectorAll('#email-settings-modules-list .email-module-row');
+        rows.forEach((row) => {
+            const key = row.getAttribute('data-module-key');
+            if (!key || !this._emailSettingsDraft?.modules?.[key]) return;
+            const mod = this._emailSettingsDraft.modules[key];
+            if (mode === 'manual') {
+                if (!mod.enabled) mod.enabled = true;
+                mod.manualSend = true;
+                return;
+            }
+            if (mode === 'auto') {
+                if (!mod.enabled) mod.enabled = true;
+                mod.autoSend = true;
+                return;
+            }
+            mod.enabled = !!enable;
+            if (enable) mod.manualSend = true;
+        });
+        this.renderEmailModulesList(document.getElementById('email-settings-module-filter')?.value || '');
+        this.setEmailSettingsDirty(true);
+    },
+
+    collectEmailSettingsFromUI() {
+        const draft = this._emailSettingsDraft || { modules: {} };
+        draft.globalEnabled = !!document.getElementById('email-settings-global-enabled')?.checked;
+        if (!Array.isArray(draft.defaultRecipients)) {
+            draft.defaultRecipients = this.parseEmailListText(document.getElementById('email-settings-default-recipients')?.value || '');
+        }
+        document.querySelectorAll('#email-settings-modules-list .email-module-row').forEach((row) => {
+            const key = row.getAttribute('data-module-key');
+            if (!key || !draft.modules[key]) return;
+            draft.modules[key].enabled = !!row.querySelector('.em-enabled')?.checked;
+            draft.modules[key].manualSend = !!row.querySelector('.em-manual')?.checked;
+            draft.modules[key].autoSend = !!row.querySelector('.em-auto')?.checked;
+            const rec = row.querySelector('.em-recipients')?.value || '';
+            draft.modules[key].recipients = this.parseEmailListText(rec);
+        });
+        this._emailSettingsDraft = draft;
+        return draft;
+    },
+
+    bindEmailSettingsEvents() {
+        const saveBtn = document.getElementById('email-settings-save-btn');
+        if (!saveBtn || saveBtn.dataset.emailBound === '1') return;
+        saveBtn.dataset.emailBound = '1';
+
+        const markDirty = () => {
+            if (this._emailSettingsHydrating) return;
+            this.collectEmailSettingsFromUI();
+            this.updateEmailSettingsStatusBanner();
+            this.renderEmailDefaultChips();
+            this.updateEmailModulesSummary();
+            this.setEmailSettingsDirty(true);
+        };
+
+        const globalEl = document.getElementById('email-settings-global-enabled');
+        if (globalEl) {
+            globalEl.addEventListener('change', () => {
+                markDirty();
+            });
+        }
+
+        const recipientsEl = document.getElementById('email-settings-default-recipients');
+        const addRecipientBtn = document.getElementById('email-settings-add-recipient-btn');
+        if (recipientsEl) {
+            recipientsEl.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    this.addEmailDefaultRecipientsFromInput();
+                }
+            });
+            recipientsEl.addEventListener('paste', () => {
+                setTimeout(() => this.addEmailDefaultRecipientsFromInput(), 0);
+            });
+        }
+        if (addRecipientBtn) {
+            addRecipientBtn.addEventListener('click', () => this.addEmailDefaultRecipientsFromInput());
+        }
+        const chipsWrap = document.getElementById('email-settings-default-chips');
+        if (chipsWrap) {
+            chipsWrap.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-email-chip]');
+                if (!btn) return;
+                const email = btn.getAttribute('data-email-chip');
+                const next = this.getEmailDefaultRecipientsList().filter((x) => x !== email);
+                this.setEmailDefaultRecipientsList(next);
+            });
+        }
+
+        const filter = document.getElementById('email-settings-module-filter');
+        if (filter) {
+            let t = null;
+            filter.addEventListener('input', () => {
+                clearTimeout(t);
+                t = setTimeout(() => {
+                    this.collectEmailSettingsFromUI();
+                    this.renderEmailModulesList(filter.value);
+                }, 120);
+            });
+        }
+
+        const groupWrap = document.getElementById('email-settings-group-filters');
+        if (groupWrap) {
+            groupWrap.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-email-group]');
+                if (!btn) return;
+                this.collectEmailSettingsFromUI();
+                this._emailSettingsGroupFilter = btn.getAttribute('data-email-group') || 'all';
+                this.renderEmailGroupFilters();
+                this.renderEmailModulesList(filter?.value || '');
+            });
+        }
+
+        const statusWrap = document.getElementById('email-settings-status-filters');
+        if (statusWrap) {
+            statusWrap.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-email-status]');
+                if (!btn) return;
+                this.collectEmailSettingsFromUI();
+                this._emailSettingsStatusFilter = btn.getAttribute('data-email-status') || 'all';
+                this.renderEmailStatusFilters();
+                this.renderEmailModulesList(filter?.value || '');
+            });
+        }
+
+        const enableVisibleBtn = document.getElementById('email-settings-enable-visible-btn');
+        if (enableVisibleBtn) {
+            enableVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(true));
+        }
+        const disableVisibleBtn = document.getElementById('email-settings-disable-visible-btn');
+        if (disableVisibleBtn) {
+            disableVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(false));
+        }
+        const manualVisibleBtn = document.getElementById('email-settings-manual-visible-btn');
+        if (manualVisibleBtn) {
+            manualVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(true, 'manual'));
+        }
+        const autoVisibleBtn = document.getElementById('email-settings-auto-visible-btn');
+        if (autoVisibleBtn) {
+            autoVisibleBtn.addEventListener('click', () => this.applyEmailBulkVisible(true, 'auto'));
+        }
+
+        const listEl = document.getElementById('email-settings-modules-list');
+        if (listEl) {
+            listEl.addEventListener('change', (e) => {
+                if (!e.target.matches('.em-manual, .em-auto, .em-recipients')) return;
+                const row = e.target.closest('.email-module-row');
+                if (row && e.target.matches('.em-manual, .em-auto')) {
+                    this.syncEmailToggleClasses(row);
+                }
+                markDirty();
+            });
+            listEl.addEventListener('input', (e) => {
+                if (!e.target.matches('.em-recipients')) return;
+                this.setEmailSettingsDirty(true);
+            });
+            listEl.addEventListener('click', (e) => {
+                const toggle = e.target.closest('[data-toggle-recipients]');
+                if (!toggle) return;
+                const row = toggle.closest('.email-module-row');
+                const wrap = row?.querySelector('.email-module-recipients-wrap');
+                if (!wrap) return;
+                const open = wrap.hasAttribute('hidden');
+                if (open) wrap.removeAttribute('hidden');
+                else wrap.setAttribute('hidden', '');
+                toggle.classList.toggle('is-open', open);
+            });
+        }
+
+        saveBtn.addEventListener('click', async () => {
+            const settings = this.collectEmailSettingsFromUI();
+            saveBtn.disabled = true;
+            try {
+                const userData = AppState.currentUser || {};
+                const result = await GoogleIntegration.sendToAppsScript('saveEmailSettings', {
+                    settings,
+                    userData
+                });
+                if (result && result.success) {
+                    AppState.notificationEmails = (settings.defaultRecipients || []).slice();
+                    if (typeof EmailDispatch !== 'undefined') {
+                        EmailDispatch.invalidateCache();
+                        EmailDispatch._settings = result.data || settings;
+                    }
+                    this._emailSettingsDraft = result.data || settings;
+                    this.setEmailSettingsDirty(false);
+                    this.updateEmailSettingsStatusBanner();
+                    this.updateEmailModulesSummary();
+                    Notification.success(result.message || 'تم حفظ إعدادات البريد');
+                } else {
+                    Notification.error((result && result.message) || 'فشل الحفظ');
+                }
+            } catch (e) {
+                Notification.error('خطأ: ' + (e.message || e));
+            } finally {
+                saveBtn.disabled = false;
+            }
+        });
+
+        const reloadBtn = document.getElementById('email-settings-reload-btn');
+        if (reloadBtn) {
+            reloadBtn.addEventListener('click', () => this.ensureEmailSettingsLoaded(true));
+        }
+        const testBtn = document.getElementById('email-settings-test-btn');
+        if (testBtn) {
+            testBtn.addEventListener('click', async () => {
+                const to = document.getElementById('email-settings-test-to')?.value?.trim();
+                if (!to || !to.includes('@')) {
+                    Notification.error('أدخل إيميل صحيح للاختبار');
+                    return;
+                }
+                testBtn.disabled = true;
+                try {
+                    const result = await GoogleIntegration.sendToAppsScript('sendTestEmail', {
+                        to,
+                        userData: AppState.currentUser || {}
+                    });
+                    if (result && result.success) Notification.success(result.message || 'تم الإرسال التجريبي');
+                    else Notification.error((result && result.message) || 'فشل التجريبي');
+                } catch (e) {
+                    Notification.error(String(e.message || e));
+                } finally {
+                    testBtn.disabled = false;
+                }
+            });
+        }
+    },
+
+    // إبقاء الدالة للتوافق إن وُجدت استدعاءات قديمة
+    removeNotificationEmail(index) {
+        if (AppState.notificationEmails && AppState.notificationEmails[index] != null) {
+            AppState.notificationEmails.splice(index, 1);
+        }
+    },
+
+    bindCloudStorageSettingsEvents() {
+        // OneDrive Settings
+        const onedriveForm = document.getElementById('onedrive-settings-form');
+        if (onedriveForm) {
+            onedriveForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const enabled = document.getElementById('onedrive-enabled')?.checked || false;
+                const clientId = document.getElementById('onedrive-client-id')?.value.trim() || '';
+                const clientSecret = document.getElementById('onedrive-client-secret')?.value.trim() || '';
+
+                AppState.cloudStorageConfig.onedrive.enabled = enabled;
+                AppState.cloudStorageConfig.onedrive.clientId = clientId;
+                if (clientSecret) {
+                    AppState.cloudStorageConfig.onedrive.clientSecret = clientSecret;
+                }
+
+                DataManager.saveCloudStorageConfig();
+                Notification.success('تم حفظ إعدادات OneDrive بنجاح');
+                this.load();
+            });
+        }
+
+        const onedriveAuthorizeBtn = document.getElementById('onedrive-authorize-btn');
+        if (onedriveAuthorizeBtn) {
+            onedriveAuthorizeBtn.addEventListener('click', async () => {
+                try {
+                    await CloudStorageIntegration.authorize('onedrive');
+                    this.load();
+                } catch (error) {
+                    Notification.error(error.message || 'فشل ربط OneDrive');
+                }
+            });
+        }
+
+        // الخادم Settings
+        const googledriveForm = document.getElementById('googledrive-settings-form');
+        if (googledriveForm) {
+            googledriveForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const enabled = document.getElementById('googledrive-enabled')?.checked || false;
+                const clientId = document.getElementById('googledrive-client-id')?.value.trim() || '';
+                const clientSecret = document.getElementById('googledrive-client-secret')?.value.trim() || '';
+
+                AppState.cloudStorageConfig.googleDrive.enabled = enabled;
+                AppState.cloudStorageConfig.googleDrive.clientId = clientId;
+                if (clientSecret) {
+                    AppState.cloudStorageConfig.googleDrive.clientSecret = clientSecret;
+                }
+
+                DataManager.saveCloudStorageConfig();
+                Notification.success('تم حفظ إعدادات الخادم بنجاح');
+                this.load();
+            });
+        }
+
+        const googledriveAuthorizeBtn = document.getElementById('googledrive-authorize-btn');
+        if (googledriveAuthorizeBtn) {
+            googledriveAuthorizeBtn.addEventListener('click', async () => {
+                try {
+                    await CloudStorageIntegration.authorize('googleDrive');
+                    this.load();
+                } catch (error) {
+                    Notification.error(error.message || 'فشل ربط الخادم');
+                }
+            });
+        }
+
+        // SharePoint Settings
+        const sharepointForm = document.getElementById('sharepoint-settings-form');
+        if (sharepointForm) {
+            sharepointForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const enabled = document.getElementById('sharepoint-enabled')?.checked || false;
+                const clientId = document.getElementById('sharepoint-client-id')?.value.trim() || '';
+                const clientSecret = document.getElementById('sharepoint-client-secret')?.value.trim() || '';
+                const tenantId = document.getElementById('sharepoint-tenant-id')?.value.trim() || '';
+                const siteUrl = document.getElementById('sharepoint-site-url')?.value.trim() || '';
+
+                AppState.cloudStorageConfig.sharepoint.enabled = enabled;
+                AppState.cloudStorageConfig.sharepoint.clientId = clientId;
+                if (clientSecret) {
+                    AppState.cloudStorageConfig.sharepoint.clientSecret = clientSecret;
+                }
+                AppState.cloudStorageConfig.sharepoint.tenantId = tenantId;
+                AppState.cloudStorageConfig.sharepoint.siteUrl = siteUrl;
+
+                DataManager.saveCloudStorageConfig();
+                Notification.success('تم حفظ إعدادات SharePoint بنجاح');
+                this.load();
+            });
+        }
+
+        const sharepointAuthorizeBtn = document.getElementById('sharepoint-authorize-btn');
+        if (sharepointAuthorizeBtn) {
+            sharepointAuthorizeBtn.addEventListener('click', async () => {
+                try {
+                    await CloudStorageIntegration.authorize('sharepoint');
+                    this.load();
+                } catch (error) {
+                    Notification.error(error.message || 'فشل ربط SharePoint');
+                }
+            });
+        }
+    },
+
+    renderCloudStorageSettings() {
+        const onedriveConfig = AppState.cloudStorageConfig.onedrive;
+        const googleDriveConfig = AppState.cloudStorageConfig.googleDrive;
+        const sharepointConfig = AppState.cloudStorageConfig.sharepoint;
+
+        const onedriveStatus = onedriveConfig.enabled && onedriveConfig.clientId && onedriveConfig.accessToken ? 'success' : 'warning';
+        const googleDriveStatus = googleDriveConfig.enabled && googleDriveConfig.clientId && googleDriveConfig.accessToken ? 'success' : 'warning';
+        const sharepointStatus = sharepointConfig.enabled && sharepointConfig.clientId && sharepointConfig.accessToken ? 'success' : 'warning';
+
+        return `
             <div class="content-card mt-6">
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-cloud ml-2"></i>
-                        \u062A\u0643\u0627\u0645\u0644 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0633\u062D\u0627\u0628\u064A
+                        تكامل التخزين السحابي
                     </h2>
                 </div>
                 <div class="card-body space-y-6">
@@ -1548,46 +4193,46 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                                 <i class="fab fa-microsoft ml-2"></i>
                                 Microsoft OneDrive
                             </h3>
-                            <span class="badge badge-${n}">
-                                ${n==="success"?"\u0645\u0641\u0639\u0644":"\u063A\u064A\u0631 \u0645\u0641\u0639\u0644"}
+                            <span class="badge badge-${onedriveStatus}">
+                                ${onedriveStatus === 'success' ? 'مفعل' : 'غير مفعل'}
                             </span>
                         </div>
                         <form id="onedrive-settings-form" class="space-y-4">
                             <div>
                                 <label class="flex items-center mb-2">
                                     <input type="checkbox" id="onedrive-enabled" class="rounded border-gray-300 text-blue-600"
-                                        ${e.enabled?"checked":""}>
-                                    <span class="mr-2 text-sm text-gray-700">\u062A\u0641\u0639\u064A\u0644 OneDrive</span>
+                                        ${onedriveConfig.enabled ? 'checked' : ''}>
+                                    <span class="mr-2 text-sm text-gray-700">تفعيل OneDrive</span>
                                 </label>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Client ID (\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0637\u0628\u064A\u0642)
+                                    Client ID (معرف التطبيق)
                                 </label>
                                 <input type="text" id="onedrive-client-id" class="form-input"
-                                    value="${e.clientId||""}"
-                                    placeholder="\u0623\u062F\u062E\u0644 Client ID \u0645\u0646 Azure Portal"
+                                    value="${onedriveConfig.clientId || ''}"
+                                    placeholder="أدخل Client ID من Azure Portal"
                                     autocomplete="username">
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Client Secret (\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0633\u0631\u064A)
+                                    Client Secret (الرمز السري)
                                 </label>
                                 <input type="password" id="onedrive-client-secret" class="form-input"
-                                    value="${e.clientSecret||""}"
-                                    placeholder="\u0623\u062F\u062E\u0644 Client Secret"
+                                    value="${onedriveConfig.clientSecret || ''}"
+                                    placeholder="أدخل Client Secret"
                                     autocomplete="new-password">
                             </div>
                             <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                                ${e.clientId&&!e.accessToken?`
+                                ${onedriveConfig.clientId && !onedriveConfig.accessToken ? `
                                     <button type="button" id="onedrive-authorize-btn" class="btn-secondary">
                                         <i class="fas fa-key ml-2"></i>
-                                        \u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628
+                                        ربط الحساب
                                     </button>
-                                `:""}
+                                ` : ''}
                                 <button type="submit" class="btn-primary">
                                     <i class="fas fa-save ml-2"></i>
-                                    \u062D\u0641\u0638
+                                    حفظ
                                 </button>
                             </div>
                         </form>
@@ -1596,78 +4241,92 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-xs text-gray-600">
                             <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                            <strong>\u0645\u0644\u0627\u062D\u0638\u0629:</strong> \u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u062A\u0637\u0628\u064A\u0642\u0627\u062A \u0641\u064A Azure Portal (\u0644\u0640 OneDrive \u0648 SharePoint) \u0623\u0648 Google Cloud Console (\u0644\u0640 \u0627\u0644\u062E\u0627\u062F\u0645) \u0623\u0648\u0644\u0627\u064B.
-                            \u0627\u0644\u0645\u062F\u064A\u0631 \u0641\u0642\u0637 \u064A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0628\u0637 \u062D\u0633\u0627\u0628 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0627\u0644\u062E\u062F\u0645\u0627\u062A \u0627\u0644\u0633\u062D\u0627\u0628\u064A\u0629. \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u0648\u0646 \u0627\u0644\u0639\u0627\u062F\u064A\u0648\u0646 \u064A\u0645\u0643\u0646\u0647\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u0643\u0627\u0645\u0644 \u0628\u0639\u062F \u062A\u0641\u0639\u064A\u0644\u0647.
+                            <strong>ملاحظة:</strong> يجب إعداد التطبيقات في Azure Portal (لـ OneDrive و SharePoint) أو Google Cloud Console (لـ الخادم) أولاً.
+                            المدير فقط يملك صلاحية ربط حساب النظام بالخدمات السحابية. المستخدمون العاديون يمكنهم استخدام التكامل بعد تفعيله.
                         </p>
                     </div>
                 </div>
             </div>
-        `},renderGoogleDriveSettings(){const e=AppState.cloudStorageConfig.googleDrive,t=e.enabled&&e.clientId&&e.accessToken?"success":"warning";return`
+        `;
+    },
+
+    renderGoogleDriveSettings() {
+        const googleDriveConfig = AppState.cloudStorageConfig.googleDrive;
+        const googleDriveStatus = googleDriveConfig.enabled && googleDriveConfig.clientId && googleDriveConfig.accessToken ? 'success' : 'warning';
+
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fab fa-google ml-2"></i>
-                        \u0627\u0644\u062E\u0627\u062F\u0645
+                        الخادم
                     </h2>
                 </div>
                 <div class="card-body space-y-4">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-base font-semibold text-gray-700">
                             <i class="fab fa-google ml-2"></i>
-                            \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062E\u0627\u062F\u0645
+                            إعدادات الخادم
                         </h3>
-                        <span class="badge badge-${t}">
-                            ${t==="success"?"\u0645\u0641\u0639\u0644":"\u063A\u064A\u0631 \u0645\u0641\u0639\u0644"}
+                        <span class="badge badge-${googleDriveStatus}">
+                            ${googleDriveStatus === 'success' ? 'مفعل' : 'غير مفعل'}
                         </span>
                     </div>
                     <form id="googledrive-settings-form" class="space-y-4">
                         <div>
                             <label class="flex items-center mb-2">
                                 <input type="checkbox" id="googledrive-enabled" class="rounded border-gray-300 text-blue-600"
-                                    ${e.enabled?"checked":""}>
-                                <span class="mr-2 text-sm text-gray-700">\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062E\u0627\u062F\u0645</span>
+                                    ${googleDriveConfig.enabled ? 'checked' : ''}>
+                                <span class="mr-2 text-sm text-gray-700">تفعيل الخادم</span>
                             </label>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Client ID (\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0637\u0628\u064A\u0642)
+                                Client ID (معرف التطبيق)
                             </label>
                             <input type="text" id="googledrive-client-id" class="form-input"
-                                value="${e.clientId||""}"
-                                placeholder="\u0623\u062F\u062E\u0644 Client ID \u0645\u0646 Google Cloud Console"
+                                value="${googleDriveConfig.clientId || ''}"
+                                placeholder="أدخل Client ID من Google Cloud Console"
                                 autocomplete="username">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Client Secret (\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0633\u0631\u064A)
+                                Client Secret (الرمز السري)
                             </label>
                             <input type="password" id="googledrive-client-secret" class="form-input"
-                                value="${e.clientSecret||""}"
-                                placeholder="\u0623\u062F\u062E\u0644 Client Secret"
+                                value="${googleDriveConfig.clientSecret || ''}"
+                                placeholder="أدخل Client Secret"
                                 autocomplete="new-password">
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            ${e.clientId&&!e.accessToken?`
+                            ${googleDriveConfig.clientId && !googleDriveConfig.accessToken ? `
                                 <button type="button" id="googledrive-authorize-btn" class="btn-secondary">
                                     <i class="fas fa-key ml-2"></i>
-                                    \u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628
+                                    ربط الحساب
                                 </button>
-                            `:""}
+                            ` : ''}
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-save ml-2"></i>
-                                \u062D\u0641\u0638
+                                حفظ
                             </button>
                         </div>
                     </form>
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-xs text-gray-600">
                             <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                            <strong>\u0645\u0644\u0627\u062D\u0638\u0629:</strong> \u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A Google Cloud Console \u0623\u0648\u0644\u0627\u064B. \u0627\u0644\u0645\u062F\u064A\u0631 \u0641\u0642\u0637 \u064A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0628\u0637 \u062D\u0633\u0627\u0628 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0640 \u0627\u0644\u062E\u0627\u062F\u0645.
+                            <strong>ملاحظة:</strong> يجب إعداد التطبيق في Google Cloud Console أولاً. المدير فقط يملك صلاحية ربط حساب النظام بـ الخادم.
                         </p>
                     </div>
                 </div>
             </div>
-        `},renderSharePointSettings(){const e=AppState.cloudStorageConfig.sharepoint,t=e.enabled&&e.clientId&&e.accessToken?"success":"warning";return`
+        `;
+    },
+
+    renderSharePointSettings() {
+        const sharepointConfig = AppState.cloudStorageConfig.sharepoint;
+        const sharepointStatus = sharepointConfig.enabled && sharepointConfig.clientId && sharepointConfig.accessToken ? 'success' : 'warning';
+
+        return `
             <div class="content-card">
                 <div class="card-header">
                     <h2 class="card-title">
@@ -1679,158 +4338,453 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-base font-semibold text-gray-700">
                             <i class="fab fa-microsoft ml-2"></i>
-                            \u0625\u0639\u062F\u0627\u062F\u0627\u062A Microsoft SharePoint
+                            إعدادات Microsoft SharePoint
                         </h3>
-                        <span class="badge badge-${t}">
-                            ${t==="success"?"\u0645\u0641\u0639\u0644":"\u063A\u064A\u0631 \u0645\u0641\u0639\u0644"}
+                        <span class="badge badge-${sharepointStatus}">
+                            ${sharepointStatus === 'success' ? 'مفعل' : 'غير مفعل'}
                         </span>
                     </div>
                     <form id="sharepoint-settings-form" class="space-y-4">
                         <div>
                             <label class="flex items-center mb-2">
                                 <input type="checkbox" id="sharepoint-enabled" class="rounded border-gray-300 text-blue-600"
-                                    ${e.enabled?"checked":""}>
-                                <span class="mr-2 text-sm text-gray-700">\u062A\u0641\u0639\u064A\u0644 SharePoint</span>
+                                    ${sharepointConfig.enabled ? 'checked' : ''}>
+                                <span class="mr-2 text-sm text-gray-700">تفعيل SharePoint</span>
                             </label>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Client ID (\u0645\u0639\u0631\u0641 \u0627\u0644\u062A\u0637\u0628\u064A\u0642)
+                                Client ID (معرف التطبيق)
                             </label>
                             <input type="text" id="sharepoint-client-id" class="form-input"
-                                value="${e.clientId||""}"
-                                placeholder="\u0623\u062F\u062E\u0644 Client ID \u0645\u0646 Azure Portal"
+                                value="${sharepointConfig.clientId || ''}"
+                                placeholder="أدخل Client ID من Azure Portal"
                                 autocomplete="username">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Client Secret (\u0627\u0644\u0631\u0645\u0632 \u0627\u0644\u0633\u0631\u064A)
+                                Client Secret (الرمز السري)
                             </label>
                             <input type="password" id="sharepoint-client-secret" class="form-input"
-                                value="${e.clientSecret||""}"
-                                placeholder="\u0623\u062F\u062E\u0644 Client Secret"
+                                value="${sharepointConfig.clientSecret || ''}"
+                                placeholder="أدخل Client Secret"
                                 autocomplete="new-password">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Tenant ID (\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0633\u062A\u0623\u062C\u0631)
+                                Tenant ID (معرف المستأجر)
                             </label>
                             <input type="text" id="sharepoint-tenant-id" class="form-input"
-                                value="${e.tenantId||""}"
-                                placeholder="\u0623\u062F\u062E\u0644 Tenant ID (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)">
+                                value="${sharepointConfig.tenantId || ''}"
+                                placeholder="أدخل Tenant ID (اختياري)">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                Site URL (\u0631\u0627\u0628\u0637 \u0627\u0644\u0645\u0648\u0642\u0639)
+                                Site URL (رابط الموقع)
                             </label>
                             <input type="url" id="sharepoint-site-url" class="form-input"
-                                value="${e.siteUrl||""}"
+                                value="${sharepointConfig.siteUrl || ''}"
                                 placeholder="https://yourcompany.sharepoint.com/sites/yoursite">
                         </div>
                         <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                            ${e.clientId&&!e.accessToken?`
+                            ${sharepointConfig.clientId && !sharepointConfig.accessToken ? `
                                 <button type="button" id="sharepoint-authorize-btn" class="btn-secondary">
                                     <i class="fas fa-key ml-2"></i>
-                                    \u0631\u0628\u0637 \u0627\u0644\u062D\u0633\u0627\u0628
+                                    ربط الحساب
                                 </button>
-                            `:""}
+                            ` : ''}
                             <button type="submit" class="btn-primary">
                                 <i class="fas fa-save ml-2"></i>
-                                \u062D\u0641\u0638
+                                حفظ
                             </button>
                         </div>
                     </form>
                     <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                         <p class="text-xs text-gray-600">
                             <i class="fas fa-info-circle ml-1 text-blue-600"></i>
-                            <strong>\u0645\u0644\u0627\u062D\u0638\u0629:</strong> \u064A\u062C\u0628 \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u0641\u064A Azure Portal \u0623\u0648\u0644\u0627\u064B. \u0627\u0644\u0645\u062F\u064A\u0631 \u0641\u0642\u0637 \u064A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0631\u0628\u0637 \u062D\u0633\u0627\u0628 \u0627\u0644\u0646\u0638\u0627\u0645 \u0628\u0640 SharePoint.
+                            <strong>ملاحظة:</strong> يجب إعداد التطبيق في Azure Portal أولاً. المدير فقط يملك صلاحية ربط حساب النظام بـ SharePoint.
                         </p>
                     </div>
                 </div>
             </div>
-        `},_violationTypesImportNormalizeKey(e){return String(e??"").trim().replace(/\s+/g,"_").replace(/[^\w\u0600-\u06FF]/g,"").toLowerCase()},_violationTypesImportPick(e,t){const s={};Object.keys(e||{}).forEach(n=>{s[this._violationTypesImportNormalizeKey(n)]=e[n]});for(let n=0;n<t.length;n++){const i=this._violationTypesImportNormalizeKey(t[n]);if(s[i]!==void 0&&s[i]!==null&&String(s[i]).trim()!=="")return s[i]}return""},_parseViolationTypeFineForImport(e){if(e==null||e==="")return 0;if(typeof Violations<"u"&&typeof Violations.parseFineAmount=="function")return Violations.parseFineAmount(e);const t=Number(String(e).replace(/[^\d.\-]/g,""));return Number.isFinite(t)&&t>=0?t:0},downloadViolationTypesImportTemplate(){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const e=["\u0627\u0633\u0645_\u0627\u0644\u0646\u0648\u0639","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u0642\u064A\u0645\u0629_\u0627\u0644\u0645\u0627\u0644\u064A\u0629"],t=["\u0645\u062B\u0627\u0644: \u0639\u062F\u0645 \u0627\u0631\u062A\u062F\u0627\u0621 \u062E\u0648\u0630\u0629","\u0648\u0635\u0641 \u0627\u062E\u062A\u064A\u0627\u0631\u064A","500"],s=XLSX.utils.book_new(),n=XLSX.utils.aoa_to_sheet([e,t]);n["!cols"]=[{wch:40},{wch:50},{wch:14}],XLSX.utils.book_append_sheet(s,n,"\u0623\u0646\u0648\u0627\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A");const i=[["\u062A\u0639\u0644\u064A\u0645\u0627\u062A:"],["\u2022 \u0639\u0645\u0648\u062F \xAB\u0627\u0633\u0645_\u0627\u0644\u0646\u0648\u0639\xBB \u0625\u0644\u0632\u0627\u0645\u064A."],["\u2022 \u0625\u0630\u0627 \u0648\u064F\u062C\u062F \u0646\u0648\u0639 \u0628\u0646\u0641\u0633 \u0627\u0644\u0627\u0633\u0645 \u0645\u0633\u0628\u0642\u0627\u064B\u060C \u064A\u064F\u062D\u062F\u0651\u064E\u062B \u0627\u0644\u0648\u0635\u0641 \u0648\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641."],["\u2022 \xAB\u0627\u0644\u0642\u064A\u0645\u0629_\u0627\u0644\u0645\u0627\u0644\u064A\u0629\xBB \u0631\u0642\u0645 \u0628\u0627\u0644\u062C\u0646\u064A\u0647 (\u064A\u0645\u0643\u0646 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0623\u0631\u0642\u0627\u0645 \u0639\u0631\u0628\u064A\u0629 \u062D\u0633\u0628 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u062A\u0635\u0641\u062D)."]];XLSX.utils.book_append_sheet(s,XLSX.utils.aoa_to_sheet(i),"\u062A\u0639\u0644\u064A\u0645\u0627\u062A"),XLSX.writeFile(s,`\u0642\u0627\u0644\u0628_\u0627\u0633\u062A\u064A\u0631\u0627\u062F_\u0623\u0646\u0648\u0627\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A_${new Date().toISOString().slice(0,10)}.xlsx`)},exportViolationTypesToExcel(){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}if(typeof ViolationTypesManager>"u"){Notification.error("\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629 \u062D\u0627\u0644\u064A\u0627\u064B.");return}ViolationTypesManager.ensureInitialized();const e=ViolationTypesManager.getAll();if(!e.length){Notification.info("\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627.");return}const t=["\u0627\u0633\u0645_\u0627\u0644\u0646\u0648\u0639","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u0642\u064A\u0645\u0629_\u0627\u0644\u0645\u0627\u0644\u064A\u0629","\u0627\u0644\u062D\u0627\u0644\u0629","\u0639\u062F\u062F_\u0627\u0644\u0633\u062C\u0644\u0627\u062A"],s=e.map(a=>{const l=ViolationTypesManager.countUsage(a),c=Number(a.fineAmount||0);return[a.name||"",a.description||"",Number.isFinite(c)?c:0,a.isDefault?"\u0627\u0641\u062A\u0631\u0627\u0636\u064A":"\u0645\u062E\u0635\u0635",l]}),n=XLSX.utils.book_new(),i=XLSX.utils.aoa_to_sheet([t,...s]);i["!cols"]=[{wch:42},{wch:55},{wch:16},{wch:12},{wch:14}],XLSX.utils.book_append_sheet(n,i,"\u0623\u0646\u0648\u0627\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A");const o=new Date().toISOString().slice(0,10);XLSX.writeFile(n,`\u0623\u0646\u0648\u0627\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A_${o}.xlsx`),Notification.success(`\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 ${e.length} \u0646\u0648\u0639\u0627\u064B \u0625\u0644\u0649 Excel.`)},showViolationTypesImportModal(){if(typeof ViolationTypesManager>"u"){Notification.error("\u0625\u062F\u0627\u0631\u0629 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629 \u062D\u0627\u0644\u064A\u0627\u064B.");return}const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
+        `;
+    },
+
+    _violationTypesImportNormalizeKey(h) {
+        return String(h == null ? '' : h).trim().replace(/\s+/g, '_').replace(/[^\w\u0600-\u06FF]/g, '').toLowerCase();
+    },
+
+    _violationTypesImportPick(row, candidates) {
+        const map = {};
+        Object.keys(row || {}).forEach((k) => {
+            map[this._violationTypesImportNormalizeKey(k)] = row[k];
+        });
+        for (let i = 0; i < candidates.length; i++) {
+            const ck = this._violationTypesImportNormalizeKey(candidates[i]);
+            if (map[ck] !== undefined && map[ck] !== null && String(map[ck]).trim() !== '') {
+                return map[ck];
+            }
+        }
+        return '';
+    },
+
+    _parseViolationTypeFineForImport(raw) {
+        if (raw === null || raw === undefined || raw === '') return 0;
+        if (typeof Violations !== 'undefined' && typeof Violations.parseFineAmount === 'function') {
+            return Violations.parseFineAmount(raw);
+        }
+        const n = Number(String(raw).replace(/[^\d.\-]/g, ''));
+        return Number.isFinite(n) && n >= 0 ? n : 0;
+    },
+
+    downloadViolationTypesImportTemplate() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+        const headers = ['اسم_النوع', 'الوصف', 'القيمة_المالية'];
+        const example = ['مثال: عدم ارتداء خوذة', 'وصف اختياري', '500'];
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+        ws['!cols'] = [{ wch: 40 }, { wch: 50 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'أنواع_المخالفات');
+        const note = [
+            ['تعليمات:'],
+            ['• عمود «اسم_النوع» إلزامي.'],
+            ['• إذا وُجد نوع بنفس الاسم مسبقاً، يُحدَّث الوصف والقيمة المالية من الملف.'],
+            ['• «القيمة_المالية» رقم بالجنيه (يمكن استخدام أرقام عربية حسب إعدادات المتصفح).']
+        ];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(note), 'تعليمات');
+        XLSX.writeFile(wb, `قالب_استيراد_أنواع_المخالفات_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    exportViolationTypesToExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير محمّلة. حدّث الصفحة وحاول مرة أخرى.');
+            return;
+        }
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة أنواع المخالفات غير متاحة حالياً.');
+            return;
+        }
+        ViolationTypesManager.ensureInitialized();
+        const types = ViolationTypesManager.getAll();
+        if (!types.length) {
+            Notification.info('لا توجد أنواع مخالفات لتصديرها.');
+            return;
+        }
+        const headers = ['اسم_النوع', 'الوصف', 'القيمة_المالية', 'الحالة', 'عدد_السجلات'];
+        const rows = types.map((type) => {
+            const usage = ViolationTypesManager.countUsage(type);
+            const fine = Number(type.fineAmount || 0);
+            return [
+                type.name || '',
+                type.description || '',
+                Number.isFinite(fine) ? fine : 0,
+                type.isDefault ? 'افتراضي' : 'مخصص',
+                usage
+            ];
+        });
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+        ws['!cols'] = [{ wch: 42 }, { wch: 55 }, { wch: 16 }, { wch: 12 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'أنواع_المخالفات');
+        const stamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `أنواع_المخالفات_${stamp}.xlsx`);
+        Notification.success(`تم تصدير ${types.length} نوعاً إلى Excel.`);
+    },
+
+    showViolationTypesImportModal() {
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة أنواع المخالفات غير متاحة حالياً.');
+            return;
+        }
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 640px;">
                 <div class="modal-header">
-                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0646 Excel</h2>
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>استيراد أنواع مخالفات من Excel</h2>
                     <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body space-y-4">
                     <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
-                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>\u062D\u0645\u0651\u0644 \u0627\u0644\u0642\u0627\u0644\u0628 (\u0639\u0646\u0627\u0648\u064A\u0646 + \u0635\u0641 \u0645\u062B\u0627\u0644)\u060C \u0639\u0628\u0651\u0626 \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u062B\u0645 \u0627\u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641.</p>
+                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>حمّل القالب (عناوين + صف مثال)، عبّئ الأنواع ثم ارفع الملف.</p>
                         <button type="button" id="violation-types-import-download-template" class="btn-secondary btn-sm">
-                            <i class="fas fa-file-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0644\u0628 Excel
+                            <i class="fas fa-file-download ml-2"></i>تحميل قالب Excel
                         </button>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0641 Excel (.xlsx)</label>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ملف Excel (.xlsx)</label>
                         <input type="file" id="violation-types-import-file" accept=".xlsx,.xls" class="form-input">
                     </div>
                     <div id="violation-types-import-preview" class="hidden text-sm text-gray-600 max-h-40 overflow-auto border rounded p-2 bg-gray-50"></div>
                     <div class="flex justify-end gap-2 pt-2 border-t">
-                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
                         <button type="button" id="violation-types-import-confirm" class="btn-primary" disabled>
-                            <i class="fas fa-upload ml-2"></i>\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F
+                            <i class="fas fa-upload ml-2"></i>تأكيد الاستيراد
                         </button>
                     </div>
                 </div>
-            </div>`,document.body.appendChild(e);let t=[];const s=e.querySelector("#violation-types-import-preview"),n=e.querySelector("#violation-types-import-confirm");e.querySelector("#violation-types-import-download-template")?.addEventListener("click",()=>this.downloadViolationTypesImportTemplate()),e.querySelector("#violation-types-import-file")?.addEventListener("change",async i=>{const o=i.target.files&&i.target.files[0];if(t=[],n.disabled=!0,s.classList.add("hidden"),!!o){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629.");return}try{const a=await o.arrayBuffer(),l=XLSX.read(a,{type:"array"}),c=l.Sheets[l.SheetNames[0]],p=XLSX.utils.sheet_to_json(c,{defval:""});t=Array.isArray(p)?p:[],s.innerHTML=`<p>\u062A\u0645 \u0642\u0631\u0627\u0621\u0629 <strong>${t.length}</strong> \u0635\u0641\u0627\u064B \u0645\u0646 \u0627\u0644\u0648\u0631\u0642\u0629 \xAB${Utils.escapeHTML(l.SheetNames[0]||"")}\xBB.</p>`,s.classList.remove("hidden"),n.disabled=t.length===0}catch(a){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A:",a),Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641: "+(a.message||""))}}}),n?.addEventListener("click",async()=>{t.length&&(n.disabled=!0,await this.processViolationTypesImportRows(t,e))}),e.addEventListener("click",i=>{i.target===e&&e.remove()})},async processViolationTypesImportRows(e,t){if(typeof ViolationTypesManager>"u"){Notification.error("\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0623\u0646\u0648\u0627\u0639 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629.");return}ViolationTypesManager.ensureInitialized(),Array.isArray(AppState.appData.violationTypes)||(AppState.appData.violationTypes=[]);const s=new Date().toISOString();let n=0,i=0,o=0;for(let a=0;a<e.length;a++){const l=e[a]||{},c=String(this._violationTypesImportPick(l,["\u0627\u0633\u0645_\u0627\u0644\u0646\u0648\u0639","\u0627\u0633\u0645 \u0627\u0644\u0646\u0648\u0639","name","typename","\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"])||"").trim();if(!c){o++;continue}const p=String(this._violationTypesImportPick(l,["\u0627\u0644\u0648\u0635\u0641","description","notes"])||"").trim(),y=this._violationTypesImportPick(l,["\u0627\u0644\u0642\u064A\u0645\u0629_\u0627\u0644\u0645\u0627\u0644\u064A\u0629","\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629","fineamount","fine","defaultfine"]),d=this._parseViolationTypeFineForImport(y!==""&&y!==void 0?y:0),v=ViolationTypesManager.getTypeByName(c);v?(v.description=p,v.fineAmount=d,v.updatedAt=s,i++):(AppState.appData.violationTypes.push({id:Utils.generateId("VTYPE"),name:c,description:p,fineAmount:d,isDefault:!1,createdAt:s,updatedAt:s}),n++)}if(ViolationTypesManager.sortTypes(),ViolationTypesManager.ensureViolationsTypeIds(),typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}ViolationTypesManager.persist(!0),t&&t.parentNode&&t.remove(),Notification.success(`\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F: ${n} \u0646\u0648\u0639 \u062C\u062F\u064A\u062F\u060C ${i} \u0645\u062D\u062F\u0651\u062B \u0628\u0627\u0644\u0627\u0633\u0645\u060C ${o} \u0635\u0641 \u0628\u062F\u0648\u0646 \u0627\u0633\u0645.`),this.refreshViolationTypesList()},renderViolationTypesList(){const e=ViolationTypesManager.getAll();return e.length?`
+            </div>`;
+        document.body.appendChild(modal);
+        let parsedRows = [];
+        const preview = modal.querySelector('#violation-types-import-preview');
+        const confirmBtn = modal.querySelector('#violation-types-import-confirm');
+        modal.querySelector('#violation-types-import-download-template')?.addEventListener('click', () => this.downloadViolationTypesImportTemplate());
+        modal.querySelector('#violation-types-import-file')?.addEventListener('change', async (e) => {
+            const f = e.target.files && e.target.files[0];
+            parsedRows = [];
+            confirmBtn.disabled = true;
+            preview.classList.add('hidden');
+            if (!f) return;
+            if (typeof XLSX === 'undefined') {
+                Notification.error('مكتبة Excel غير محمّلة.');
+                return;
+            }
+            try {
+                const buf = await f.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                parsedRows = Array.isArray(json) ? json : [];
+                preview.innerHTML = `<p>تم قراءة <strong>${parsedRows.length}</strong> صفاً من الورقة «${Utils.escapeHTML(wb.SheetNames[0] || '')}».</p>`;
+                preview.classList.remove('hidden');
+                confirmBtn.disabled = parsedRows.length === 0;
+            } catch (err) {
+                Utils.safeError('استيراد أنواع مخالفات:', err);
+                Notification.error('تعذّر قراءة الملف: ' + (err.message || ''));
+            }
+        });
+        confirmBtn?.addEventListener('click', async () => {
+            if (!parsedRows.length) return;
+            confirmBtn.disabled = true;
+            await this.processViolationTypesImportRows(parsedRows, modal);
+        });
+        modal.addEventListener('click', (ev) => { if (ev.target === modal) modal.remove(); });
+    },
+
+    async processViolationTypesImportRows(rows, modal) {
+        if (typeof ViolationTypesManager === 'undefined') {
+            Notification.error('إدارة الأنواع غير متاحة.');
+            return;
+        }
+        ViolationTypesManager.ensureInitialized();
+        if (!Array.isArray(AppState.appData.violationTypes)) {
+            AppState.appData.violationTypes = [];
+        }
+        const now = new Date().toISOString();
+        let added = 0;
+        let merged = 0;
+        let skipped = 0;
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i] || {};
+            const name = String(this._violationTypesImportPick(row, ['اسم_النوع', 'اسم النوع', 'name', 'typename', 'نوع_المخالفة']) || '').trim();
+            if (!name) {
+                skipped++;
+                continue;
+            }
+            const description = String(this._violationTypesImportPick(row, ['الوصف', 'description', 'notes']) || '').trim();
+            const fineRaw = this._violationTypesImportPick(row, ['القيمة_المالية', 'القيمة المالية', 'fineamount', 'fine', 'defaultfine']);
+            const fineAmount = this._parseViolationTypeFineForImport(fineRaw !== '' && fineRaw !== undefined ? fineRaw : 0);
+            const existing = ViolationTypesManager.getTypeByName(name);
+            if (existing) {
+                existing.description = description;
+                existing.fineAmount = fineAmount;
+                existing.updatedAt = now;
+                merged++;
+            } else {
+                AppState.appData.violationTypes.push({
+                    id: Utils.generateId('VTYPE'),
+                    name,
+                    description,
+                    fineAmount,
+                    isDefault: false,
+                    createdAt: now,
+                    updatedAt: now
+                });
+                added++;
+            }
+        }
+        ViolationTypesManager.sortTypes();
+        ViolationTypesManager.ensureViolationsTypeIds();
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            try { window.DataManager.save(); } catch (e) { /* ignore */ }
+        }
+        ViolationTypesManager.persist(true);
+        if (modal && modal.parentNode) modal.remove();
+        Notification.success(`تم الاستيراد: ${added} نوع جديد، ${merged} محدّث بالاسم، ${skipped} صف بدون اسم.`);
+        this.refreshViolationTypesList();
+    },
+
+    renderViolationTypesList() {
+        const types = ViolationTypesManager.getAll();
+        if (!types.length) {
+            return `
+                <div class="empty-state">
+                    <i class="fas fa-tags text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">لم يتم تعريف أنواع مخالفات حتى الآن</p>
+                </div>
+            `;
+        }
+
+        return `
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
-                            <th>\u0627\u0644\u0648\u0635\u0641</th>
-                            <th>\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629</th>
-                            <th>\u0627\u0644\u062D\u0627\u0644\u0629</th>
-                            <th>\u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A</th>
-                            <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            <th>نوع المخالفة</th>
+                            <th>الوصف</th>
+                            <th>القيمة المالية</th>
+                            <th>الحالة</th>
+                            <th>عدد السجلات</th>
+                            <th>الإجراءات</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${e.map(t=>{const s=ViolationTypesManager.countUsage(t);return`
-                                    <tr data-violation-type-id="${t.id}">
+                        ${types.map(type => {
+            const usage = ViolationTypesManager.countUsage(type);
+            return `
+                                    <tr data-violation-type-id="${type.id}">
                                         <td class="align-top">
-                                            <span class="font-semibold">${Utils.escapeHTML(t.name)}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(type.name)}</span>
                                         </td>
                                         <td class="align-top">
-                                            ${t.description?`<span class="text-sm text-gray-600">${Utils.escapeHTML(t.description)}</span>`:'<span class="text-sm text-gray-400">\u2014</span>'}
+                                            ${type.description ? `<span class="text-sm text-gray-600">${Utils.escapeHTML(type.description)}</span>` : '<span class="text-sm text-gray-400">—</span>'}
                                         </td>
                                         <td class="align-top font-semibold text-red-700">
-                                            ${Number(t.fineAmount||0).toLocaleString("ar-EG")} \u062C.\u0645
+                                            ${Number(type.fineAmount || 0).toLocaleString('ar-EG')} ج.م
                                         </td>
                                         <td class="align-top">
-                                            <span class="badge ${t.isDefault?"badge-info":"badge-primary"}">
-                                                ${t.isDefault?"\u0627\u0641\u062A\u0631\u0627\u0636\u064A":"\u0645\u062E\u0635\u0635"}
+                                            <span class="badge ${type.isDefault ? 'badge-info' : 'badge-primary'}">
+                                                ${type.isDefault ? 'افتراضي' : 'مخصص'}
                                             </span>
                                         </td>
-                                        <td class="align-top">${s}</td>
+                                        <td class="align-top">${usage}</td>
                                         <td class="align-top">
                                             <div class="flex items-center gap-2">
-                                                <button class="btn-icon btn-icon-primary" data-action="view-violation-type" data-type-id="${t.id}" title="\u0639\u0631\u0636">
+                                                <button class="btn-icon btn-icon-primary" data-action="view-violation-type" data-type-id="${type.id}" title="عرض">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <button class="btn-icon btn-icon-info" data-action="edit-violation-type" data-type-id="${t.id}" title="\u062A\u0639\u062F\u064A\u0644">
+                                                <button class="btn-icon btn-icon-info" data-action="edit-violation-type" data-type-id="${type.id}" title="تعديل">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn-icon btn-icon-danger" data-action="delete-violation-type" data-type-id="${t.id}" title="\u062D\u0630\u0641">
+                                                <button class="btn-icon btn-icon-danger" data-action="delete-violation-type" data-type-id="${type.id}" title="حذف">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
-                                `}).join("")}
+                                `;
+        }).join('')
+            }
                     </tbody>
                 </table>
             </div>
-        `:`
-                <div class="empty-state">
-                    <i class="fas fa-tags text-4xl text-gray-300 mb-3"></i>
-                    <p class="text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u062A\u0639\u0631\u064A\u0641 \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062D\u062A\u0649 \u0627\u0644\u0622\u0646</p>
-                </div>
-            `},bindViolationTypesEvents(){const e=document.getElementById("add-violation-type-btn");e&&(e.onclick=()=>this.openViolationTypeModal());const t=document.getElementById("import-violation-types-btn");t&&(t.onclick=()=>this.showViolationTypesImportModal());const s=document.getElementById("export-violation-types-btn");s&&(s.onclick=()=>this.exportViolationTypesToExcel()),document.querySelectorAll('[data-action="view-violation-type"]').forEach(n=>{n.onclick=i=>{const o=i.currentTarget.getAttribute("data-type-id");this.viewViolationType(o)}}),document.querySelectorAll('[data-action="edit-violation-type"]').forEach(n=>{n.onclick=i=>{const o=i.currentTarget.getAttribute("data-type-id");this.openViolationTypeModal(o)}}),document.querySelectorAll('[data-action="delete-violation-type"]').forEach(n=>{n.onclick=i=>{const o=i.currentTarget.getAttribute("data-type-id");this.deleteViolationType(o)}})},refreshViolationTypesList(){const e=document.getElementById("violation-types-management");e&&(e.innerHTML=this.renderViolationTypesList(),this.bindViolationTypesEvents())},viewViolationType(e){try{if(!e||typeof ViolationTypesManager>"u")return;ViolationTypesManager.ensureInitialized?.();const t=ViolationTypesManager.getTypeById(e);if(!t||!t.name){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u062D\u062F\u062F");return}typeof UI<"u"&&typeof UI.showSection=="function"&&UI.showSection("violations");const s=()=>typeof Violations>"u"?!1:(Violations.currentFilters||(Violations.currentFilters={search:"",personType:"",violationType:"",severity:"",status:""}),Violations.currentFilters.violationType=t.name,typeof Violations.switchTab=="function"?Violations.switchTab("all"):typeof Violations.refreshViolationsView=="function"?Violations.refreshViolationsView():typeof Violations.refreshModule=="function"&&Violations.refreshModule(),!0);s()||setTimeout(()=>{s()||setTimeout(()=>s(),600)},250)}catch{Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0641\u062A\u062D \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}},openViolationTypeModal(e=null){const t=e?ViolationTypesManager.getTypeById(e):null;if(e&&!t){Notification.error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u062D\u062F\u062F");return}const s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+        `;
+    },
+
+    bindViolationTypesEvents() {
+        const addBtn = document.getElementById('add-violation-type-btn');
+        if (addBtn) {
+            addBtn.onclick = () => this.openViolationTypeModal();
+        }
+        const importBtn = document.getElementById('import-violation-types-btn');
+        if (importBtn) {
+            importBtn.onclick = () => this.showViolationTypesImportModal();
+        }
+        const exportBtn = document.getElementById('export-violation-types-btn');
+        if (exportBtn) {
+            exportBtn.onclick = () => this.exportViolationTypesToExcel();
+        }
+
+        document.querySelectorAll('[data-action="view-violation-type"]').forEach(btn => {
+            btn.onclick = (event) => {
+                const typeId = event.currentTarget.getAttribute('data-type-id');
+                this.viewViolationType(typeId);
+            };
+        });
+
+        document.querySelectorAll('[data-action="edit-violation-type"]').forEach(btn => {
+            btn.onclick = (event) => {
+                const typeId = event.currentTarget.getAttribute('data-type-id');
+                this.openViolationTypeModal(typeId);
+            };
+        });
+
+        document.querySelectorAll('[data-action="delete-violation-type"]').forEach(btn => {
+            btn.onclick = (event) => {
+                const typeId = event.currentTarget.getAttribute('data-type-id');
+                this.deleteViolationType(typeId);
+            };
+        });
+    },
+
+    refreshViolationTypesList() {
+        const container = document.getElementById('violation-types-management');
+        if (!container) return;
+        container.innerHTML = this.renderViolationTypesList();
+        this.bindViolationTypesEvents();
+    },
+
+    viewViolationType(typeId) {
+        try {
+            if (!typeId || typeof ViolationTypesManager === 'undefined') return;
+            ViolationTypesManager.ensureInitialized?.();
+            const type = ViolationTypesManager.getTypeById(typeId);
+            if (!type || !type.name) {
+                Notification.error('تعذر العثور على نوع المخالفة المحدد');
+                return;
+            }
+
+            if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
+                UI.showSection('violations');
+            }
+
+            const applyFilter = () => {
+                if (typeof Violations === 'undefined') return false;
+                if (!Violations.currentFilters) {
+                    Violations.currentFilters = { search: '', personType: '', violationType: '', severity: '', status: '' };
+                }
+                Violations.currentFilters.violationType = type.name;
+
+                // نضمن الدخول على تبويب "الكل" حتى تظهر الفلاتر والقائمة
+                if (typeof Violations.switchTab === 'function') {
+                    Violations.switchTab('all');
+                } else if (typeof Violations.refreshViolationsView === 'function') {
+                    Violations.refreshViolationsView();
+                } else if (typeof Violations.refreshModule === 'function') {
+                    Violations.refreshModule();
+                }
+                return true;
+            };
+
+            // محاولة سريعة، ثم إعادة محاولة قصيرة لو لسه القسم/الموديول ما اتجهزش
+            if (!applyFilter()) {
+                setTimeout(() => {
+                    if (!applyFilter()) {
+                        setTimeout(() => applyFilter(), 600);
+                    }
+                }, 250);
+            }
+        } catch (e) {
+            Notification.error('حدث خطأ أثناء فتح قائمة المخالفات');
+        }
+    },
+
+    openViolationTypeModal(typeId = null) {
+        const existing = typeId ? ViolationTypesManager.getTypeById(typeId) : null;
+        if (typeId && !existing) {
+            Notification.error('تعذر العثور على نوع المخالفة المحدد');
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 480px;">
                 <div class="modal-header">
-                    <h2 class="modal-title">${t?"\u062A\u0639\u062F\u064A\u0644 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0646\u0648\u0639 \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F"}</h2>
+                    <h2 class="modal-title">${existing ? 'تعديل نوع المخالفة' : 'إضافة نوع مخالفة جديد'}</h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
                     </button>
@@ -1838,123 +4792,543 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                 <div class="modal-body">
                     <form id="violation-type-form" class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0646\u0648\u0639 *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">اسم النوع *</label>
                             <input type="text" id="violation-type-name" class="form-input" required maxlength="150"
-                                value="${t?Utils.escapeHTML(t.name):""}"
-                                placeholder="\u0645\u062B\u0627\u0644: \u0639\u062F\u0645 \u0627\u0631\u062A\u062F\u0627\u0621 \u062E\u0648\u0630\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629">
+                                value="${existing ? Utils.escapeHTML(existing.name) : ''}"
+                                placeholder="مثال: عدم ارتداء خوذة السلامة">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0635\u0641 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">الوصف (اختياري)</label>
                             <textarea id="violation-type-description" class="form-input" rows="3"
-                                placeholder="\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0646\u0648\u0639">${t?Utils.escapeHTML(t.description||""):""}</textarea>
+                                placeholder="وصف مختصر لهذا النوع">${existing ? Utils.escapeHTML(existing.description || '') : ''}</textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">القيمة المالية الافتراضية</label>
                             <input type="number" id="violation-type-fine-amount" class="form-input" min="0" step="1"
-                                value="${t?Number(t.fineAmount||0):0}"
-                                placeholder="\u0645\u062B\u0627\u0644: 500">
-                            <p class="text-xs text-gray-500 mt-1">\u062A\u064F\u0633\u062A\u062E\u062F\u0645 \u0647\u0630\u0647 \u0627\u0644\u0642\u064A\u0645\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062A\u0633\u062C\u064A\u0644.</p>
+                                value="${existing ? Number(existing.fineAmount || 0) : 0}"
+                                placeholder="مثال: 500">
+                            <p class="text-xs text-gray-500 mt-1">تُستخدم هذه القيمة تلقائياً عند اختيار نوع المخالفة في التسجيل.</p>
                         </div>
                         <div class="flex items-center justify-end gap-3 pt-4 border-t">
-                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
                             <button type="submit" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${t?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0646\u0648\u0639"}
+                                <i class="fas fa-save ml-2"></i>${existing ? 'حفظ التعديلات' : 'إضافة النوع'}
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
-        `,document.body.appendChild(s),s.querySelector("#violation-type-form").addEventListener("submit",async i=>{i.preventDefault();const o=s.querySelector("#violation-type-name"),a=s.querySelector("#violation-type-description"),l=s.querySelector("#violation-type-fine-amount"),c=o?.value.trim()||"",p=a?.value.trim()||"",y=l?.value??"0",d=Number(y),v=Number.isFinite(d)&&d>=0?d:0;if(!c){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0633\u0645 \u0627\u0644\u0646\u0648\u0639"),o?.focus();return}try{t?(ViolationTypesManager.updateType(t.id,{name:c,description:p,fineAmount:v}),await ViolationTypesManager.persist(),Notification.success("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D")):(ViolationTypesManager.addType({name:c,description:p,fineAmount:v}),await ViolationTypesManager.persist(),Notification.success("\u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D")),s.remove(),this.refreshViolationTypesList()}catch(x){Notification.error(x.message)}}),s.addEventListener("click",i=>{i.target===s&&s.remove()})},deleteViolationType(e){if(!e)return;const t=ViolationTypesManager.getTypeById(e);if(!t){Notification.error("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=ViolationTypesManager.countUsage(t),n=s>0?`\u0647\u0646\u0627\u0643 ${s} \u0633\u062C\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0631\u062A\u0628\u0637 \u0628\u0647\u0630\u0627 \u0627\u0644\u0646\u0648\u0639.
-\u0644\u0646 \u064A\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0648\u062C\u0648\u062F\u0629\u060C \u0644\u0643\u0646 \u0644\u0646 \u064A\u0643\u0648\u0646 \u0627\u0644\u0646\u0648\u0639 \u0645\u062A\u0627\u062D\u0627\u064B \u0644\u0644\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062C\u062F\u064A\u062F.
-\u0647\u0644 \u062A\u0631\u063A\u0628 \u0628\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 \u0644\u062D\u0630\u0641 "${t.name}"\u061F`:`\u0647\u0644 \u062A\u0631\u064A\u062F \u0628\u0627\u0644\u062A\u0623\u0643\u064A\u062F \u062D\u0630\u0641 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 "${t.name}"\u061F`;confirm(n)&&(async()=>{try{ViolationTypesManager.deleteType(e),await ViolationTypesManager.persist(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D"),this.refreshViolationTypesList()}catch(i){Notification.error(i.message)}})()},normalizeOwner(e){return!e||e==="__default__"?"__default__":String(e)},renderApprovalOwnerOptions(e="__default__"){const t=this.normalizeOwner(e),s=ApprovalCircuits.getUsersList(),n=ApprovalCircuits.listOwners(),i=[];return i.push(`
-            <option value="__default__" ${t==="__default__"?"selected":""}>
-                \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A (\u064A\u0637\u0628\u0642 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646)
+        `;
+
+        document.body.appendChild(modal);
+
+        const form = modal.querySelector('#violation-type-form');
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const nameInput = modal.querySelector('#violation-type-name');
+            const descriptionInput = modal.querySelector('#violation-type-description');
+            const fineAmountInput = modal.querySelector('#violation-type-fine-amount');
+            const name = nameInput?.value.trim() || '';
+            const description = descriptionInput?.value.trim() || '';
+            const fineAmountRaw = fineAmountInput?.value ?? '0';
+            const parsedFineAmount = Number(fineAmountRaw);
+            const fineAmount = Number.isFinite(parsedFineAmount) && parsedFineAmount >= 0 ? parsedFineAmount : 0;
+
+            if (!name) {
+                Notification.error('يرجى إدخال اسم النوع');
+                nameInput?.focus();
+                return;
+            }
+
+            try {
+                if (existing) {
+                    ViolationTypesManager.updateType(existing.id, { name, description, fineAmount });
+                    await ViolationTypesManager.persist();
+                    Notification.success('تم تحديث نوع المخالفة بنجاح');
+                } else {
+                    ViolationTypesManager.addType({ name, description, fineAmount });
+                    await ViolationTypesManager.persist();
+                    Notification.success('تم إضافة نوع المخالفة بنجاح');
+                }
+                modal.remove();
+                this.refreshViolationTypesList();
+            } catch (error) {
+                Notification.error(error.message);
+            }
+        });
+
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.remove();
+            }
+        });
+    },
+
+    deleteViolationType(typeId) {
+        if (!typeId) return;
+
+        const type = ViolationTypesManager.getTypeById(typeId);
+        if (!type) {
+            Notification.error('نوع المخالفة غير موجود');
+            return;
+        }
+
+        const usage = ViolationTypesManager.countUsage(type);
+        const message = usage > 0
+            ? `هناك ${usage} سجل مخالفة مرتبط بهذا النوع.\nلن يتم حذف السجلات الموجودة، لكن لن يكون النوع متاحاً للاستخدام الجديد.\nهل ترغب بالمتابعة لحذف "${type.name}"؟`
+            : `هل تريد بالتأكيد حذف نوع المخالفة "${type.name}"؟`;
+
+        if (!confirm(message)) {
+            return;
+        }
+
+        (async () => {
+            try {
+                ViolationTypesManager.deleteType(typeId);
+                await ViolationTypesManager.persist();
+                Notification.success('تم حذف نوع المخالفة بنجاح');
+                this.refreshViolationTypesList();
+            } catch (error) {
+                Notification.error(error.message);
+            }
+        })();
+    },
+
+    normalizeOwner(ownerId) {
+        return !ownerId || ownerId === '__default__' ? '__default__' : String(ownerId);
+    },
+
+    renderApprovalOwnerOptions(selectedOwner = '__default__') {
+        const normalized = this.normalizeOwner(selectedOwner);
+        const users = ApprovalCircuits.getUsersList();
+        const configuredOwners = ApprovalCircuits.listOwners();
+        const optionItems = [];
+
+        optionItems.push(`
+            <option value="__default__" ${normalized === '__default__' ? 'selected' : ''}>
+                المسار الافتراضي (يطبق على جميع المستخدمين)
             </option>
-        `),s.forEach(o=>{const a=o.id||o.email,l=`${Utils.escapeHTML(o.name||o.email||"")}${o.email?` - ${Utils.escapeHTML(o.email)}`:""}`;i.push(`
-                <option value="${Utils.escapeHTML(a)}" ${t===a?"selected":""}>
-                    ${l}
+        `);
+
+        users.forEach(user => {
+            const value = user.id || user.email;
+            const label = `${Utils.escapeHTML(user.name || user.email || '')}${user.email ? ` - ${Utils.escapeHTML(user.email)}` : ''}`;
+            optionItems.push(`
+                <option value="${Utils.escapeHTML(value)}" ${normalized === value ? 'selected' : ''}>
+                    ${label}
                 </option>
-            `)}),n.filter(o=>o&&o!=="__default__"&&!s.some(a=>a.id===o)).forEach(o=>{const a=ApprovalCircuits.getCircuit(o);i.push(`
-                    <option value="${Utils.escapeHTML(o)}" ${t===o?"selected":""}>
-                        \u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F (${Utils.escapeHTML(a?.name||o)})
+            `);
+        });
+
+        configuredOwners
+            .filter(ownerId => ownerId && ownerId !== '__default__' && !users.some(user => user.id === ownerId))
+            .forEach(ownerId => {
+                const circuit = ApprovalCircuits.getCircuit(ownerId);
+                optionItems.push(`
+                    <option value="${Utils.escapeHTML(ownerId)}" ${normalized === ownerId ? 'selected' : ''}>
+                        مستخدم غير موجود (${Utils.escapeHTML(circuit?.name || ownerId)})
                     </option>
-                `)}),i.join("")},renderApprovalStepsPlaceholder(){return`
+                `);
+            });
+
+        return optionItems.join('');
+    },
+
+    renderApprovalStepsPlaceholder() {
+        return `
             <div class="bg-gray-50 border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-600">
                 <i class="fas fa-layer-group text-2xl text-gray-400 mb-3"></i>
-                <p>\u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0623\u0639\u0644\u0627\u0647 \u062B\u0645 \u0642\u0645 \u0628\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062A\u0648\u064A\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u062E\u0627\u0635\u0629 \u0628\u0647. \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0633\u062A\u0648\u0649 \u0645\u0639 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u064A\u0646 \u0641\u064A \u0643\u0644 \u0645\u0633\u062A\u0648\u0649.</p>
+                <p>اختر مستخدماً من القائمة أعلاه ثم قم بإضافة مستويات الاعتماد الخاصة به. يمكن إضافة أكثر من مستوى مع تحديد المعتمدين في كل مستوى.</p>
             </div>
-        `},updateApprovalCircuitStatusLabel(){const e=document.getElementById("approval-circuit-active-label");if(!e)return;const t=this.normalizeOwner(this.currentApprovalCircuitOwner),s=ApprovalCircuits.getCircuit(t);if(!s||!Array.isArray(s.steps)||s.steps.length===0){e.style.display="none";return}const n=t==="__default__"?null:ApprovalCircuits.getUserById(t),i=t==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A":n?.name||n?.email||`\u0645\u0633\u062A\u062E\u062F\u0645 ${t}`,o=s.steps.length;e.textContent=`${i} \u2022 ${o} \u0645\u0633\u062A\u0648\u0649${o>1?"\u0627\u062A":""}`,e.style.display="inline-flex"},renderApprovalSteps(){const e=document.getElementById("approval-steps-container");if(!e)return;if(!this.currentApprovalCircuitSteps||this.currentApprovalCircuitSteps.length===0){e.innerHTML=this.renderApprovalStepsPlaceholder(),this.updateApprovalCircuitStatusLabel();return}const t=ApprovalCircuits.getUsersList();e.innerHTML=this.currentApprovalCircuitSteps.map((s,n)=>this.renderApprovalStepCard(s,n,t)).join(""),this.updateApprovalCircuitStatusLabel()},renderApprovalStepCard(e,t,s){const n=this.getStepTitle(t),i=Array.isArray(e.userIds)?e.userIds:[],o=s.map(a=>{const l=a.id||a.email,c=`${Utils.escapeHTML(a.name||a.email||"")}${a.email?` (${Utils.escapeHTML(a.email)})`:""}`,p=i.includes(l)?"selected":"";return`<option value="${Utils.escapeHTML(l)}" ${p}>${c}</option>`}).join("");return`
-            <div class="approval-step-card border border-gray-200 rounded-lg bg-gray-50 p-4" data-step-index="${t}" data-step-id="${Utils.escapeHTML(e.id||"")}">
+        `;
+    },
+
+    updateApprovalCircuitStatusLabel() {
+        const label = document.getElementById('approval-circuit-active-label');
+        if (!label) return;
+
+        const ownerId = this.normalizeOwner(this.currentApprovalCircuitOwner);
+        const circuit = ApprovalCircuits.getCircuit(ownerId);
+        if (!circuit || !Array.isArray(circuit.steps) || circuit.steps.length === 0) {
+            label.style.display = 'none';
+            return;
+        }
+
+        const user = ownerId === '__default__' ? null : ApprovalCircuits.getUserById(ownerId);
+        const ownerLabel = ownerId === '__default__'
+            ? 'المسار الافتراضي'
+            : (user?.name || user?.email || `مستخدم ${ownerId}`);
+        const stepsCount = circuit.steps.length;
+        label.textContent = `${ownerLabel} • ${stepsCount} مستوى${stepsCount > 1 ? 'ات' : ''}`;
+        label.style.display = 'inline-flex';
+    },
+
+    renderApprovalSteps() {
+        const container = document.getElementById('approval-steps-container');
+        if (!container) return;
+
+        if (!this.currentApprovalCircuitSteps || this.currentApprovalCircuitSteps.length === 0) {
+            container.innerHTML = this.renderApprovalStepsPlaceholder();
+            this.updateApprovalCircuitStatusLabel();
+            return;
+        }
+
+        const users = ApprovalCircuits.getUsersList();
+        container.innerHTML = this.currentApprovalCircuitSteps
+            .map((step, index) => this.renderApprovalStepCard(step, index, users))
+            .join('');
+
+        this.updateApprovalCircuitStatusLabel();
+    },
+
+    renderApprovalStepCard(step, index, users) {
+        const title = this.getStepTitle(index);
+        const selectedIds = Array.isArray(step.userIds) ? step.userIds : [];
+        const options = users.map(user => {
+            const value = user.id || user.email;
+            const label = `${Utils.escapeHTML(user.name || user.email || '')}${user.email ? ` (${Utils.escapeHTML(user.email)})` : ''}`;
+            const selected = selectedIds.includes(value) ? 'selected' : '';
+            return `<option value="${Utils.escapeHTML(value)}" ${selected}>${label}</option>`;
+        }).join('');
+
+        return `
+            <div class="approval-step-card border border-gray-200 rounded-lg bg-gray-50 p-4" data-step-index="${index}" data-step-id="${Utils.escapeHTML(step.id || '')}">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h4 class="text-sm font-semibold text-gray-700">${n}</h4>
-                        <p class="text-xs text-gray-500">\u062D\u062F\u062F \u062F\u0648\u0631 \u0627\u0644\u0645\u0639\u062A\u0645\u062F \u0648\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0627\u0644\u0645\u062E\u0648\u0644\u064A\u0646 \u0628\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0648\u0649.</p>
+                        <h4 class="text-sm font-semibold text-gray-700">${title}</h4>
+                        <p class="text-xs text-gray-500">حدد دور المعتمد والمستخدمين المخولين بالاعتماد في هذا المستوى.</p>
                     </div>
-                    <button type="button" class="btn-icon btn-icon-danger" data-remove-step-index="${t}" title="\u062D\u0630\u0641 \u0627\u0644\u0645\u0633\u062A\u0648\u0649">
+                    <button type="button" class="btn-icon btn-icon-danger" data-remove-step-index="${index}" title="حذف المستوى">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062A\u0648\u0649 / \u0627\u0644\u062F\u0648\u0631</label>
-                        <input type="text" class="form-input approval-step-name" value="${Utils.escapeHTML(e.name||e.role||"")}" placeholder="\u0645\u062B\u0627\u0644: \u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u062C\u0647\u0629 \u0627\u0644\u0637\u0627\u0644\u0628\u0629" required>
+                        <label class="block text-xs font-semibold text-gray-600 mb-2">اسم المستوى / الدور</label>
+                        <input type="text" class="form-input approval-step-name" value="${Utils.escapeHTML(step.name || step.role || '')}" placeholder="مثال: مسؤول الجهة الطالبة" required>
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 mb-2">\u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646 \u0627\u0644\u0645\u062D\u062A\u0645\u0644\u0648\u0646</label>
+                        <label class="block text-xs font-semibold text-gray-600 mb-2">المعتمدون المحتملون</label>
                         <select class="form-input approval-step-users" multiple size="4">
-                            ${o}
+                            ${options}
                         </select>
-                        <p class="text-xs text-gray-500 mt-1">\u064A\u0645\u0643\u0646 \u0627\u062E\u062A\u064A\u0627\u0631 \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0633\u062A\u062E\u062F\u0645 \u0644\u064A\u0643\u0648\u0646 \u0645\u0633\u0624\u0648\u0644\u0627\u064B \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u0648\u0649.</p>
+                        <p class="text-xs text-gray-500 mt-1">يمكن اختيار أكثر من مستخدم ليكون مسؤولاً عن هذا المستوى.</p>
                     </div>
                 </div>
                 <div class="flex flex-wrap items-center gap-4 mt-4">
                     <label class="flex items-center text-sm text-gray-700 gap-2">
-                        <input type="checkbox" class="approval-step-required" ${e.required!==!1?"checked":""}>
-                        <span>\u0627\u0639\u062A\u0645\u0627\u062F \u0625\u0644\u0632\u0627\u0645\u064A</span>
+                        <input type="checkbox" class="approval-step-required" ${step.required !== false ? 'checked' : ''}>
+                        <span>اعتماد إلزامي</span>
                     </label>
                     <label class="flex items-center text-sm text-gray-700 gap-2">
-                        <input type="checkbox" class="approval-step-safety" ${e.isSafetyOfficer===!0?"checked":""}>
-                        <span>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</span>
+                        <input type="checkbox" class="approval-step-safety" ${step.isSafetyOfficer === true ? 'checked' : ''}>
+                        <span>مسؤول السلامة والصحة المهنية</span>
                     </label>
                 </div>
             </div>
-        `},getStepTitle(e){return["\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0623\u0648\u0644","\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062B\u0627\u0646\u064A","\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062B\u0627\u0644\u062B","\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u0631\u0627\u0628\u0639","\u0627\u0644\u0645\u0633\u062A\u0648\u0649 \u0627\u0644\u062E\u0627\u0645\u0633"][e]||`\u0627\u0644\u0645\u0633\u062A\u0648\u0649 ${e+1}`},refreshApprovalOwnerOptions(e="__default__"){const t=document.getElementById("approval-owner-select");t&&(t.innerHTML=this.renderApprovalOwnerOptions(e),t.value=this.normalizeOwner(e))},initializeApprovalCircuitsUI(){const e=document.getElementById("approval-owner-select");if(!e)return;const t=document.getElementById("add-approval-step-btn"),s=document.getElementById("save-approval-circuit-btn"),n=document.getElementById("delete-approval-circuit-btn"),i=document.getElementById("approval-steps-container"),o=this.normalizeOwner(e.value||"__default__");this.currentApprovalCircuitOwner=o,this.loadApprovalCircuitEditor(o),e.addEventListener("change",a=>{const l=this.normalizeOwner(a.target.value);this.currentApprovalCircuitOwner=l,this.loadApprovalCircuitEditor(l)}),t&&t.addEventListener("click",()=>this.addApprovalCircuitStep()),s&&s.addEventListener("click",()=>this.saveApprovalCircuit()),n&&n.addEventListener("click",()=>this.deleteApprovalCircuit()),i&&i.addEventListener("click",a=>{const l=a.target.closest("[data-remove-step-index]");if(l){const c=parseInt(l.getAttribute("data-remove-step-index"),10);Number.isNaN(c)||this.removeApprovalCircuitStep(c)}})},loadApprovalCircuitEditor(e){const t=this.normalizeOwner(e),s=ApprovalCircuits.getCircuit(t),n=document.getElementById("approval-circuit-name"),i=document.getElementById("delete-approval-circuit-btn");s?(this.currentApprovalCircuitId=s.id||null,this.currentApprovalCircuitSteps=Array.isArray(s.steps)?s.steps.map((o,a)=>({id:o.id||Utils.generateId("CSTEP"),name:o.name||o.role||"",userIds:Array.isArray(o.userIds)?o.userIds.filter(Boolean):[],required:o.required!==!1,isSafetyOfficer:o.isSafetyOfficer===!0,order:typeof o.order=="number"?o.order:a})):[],n&&(n.value=s.name||(t==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A":""))):(this.currentApprovalCircuitId=null,this.currentApprovalCircuitSteps=[],n&&(n.value=t==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A":"")),this.currentApprovalCircuitOwner=t,this.currentApprovalCircuitSteps=this.currentApprovalCircuitSteps.map((o,a)=>Object.assign({},o,{order:a})),i&&(i.disabled=!s),this.renderApprovalSteps()},addApprovalCircuitStep(){Array.isArray(this.currentApprovalCircuitSteps)||(this.currentApprovalCircuitSteps=[]),this.currentApprovalCircuitSteps.push({id:Utils.generateId("CSTEP"),name:"",userIds:[],required:!0,isSafetyOfficer:!1,order:this.currentApprovalCircuitSteps.length}),this.renderApprovalSteps()},removeApprovalCircuitStep(e){Array.isArray(this.currentApprovalCircuitSteps)&&(this.currentApprovalCircuitSteps.splice(e,1),this.currentApprovalCircuitSteps=this.currentApprovalCircuitSteps.map((t,s)=>Object.assign({},t,{order:s})),this.renderApprovalSteps())},collectApprovalCircuitData(){const e=this.normalizeOwner(this.currentApprovalCircuitOwner),t=document.getElementById("approval-circuit-name"),s=t?t.value.trim():"",n=document.querySelectorAll(".approval-step-card"),i=Array.from(n).map((o,a)=>{const l=o.getAttribute("data-step-id")||Utils.generateId("CSTEP"),c=o.querySelector(".approval-step-name"),p=o.querySelector(".approval-step-users"),y=o.querySelector(".approval-step-required"),d=o.querySelector(".approval-step-safety"),v=c?c.value.trim():"",x=p?Array.from(p.options).filter(E=>E.selected).map(E=>E.value):[];return{id:l,name:v,userIds:x,required:y?y.checked:!0,isSafetyOfficer:d?d.checked:!1,order:a}});return{id:this.currentApprovalCircuitId||Utils.generateId("CIR"),ownerId:e,name:s||(e==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A":""),steps:i,updatedAt:new Date().toISOString()}},saveApprovalCircuit(){const e=this.collectApprovalCircuitData();if(!e.steps||e.steps.length===0){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u062A\u0648\u0649 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0642\u0628\u0644 \u0627\u0644\u062D\u0641\u0638.");return}if(e.steps.some(n=>!n.name)){Notification.error("\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0627\u0633\u0645 \u0644\u0643\u0644 \u0645\u0633\u062A\u0648\u0649 \u0627\u0639\u062A\u0645\u0627\u062F.");return}if(e.steps.some(n=>!Array.isArray(n.userIds)||n.userIds.length===0)){Notification.error("\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0645\u0633\u062A\u062E\u062F\u0645 \u0648\u0627\u062D\u062F \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u0644\u0643\u0644 \u0645\u0633\u062A\u0648\u0649 \u0627\u0639\u062A\u0645\u0627\u062F.");return}ApprovalCircuits.saveCircuit(e),this.currentApprovalCircuitId=e.id,this.currentApprovalCircuitSteps=e.steps.map((n,i)=>Object.assign({},n,{order:i})),this.refreshApprovalOwnerOptions(e.ownerId),this.renderApprovalSteps(),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0628\u0646\u062C\u0627\u062D")},deleteApprovalCircuit(){const e=this.normalizeOwner(this.currentApprovalCircuitOwner),t=ApprovalCircuits.getCircuit(e);if(!t){Notification.info("\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u0627\u0631 \u0644\u062D\u0630\u0641\u0647.");return}const s=e==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A":t.name||e;confirm(`\u0647\u0644 \u062A\u0631\u064A\u062F \u062D\u0630\u0641 "${s}"\u061F
-\u0644\u0646 \u064A\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0633\u0627\u0628\u0642\u0629\u060C \u0644\u0643\u0646 \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A \u0645\u0633\u062A\u0642\u0628\u0644\u0627\u064B.`)&&(ApprovalCircuits.deleteCircuit(e),this.currentApprovalCircuitId=null,this.currentApprovalCircuitSteps=[],this.refreshApprovalOwnerOptions(e),this.loadApprovalCircuitEditor(e),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F."))},renderUsersPermissionsList(){const e=AppState.appData.users||[];return e.length===0?`
+        `;
+    },
+
+    getStepTitle(index) {
+        const labels = ['المستوى الأول', 'المستوى الثاني', 'المستوى الثالث', 'المستوى الرابع', 'المستوى الخامس'];
+        return labels[index] || `المستوى ${index + 1}`;
+    },
+
+    refreshApprovalOwnerOptions(selectedOwner = '__default__') {
+        const ownerSelect = document.getElementById('approval-owner-select');
+        if (!ownerSelect) return;
+        ownerSelect.innerHTML = this.renderApprovalOwnerOptions(selectedOwner);
+        ownerSelect.value = this.normalizeOwner(selectedOwner);
+    },
+
+    initializeApprovalCircuitsUI() {
+        const ownerSelect = document.getElementById('approval-owner-select');
+        if (!ownerSelect) return;
+
+        const addStepBtn = document.getElementById('add-approval-step-btn');
+        const saveBtn = document.getElementById('save-approval-circuit-btn');
+        const deleteBtn = document.getElementById('delete-approval-circuit-btn');
+        const stepsContainer = document.getElementById('approval-steps-container');
+
+        const initialOwner = this.normalizeOwner(ownerSelect.value || '__default__');
+        this.currentApprovalCircuitOwner = initialOwner;
+        this.loadApprovalCircuitEditor(initialOwner);
+
+        ownerSelect.addEventListener('change', (event) => {
+            const ownerId = this.normalizeOwner(event.target.value);
+            this.currentApprovalCircuitOwner = ownerId;
+            this.loadApprovalCircuitEditor(ownerId);
+        });
+
+        if (addStepBtn) {
+            addStepBtn.addEventListener('click', () => this.addApprovalCircuitStep());
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveApprovalCircuit());
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => this.deleteApprovalCircuit());
+        }
+
+        if (stepsContainer) {
+            stepsContainer.addEventListener('click', (event) => {
+                const removeBtn = event.target.closest('[data-remove-step-index]');
+                if (removeBtn) {
+                    const index = parseInt(removeBtn.getAttribute('data-remove-step-index'), 10);
+                    if (!Number.isNaN(index)) {
+                        this.removeApprovalCircuitStep(index);
+                    }
+                }
+            });
+        }
+    },
+
+    loadApprovalCircuitEditor(ownerId) {
+        const normalized = this.normalizeOwner(ownerId);
+        const circuit = ApprovalCircuits.getCircuit(normalized);
+        const nameInput = document.getElementById('approval-circuit-name');
+        const deleteBtn = document.getElementById('delete-approval-circuit-btn');
+
+        if (circuit) {
+            this.currentApprovalCircuitId = circuit.id || null;
+            this.currentApprovalCircuitSteps = Array.isArray(circuit.steps)
+                ? circuit.steps.map((step, index) => ({
+                    id: step.id || Utils.generateId('CSTEP'),
+                    name: step.name || step.role || '',
+                    userIds: Array.isArray(step.userIds) ? step.userIds.filter(Boolean) : [],
+                    required: step.required !== false,
+                    isSafetyOfficer: step.isSafetyOfficer === true,
+                    order: typeof step.order === 'number' ? step.order : index
+                }))
+                : [];
+            if (nameInput) {
+                nameInput.value = circuit.name || (normalized === '__default__' ? 'المسار الافتراضي' : '');
+            }
+        } else {
+            this.currentApprovalCircuitId = null;
+            this.currentApprovalCircuitSteps = [];
+            if (nameInput) {
+                nameInput.value = normalized === '__default__' ? 'المسار الافتراضي' : '';
+            }
+        }
+
+        this.currentApprovalCircuitOwner = normalized;
+        this.currentApprovalCircuitSteps = this.currentApprovalCircuitSteps.map((step, index) => Object.assign({}, step, { order: index }));
+
+        if (deleteBtn) {
+            deleteBtn.disabled = !circuit;
+        }
+
+        this.renderApprovalSteps();
+    },
+
+    addApprovalCircuitStep() {
+        if (!Array.isArray(this.currentApprovalCircuitSteps)) {
+            this.currentApprovalCircuitSteps = [];
+        }
+        this.currentApprovalCircuitSteps.push({
+            id: Utils.generateId('CSTEP'),
+            name: '',
+            userIds: [],
+            required: true,
+            isSafetyOfficer: false,
+            order: this.currentApprovalCircuitSteps.length
+        });
+        this.renderApprovalSteps();
+    },
+
+    removeApprovalCircuitStep(index) {
+        if (!Array.isArray(this.currentApprovalCircuitSteps)) return;
+        this.currentApprovalCircuitSteps.splice(index, 1);
+        this.currentApprovalCircuitSteps = this.currentApprovalCircuitSteps.map((step, idx) => Object.assign({}, step, { order: idx }));
+        this.renderApprovalSteps();
+    },
+
+    collectApprovalCircuitData() {
+        const ownerId = this.normalizeOwner(this.currentApprovalCircuitOwner);
+        const nameInput = document.getElementById('approval-circuit-name');
+        const name = nameInput ? nameInput.value.trim() : '';
+        const stepCards = document.querySelectorAll('.approval-step-card');
+
+        const steps = Array.from(stepCards).map((card, index) => {
+            const id = card.getAttribute('data-step-id') || Utils.generateId('CSTEP');
+            const nameField = card.querySelector('.approval-step-name');
+            const usersSelect = card.querySelector('.approval-step-users');
+            const requiredCheckbox = card.querySelector('.approval-step-required');
+            const safetyCheckbox = card.querySelector('.approval-step-safety');
+
+            const stepName = nameField ? nameField.value.trim() : '';
+            const userIds = usersSelect
+                ? Array.from(usersSelect.options)
+                    .filter(opt => opt.selected)
+                    .map(opt => opt.value)
+                : [];
+
+            return {
+                id,
+                name: stepName,
+                userIds,
+                required: requiredCheckbox ? requiredCheckbox.checked : true,
+                isSafetyOfficer: safetyCheckbox ? safetyCheckbox.checked : false,
+                order: index
+            };
+        });
+
+        return {
+            id: this.currentApprovalCircuitId || Utils.generateId('CIR'),
+            ownerId,
+            name: name || (ownerId === '__default__' ? 'المسار الافتراضي' : ''),
+            steps,
+            updatedAt: new Date().toISOString()
+        };
+    },
+
+    saveApprovalCircuit() {
+        const circuit = this.collectApprovalCircuitData();
+        if (!circuit.steps || circuit.steps.length === 0) {
+            Notification.error('يرجى إضافة مستوى واحد على الأقل قبل الحفظ.');
+            return;
+        }
+
+        const missingNames = circuit.steps.some(step => !step.name);
+        if (missingNames) {
+            Notification.error('يجب تحديد اسم لكل مستوى اعتماد.');
+            return;
+        }
+
+        const missingUsers = circuit.steps.some(step => !Array.isArray(step.userIds) || step.userIds.length === 0);
+        if (missingUsers) {
+            Notification.error('يجب تحديد مستخدم واحد على الأقل لكل مستوى اعتماد.');
+            return;
+        }
+
+        ApprovalCircuits.saveCircuit(circuit);
+        this.currentApprovalCircuitId = circuit.id;
+        this.currentApprovalCircuitSteps = circuit.steps.map((step, index) => Object.assign({}, step, { order: index }));
+        this.refreshApprovalOwnerOptions(circuit.ownerId);
+        this.renderApprovalSteps();
+        Notification.success('تم حفظ مسار الاعتماد بنجاح');
+    },
+
+    deleteApprovalCircuit() {
+        const ownerId = this.normalizeOwner(this.currentApprovalCircuitOwner);
+        const circuit = ApprovalCircuits.getCircuit(ownerId);
+        if (!circuit) {
+            Notification.info('لا يوجد مسار لحذفه.');
+            return;
+        }
+
+        const ownerLabel = ownerId === '__default__' ? 'المسار الافتراضي' : circuit.name || ownerId;
+        if (!confirm(`هل تريد حذف "${ownerLabel}"؟\nلن يتم حذف التصاريح السابقة، لكن سيتم استخدام المسار الافتراضي مستقبلاً.`)) {
+            return;
+        }
+
+        ApprovalCircuits.deleteCircuit(ownerId);
+        this.currentApprovalCircuitId = null;
+        this.currentApprovalCircuitSteps = [];
+        this.refreshApprovalOwnerOptions(ownerId);
+        this.loadApprovalCircuitEditor(ownerId);
+        Notification.success('تم حذف مسار الاعتماد.');
+    },
+
+    renderUsersPermissionsList() {
+        const users = AppState.appData.users || [];
+        if (users.length === 0) {
+            return `
                 <div class="text-center text-gray-500 py-4">
                     <i class="fas fa-users text-3xl mb-2"></i>
-                    <p>\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u062D\u0627\u0644\u064A\u0627\u064B</p>
+                    <p>لا يوجد مستخدمين حالياً</p>
                 </div>
-            `:e.map(t=>{const s=this.hasAccessForUser(t,"settings"),n=t.role==="admin"?"badge-danger":t.role==="safety_officer"?"badge-warning":"badge-info",i=t.role==="admin"?"\u0645\u062F\u064A\u0631":t.role==="safety_officer"?"\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629":"\u0645\u0633\u062A\u062E\u062F\u0645";return`
+            `;
+        }
+
+        return users.map(user => {
+            const hasSettingsAccess = this.hasAccessForUser(user, 'settings');
+            const roleBadge = user.role === 'admin' ? 'badge-danger' :
+                user.role === 'safety_officer' ? 'badge-warning' : 'badge-info';
+            const roleText = user.role === 'admin' ? 'مدير' :
+                user.role === 'safety_officer' ? 'مسؤول السلامة' : 'مستخدم';
+
+            return `
                 <div class="flex items-center justify-between p-3 border rounded hover:bg-gray-50">
                     <div class="flex items-center flex-1">
                         <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center ml-3">
-                            ${t.photo?(()=>{const o=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(t.photo):{canonical:String(t.photo),displaySrc:String(t.photo),needsProxy:!1,proxyFileId:""},a=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(o):"";return`<img src="${Utils.escapeHTML(o.displaySrc)}" alt="${Utils.escapeHTML(t.name)}"${a} class="settings-perm-user-photo w-full h-full rounded-full object-cover">`})():'<i class="fas fa-user text-gray-600"></i>'}
+                            ${user.photo ? (() => {
+                    const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                        ? Utils.resolveDriveAwareImgDisplay(user.photo)
+                        : { canonical: String(user.photo), displaySrc: String(user.photo), needsProxy: false, proxyFileId: '' };
+                    const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                    return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(user.name)}"${pa} class="settings-perm-user-photo w-full h-full rounded-full object-cover">`;
+                })() :
+                    `<i class="fas fa-user text-gray-600"></i>`
+                }
                         </div>
                         <div class="flex-1">
-                            <div class="font-semibold">${Utils.escapeHTML(t.name||"")}</div>
-                            <div class="text-sm text-gray-600">${Utils.escapeHTML(t.email||"")}</div>
+                            <div class="font-semibold">${Utils.escapeHTML(user.name || '')}</div>
+                            <div class="text-sm text-gray-600">${Utils.escapeHTML(user.email || '')}</div>
                         </div>
                         <div class="mr-4">
-                            <span class="badge ${n}">${i}</span>
+                            <span class="badge ${roleBadge}">${roleText}</span>
                         </div>
                     </div>
                     <div class="flex items-center">
-                        <span class="badge ${s?"badge-success":"badge-warning"} mr-3">
-                            ${s?'<i class="fas fa-check-circle ml-1"></i> \u0644\u062F\u064A\u0647 \u0635\u0644\u0627\u062D\u064A\u0629':'<i class="fas fa-times-circle ml-1"></i> \u0644\u0627 \u064A\u0645\u0644\u0643 \u0635\u0644\u0627\u062D\u064A\u0629'}
+                        <span class="badge ${hasSettingsAccess ? 'badge-success' : 'badge-warning'} mr-3">
+                            ${hasSettingsAccess ?
+                    '<i class="fas fa-check-circle ml-1"></i> لديه صلاحية' :
+                    '<i class="fas fa-times-circle ml-1"></i> لا يملك صلاحية'
+                }
                         </span>
-                        <button onclick="Settings.viewUserPermissions('${t.id}')" 
+                        <button onclick="Settings.viewUserPermissions('${user.id}')" 
                                 class="btn-icon btn-icon-primary" 
-                                title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0627\u0635\u064A\u0644">
+                                title="عرض التاصيل">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </div>
-            `}).join("")},viewUserPermissions(e){const t=AppState.appData.users.find(a=>a.id===e);if(!t){Notification.error("\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const s=this.hasAccessForUser(t,"settings"),n=t.permissions||{},i=[{key:"dashboard",label:"\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645"},{key:"incidents",label:"\u0627\u0644\u062D\u0648\u0627\u062F\u062B"},{key:"nearmiss",label:"\u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0648\u0634\u064A\u0643\u0629"},{key:"ptw",label:"\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644"},{key:"training",label:"\u0627\u0644\u062A\u062F\u0631\u064A\u0628"},{key:"clinic",label:"\u0627\u0644\u0639\u064A\u0627\u062F\u0629"},{key:"fire-equipment",label:"\u0645\u0639\u062F\u0627\u062A \u0627\u0644\u0625\u0637\u0641\u0627\u0621"},{key:"ppe",label:"\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629"},{key:"violations",label:"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A"},{key:"contractors",label:"\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646"},{key:"employees",label:"\u0642\u0627\u0639\u062F\u0629 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646"},{key:"behavior-monitoring",label:"\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u062A\u0635\u0631\u0627\u062A"},{key:"chemical-safety",label:"\u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0643\u064A\u0645\u064A\u0627\u0626\u064A\u0629"},{key:"daily-observations",label:"\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u064A\u0648\u0645\u064A\u0629"},{key:"iso",label:"\u0646\u0638\u0627\u0645 ISO"},{key:"emergency",label:"\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0637\u0648\u0627\u0631\u0626"},{key:"users",label:"\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646"},{key:"settings",label:"\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A"}],o=document.createElement("div");o.className="modal-overlay",o.innerHTML=`
+            `;
+        }).join('');
+    },
+
+    viewUserPermissions(userId) {
+        const user = AppState.appData.users.find(u => u.id === userId);
+        if (!user) {
+            Notification.error('المستخدم غير موجود');
+            return;
+        }
+
+        const hasSettingsAccess = this.hasAccessForUser(user, 'settings');
+        const permissions = user.permissions || {};
+        const allModules = [
+            { key: 'dashboard', label: 'لوحة التحكم' },
+            { key: 'incidents', label: 'الحوادث' },
+            { key: 'nearmiss', label: 'الحوادث الوشيكة' },
+            { key: 'ptw', label: 'تصاريح العمل' },
+            { key: 'training', label: 'التدريب' },
+            { key: 'clinic', label: 'العيادة' },
+            { key: 'fire-equipment', label: 'معدات الإطفاء' },
+            { key: 'ppe', label: 'مهمات الوقاية' },
+            { key: 'violations', label: 'المخالفات' },
+            { key: 'contractors', label: 'المقاولين' },
+            { key: 'employees', label: 'قاعدة بيانات الموظفين' },
+            { key: 'behavior-monitoring', label: 'مراقبة التصرات' },
+            { key: 'chemical-safety', label: 'السلامة الكيميائية' },
+            { key: 'daily-observations', label: 'الملاحظات اليومية' },
+            { key: 'iso', label: 'نظام ISO' },
+            { key: 'emergency', label: 'تنبيهات الطوارئ' },
+            { key: 'users', label: 'المستخدمين' },
+            { key: 'settings', label: 'الإعدادات' }
+        ];
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
             <div class="modal-content" style="max-width: 700px;">
                 <div class="modal-header">
                     <h2 class="modal-title">
                         <i class="fas fa-shield-alt ml-2"></i>
-                        \u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${Utils.escapeHTML(t.name)}
+                        صلاحيات المستخدم: ${Utils.escapeHTML(user.name)}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i>
@@ -1965,45 +5339,528 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         <div class="bg-blue-50 border border-blue-200 rounded p-4">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="font-semibold text-blue-800">${Utils.escapeHTML(t.name)}</p>
-                                    <p class="text-sm text-blue-600">${Utils.escapeHTML(t.email)}</p>
+                                    <p class="font-semibold text-blue-800">${Utils.escapeHTML(user.name)}</p>
+                                    <p class="text-sm text-blue-600">${Utils.escapeHTML(user.email)}</p>
                                 </div>
                                 <div class="text-left">
-                                    <span class="badge ${t.role==="admin"?"badge-danger":t.role==="safety_officer"?"badge-warning":"badge-info"}">
-                                        ${t.role==="admin"?"\u0645\u062F\u064A\u0631":t.role==="safety_officer"?"\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629":"\u0645\u0633\u062A\u062E\u062F\u0645"}
+                                    <span class="badge ${user.role === 'admin' ? 'badge-danger' : user.role === 'safety_officer' ? 'badge-warning' : 'badge-info'}">
+                                        ${user.role === 'admin' ? 'مدير' : user.role === 'safety_officer' ? 'مسؤول السلامة' : 'مستخدم'}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         
                         <div>
-                            <h3 class="font-semibold mb-3">\u0635\u0644\u0627\u062D\u064A\u0627\u062A \u0627\u0644\u0648\u0635\u0648\u0644 \u0644\u0644\u0648\u062D\u062F\u0627\u062A:</h3>
+                            <h3 class="font-semibold mb-3">صلاحيات الوصول للوحدات:</h3>
                             <div class="grid grid-cols-2 gap-2">
-                                ${i.map(a=>{const l=this.hasAccessForUser(t,a.key);return`
-                                        <div class="flex items-center justify-between p-2 border rounded ${l?"bg-green-50":"bg-gray-50"}">
-                                            <span class="text-sm">${a.label}</span>
-                                            ${l?'<i class="fas fa-check-circle text-green-600"></i>':'<i class="fas fa-times-circle text-gray-400"></i>'}
+                                ${allModules.map(module => {
+            const hasPermission = this.hasAccessForUser(user, module.key);
+            return `
+                                        <div class="flex items-center justify-between p-2 border rounded ${hasPermission ? 'bg-green-50' : 'bg-gray-50'}">
+                                            <span class="text-sm">${module.label}</span>
+                                            ${hasPermission ?
+                    '<i class="fas fa-check-circle text-green-600"></i>' :
+                    '<i class="fas fa-times-circle text-gray-400"></i>'
+                }
                                         </div>
-                                    `}).join("")}
+                                    `;
+        }).join('')}
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
-                    <button type="button" class="btn-primary" onclick="UI.showSection('users'); this.closest('.modal-overlay').remove(); setTimeout(() => Users.editUser('${t.id}'), 500);">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
+                    <button type="button" class="btn-primary" onclick="UI.showSection('users'); this.closest('.modal-overlay').remove(); setTimeout(() => Users.editUser('${user.id}'), 500);">
                         <i class="fas fa-edit ml-2"></i>
-                        \u062A\u0639\u062F\u064A\u0644 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A
+                        تعديل الصلاحيات
                     </button>
                 </div>
             </div>
-        `,document.body.appendChild(o),o.addEventListener("click",a=>{a.target===o&&o.remove()})},hasAccessForUser(e,t){if(e.role==="admin")return!0;const s=typeof Permissions<"u"&&typeof Permissions.normalizePermissions=="function"?Permissions.normalizePermissions(e.permissions):e.permissions||{};return s&&s.hasOwnProperty(t)?s[t]===!0:!1},async handleSubmit(e){e.preventDefault();try{const t=document.getElementById("google-apps-script-enabled"),s=document.getElementById("google-apps-script-url"),n=document.getElementById("google-sheets-enabled"),i=document.getElementById("google-sheets-id");if(!t||!s||!n||!i){Notification.error("\u062E\u0637\u0623: \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u062D\u0642\u0648\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C");return}AppState.googleConfig.appsScript.enabled=t.checked,AppState.googleConfig.appsScript.scriptUrl=s.value.trim(),AppState.googleConfig.sheets.enabled=n.checked,AppState.googleConfig.sheets.spreadsheetId=i.value.trim();let o=!1;if(typeof window.DataManager<"u"&&window.DataManager.saveGoogleConfig)window.DataManager.saveGoogleConfig()?(o=!0,Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0646\u062C\u0627\u062D")):Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A");else if(typeof window.DataManager<"u"&&window.DataManager.save)try{await window.DataManager.save(),o=!0,Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0646\u062C\u0627\u062D")}catch(a){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A:",a),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A: "+(a.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}else try{localStorage.setItem("hse_google_config",JSON.stringify(AppState.googleConfig)),o=!0,Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0646\u062C\u0627\u062D (\u062D\u0641\u0638 \u0645\u062D\u0644\u064A)")}catch(a){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A:",a),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A: "+a.message)}if(o&&AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl)try{Loading.show(),await new Promise(l=>setTimeout(l,500));const a=await GoogleIntegration.readFromSheets("Users");Loading.hide(),a&&Array.isArray(a)?Notification.success(`\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0648\u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0646\u062C\u0627\u062D! \u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 ${a.length} \u0633\u062C\u0644`):Notification.warning("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.")}catch(a){Loading.hide(),Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0639\u062F \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A:",a),Notification.warning("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A\u060C \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: "+(a.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645:",t),Notification.error("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A: "+(t.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async testConnection(){Loading.show();try{if(AppState.googleConfig.appsScript.enabled&&AppState.googleConfig.appsScript.scriptUrl){const t=await Utils.promiseWithTimeout(GoogleIntegration.readFromSheets("Users"),3e4,`\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
 
-\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A
-2. \u0635\u062D\u0629 \u0631\u0627\u0628\u0637 \u0646\u0642\u0637\u0629 \u0627\u0644\u0646\u0647\u0627\u064A\u0629 (RPC)
-3. \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0642\u064A\u0648\u062F \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629`);Loading.hide(),Notification.success("\u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0646\u062C\u062D! \u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 "+t.length+" \u0633\u062C\u0644")}else Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645 \u0648\u0625\u062F\u062E\u0627\u0644 \u0631\u0627\u0628\u0637 \u0646\u0642\u0637\u0629 \u0627\u0644\u0646\u0647\u0627\u064A\u0629")}catch(e){Loading.hide();const t=e.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";Notification.error("\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: "+t),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u062E\u062A\u0628\u0627\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644:",e)}},async initializeSheets(){if(!AppState.googleConfig.appsScript.enabled){Notification.error("\u064A\u0631\u062C\u0649 \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645 \u0623\u0648\u0644\u0627\u064B");return}if(!AppState.googleConfig.sheets.spreadsheetId){Notification.error("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u062F\u0648\u0644 \u0623\u0648\u0644\u0627\u064B \u0625\u0630\u0627 \u0643\u0627\u0646 \u0645\u0637\u0644\u0648\u0628\u0627\u064B");return}if(confirm(`\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u0646\u0634\u0627\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u0627\u0644\u0645\u0637\u0644\u0648\u0628\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u061F
+    hasAccessForUser(user, moduleName) {
+        // محاكاة نفس منطق Permissions.hasAccess لكن لمستخدم محدد
+        if (user.role === 'admin') return true;
 
-\u0633\u064A\u062A\u0645 \u0625\u0646\u0634\u0627\u0621:
-${"Users, Incidents, NearMiss, PTW, Training, ClinicVisits, Medications, SickLeave, ClinicInventory, FireEquipment, FireEquipmentAssets, FireEquipmentInspections, PPE, Violations, Contractors, Employees, BehaviorMonitoring, ChemicalSafety, DailyObservations, ISODocuments, ISOProcedures, ISOForms, EmergencyAlerts, EmergencyPlans".split(", ").map(t=>`- ${t}`).join(`
-`)}`))try{Loading.show(),await GoogleIntegration.initializeSheets(),Loading.hide(),Notification.success("\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u0628\u0646\u062C\u0627\u062D")}catch(t){Loading.hide(),Utils.safeError("\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0623\u0648\u0631\u0627\u0642:",t),Notification.error("\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u0623\u0648\u0631\u0627\u0642: "+t.message)}},getMonthlySafetyDefaultFromDate(){const e=new Date,t=e.getFullYear(),s=String(e.getMonth()+1).padStart(2,"0");return`${t}-${s}-01`},getMonthlySafetyDefaultToDate(){const e=new Date,t=new Date(e.getFullYear(),e.getMonth()+1,0),s=t.getFullYear(),n=String(t.getMonth()+1).padStart(2,"0"),i=String(t.getDate()).padStart(2,"0");return`${s}-${n}-${i}`},renderMonthlySafetyYearOptions(){const e=new Date().getFullYear();let t="";for(let s=e+1;s>=e-3;s-=1)t+=`<option value="${s}"${s===e?" selected":""}>${s}</option>`;return t},renderMonthlySafetyMonthOptions(){const e=["\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"],t=new Date().getMonth()+1;return e.map((s,n)=>{const i=n+1;return`<option value="${i}"${i===t?" selected":""}>${s}</option>`}).join("")},async generateMonthlySafetyReport(e){if(!this.isCurrentUserAdmin()){const d=typeof Reports<"u"&&Reports.getTranslations?Reports.getTranslations().t("msg.adminOnlyReport"):"\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0634\u0647\u0631\u064A \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637";Notification.error(d);return}if(typeof Reports>"u"||typeof Reports.downloadMonthlySafetyReport!="function"){Notification.error("\u0646\u0638\u0627\u0645 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B");return}const t=document.getElementById("monthly-safety-from"),s=document.getElementById("monthly-safety-to"),n=document.getElementById("monthly-safety-site"),i=document.getElementById("monthly-safety-lang"),o=t?t.value:"",a=s?s.value:"",l=n?String(n.value||"").trim():"",c=e||(i?i.value:"ar")||"ar",p=typeof Reports.buildSafetyReportPeriod=="function"?Reports.buildSafetyReportPeriod(o,a):null,{t:y}=Reports.getTranslations?Reports.getTranslations():{t:d=>d};if(!p){Notification.error(y("msg.invalidDateRange"));return}Loading.show(c==="en"?"Preparing monthly safety report...":"\u062C\u0627\u0631\u064A \u062A\u062D\u0636\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0634\u0647\u0631\u064A...");try{const d=await Reports.downloadMonthlySafetyReport(p,c,l||null);Loading.hide(),d&&Notification.success(c==="en"?"Monthly safety report downloaded":"\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0634\u0647\u0631\u064A \u0628\u0646\u062C\u0627\u062D")}catch(d){Loading.hide(),Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631: "+(d&&d.message?d.message:String(d)))}},async generateReport(e){Loading.show();try{await Reports.generateAndExport(e),Loading.hide(),Notification.success("\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0628\u0646\u062C\u0627\u062D")}catch(t){Loading.hide(),Notification.error("\u0641\u0634\u0644 \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0642\u0631\u064A\u0631: "+t.message)}},setupSettingsListeners(){setTimeout(()=>{const e=document.getElementById("save-date-format-btn");e&&e.addEventListener("click",()=>{const i=document.getElementById("date-format-select").value;AppState.dateFormat=i,typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0628\u0646\u062C\u0627\u062D")});const t=document.getElementById("upload-logo-btn"),s=document.getElementById("company-logo-input");t&&s&&t.addEventListener("click",()=>{const i=s.files[0];if(!i){Notification.error("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0635\u0648\u0631\u0629");return}if(i.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u064A\u062C\u0628 \u0623\u0644\u0627 \u064A\u062A\u062C\u0627\u0648\u0632 2MB");return}const o=new FileReader;o.onload=async a=>{let l=a.target.result;try{l=await Settings.compressLogo(l),Utils.safeLog("\u2705 \u062A\u0645 \u0636\u063A\u0637 \u0627\u0644\u0634\u0639\u0627\u0631 (\u0627\u0644\u062D\u062C\u0645 \u0627\u0644\u0646\u0647\u0627\u0626\u064A: "+l.length+" \u062D\u0631\u0641)")}catch(p){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0636\u063A\u0637 \u0627\u0644\u0634\u0639\u0627\u0631\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0623\u0635\u0644\u064A\u0629:",p)}if(AppState.companyLogo=l,AppState.companySettings||(AppState.companySettings={}),AppState.companySettings.logo=l,localStorage.setItem("company_logo",l),localStorage.setItem("hse_company_logo",l),typeof window.DataManager<"u"&&window.DataManager.saveCompanySettings&&window.DataManager.saveCompanySettings(),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const p=AppState.currentUser||{},y=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:AppState.companySettings?.name||"",secondaryName:AppState.companySettings?.secondaryName||"",formVersion:AppState.companySettings?.formVersion||"1.0",nameFontSize:AppState.companySettings?.nameFontSize||16,secondaryNameFontSize:AppState.companySettings?.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings?.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings?.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings?.employeeImportHireMonths??3,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:l,postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:p.email,name:p.name,role:p.role,permissions:p.permissions}});y&&y.success?Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"):Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",y?.message)}catch(p){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0641\u0638 \u0627\u0644\u0634\u0639\u0627\u0631 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",p)}const c=document.getElementById("company-logo-preview");c&&(c.src=AppState.companyLogo,c.style.display="block"),typeof UI<"u"&&UI.updateCompanyLogoHeader&&UI.updateCompanyLogoHeader(),typeof UI<"u"&&UI.updateDashboardLogo&&UI.updateDashboardLogo(),typeof UI<"u"&&UI.updateLoginLogo&&UI.updateLoginLogo(),window.dispatchEvent(new CustomEvent("companyLogoUpdated",{detail:{logoUrl:l}})),Notification.success("\u062A\u0645 \u0631\u0641\u0639 \u0627\u0644\u0634\u0639\u0627\u0631 \u0628\u0646\u062C\u0627\u062D")},o.readAsDataURL(i)});const n=document.getElementById("remove-logo-btn");n&&n.addEventListener("click",async()=>{if(AppState.companyLogo="",AppState.companySettings&&(AppState.companySettings.logo=""),localStorage.removeItem("company_logo"),localStorage.removeItem("hse_company_logo"),typeof window.DataManager<"u"&&window.DataManager.saveCompanySettings&&window.DataManager.saveCompanySettings(),typeof window.DataManager<"u"&&window.DataManager.save?window.DataManager.save():Utils.safeWarn("\u26A0\uFE0F DataManager \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0644\u0645 \u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),AppState.googleConfig?.appsScript?.enabled&&typeof GoogleIntegration<"u")try{const o=AppState.currentUser||{},a=await GoogleIntegration.sendToAppsScript("saveCompanySettings",{name:AppState.companySettings?.name||"",secondaryName:AppState.companySettings?.secondaryName||"",formVersion:AppState.companySettings?.formVersion||"1.0",nameFontSize:AppState.companySettings?.nameFontSize||16,secondaryNameFontSize:AppState.companySettings?.secondaryNameFontSize||14,secondaryNameColor:AppState.companySettings?.secondaryNameColor||"#6B7280",clinicMonthlyVisitsAlertThreshold:AppState.companySettings?.clinicMonthlyVisitsAlertThreshold??10,employeeImportHireMonths:AppState.companySettings?.employeeImportHireMonths??3,address:AppState.companySettings?.address||"",phone:AppState.companySettings?.phone||"",email:AppState.companySettings?.email||"",logo:"",postLoginItems:typeof AppState.companySettings?.postLoginItems=="string"?AppState.companySettings.postLoginItems:JSON.stringify(AppState.companySettings?.postLoginItems||[]),userData:{email:o.email,name:o.name,role:o.role,permissions:o.permissions}});a&&a.success?Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"):Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",a?.message)}catch(o){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",o)}const i=document.getElementById("company-logo-preview");i&&(i.style.display="none"),typeof UI<"u"&&UI.updateCompanyLogoHeader&&UI.updateCompanyLogoHeader(),typeof UI<"u"&&UI.updateLoginLogo&&UI.updateLoginLogo(),window.dispatchEvent(new CustomEvent("companyLogoUpdated",{detail:{logoUrl:""}})),Notification.success("\u062A\u0645 \u0625\u0632\u0627\u0644\u0629 \u0627\u0644\u0634\u0639\u0627\u0631 \u0628\u0646\u062C\u0627\u062D"),this.load()})},100)}};(function(){"use strict";try{typeof window<"u"&&typeof Settings<"u"&&(window.Settings=Settings,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 Settings module loaded and available on window.Settings"))}catch{if(typeof window<"u"&&typeof Settings<"u")try{window.Settings=Settings}catch{}}})();
+        // التحقق من الصلاحيات المخصصة للمستخدم (الممنوحة من قبل مدير النظام)
+        const normalizedPermissions = typeof Permissions !== 'undefined' && typeof Permissions.normalizePermissions === 'function'
+            ? Permissions.normalizePermissions(user.permissions)
+            : (user.permissions || {});
+        
+        if (normalizedPermissions && normalizedPermissions.hasOwnProperty(moduleName)) {
+            return normalizedPermissions[moduleName] === true;
+        }
+
+        // لا توجد صلاحيات افتراضية - يجب منحها من قبل مدير النظام فقط
+        return false;
+    },
+
+    async handleSubmit(e) {
+        e.preventDefault();
+        try {
+            const appsScriptEnabled = document.getElementById('google-apps-script-enabled');
+            const appsScriptUrl = document.getElementById('google-apps-script-url');
+            const sheetsEnabled = document.getElementById('google-sheets-enabled');
+            const sheetsId = document.getElementById('google-sheets-id');
+
+            if (!appsScriptEnabled || !appsScriptUrl || !sheetsEnabled || !sheetsId) {
+                Notification.error('خطأ: لم يتم العثور على حقول النموذج');
+                return;
+            }
+
+            AppState.googleConfig.appsScript.enabled = appsScriptEnabled.checked;
+            AppState.googleConfig.appsScript.scriptUrl = appsScriptUrl.value.trim();
+            AppState.googleConfig.sheets.enabled = sheetsEnabled.checked;
+            AppState.googleConfig.sheets.spreadsheetId = sheetsId.value.trim();
+
+            // حفظ الإعدادات باستخدام window.DataManager
+            let saveSuccess = false;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.saveGoogleConfig) {
+                const saved = window.DataManager.saveGoogleConfig();
+                if (saved) {
+                    saveSuccess = true;
+                    Notification.success('تم حفظ الإعدادات بنجاح');
+                } else {
+                    Notification.error('فشل حفظ الإعدادات');
+                }
+            } else if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                // إذا لم تكن saveGoogleConfig موجودة، استخدم save() العامة
+                try {
+                    await window.DataManager.save();
+                    saveSuccess = true;
+                    Notification.success('تم حفظ الإعدادات بنجاح');
+                } catch (saveError) {
+                    Utils.safeError('خطأ في حفظ الإعدادات:', saveError);
+                    Notification.error('فشل حفظ الإعدادات: ' + (saveError.message || 'خطأ غير معروف'));
+                }
+            } else {
+                // حفظ مباشر في localStorage كحل بديل
+                try {
+                    localStorage.setItem('hse_google_config', JSON.stringify(AppState.googleConfig));
+                    saveSuccess = true;
+                    Notification.success('تم حفظ الإعدادات بنجاح (حفظ محلي)');
+                } catch (storageError) {
+                    Utils.safeError('خطأ في حفظ الإعدادات:', storageError);
+                    Notification.error('فشل حفظ الإعدادات: ' + storageError.message);
+                }
+            }
+
+            // اختبار الاتصال بعد حفظ الإعدادات للتأكد من نجاح الاتصال
+            if (saveSuccess && AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
+                try {
+                    Loading.show();
+                    // انتظار قصير للتأكد من حفظ الإعدادات
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // اختبار الاتصال
+                    const testResult = await GoogleIntegration.readFromSheets('Users');
+                    Loading.hide();
+                    
+                    if (testResult && Array.isArray(testResult)) {
+                        Notification.success(`✅ تم حفظ الإعدادات واختبار الاتصال بنجاح! تم العثور على ${testResult.length} سجل`);
+                    } else {
+                        Notification.warning('تم حفظ الإعدادات، لكن فشل اختبار الاتصال. يرجى التحقق من الإعدادات.');
+                    }
+                } catch (testError) {
+                    Loading.hide();
+                    Utils.safeWarn('⚠️ فشل اختبار الاتصال بعد حفظ الإعدادات:', testError);
+                    Notification.warning('تم حفظ الإعدادات، لكن فشل اختبار الاتصال: ' + (testError.message || 'خطأ غير معروف'));
+                }
+            }
+        } catch (error) {
+            Utils.safeError('خطأ في حفظ إعدادات الاتصال بالخادم:', error);
+            Notification.error('فشل حفظ الإعدادات: ' + (error.message || 'خطأ غير معروف'));
+        }
+    },
+
+    async testConnection() {
+        Loading.show();
+        try {
+            if (AppState.googleConfig.appsScript.enabled && AppState.googleConfig.appsScript.scriptUrl) {
+                // استخدام timeout محسّن (30 ثانية)
+                const timeout = 30000;
+                const result = await Utils.promiseWithTimeout(
+                    GoogleIntegration.readFromSheets('Users'),
+                    timeout,
+                    'انتهت مهلة الاتصال بالخادم\n\nتحقق من:\n1. اتصال الإنترنت\n2. صحة رابط نقطة النهاية (RPC)\n3. عدم وجود قيود على الشبكة'
+                );
+                Loading.hide();
+                Notification.success('الاتصال نجح! تم العثور على ' + result.length + ' سجل');
+            } else {
+                Loading.hide();
+                Notification.error('يرجى تفعيل الاتصال بالخادم وإدخال رابط نقطة النهاية');
+            }
+        } catch (error) {
+            Loading.hide();
+            const errorMsg = error.message || 'خطأ غير معروف';
+            Notification.error('فشل الاتصال: ' + errorMsg);
+            Utils.safeError('خطأ في اختبار الاتصال:', error);
+        }
+    },
+
+    async initializeSheets() {
+        if (!AppState.googleConfig.appsScript.enabled) {
+            Notification.error('يرجى تفعيل الاتصال بالخادم أولاً');
+            return;
+        }
+
+        if (!AppState.googleConfig.sheets.spreadsheetId) {
+            Notification.error('يرجى إدخال معرف الجدول أولاً إذا كان مطلوباً');
+            return;
+        }
+
+        const sheetsList = 'Users, Incidents, NearMiss, PTW, Training, ClinicVisits, Medications, SickLeave, ClinicInventory, FireEquipment, FireEquipmentAssets, FireEquipmentInspections, PPE, Violations, Contractors, Employees, BehaviorMonitoring, ChemicalSafety, DailyObservations, ISODocuments, ISOProcedures, ISOForms, EmergencyAlerts, EmergencyPlans';
+
+        if (!confirm(`هل تريد إنشاء جميع الأوراق المطلوبة تلقائياً؟\n\nسيتم إنشاء:\n${sheetsList.split(', ').map(s => `- ${s}`).join('\n')}`)) {
+            return;
+        }
+
+        try {
+            Loading.show();
+            await GoogleIntegration.initializeSheets();
+            Loading.hide();
+            Notification.success('تم إنشاء جميع الأوراق بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('فشل إنشاء الأوراق:', error);
+            Notification.error('فشل إنشاء الأوراق: ' + error.message);
+        }
+    },
+
+    getMonthlySafetyDefaultFromDate() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        return `${y}-${m}-01`;
+    },
+
+    getMonthlySafetyDefaultToDate() {
+        const now = new Date();
+        const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const y = last.getFullYear();
+        const m = String(last.getMonth() + 1).padStart(2, '0');
+        const d = String(last.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    },
+
+    renderMonthlySafetyYearOptions() {
+        const nowYear = new Date().getFullYear();
+        let html = '';
+        for (let y = nowYear + 1; y >= nowYear - 3; y -= 1) {
+            html += `<option value="${y}"${y === nowYear ? ' selected' : ''}>${y}</option>`;
+        }
+        return html;
+    },
+
+    renderMonthlySafetyMonthOptions() {
+        const labels = [
+            'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+            'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+        ];
+        const currentMonth = new Date().getMonth() + 1;
+        return labels.map((label, index) => {
+            const value = index + 1;
+            return `<option value="${value}"${value === currentMonth ? ' selected' : ''}>${label}</option>`;
+        }).join('');
+    },
+
+    async generateMonthlySafetyReport(langOverride) {
+        if (!this.isCurrentUserAdmin()) {
+            const msg = (typeof Reports !== 'undefined' && Reports.getTranslations)
+                ? Reports.getTranslations().t('msg.adminOnlyReport')
+                : 'تصدير تقرير السلامة الشهري متاح لمدير النظام فقط';
+            Notification.error(msg);
+            return;
+        }
+        if (typeof Reports === 'undefined' || typeof Reports.downloadMonthlySafetyReport !== 'function') {
+            Notification.error('نظام التقارير غير متاح حالياً');
+            return;
+        }
+
+        const fromEl = document.getElementById('monthly-safety-from');
+        const toEl = document.getElementById('monthly-safety-to');
+        const siteEl = document.getElementById('monthly-safety-site');
+        const langEl = document.getElementById('monthly-safety-lang');
+        const fromDate = fromEl ? fromEl.value : '';
+        const toDate = toEl ? toEl.value : '';
+        const siteId = siteEl ? String(siteEl.value || '').trim() : '';
+        const lang = langOverride || (langEl ? langEl.value : 'ar') || 'ar';
+        const period = typeof Reports.buildSafetyReportPeriod === 'function'
+            ? Reports.buildSafetyReportPeriod(fromDate, toDate)
+            : null;
+
+        const { t } = Reports.getTranslations ? Reports.getTranslations() : { t: (k) => k };
+        if (!period) {
+            Notification.error(t('msg.invalidDateRange'));
+            return;
+        }
+
+        Loading.show(lang === 'en' ? 'Preparing monthly safety report...' : 'جاري تحضير تقرير السلامة الشهري...');
+        try {
+            const ok = await Reports.downloadMonthlySafetyReport(period, lang, siteId || null);
+            Loading.hide();
+            if (ok) {
+                Notification.success(lang === 'en' ? 'Monthly safety report downloaded' : 'تم تحميل تقرير السلامة الشهري بنجاح');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('فشل تحميل التقرير: ' + (error && error.message ? error.message : String(error)));
+        }
+    },
+
+    async generateReport(type) {
+        Loading.show();
+        try {
+            await Reports.generateAndExport(type);
+            Loading.hide();
+            Notification.success('تم إنشاء التقرير بنجاح');
+        } catch (error) {
+            Loading.hide();
+            Notification.error('فشل إنشاء التقرير: ' + error.message);
+        }
+    },
+
+    setupSettingsListeners() {
+        setTimeout(() => {
+            // حفظ إعدادات التاريخ      
+            const saveDateBtn = document.getElementById('save-date-format-btn');
+            if (saveDateBtn) {
+                saveDateBtn.addEventListener('click', () => {
+                    const dateFormat = document.getElementById('date-format-select').value;
+                    AppState.dateFormat = dateFormat;
+                    // حفظ البيانات باستخدام window.DataManager
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        } else {
+            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+        }
+                    Notification.success('تم حفظ إعدادات التاريخ بنجاح');
+                });
+            }
+
+            // إعدادات البريد تُربط عبر bindEmailSettingsEvents في bindEvents
+
+            // رفع شعار الشركة
+            const uploadLogoBtn = document.getElementById('upload-logo-btn');
+            const logoInput = document.getElementById('company-logo-input');
+            if (uploadLogoBtn && logoInput) {
+                uploadLogoBtn.addEventListener('click', () => {
+                    const file = logoInput.files[0];
+                    if (!file) {
+                        Notification.error('يرجى اختيار صورة');
+                        return;
+                    }
+
+                    if (file.size > 2 * 1024 * 1024) {
+                        Notification.error('حجم الصورة يجب ألا يتجاوز 2MB');
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        let logoDataUrl = e.target.result;
+                        
+                        // ✅ ضغط الصورة لتقليل الحجم (للتأكد من أن base64 string أقل من 50,000 حرف)
+                        try {
+                            logoDataUrl = await Settings.compressLogo(logoDataUrl);
+                            Utils.safeLog('✅ تم ضغط الشعار (الحجم النهائي: ' + logoDataUrl.length + ' حرف)');
+                        } catch (compressError) {
+                            Utils.safeWarn('⚠️ فشل ضغط الشعار، سيتم استخدام الصورة الأصلية:', compressError);
+                            // في حالة الفشل، نستخدم الصورة الأصلية
+                        }
+                        
+                        AppState.companyLogo = logoDataUrl;
+                        // تحديث الشعار في AppState.companySettings أيضاً
+                        if (!AppState.companySettings) {
+                            AppState.companySettings = {};
+                        }
+                        AppState.companySettings.logo = logoDataUrl;
+                        // حفظ الشعار في localStorage للمزامنة مع favicon
+                        localStorage.setItem('company_logo', logoDataUrl);
+                        localStorage.setItem('hse_company_logo', logoDataUrl);
+                        // حفظ إعدادات الشركة (بما في ذلك الشعار) في localStorage
+                        if (typeof window.DataManager !== 'undefined' && window.DataManager.saveCompanySettings) {
+                            window.DataManager.saveCompanySettings();
+                        }
+                        // حفظ البيانات باستخدام window.DataManager
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        } else {
+            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+        }
+
+                        // حفظ الشعار في قاعدة البيانات
+                        if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                            try {
+                                const userData = AppState.currentUser || {};
+                                const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                    name: AppState.companySettings?.name || '',
+                                    secondaryName: AppState.companySettings?.secondaryName || '',
+                                    formVersion: AppState.companySettings?.formVersion || '1.0',
+                                    nameFontSize: AppState.companySettings?.nameFontSize || 16,
+                                    secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
+                                    secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
+                                    clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
+                                    address: AppState.companySettings?.address || '',
+                                    phone: AppState.companySettings?.phone || '',
+                                    email: AppState.companySettings?.email || '',
+                                    logo: logoDataUrl,
+                                    postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                    userData: {
+                                        email: userData.email,
+                                        name: userData.name,
+                                        role: userData.role,
+                                        permissions: userData.permissions
+                                    }
+                                });
+
+                                if (result && result.success) {
+                                    Utils.safeLog('✅ تم حفظ الشعار في قاعدة البيانات بنجاح');
+                                } else {
+                                    Utils.safeWarn('⚠️ فشل حفظ الشعار في قاعدة البيانات:', result?.message);
+                                }
+                            } catch (error) {
+                                Utils.safeWarn('⚠️ خطأ أثناء حفظ الشعار في قاعدة البيانات:', error);
+                            }
+                        }
+
+                        // تحديث العرض
+                        const preview = document.getElementById('company-logo-preview');
+                        if (preview) {
+                            preview.src = AppState.companyLogo;
+                            preview.style.display = 'block';
+                        }
+
+                        // تحديث الهيدر
+                        if (typeof UI !== 'undefined' && UI.updateCompanyLogoHeader) {
+                            UI.updateCompanyLogoHeader();
+                        }
+                        if (typeof UI !== 'undefined' && UI.updateDashboardLogo) {
+                            UI.updateDashboardLogo();
+                        }
+                        if (typeof UI !== 'undefined' && UI.updateLoginLogo) {
+                            UI.updateLoginLogo();
+                        }
+
+                        // إرسال حدث لتحديث favicon
+                        window.dispatchEvent(new CustomEvent('companyLogoUpdated', { detail: { logoUrl: logoDataUrl } }));
+
+                        Notification.success('تم رفع الشعار بنجاح');
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            // إزالة شعار الشركة
+            const removeLogoBtn = document.getElementById('remove-logo-btn');
+            if (removeLogoBtn) {
+                removeLogoBtn.addEventListener('click', async () => {
+                    AppState.companyLogo = '';
+                    // إزالة الشعار من AppState.companySettings أيضاً
+                    if (AppState.companySettings) {
+                        AppState.companySettings.logo = '';
+                    }
+                    // إزالة الشعار من localStorage
+                    localStorage.removeItem('company_logo');
+                    localStorage.removeItem('hse_company_logo');
+                    // حفظ إعدادات الشركة (بما في ذلك الشعار) في localStorage
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.saveCompanySettings) {
+                        window.DataManager.saveCompanySettings();
+                    }
+                    // حفظ البيانات باستخدام window.DataManager
+        if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+            window.DataManager.save();
+        } else {
+            Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+        }
+
+                    // حفظ إزالة الشعار في قاعدة البيانات
+                    if (AppState.googleConfig?.appsScript?.enabled && typeof GoogleIntegration !== 'undefined') {
+                        try {
+                            const userData = AppState.currentUser || {};
+                            const result = await GoogleIntegration.sendToAppsScript('saveCompanySettings', {
+                                name: AppState.companySettings?.name || '',
+                                secondaryName: AppState.companySettings?.secondaryName || '',
+                                formVersion: AppState.companySettings?.formVersion || '1.0',
+                                nameFontSize: AppState.companySettings?.nameFontSize || 16,
+                                secondaryNameFontSize: AppState.companySettings?.secondaryNameFontSize || 14,
+                                secondaryNameColor: AppState.companySettings?.secondaryNameColor || '#6B7280',
+                                clinicMonthlyVisitsAlertThreshold: AppState.companySettings?.clinicMonthlyVisitsAlertThreshold ?? 10,
+                                    employeeImportHireMonths: AppState.companySettings?.employeeImportHireMonths ?? 3,
+                                address: AppState.companySettings?.address || '',
+                                phone: AppState.companySettings?.phone || '',
+                                email: AppState.companySettings?.email || '',
+                                logo: '',
+                                postLoginItems: typeof AppState.companySettings?.postLoginItems === 'string' ? AppState.companySettings.postLoginItems : JSON.stringify(AppState.companySettings?.postLoginItems || []),
+                                userData: {
+                                    email: userData.email,
+                                    name: userData.name,
+                                    role: userData.role,
+                                    permissions: userData.permissions
+                                }
+                            });
+
+                            if (result && result.success) {
+                                Utils.safeLog('✅ تم حذف الشعار من قاعدة البيانات بنجاح');
+                            } else {
+                                Utils.safeWarn('⚠️ فشل حذف الشعار من قاعدة البيانات:', result?.message);
+                            }
+                        } catch (error) {
+                            Utils.safeWarn('⚠️ خطأ أثناء حذف الشعار من قاعدة البيانات:', error);
+                        }
+                    }
+
+                    const preview = document.getElementById('company-logo-preview');
+                    if (preview) {
+                        preview.style.display = 'none';
+                    }
+
+                    if (typeof UI !== 'undefined' && UI.updateCompanyLogoHeader) {
+                        UI.updateCompanyLogoHeader();
+                    }
+                    if (typeof UI !== 'undefined' && UI.updateLoginLogo) {
+                        UI.updateLoginLogo();
+                    }
+
+                    // إرسال حدث لتحديث favicon
+                    window.dispatchEvent(new CustomEvent('companyLogoUpdated', { detail: { logoUrl: '' } }));
+
+                    Notification.success('تم إزالة الشعار بنجاح');
+                    this.load();
+                });
+            }
+        }, 100);
+    }
+};
+// ===== Export module to global scope =====
+// تصدير الموديول إلى window فوراً لضمان توافره
+(function () {
+    'use strict';
+    try {
+        if (typeof window !== 'undefined' && typeof Settings !== 'undefined') {
+            window.Settings = Settings;
+            
+            // إشعار عند تحميل الموديول بنجاح
+            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ Settings module loaded and available on window.Settings');
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تصدير Settings:', error);
+        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
+        if (typeof window !== 'undefined' && typeof Settings !== 'undefined') {
+            try {
+                window.Settings = Settings;
+            } catch (e) {
+                console.error('❌ فشل تصدير Settings:', e);
+            }
+        }
+    }
+})();

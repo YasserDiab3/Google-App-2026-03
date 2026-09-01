@@ -1,1 +1,559 @@
-const MODULES_TO_LOAD=["users","incidents","nearmiss","reports","help","settings","fireequipment","ppe","periodicinspections","contractors","violations","employees","behaviormonitoring","chemicalsafety","dailyobservations","iso","emergency","safetybudget","actiontrackingregister","hse","safetyperformancekpis","sustainability","riskassessment","riskmatrix","legaldocuments","safetyhealthmanagement","usertasks","sopjha","aiassistant","useraiassistant","issuetracking","changemanagement","apptester","issuingauthorities","ptw","training","clinic"],MODULE_LOAD_MAX_RETRIES=2,MODULE_LOAD_RETRY_DELAY=1e3;function getModuleLoaderLogger(){const e=typeof Utils<"u"&&Utils.safeLog?Utils.safeLog:console.log,n=typeof Utils<"u"&&Utils.safeError?Utils.safeError:console.error,l=typeof Utils<"u"&&Utils.safeWarn?Utils.safeWarn:console.warn;return{log:e,logError:n,warn:l}}let _modulesLoadPromise=null;function startModuleLoadOnce(){if(_modulesLoadPromise)return _modulesLoadPromise;const{log:e}=getModuleLoaderLogger();return e("\u{1F4E6} \u0628\u062F\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A (\u0645\u0631\u0629 \u0648\u0627\u062D\u062F\u0629)..."),_modulesLoadPromise=loadAllModules(),_modulesLoadPromise}function loadModule(e,n){return n===void 0&&(n=0),new Promise(l=>{const d="js/modules/modules/",r=typeof Utils<"u"&&Utils.safeLog?Utils.safeLog:console.log,t=typeof Utils<"u"&&Utils.safeError?Utils.safeError:console.error,w=typeof Utils<"u"&&Utils.safeWarn?Utils.safeWarn:console.warn;let o=!1;const p=setTimeout(()=>{o||(o=!0,w(`\u26A0\uFE0F Timeout: \u062A\u062D\u0645\u064A\u0644 ${e} \u0627\u0633\u062A\u063A\u0631\u0642 \u0623\u0643\u062B\u0631 \u0645\u0646 6 \u062B\u0648\u0627\u0646 - \u0627\u0644\u0627\u0633\u062A\u0645\u0631\u0627\u0631...`),l())},6e3),c=()=>{o||(o=!0,clearTimeout(p),l())},f=document.createElement("script");f.src=`${d}${e}.js`,f.async=!1,f.defer=!0;const y=Date.now();f.onload=()=>{const u=Date.now()-y;r(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e} (${u}ms)`);const g=window[e.charAt(0).toUpperCase()+e.slice(1)]||window[e];if(e==="fireequipment"){let i=0;const a=10,s=setInterval(()=>{i++,typeof window.FireEquipment<"u"&&typeof window.FireEquipment.load=="function"?(r("\u2705 FireEquipment \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.FireEquipment \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.FireEquipment<"u"?t("\u26A0\uFE0F FireEquipment \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F FireEquipment \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="violations"){let i=0;const a=10,s=setInterval(()=>{i++,typeof window.Violations<"u"&&typeof window.Violations.load=="function"?(r("\u2705 Violations \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.Violations \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.Violations<"u"?t("\u26A0\uFE0F Violations \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F Violations \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="dailyobservations"){let i=0;const a=10,s=setInterval(()=>{i++,typeof window.DailyObservations<"u"&&typeof window.DailyObservations.load=="function"?(r("\u2705 DailyObservations \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.DailyObservations \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.DailyObservations<"u"?t("\u26A0\uFE0F DailyObservations \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F DailyObservations \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="contractors"){let i=0;const a=15,s=setInterval(()=>{i++,typeof window.Contractors<"u"&&typeof window.Contractors.load=="function"?(r("\u2705 Contractors \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.Contractors \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.Contractors<"u"?t("\u26A0\uFE0F Contractors \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F Contractors \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="clinic"){let i=0;const a=25,s=setInterval(()=>{i++,typeof window.Clinic<"u"&&typeof window.Clinic.load=="function"?(r("\u2705 Clinic \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.Clinic \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.Clinic<"u"?t("\u26A0\uFE0F Clinic \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F Clinic \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="ppe"){let i=0;const a=10,s=setInterval(()=>{i++,typeof window.PPE<"u"&&typeof window.PPE.load=="function"?(r("\u2705 PPE \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.PPE \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.PPE<"u"?t("\u26A0\uFE0F PPE \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F PPE \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="periodicinspections"){let i=0;const a=10,s=setInterval(()=>{i++,typeof window.PeriodicInspections<"u"&&typeof window.PeriodicInspections.load=="function"?(r("\u2705 PeriodicInspections \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.PeriodicInspections \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.PeriodicInspections<"u"?t("\u26A0\uFE0F PeriodicInspections \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F PeriodicInspections \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}else if(e==="ptw"){let i=0;const a=20,s=setInterval(()=>{i++,typeof window.PTW<"u"&&typeof window.PTW.load=="function"?(r("\u2705 PTW \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window.PTW \u0645\u0639 \u062F\u0627\u0644\u0629 load"),clearInterval(s),c()):i>=a&&(typeof window.PTW<"u"?t("\u26A0\uFE0F PTW \u0645\u062A\u0627\u062D \u0644\u0643\u0646 \u062F\u0627\u0644\u0629 load \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0623\u0648 \u0644\u064A\u0633\u062A function"):t(`\u26A0\uFE0F PTW \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u0639\u0644\u0649 window \u0628\u0639\u062F ${a} \u0645\u062D\u0627\u0648\u0644\u0629`),clearInterval(s),c())},100);return}setTimeout(()=>{c()},100)},f.onerror=u=>{const g=Date.now()-y;t(`\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644: ${e} \u0628\u0639\u062F ${g}ms${n>0?` (\u0645\u062D\u0627\u0648\u0644\u0629 ${n+1}/${MODULE_LOAD_MAX_RETRIES+1})`:""}`),t(`   \u0627\u0644\u0645\u0633\u0627\u0631: ${f.src}`),t("   \u0646\u0648\u0639 \u0627\u0644\u062E\u0637\u0623:",u?.type||"unknown"),fetch(f.src,{method:"HEAD",cache:"no-store"}).then(i=>{const a=i.status===503,s=n<MODULE_LOAD_MAX_RETRIES;if(a&&s){o||(w(`\u{1F504} \u0625\u0639\u0627\u062F\u0629 \u0645\u062D\u0627\u0648\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 ${e} \u0628\u0639\u062F ${MODULE_LOAD_RETRY_DELAY/1e3} \u062B\u0627\u0646\u064A\u0629 (503)`),clearTimeout(p),o=!0,setTimeout(()=>{loadModule(e,n+1).then(l)},MODULE_LOAD_RETRY_DELAY));return}i.status===503&&!s&&t(`\u{1F6A8} 503 Service Unavailable - \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 ${e}.js \u0628\u0639\u062F ${MODULE_LOAD_MAX_RETRIES+1} \u0645\u062D\u0627\u0648\u0644\u0627\u062A`),u&&u.message&&t(`   \u0627\u0644\u062E\u0637\u0623: ${u.message}`),c()}).catch(()=>{if(n<MODULE_LOAD_MAX_RETRIES&&!o){w(`\u{1F504} \u0625\u0639\u0627\u062F\u0629 \u0645\u062D\u0627\u0648\u0644\u0629 \u062A\u062D\u0645\u064A\u0644 ${e} \u0628\u0639\u062F ${MODULE_LOAD_RETRY_DELAY/1e3} \u062B\u0627\u0646\u064A\u0629 (\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644)`),clearTimeout(p),o=!0,setTimeout(()=>{loadModule(e,n+1).then(l)},MODULE_LOAD_RETRY_DELAY);return}u&&u.message&&t(`   \u0627\u0644\u062E\u0637\u0623: ${u.message}`),c()})},document.head.appendChild(f)})}async function loadAllModules(){const{log:e,logError:n}=getModuleLoaderLogger();try{let l=typeof Utils<"u",d=typeof AppState<"u",r=0;const t=30;for(;(!l||!d)&&r<t;)await new Promise(o=>setTimeout(o,100)),l=typeof Utils<"u",d=typeof AppState<"u",r++;if(!l||!d){n("\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u062A\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 (Utils/AppState)");return}if(MODULES_TO_LOAD.indexOf("contractors")!==-1&&(e("\u{1F4E6} \u0628\u062F\u0621 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646..."),await loadModule("contractors"),await new Promise(o=>setTimeout(o,250)),typeof window.Contractors<"u"?e("\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0628\u0646\u062C\u0627\u062D"):n("\u26A0\uFE0F \u062A\u062D\u0630\u064A\u0631: \u0645\u0648\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0644\u0645 \u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644\u0647 \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D")),typeof Permissions<"u"&&typeof Permissions.getCurrentUserPermissions=="function")try{const o=Permissions.getCurrentUserPermissions();await loadModulesBasedOnPermissions(o)}catch(o){n("\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0630\u0643\u064A\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0644\u064A\u062F\u064A:",o),await loadModulesFallback()}else await loadModulesFallback();await new Promise(o=>setTimeout(o,100)),e("\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A \u0628\u0646\u062C\u0627\u062D")}catch(l){n("\u274C \u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A:",l)}}async function loadModulesBasedOnPermissions(e){const{log:n,logError:l}=getModuleLoaderLogger();if(!e)return loadModulesFallback();const d=getRequiredModulesForPermissions(e),r=["contractors"];for(const o of r)d.includes(o)&&(await loadModule(o),await new Promise(p=>setTimeout(p,50)));const t=d.filter(o=>!r.includes(o)),w=5;for(let o=0;o<t.length;o+=w){const p=t.slice(o,o+w);n(`\u{1F4E6} \u062A\u062D\u0645\u064A\u0644 \u062F\u0641\u0639\u0629 ${Math.floor(o/w)+1}: ${p.join(", ")}`),await Promise.all(p.map(async c=>{try{await loadModule(c)}catch(f){l(`\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 ${c}:`,f)}})),await new Promise(c=>setTimeout(c,100))}n(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${d.length} \u0645\u0648\u062F\u064A\u0648\u0644 \u062D\u0633\u0628 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A`)}function getRequiredModulesForPermissions(e){const n=[];return n.push("users","dashboard"),e.canViewIncidents&&n.push("incidents","nearmiss"),e.canViewContractors&&n.push("contractors","violations"),e.canViewEmployees&&n.push("employees"),e.canViewTraining&&n.push("training"),e.canViewClinic&&n.push("clinic"),e.canViewFireEquipment&&n.push("fireequipment"),e.canViewPPE&&n.push("ppe"),[...new Set(n)]}async function loadModulesFallback(){const{log:e,logError:n}=getModuleLoaderLogger();e("\u{1F504} \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A \u0628\u0627\u0644\u0637\u0631\u064A\u0642\u0629 \u0627\u0644\u062A\u0642\u0644\u064A\u062F\u064A\u0629 (fallback)"),MODULES_TO_LOAD.indexOf("contractors")!==-1&&(await loadModule("contractors"),await new Promise(r=>setTimeout(r,250)));const d=MODULES_TO_LOAD.filter(r=>r!=="contractors");for(const r of d)try{await loadModule(r),await new Promise(t=>setTimeout(t,25))}catch(t){n(`\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 ${r}:`,t)}}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",()=>{startModuleLoadOnce()}):startModuleLoadOnce();
+/**
+ * Modules Loader
+ * محمل الموديولات - يقوم بتحميل جميع الموديولات المقسمة
+ * 
+ * هذا الملف يحل محل app-modules.js بعد التقسيم
+ */
+
+// 🔥 IMMEDIATE DEBUG - Log that this file is executing
+console.log('🔥🔥🔥 modules-loader.js IS EXECUTING NOW!');
+console.log('🔥 Document readyState:', document.readyState);
+console.log('🔥 Current time:', new Date().toISOString());
+
+// قائمة الموديولات المطلوب تحميلها (32 موديول)
+const MODULES_TO_LOAD = [
+    'users',
+    'incidents',
+    'nearmiss',
+    'reports',
+    'help',
+    'settings',
+    'fireequipment',
+    'ppe',
+    'periodicinspections',
+    'contractors', // يجب تحميله قبل violations لأنه يحتوي على ثوابت مشتركة
+    'violations',
+    'employees',
+    'behaviormonitoring',
+    'chemicalsafety',
+    'dailyobservations',
+    'iso',
+    'emergency',
+    'safetybudget',
+    'actiontrackingregister',
+    'hse',
+    'safetyperformancekpis',
+    'sustainability',
+    'riskassessment',
+    'riskmatrix', // مصفوفة تقييم المخاطر
+    'legaldocuments',
+    'safetyhealthmanagement',
+    'usertasks',
+    'sopjha',
+    'aiassistant',
+    'useraiassistant',
+    'issuetracking',
+    'changemanagement',
+    'apptester',
+    'issuingauthorities',
+    // ثقيل الحجم — يُحمَّل بعد الأساسيات لتسريع أول عرض
+    'ptw',
+    'training',
+    'clinic'
+];
+
+/** عدد إعادة المحاولات عند 503 أو فشل التحميل */
+const MODULE_LOAD_MAX_RETRIES = 2;
+/** التأخير قبل إعادة المحاولة (ms) */
+const MODULE_LOAD_RETRY_DELAY = 1000;
+
+function getModuleLoaderLogger() {
+    const log = (typeof Utils !== 'undefined' && Utils.safeLog) ? Utils.safeLog : console.log;
+    const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
+    const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
+    return { log, logError, warn };
+}
+
+let _modulesLoadPromise = null;
+function startModuleLoadOnce() {
+    if (_modulesLoadPromise) return _modulesLoadPromise;
+    const { log } = getModuleLoaderLogger();
+    log('📦 بدء تحميل الموديولات (مرة واحدة)...');
+    _modulesLoadPromise = loadAllModules();
+    return _modulesLoadPromise;
+}
+
+/**
+ * تحميل موديول واحد (مع إعادة محاولة عند 503)
+ * @param {string} moduleName - اسم الموديول
+ * @param {number} retryCount - عدد المحاولات السابقة (داخلي)
+ */
+function loadModule(moduleName, retryCount) {
+    if (retryCount === undefined) retryCount = 0;
+    return new Promise((resolve) => {
+        const basePath = 'js/modules/modules/';
+        const log = (typeof Utils !== 'undefined' && Utils.safeLog) ? Utils.safeLog : console.log;
+        const logError = (typeof Utils !== 'undefined' && Utils.safeError) ? Utils.safeError : console.error;
+        const warn = (typeof Utils !== 'undefined' && Utils.safeWarn) ? Utils.safeWarn : console.warn;
+
+        // ✅ إضافة timeout عام لمنع Promise غير المحلولة (6 ثوان - يوازن بين السرعة والاستقرار)
+        let isResolved = false;
+        const timeoutId = setTimeout(() => {
+            if (!isResolved) {
+                isResolved = true;
+                warn(`⚠️ Timeout: تحميل ${moduleName} استغرق أكثر من 6 ثوان - الاستمرار...`);
+                resolve(); // الاستمرار حتى لو انتهى الوقت
+            }
+        }, 6000); // 6 ثوان لتقليل التأخير في الإنتاج
+
+        const safeResolve = () => {
+            if (!isResolved) {
+                isResolved = true;
+                clearTimeout(timeoutId);
+                resolve();
+            }
+        };
+
+        const script = document.createElement('script');
+        script.src = `${basePath}${moduleName}.js`;
+        script.async = false; // ✅ تعطيل async لتحسين التوافق مع file:// protocol
+        script.defer = true; // استخدام defer بدلاً من async
+        
+        // ✅ إضافة timestamp لتتبع وقت التحميل
+        const startTime = Date.now();
+        
+        // 🔍 DEBUG: Log the exact URL being loaded (تقليل الضجيج بعد المحاولة الأولى)
+        if (retryCount === 0) {
+            console.log(`🔍 Loading module: ${moduleName} from URL: ${script.src}`);
+        }
+        
+        script.onload = () => {
+            const loadTime = Date.now() - startTime;
+            log(`✅ تم تحميل الموديول: ${moduleName} (${loadTime}ms)`);
+            
+            // 🔍 DEBUG: Verify module is on window
+            const globalModule = window[moduleName.charAt(0).toUpperCase() + moduleName.slice(1)] || window[moduleName];
+            console.log(`🔍 Module ${moduleName} on window:`, typeof globalModule !== 'undefined' ? '✅ Found' : '❌ Not found');
+
+            // التحقق من تحميل الموديولات المهمة بشكل خاص
+            if (moduleName === 'fireequipment') {
+                // التحقق من تحميل موديول FireEquipment
+                let checkCount = 0;
+                const maxChecks = 10; // تقليل زمن الانتظار
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    // ✅ التحقق الآمن من وجود الموديول ودالة load
+                    if (typeof window.FireEquipment !== 'undefined' && 
+                        typeof window.FireEquipment.load === 'function') {
+                        log(`✅ FireEquipment متاح على window.FireEquipment مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.FireEquipment !== 'undefined') {
+                            logError(`⚠️ FireEquipment متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ FireEquipment غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve(); // الاستمرار حتى لو فشل التحقق
+                    }
+                }, 100);
+                return; // لا نستدعي resolve هنا، سنستدعيه في checkInterval
+            } else if (moduleName === 'violations') {
+                // التحقق من تحميل موديول Violations
+                let checkCount = 0;
+                const maxChecks = 10; // تقليل زمن الانتظار
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    // ✅ التحقق الآمن من وجود الموديول ودالة load
+                    if (typeof window.Violations !== 'undefined' && 
+                        typeof window.Violations.load === 'function') {
+                        log(`✅ Violations متاح على window.Violations مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.Violations !== 'undefined') {
+                            logError(`⚠️ Violations متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ Violations غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve(); // الاستمرار حتى لو فشل التحقق
+                    }
+                }, 100);
+                return; // لا نستدعي resolve هنا، سنستدعيه في checkInterval
+            } else if (moduleName === 'dailyobservations') {
+                // محاولة متعددة للتحقق من توفر الموديول ودالة load
+                let checkCount = 0;
+                const maxChecks = 10;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    // ✅ التحقق الآمن من وجود الموديول ودالة load
+                    if (typeof window.DailyObservations !== 'undefined' && 
+                        typeof window.DailyObservations.load === 'function') {
+                        log(`✅ DailyObservations متاح على window.DailyObservations مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.DailyObservations !== 'undefined') {
+                            logError(`⚠️ DailyObservations متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ DailyObservations غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve(); // الاستمرار حتى لو فشل التحقق
+                    }
+                }, 100);
+                return; // لا نستدعي resolve هنا، سنستدعيه في checkInterval
+            } else if (moduleName === 'contractors') {
+                // التحقق من تحميل موديول المقاولين
+                let checkCount = 0;
+                const maxChecks = 15; // تقليل زمن الانتظار
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    // ✅ التحقق الآمن من وجود الموديول ودالة load
+                    if (typeof window.Contractors !== 'undefined' && 
+                        typeof window.Contractors.load === 'function') {
+                        log(`✅ Contractors متاح على window.Contractors مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.Contractors !== 'undefined') {
+                            logError(`⚠️ Contractors متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ Contractors غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve(); // الاستمرار حتى لو فشل التحقق
+                    }
+                }, 100);
+                return; // لا نستدعي resolve هنا، سنستدعيه في checkInterval
+            } else if (moduleName === 'clinic') {
+                // ✅ التحقق من تحميل موديول العيادة (Clinic)
+                let checkCount = 0;
+                const maxChecks = 25; // 25 × 100ms = 2.5 ثوان
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.Clinic !== 'undefined' && 
+                        typeof window.Clinic.load === 'function') {
+                        log(`✅ Clinic متاح على window.Clinic مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.Clinic !== 'undefined') {
+                            logError(`⚠️ Clinic متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ Clinic غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
+            } else if (moduleName === 'ppe') {
+                // التحقق من تحميل موديول PPE
+                let checkCount = 0;
+                const maxChecks = 10;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PPE !== 'undefined' && typeof window.PPE.load === 'function') {
+                        log(`✅ PPE متاح على window.PPE مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PPE !== 'undefined') {
+                            logError(`⚠️ PPE متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PPE غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
+            } else if (moduleName === 'periodicinspections') {
+                // التحقق من تحميل موديول الفحوصات الدورية
+                let checkCount = 0;
+                const maxChecks = 10;
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PeriodicInspections !== 'undefined' && typeof window.PeriodicInspections.load === 'function') {
+                        log(`✅ PeriodicInspections متاح على window.PeriodicInspections مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PeriodicInspections !== 'undefined') {
+                            logError(`⚠️ PeriodicInspections متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PeriodicInspections غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
+            } else if (moduleName === 'ptw') {
+                // ✅ التحقق من تحميل موديول تصاريح العمل (PTW)
+                let checkCount = 0;
+                const maxChecks = 20; // 20 × 100ms = 2 ثوان
+                const checkInterval = setInterval(() => {
+                    checkCount++;
+                    if (typeof window.PTW !== 'undefined' && typeof window.PTW.load === 'function') {
+                        log(`✅ PTW متاح على window.PTW مع دالة load`);
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    } else if (checkCount >= maxChecks) {
+                        if (typeof window.PTW !== 'undefined') {
+                            logError(`⚠️ PTW متاح لكن دالة load غير موجودة أو ليست function`);
+                        } else {
+                            logError(`⚠️ PTW غير متاح على window بعد ${maxChecks} محاولة`);
+                        }
+                        clearInterval(checkInterval);
+                        safeResolve();
+                    }
+                }, 100);
+                return;
+            }
+
+            // ✅ للمواديل الأخرى: انتظار قصير ثم resolve
+            // بعض المواديل قد تأخذ وقت قصير للتصدير على window
+            setTimeout(() => {
+                safeResolve();
+            }, 100); // 100ms كافية لمعظم المواديل
+        };
+        script.onerror = (error) => {
+            const loadTime = Date.now() - startTime;
+            logError(`❌ فشل تحميل الموديول: ${moduleName} بعد ${loadTime}ms${retryCount > 0 ? ` (محاولة ${retryCount + 1}/${MODULE_LOAD_MAX_RETRIES + 1})` : ''}`);
+            logError(`   المسار: ${script.src}`);
+            logError(`   نوع الخطأ:`, error?.type || 'unknown');
+            
+            // التحقق من حالة HTTP (503 = إعادة محاولة تلقائية)
+            fetch(script.src, { method: 'HEAD', cache: 'no-store' })
+                .then(response => {
+                    if (typeof console !== 'undefined' && console.log) {
+                        console.log(`🔍 HTTP Status for ${moduleName}:`, response.status, response.statusText);
+                    }
+                    const is503 = response.status === 503;
+                    const canRetry = retryCount < MODULE_LOAD_MAX_RETRIES;
+                    if (is503 && canRetry) {
+                        if (!isResolved) {
+                            warn(`🔄 إعادة محاولة تحميل ${moduleName} بعد ${MODULE_LOAD_RETRY_DELAY / 1000} ثانية (503)`);
+                            clearTimeout(timeoutId);
+                            isResolved = true;
+                            setTimeout(() => {
+                                loadModule(moduleName, retryCount + 1).then(resolve);
+                            }, MODULE_LOAD_RETRY_DELAY);
+                        }
+                        return;
+                    }
+                    if (response.status === 503 && !canRetry) {
+                        logError(`🚨 503 Service Unavailable - تعذر تحميل ${moduleName}.js بعد ${MODULE_LOAD_MAX_RETRIES + 1} محاولات`);
+                    }
+                    if (error && error.message) {
+                        logError(`   الخطأ: ${error.message}`);
+                    }
+                    safeResolve();
+                })
+                .catch(() => {
+                    // عند فشل fetch (شبكة/CORS): إعادة محاولة مرة واحدة إن أمكن
+                    const canRetry = retryCount < MODULE_LOAD_MAX_RETRIES;
+                    if (canRetry && !isResolved) {
+                        warn(`🔄 إعادة محاولة تحميل ${moduleName} بعد ${MODULE_LOAD_RETRY_DELAY / 1000} ثانية (فشل الاتصال)`);
+                        clearTimeout(timeoutId);
+                        isResolved = true;
+                        setTimeout(() => {
+                            loadModule(moduleName, retryCount + 1).then(resolve);
+                        }, MODULE_LOAD_RETRY_DELAY);
+                        return;
+                    }
+                    if (error && error.message) {
+                        logError(`   الخطأ: ${error.message}`);
+                    }
+                    safeResolve();
+                });
+        };
+        document.head.appendChild(script);
+    });
+}
+
+/**
+ * تحميل جميع الموديولات
+ */
+async function loadAllModules() {
+    const { log, logError } = getModuleLoaderLogger();
+
+    try {
+        // التأكد من تحميل Utils و AppState أولاً
+        let utilsReady = typeof Utils !== 'undefined';
+        let appStateReady = typeof AppState !== 'undefined';
+        let waitCount = 0;
+        const maxWait = 30; // 3 ثوان
+
+        while ((!utilsReady || !appStateReady) && waitCount < maxWait) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            utilsReady = typeof Utils !== 'undefined';
+            appStateReady = typeof AppState !== 'undefined';
+            waitCount++;
+        }
+
+        if (!utilsReady || !appStateReady) {
+            logError('❌ فشل تحميل المتطلبات الأساسية (Utils/AppState)');
+            return;
+        }
+
+        // تحميل contractors أولاً بشكل منفصل لضمان تحميله قبل violations
+        const contractorsIndex = MODULES_TO_LOAD.indexOf('contractors');
+        if (contractorsIndex !== -1) {
+            log('📦 بدء تحميل موديول المقاولين...');
+            await loadModule('contractors');
+            // انتظار أطول للتأكد من تحميله بالكامل وتصديره
+            await new Promise(resolve => setTimeout(resolve, 250));
+            
+            // التحقق النهائي من تحميل الموديول
+            if (typeof window.Contractors !== 'undefined') {
+                log('✅ تم تحميل موديول المقاولين بنجاح');
+            } else {
+                logError('⚠️ تحذير: موديول المقاولين لم يتم تحميله بشكل صحيح');
+            }
+        }
+
+        // ✅ تحسين: تحميل ذكي للموديولات حسب الصلاحيات
+        if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
+            try {
+                const userPermissions = Permissions.getCurrentUserPermissions();
+                await loadModulesBasedOnPermissions(userPermissions);
+            } catch (error) {
+                logError('⚠️ فشل التحميل الذكي، سيتم استخدام التحميل التقليدي:', error);
+                await loadModulesFallback();
+            }
+        } else {
+            await loadModulesFallback();
+        }
+
+        // انتظار قصير للتأكد من تصدير جميع الموديولات إلى window
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        log('✅ تم تحميل جميع الموديولات بنجاح');
+    } catch (error) {
+        logError('❌ حدث خطأ في تحميل الموديولات:', error);
+    }
+}
+
+/**
+ * تحميل الموديولات حسب صلاحيات المستخدم
+ */
+async function loadModulesBasedOnPermissions(userPermissions) {
+    const { log, logError } = getModuleLoaderLogger();
+    if (!userPermissions) {
+        return loadModulesFallback();
+    }
+
+    const requiredModules = getRequiredModulesForPermissions(userPermissions);
+
+    // تحميل الموديولات الأساسية أولاً
+    const coreModules = ['contractors']; // contractors مطلوب للعديد من الموديولات
+    for (const moduleName of coreModules) {
+        if (requiredModules.includes(moduleName)) {
+            await loadModule(moduleName);
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+    }
+
+    // تحميل باقي الموديولات المطلوبة بشكل متوازي (مجموعات صغيرة)
+    const otherModules = requiredModules.filter(name => !coreModules.includes(name));
+    const batchSize = 5; // تحميل 5 موديولات في كل دفعة
+
+    for (let i = 0; i < otherModules.length; i += batchSize) {
+        const batch = otherModules.slice(i, i + batchSize);
+        log(`📦 تحميل دفعة ${Math.floor(i / batchSize) + 1}: ${batch.join(', ')}`);
+
+        await Promise.all(batch.map(async (moduleName) => {
+            try {
+                await loadModule(moduleName);
+            } catch (error) {
+                logError(`❌ خطأ في تحميل ${moduleName}:`, error);
+            }
+        }));
+
+        // انتظار قصير بين الدفعات
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    log(`✅ تم تحميل ${requiredModules.length} موديول حسب الصلاحيات`);
+}
+
+/**
+ * تحديد الموديولات المطلوبة حسب الصلاحيات
+ */
+function getRequiredModulesForPermissions(permissions) {
+    const requiredModules = [];
+
+    // موديولات أساسية لجميع المستخدمين
+    requiredModules.push('users', 'dashboard');
+
+    // موديولات حسب الصلاحيات
+    if (permissions.canViewIncidents) {
+        requiredModules.push('incidents', 'nearmiss');
+    }
+
+    if (permissions.canViewContractors) {
+        requiredModules.push('contractors', 'violations');
+    }
+
+    if (permissions.canViewEmployees) {
+        requiredModules.push('employees');
+    }
+
+    if (permissions.canViewTraining) {
+        requiredModules.push('training');
+    }
+
+    if (permissions.canViewClinic) {
+        requiredModules.push('clinic');
+    }
+
+    if (permissions.canViewFireEquipment) {
+        requiredModules.push('fireequipment');
+    }
+
+    if (permissions.canViewPPE) {
+        requiredModules.push('ppe');
+    }
+
+    // إلخ... يمكن توسيع هذا حسب الحاجة
+
+    // إزالة التكرارات
+    return [...new Set(requiredModules)];
+}
+
+/**
+ * تحميل الموديولات كـ fallback (التقليدي)
+ */
+async function loadModulesFallback() {
+    const { log, logError } = getModuleLoaderLogger();
+    log('🔄 تحميل الموديولات بالطريقة التقليدية (fallback)');
+
+    // تحميل contractors أولاً
+    const contractorsIndex = MODULES_TO_LOAD.indexOf('contractors');
+    if (contractorsIndex !== -1) {
+        await loadModule('contractors');
+        await new Promise(resolve => setTimeout(resolve, 250));
+    }
+
+    // تحميل باقي الموديولات بالتسلسل
+    const otherModules = MODULES_TO_LOAD.filter(name => name !== 'contractors');
+
+    for (const moduleName of otherModules) {
+        try {
+            await loadModule(moduleName);
+            await new Promise(resolve => setTimeout(resolve, 25));
+        } catch (error) {
+            logError(`❌ خطأ في تحميل ${moduleName}:`, error);
+        }
+    }
+}
+
+// تحميل الموديولات عند جاهزية DOM
+console.log('🔥 Setting up module loading...');
+console.log('🔥 Document readyState:', document.readyState);
+
+if (document.readyState === 'loading') {
+    console.log('🔥 Document still loading - adding DOMContentLoaded listener');
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('🔥 DOMContentLoaded fired - starting modules load once');
+        startModuleLoadOnce();
+    });
+} else {
+    console.log('🔥 Document already loaded - starting modules load once');
+    startModuleLoadOnce();
+}

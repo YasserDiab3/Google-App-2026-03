@@ -1,4 +1,113 @@
-(function(){"use strict";const m=window.location.hostname==="localhost"||window.location.hostname==="127.0.0.1"||window.location.search.includes("dev=true"),u=(...e)=>{try{if(window.Utils&&typeof window.Utils.safeLog=="function"){window.Utils.safeLog(...e);return}}catch{}};let i=null;function c(){const e=Array.from(document.styleSheets);let o=!0;for(let t=0;t<e.length;t++)try{e[t].cssRules||e[t].rules}catch{o=!1;break}o||document.readyState==="complete"?requestAnimationFrame(()=>{h()}):setTimeout(c,50)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",c):c();function h(){const e=document.getElementById("dashboard-section");e&&(y(e),g(e),E(e),k(e),w(e))}function y(e){if(e.querySelectorAll(".kpi-grid > .kpi-card").forEach(t=>{t.style.opacity="1",t.style.transform="none",t.style.transition="none",t.addEventListener("click",function(s){const n=document.createElement("div");n.style.position="absolute",n.style.borderRadius="50%",n.style.background="rgba(255, 255, 255, 0.5)",n.style.width="20px",n.style.height="20px",n.style.pointerEvents="none",n.style.animation="rippleEffect 0.6s ease-out";const r=t.getBoundingClientRect();n.style.left=s.clientX-r.left-10+"px",n.style.top=s.clientY-r.top-10+"px",t.appendChild(n),setTimeout(()=>n.remove(),600)})}),!document.getElementById("ripple-animation-style")){const t=document.createElement("style");t.id="ripple-animation-style",t.textContent=`
+/**
+ * ========================================
+ * تحسينات JavaScript للوحة التحكم
+ * Enhanced Dashboard Interactions
+ * ========================================
+ */
+
+(function () {
+    'use strict';
+
+    const __isDev = (window.location.hostname === 'localhost' ||
+        window.location.hostname === '127.0.0.1' ||
+        window.location.search.includes('dev=true'));
+    const log = (...args) => {
+        try {
+            if (window.Utils && typeof window.Utils.safeLog === 'function') {
+                window.Utils.safeLog(...args);
+                return;
+            }
+        } catch (e) { /* ignore */ }
+        if (__isDev) {
+            try { console.log(...args); } catch (e) { /* ignore */ }
+        }
+    };
+
+    let realtimeDataInterval = null;
+
+    // الانتظار حتى يتم تحميل DOM و CSS
+    function waitForCSSAndInit() {
+        // التحقق من تحميل CSS
+        const stylesheets = Array.from(document.styleSheets);
+        let cssLoaded = true;
+        
+        for (let i = 0; i < stylesheets.length; i++) {
+            try {
+                // محاولة الوصول إلى CSS rules - إذا فشل، الملف لم يتم تحميله بعد
+                stylesheets[i].cssRules || stylesheets[i].rules;
+            } catch (e) {
+                cssLoaded = false;
+                break;
+            }
+        }
+        
+        if (cssLoaded || document.readyState === 'complete') {
+            // استخدام requestAnimationFrame لتأخير التنفيذ حتى يتم render CSS
+            requestAnimationFrame(() => {
+                initDashboardEnhancements();
+            });
+        } else {
+            // إعادة المحاولة بعد تأخير قصير
+            setTimeout(waitForCSSAndInit, 50);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForCSSAndInit);
+    } else {
+        waitForCSSAndInit();
+    }
+
+    function initDashboardEnhancements() {
+        const dashboardRoot = document.getElementById('dashboard-section');
+        if (!dashboardRoot) return;
+
+        // تفعيل التأثيرات التفاعلية (مقيّدة بلوحة التحكم — بدون تحريك 3D/عدّ تصاعدي يتداخل مع KPIs الحية)
+        enhanceKPICards(dashboardRoot);
+        enhanceContentCards(dashboardRoot);
+        addHoverSoundEffects(dashboardRoot);
+        addCardFlipEffect(dashboardRoot);
+        addGlowEffect(dashboardRoot);
+    }
+
+    /**
+     * تحسين بطاقات KPI بتأثيرات تفاعلية
+     */
+    function enhanceKPICards(dashboardRoot) {
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
+
+        kpiCards.forEach((card) => {
+            // ثبات فوري — بدون fade-in متدرج يسبب وميضاً مع تحديث الأرقام الحية
+            card.style.opacity = '1';
+            card.style.transform = 'none';
+            card.style.transition = 'none';
+
+            card.addEventListener('click', function (e) {
+                // إضافة تأثير الموجة (Ripple Effect)
+                const ripple = document.createElement('div');
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.background = 'rgba(255, 255, 255, 0.5)';
+                ripple.style.width = '20px';
+                ripple.style.height = '20px';
+                ripple.style.pointerEvents = 'none';
+                ripple.style.animation = 'rippleEffect 0.6s ease-out';
+
+                const rect = card.getBoundingClientRect();
+                ripple.style.left = (e.clientX - rect.left - 10) + 'px';
+                ripple.style.top = (e.clientY - rect.top - 10) + 'px';
+
+                card.appendChild(ripple);
+
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+
+        // إضافة تأثير Ripple في CSS
+        if (!document.getElementById('ripple-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'ripple-animation-style';
+            style.textContent = `
                 @keyframes rippleEffect {
                     0% {
                         transform: scale(0);
@@ -9,7 +118,211 @@
                         opacity: 0;
                     }
                 }
-            `,document.head.appendChild(t)}}function g(e){const o=e.querySelectorAll(".content-card"),t=["reports-statistics-section","safety-metrics-section"];o.forEach((s,n)=>{t.some(a=>s.classList.contains(a))||(s.style.opacity="0",s.style.transform="translateY(30px)",setTimeout(()=>{s.style.transition="all 0.6s cubic-bezier(0.4, 0, 0.2, 1)",s.style.opacity="1",s.style.transform="translateY(0)"},(n+5)*100),s.addEventListener("mouseenter",function(){this.style.boxShadow="0 20px 60px rgba(102, 126, 234, 0.2), 0 5px 20px rgba(102, 126, 234, 0.15)"}),s.addEventListener("mouseleave",function(){this.style.boxShadow=""}))})}function S(){const e=document.getElementById("dashboard-section");e&&window.addEventListener("scroll",()=>{const o=window.pageYOffset;e.querySelectorAll(".kpi-card, .content-card").forEach((s,n)=>{const r=(n%3+1)*.05,a=-(o*r);s.style.transform=`translateY(${a}px)`})})}function I(){const e=document.querySelectorAll(".kpi-value"),o={threshold:.5,rootMargin:"0px"},t=new IntersectionObserver(s=>{s.forEach(n=>{n.isIntersecting&&!n.target.dataset.animated&&(b(n.target),n.target.dataset.animated="true")})},o);e.forEach(s=>t.observe(s))}function b(e){const o=e.textContent.trim(),t=o.includes("%"),s=parseFloat(o.replace(/[^\d.-]/g,""));if(isNaN(s))return;const n=2e3,r=60,a=s/r,l=n/r;let d=0,p=0;const A=setInterval(()=>{p++,d+=a,p>=r&&(d=s,clearInterval(A));const f=Math.round(d);e.textContent=t?`${f}%`:f},l)}function L(){document.querySelectorAll(".kpi-card").forEach(o=>{const t=document.createElement("div");t.style.position="absolute",t.style.bottom="0",t.style.left="0",t.style.height="3px",t.style.width="0%",t.style.background="linear-gradient(90deg, #667eea 0%, #764ba2 100%)",t.style.transition="width 1s ease-out",t.style.borderRadius="0 0 24px 24px",o.appendChild(t),new IntersectionObserver(n=>{n.forEach(r=>{r.isIntersecting&&setTimeout(()=>{t.style.width="100%"},300)})},{threshold:.5}).observe(o)})}function E(e){e.querySelectorAll(".kpi-grid > .kpi-card").forEach(t=>{t.addEventListener("mouseenter",()=>{})})}function k(e){e.querySelectorAll(".kpi-grid > .kpi-card").forEach(t=>{t.addEventListener("dblclick",function(){this.style.transform="rotateY(180deg)",setTimeout(()=>{this.style.transform="rotateY(0deg)"},600)})})}function w(e){const o=e.querySelectorAll(".kpi-grid > .kpi-card.kpi-danger, .kpi-grid > .kpi-card.kpi-warning"),t=e.querySelectorAll(".reports-statistics-section, .safety-metrics-section");o.forEach(s=>{const n=Array.from(t).some(a=>a.contains(s)),r=s.parentElement&&s.parentElement.classList.contains("kpi-grid");n||r||s.classList.add("hse-pulse-glow")})}function T(){document.querySelectorAll(".kpi-card, .content-card").forEach(o=>{const t=document.createElement("div");t.className="skeleton-loader",t.style.cssText=`
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
+     * تحسين بطاقات المحتوى
+     * لا يُطبَّق على قسم التقارير والإحصائيات أو مؤشرات السلامة (منع وميض).
+     */
+    function enhanceContentCards(dashboardRoot) {
+        const contentCards = dashboardRoot.querySelectorAll('.content-card');
+        const noEnhanceClasses = ['reports-statistics-section', 'safety-metrics-section'];
+
+        contentCards.forEach((card, index) => {
+            const skip = noEnhanceClasses.some(c => card.classList.contains(c));
+            if (skip) return;
+
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+
+            setTimeout(() => {
+                card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, (index + 5) * 100);
+
+            card.addEventListener('mouseenter', function () {
+                this.style.boxShadow = '0 20px 60px rgba(102, 126, 234, 0.2), 0 5px 20px rgba(102, 126, 234, 0.15)';
+            });
+
+            card.addEventListener('mouseleave', function () {
+                this.style.boxShadow = '';
+            });
+        });
+    }
+
+    /**
+     * إضافة تأثير Parallax للخلفية
+     */
+    function addParallaxEffect() {
+        const dashboardSection = document.getElementById('dashboard-section');
+        if (!dashboardSection) return;
+
+        window.addEventListener('scroll', () => {
+            const scrolled = window.pageYOffset;
+            const parallaxElements = dashboardSection.querySelectorAll('.kpi-card, .content-card');
+
+            parallaxElements.forEach((element, index) => {
+                const speed = (index % 3 + 1) * 0.05;
+                const yPos = -(scrolled * speed);
+                element.style.transform = `translateY(${yPos}px)`;
+            });
+        });
+    }
+
+    /**
+     * إضافة تأثير العد التصاعدي للأرقام
+     */
+    function addCountUpAnimation() {
+        const kpiValues = document.querySelectorAll('.kpi-value');
+
+        const observerOptions = {
+            threshold: 0.5,
+            rootMargin: '0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !entry.target.dataset.animated) {
+                    animateValue(entry.target);
+                    entry.target.dataset.animated = 'true';
+                }
+            });
+        }, observerOptions);
+
+        kpiValues.forEach(value => observer.observe(value));
+    }
+
+    /**
+     * تحريك القيمة من 0 إلى القيمة النهائية
+     */
+    function animateValue(element) {
+        const text = element.textContent.trim();
+        const hasPercent = text.includes('%');
+        const numericValue = parseFloat(text.replace(/[^\d.-]/g, ''));
+
+        if (isNaN(numericValue)) return;
+
+        const duration = 2000;
+        const steps = 60;
+        const stepValue = numericValue / steps;
+        const stepDuration = duration / steps;
+        let currentValue = 0;
+        let currentStep = 0;
+
+        const timer = setInterval(() => {
+            currentStep++;
+            currentValue += stepValue;
+
+            if (currentStep >= steps) {
+                currentValue = numericValue;
+                clearInterval(timer);
+            }
+
+            const displayValue = Math.round(currentValue);
+            element.textContent = hasPercent ? `${displayValue}%` : displayValue;
+        }, stepDuration);
+    }
+
+    /**
+     * إضافة مؤشرات التقدم للبطاقات
+     */
+    function addProgressIndicators() {
+        const kpiCards = document.querySelectorAll('.kpi-card');
+
+        kpiCards.forEach(card => {
+            // إضافة شريط تقدم في الأسفل
+            const progressBar = document.createElement('div');
+            progressBar.style.position = 'absolute';
+            progressBar.style.bottom = '0';
+            progressBar.style.left = '0';
+            progressBar.style.height = '3px';
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)';
+            progressBar.style.transition = 'width 1s ease-out';
+            progressBar.style.borderRadius = '0 0 24px 24px';
+
+            card.appendChild(progressBar);
+
+            // تحريك شريط التقدم عند الظهور
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            progressBar.style.width = '100%';
+                        }, 300);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            observer.observe(card);
+        });
+    }
+
+    /**
+     * إضافة تأثيرات صوتية عند التمرير (اختياري)
+     */
+    function addHoverSoundEffects(dashboardRoot) {
+        // يمكن إضافة أصوات خفيفة عند التفاعل مع البطاقات
+        // هذه الميزة اختيارية ويمكن تفعيلها حسب الحاجة
+
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
+
+        kpiCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                // يمكن إضافة صوت خفيف هنا
+                // playSound('hover.mp3');
+            });
+        });
+    }
+
+    /**
+     * إضافة تأثير القلب للبطاقات عند النقر المزدوج
+     */
+    function addCardFlipEffect(dashboardRoot) {
+        const kpiCards = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card');
+
+        kpiCards.forEach(card => {
+            card.addEventListener('dblclick', function () {
+                this.style.transform = 'rotateY(180deg)';
+
+                setTimeout(() => {
+                    this.style.transform = 'rotateY(0deg)';
+                }, 600);
+            });
+        });
+    }
+
+    /**
+     * إضافة تأثير التوهج للعناصر المهمة
+     * لا يُطبَّق على كروت التقارير والإحصائيات أو مؤشرات السلامة (منع وميض).
+     */
+    function addGlowEffect(dashboardRoot) {
+        const importantElements = dashboardRoot.querySelectorAll('.kpi-grid > .kpi-card.kpi-danger, .kpi-grid > .kpi-card.kpi-warning');
+        const noGlowContainers = dashboardRoot.querySelectorAll('.reports-statistics-section, .safety-metrics-section');
+
+        importantElements.forEach(element => {
+            const insideNoGlow = Array.from(noGlowContainers).some(container => container.contains(element));
+            const isTopKpiGridCard = element.parentElement && element.parentElement.classList.contains('kpi-grid');
+            if (insideNoGlow || isTopKpiGridCard) return;
+            element.classList.add('hse-pulse-glow');
+        });
+    }
+
+    /**
+     * إضافة مؤشر التحميل للبطاقات
+     */
+    function addLoadingIndicators() {
+        const cards = document.querySelectorAll('.kpi-card, .content-card');
+
+        cards.forEach(card => {
+            // إضافة skeleton loader
+            const skeleton = document.createElement('div');
+            skeleton.className = 'skeleton-loader';
+            skeleton.style.cssText = `
                 position: absolute;
                 top: 0;
                 left: 0;
@@ -20,7 +333,28 @@
                 animation: shimmer 1.5s infinite;
                 border-radius: inherit;
                 z-index: 10;
-            `,o.style.position="relative",o.appendChild(t),setTimeout(()=>{t.style.opacity="0",setTimeout(()=>t.remove(),300)},1e3)})}function v(){const e=document.getElementById("dashboard-section");if(!e)return;const o=document.createElement("div");o.style.cssText=`
+            `;
+
+            card.style.position = 'relative';
+            card.appendChild(skeleton);
+
+            // إزالة skeleton بعد التحميل
+            setTimeout(() => {
+                skeleton.style.opacity = '0';
+                setTimeout(() => skeleton.remove(), 300);
+            }, 1000);
+        });
+    }
+
+    /**
+     * إضافة تأثيرات الجسيمات في الخلفية
+     */
+    function addParticleEffect() {
+        const dashboardSection = document.getElementById('dashboard-section');
+        if (!dashboardSection) return;
+
+        const particlesContainer = document.createElement('div');
+        particlesContainer.style.cssText = `
             position: absolute;
             top: 0;
             left: 0;
@@ -29,17 +363,32 @@
             overflow: hidden;
             pointer-events: none;
             z-index: 0;
-        `;for(let t=0;t<20;t++){const s=document.createElement("div");s.style.cssText=`
+        `;
+
+        // إنشاء جسيمات متحركة
+        for (let i = 0; i < 20; i++) {
+            const particle = document.createElement('div');
+            particle.style.cssText = `
                 position: absolute;
-                width: ${Math.random()*10+5}px;
-                height: ${Math.random()*10+5}px;
+                width: ${Math.random() * 10 + 5}px;
+                height: ${Math.random() * 10 + 5}px;
                 background: radial-gradient(circle, rgba(102, 126, 234, 0.3) 0%, transparent 70%);
                 border-radius: 50%;
-                left: ${Math.random()*100}%;
-                top: ${Math.random()*100}%;
-                animation: float ${Math.random()*10+10}s ease-in-out infinite;
-                animation-delay: ${Math.random()*5}s;
-            `,o.appendChild(s)}if(e.insertBefore(o,e.firstChild),!document.getElementById("particle-animation-style")){const t=document.createElement("style");t.id="particle-animation-style",t.textContent=`
+                left: ${Math.random() * 100}%;
+                top: ${Math.random() * 100}%;
+                animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+                animation-delay: ${Math.random() * 5}s;
+            `;
+            particlesContainer.appendChild(particle);
+        }
+
+        dashboardSection.insertBefore(particlesContainer, dashboardSection.firstChild);
+
+        // إضافة animation للجسيمات
+        if (!document.getElementById('particle-animation-style')) {
+            const style = document.createElement('style');
+            style.id = 'particle-animation-style';
+            style.textContent = `
                 @keyframes float {
                     0%, 100% {
                         transform: translate(0, 0);
@@ -54,10 +403,91 @@
                         transform: translate(20px, 20px);
                     }
                 }
-            `,document.head.appendChild(t)}}function q(){document.querySelectorAll(".kpi-card").forEach(o=>{const t=o.querySelector(".kpi-icon");if(!t)return;const s=document.createElementNS("http://www.w3.org/2000/svg","svg");s.setAttribute("width","100"),s.setAttribute("height","100"),s.style.cssText=`
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
+     * إضافة مؤشر التقدم الدائري
+     */
+    function addCircularProgress() {
+        const kpiCards = document.querySelectorAll('.kpi-card');
+
+        kpiCards.forEach(card => {
+            const icon = card.querySelector('.kpi-icon');
+            if (!icon) return;
+
+            // إنشاء SVG للتقدم الدائري
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.setAttribute('width', '100');
+            svg.setAttribute('height', '100');
+            svg.style.cssText = `
                 position: absolute;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%) rotate(-90deg);
                 pointer-events: none;
-            `;const n=document.createElementNS("http://www.w3.org/2000/svg","circle");n.setAttribute("cx","50"),n.setAttribute("cy","50"),n.setAttribute("r","45"),n.setAttribute("fill","none"),n.setAttribute("stroke","rgba(255, 255, 255, 0.3)"),n.setAttribute("stroke-width","3"),n.setAttribute("stroke-dasharray","283"),n.setAttribute("stroke-dashoffset","283"),n.style.transition="stroke-dashoffset 2s ease-out",s.appendChild(n),t.style.position="relative",t.appendChild(s),new IntersectionObserver(a=>{a.forEach(l=>{l.isIntersecting&&setTimeout(()=>{n.setAttribute("stroke-dashoffset","0")},500)})},{threshold:.5}).observe(o)})}function x(){i&&(clearInterval(i),i=null)}function C(){i&&(clearInterval(i),i=null),u("\u2705 \u062A\u0645 \u062A\u0646\u0638\u064A\u0641 \u0645\u0648\u0627\u0631\u062F Dashboard enhancements")}typeof window<"u"&&(window.cleanupDashboardEnhancements=C),setTimeout(()=>{v(),x()},1e3),u("\u2728 Dashboard enhancements loaded successfully!")})();
+            `;
+
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', '50');
+            circle.setAttribute('cy', '50');
+            circle.setAttribute('r', '45');
+            circle.setAttribute('fill', 'none');
+            circle.setAttribute('stroke', 'rgba(255, 255, 255, 0.3)');
+            circle.setAttribute('stroke-width', '3');
+            circle.setAttribute('stroke-dasharray', '283');
+            circle.setAttribute('stroke-dashoffset', '283');
+            circle.style.transition = 'stroke-dashoffset 2s ease-out';
+
+            svg.appendChild(circle);
+            icon.style.position = 'relative';
+            icon.appendChild(svg);
+
+            // تحريك التقدم
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            circle.setAttribute('stroke-dashoffset', '0');
+                        }, 500);
+                    }
+                });
+            }, { threshold: 0.5 });
+
+            observer.observe(card);
+        });
+    }
+
+    function updateRealTimeData() {
+        if (realtimeDataInterval) {
+            clearInterval(realtimeDataInterval);
+            realtimeDataInterval = null;
+        }
+    }
+
+    /**
+     * تنظيف جميع الموارد
+     */
+    function cleanupDashboardEnhancements() {
+        if (realtimeDataInterval) {
+            clearInterval(realtimeDataInterval);
+            realtimeDataInterval = null;
+        }
+        log('✅ تم تنظيف موارد Dashboard enhancements');
+    }
+
+    // تصدير دالة التنظيف للاستخدام الخارجي
+    if (typeof window !== 'undefined') {
+        window.cleanupDashboardEnhancements = cleanupDashboardEnhancements;
+    }
+
+    // تفعيل التحسينات الإضافية (خلفية فقط — بدون دوائر/شرائط تقدم فوق أرقام KPI)
+    setTimeout(() => {
+        addParticleEffect();
+        updateRealTimeData();
+    }, 1000);
+
+    log('✨ Dashboard enhancements loaded successfully!');
+})();

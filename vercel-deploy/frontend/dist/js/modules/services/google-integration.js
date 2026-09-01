@@ -1,92 +1,4574 @@
-const GoogleIntegration={_syncInProgress:{users:!1,global:!1,lastSyncStart:null,lastSyncEnd:null},sanitizeGasErrorText(e,t){const s=t||"\u062A\u0639\u0630\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0627\u062F\u0645. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.",r=String(e||"").replace(/^\uFEFF/,"").trim();return r?r.charAt(0)==="<"||/<!DOCTYPE/i.test(r)||/<html[\s>]/i.test(r)||/web word processing/i.test(r)||/accounts\.google\.com/i.test(r)||/<meta\s/i.test(r)?"\u0627\u0644\u062E\u0627\u062F\u0645 \u0623\u0639\u0627\u062F \u0635\u0641\u062D\u0629 HTML \u0628\u062F\u0644 JSON (\u0646\u0634\u0631 Web App \u0623\u0648 \u0645\u0647\u0644\u0629 Google). \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u062B\u0648\u0627\u0646\u064D.":r.length>280?r.substring(0,280)+"\u2026":r:s},looksLikeGasHtmlResponse(e){const t=String(e||"").replace(/^\uFEFF/,"").trim();return!!t&&(t.charAt(0)==="<"||/<!DOCTYPE/i.test(t)||/<html[\s>]/i.test(t)||/web word processing/i.test(t)||/accounts\.google\.com/i.test(t))},isSyncing(e="users"){const t=e.toLowerCase();return this._syncInProgress[t]===!0},_setSyncState(e,t){const s=e.toLowerCase();this._syncInProgress[s]=t,t?this._syncInProgress.lastSyncStart=Date.now():this._syncInProgress.lastSyncEnd=Date.now()},_isBackendRpcConfigured(){try{const e=AppState&&AppState.googleConfig&&AppState.googleConfig.appsScript;return e&&String(e.scriptUrl||"").trim()?!!(e&&e.enabled):!1}catch{return!1}},ADMIN_ONLY_READ_SHEETS:["Users","UserVersions","AuditLog","SecurityAuditLog","UserActivityLog"],_isCurrentUserEffectiveAdmin_(){try{return!!(AppState.currentUser&&typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser))}catch{return!1}},_filterSheetsForCurrentUser(e){const t=Array.isArray(e)?e.slice():[];return this._isCurrentUserEffectiveAdmin_()?t:t.filter(s=>!this.ADMIN_ONLY_READ_SHEETS.includes(s))},_canReadUsersSheet_(){return this._isCurrentUserEffectiveAdmin_()?!0:typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess("users"):!1},async fetchUsersForApp(e={}){if(!this._isBackendRpcConfigured())return null;try{const t=await this.sendToAppsScript("getUsersForApp",{__timeoutMs:e.timeout||15e3});return t&&t.success&&Array.isArray(t.data)?(AppState.appData.users=t.data,AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.users=Date.now(),AppState.syncMeta.sheets=AppState.syncMeta.sheets||{},AppState.syncMeta.sheets.Users=Date.now(),AppState.currentUser?.email&&(AppState.syncMeta.userEmail=AppState.currentUser.email),typeof DataManager<"u"&&DataManager.save&&DataManager.save(),t.data):null}catch(t){return AppState?.debugMode&&Utils.safeWarn("\u26A0\uFE0F fetchUsersForApp:",t?.message||t),null}},_isExpectedReadError_(e=""){const t=String(e||"").toLowerCase();return t.includes("admin_only")||t.includes("actor_identity_required")||t.includes("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629")||t.includes("direct_sheet_write_blocked")||t.includes("get_read_denied")},_isWriteMutationAction(e){if(!e||typeof e!="string")return!1;const t=e.toLowerCase();return["get","read","fetch","load","list","query","search","find"].some(n=>t.startsWith(n))?!1:["add","update","delete","save","append","remove","submit","create","patch","set","upload","import","initialize","sync","send","move","copy","approve","reject","cancel","revoke","reset"].some(n=>t.startsWith(n))},prepareSheetPayload(e,t){const s=o=>{if(!o||typeof o!="object"||Array.isArray(o))return o;const l=["id","workType","workDescription","location","department","startDate","endDate","responsible","status","approvals","requiredPPE","riskAssessment","riskNotes","approvalCircuitOwnerId","approvalCircuitName","skipApprovalFlow","createdBy","createdById","updatedBy","updatedById","createdAt","updatedAt"],y={};return l.forEach(p=>{Object.prototype.hasOwnProperty.call(o,p)&&(y[p]=o[p])}),y},r=o=>{if(!o||typeof o!="object"||Array.isArray(o))return o;const l={...o},y=(i,f)=>{if(l[i])return;const h=Object.keys(l);for(const E of h){const g=String(E||"").toLowerCase();if(f.includes(g)){l[i]=l[E];break}}};y("createdBy",["createdby"]),y("createdById",["createdbyid"]),y("updatedBy",["updatedby"]),y("updatedById",["updatedbyid"]);const p=["id","sequentialNumber","permitId","openDate","permitType","permitTypeDisplay","requestingParty","locationId","location","sublocationId","sublocation","timeFrom","timeTo","totalTime","authorizedParty","workDescription","supervisor1","supervisor2","status","paperPermitNumber","equipment","tools","toolsList","teamMembersText","hotWorkDetails","hotWorkOther","confinedSpaceDetails","confinedSpaceOther","heightWorkDetails","heightWorkOther","electricalWorkType","coldWorkType","otherWorkType","excavationLength","excavationWidth","excavationDepth","soilType","preStartChecklist","lotoApplied","governmentPermits","riskAssessmentAttached","gasTesting","mocRequest","ppeNotes","requiredPPE","riskLikelihood","riskConsequence","riskScore","riskLevel","riskNotes","manualApprovalsText","manualClosureApprovalsText","closureDate","closureReason","isManualEntry","approvalCircuitOwnerId","approvalCircuitName","skipApprovalFlow","createdBy","createdById","updatedBy","updatedById","createdAt","updatedAt"],a={};return p.forEach(i=>{Object.prototype.hasOwnProperty.call(l,i)&&(a[i]=l[i])}),a};if(e==="PTW")return Array.isArray(t)?t.map(o=>s(o)):t&&typeof t=="object"?s(t):t;if(e==="PTWRegistry")return Array.isArray(t)?t.map(o=>r(o)):t&&typeof t=="object"?r(t):t;if(e==="ContractorEvaluationApprovalRequests"){const o=l=>{if(!l||typeof l!="object"||Array.isArray(l))return l;const y=["id","contractorId","contractorName","evaluationData","status","createdBy","createdByName","createdAt","approvedAt","approvedBy","approvedByName","rejectedAt","rejectedBy","rejectedByName","rejectionReason","updatedAt","updatedBy","updatedByName","legacySource","spreadsheetId"],p={};return y.forEach(a=>{Object.prototype.hasOwnProperty.call(l,a)&&(p[a]=l[a])}),p};return Array.isArray(t)?t.map(l=>o(l)):t&&typeof t=="object"?o(t):t}if(e!=="Users")return t;const n=o=>{if(!o||typeof o!="object")return o;const l={...o},y=typeof Utils<"u"&&Utils&&typeof Utils.isSha256Hex=="function",p=l.passwordHash&&l.passwordHash.trim()!=="",a=l.password||"";return p&&y&&Utils.isSha256Hex(l.passwordHash.trim())||!p&&a&&a!=="***"&&y&&Utils.isSha256Hex(a)&&(l.passwordHash=a.trim()),l.password="***",(l.passwordHash&&l.passwordHash.trim()===""||l.passwordHash&&y&&!Utils.isSha256Hex(l.passwordHash.trim()))&&delete l.passwordHash,l};return Array.isArray(t)?t.map(o=>n(o)):t&&typeof t=="object"?n(t):t},async immediateSyncWithRetry(e,t,s=3){if(!this._isBackendRpcConfigured())throw new Error("\u062E\u0627\u062F\u0645 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0644");let r=null;for(let n=1;n<=s;n++){try{Utils.safeLog(`\u{1F504} \u0645\u062D\u0627\u0648\u0644\u0629 ${n}/${s} \u0644\u0644\u0640 ${e}...`);const o=await this.sendToAppsScript(e,t);if(o&&o.success)return Utils.safeLog(`\u2705 \u062A\u0645 \u0628\u0646\u062C\u0627\u062D ${e} \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 ${n}`),o;if(r=new Error(o?.message||"\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629"),Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 ${e} \u0641\u064A \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 ${n}: ${o?.message}`),o?.message&&o.message.includes("invalid"))return o}catch(o){r=o,Utils.safeWarn(`\u274C \u062E\u0637\u0623 \u0641\u064A ${e} (\u0645\u062D\u0627\u0648\u0644\u0629 ${n}/${s}):`,o.message)}if(n<s){const o=500*n;await new Promise(l=>setTimeout(l,o))}}throw r||new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0639\u062F \u0627\u0633\u062A\u0646\u0641\u0627\u0630 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A")},_resolveScriptUrl(){if(typeof getEffectiveApiUrl=="function"){const t=getEffectiveApiUrl();if(t)return t}if(typeof window.LIVE_BACKEND_URL<"u"&&window.LIVE_BACKEND_URL)return window.LIVE_BACKEND_URL;let e=String(AppState?.googleConfig?.appsScript?.scriptUrl||"").trim();if(typeof Utils<"u"&&typeof Utils.getAppsScriptScriptUrl=="function"){const t=String(Utils.getAppsScriptScriptUrl()||"").trim();t&&(e=t)}else e&&e.indexOf("script.google.com/macros/s/")!==-1&&(e=e.replace(/\/dev(\?|#|$)/,"/exec$1"));return e},isValidGoogleAppsScriptUrl(e){try{if(!e||typeof e!="string")return!1;const t=e.trim();if(t.startsWith("/")||t.startsWith("./"))return!0;const s=typeof window<"u"&&window.location&&window.location.origin?window.location.origin:"http://localhost",r=new URL(t,s),n=r.hostname.toLowerCase(),o=r.pathname||"";return n==="script.google.com"||n.endsWith(".script.google.com")||n.includes("googleusercontent.com")?o.endsWith("/exec"):!!(n.includes("safety-icapp.com")||n.endsWith(".trycloudflare.com")||n.includes("vercel.app")||n==="localhost"||n==="127.0.0.1"||n==="")}catch{return!1}},getOrCreateCSRFToken(){let e=sessionStorage.getItem("csrf_token");if(!e){const t=new Uint8Array(32);crypto.getRandomValues(t),e=Array.from(t).map(s=>s.toString(16).padStart(2,"0")).join(""),sessionStorage.setItem("csrf_token",e)}return e},getOrCreateClientSessionId(){let e=sessionStorage.getItem("client_session_id");if(!e){const t=Math.random().toString(36).slice(2,10);e=`sid_${Date.now().toString(36)}_${t}`,sessionStorage.setItem("client_session_id",e)}return e},_requestQueue:[],_isProcessingQueue:!1,_queueWorkers:0,_maxQueueWorkers:3,_lastRequestTime:null,_minQueueDelayMs:40,_authRpcActions:["login","verifyMfaLogin","confirmMfaEnrollment","startMfaEnrollment","disableMfa","changePassword"],_isAuthRpcAction(e){return typeof e=="string"&&this._authRpcActions.includes(e)},_isClinicAttendanceRpcAction(e){return e==="recordClinicStaffLogin"||e==="recordClinicStaffLogout"},_shouldBypassRequestQueue(e){return this._isAuthRpcAction(e)||this._isClinicAttendanceRpcAction(e)||e==="warmup"||this._isCriticalUserMutation(e)},_isCriticalUserMutation(e){return new Set(["deleteIncident","deleteObservation","deleteNearMiss","deletePTW","deleteEmployee","saveFormSettings","getFormSettings","getCompanySettings","saveCompanySettings"]).has(e)},_circuitBreaker:{isOpen:!1,failureCount:0,lastFailureTime:null,openUntil:null,successCount:0},_activeRequests:new Map,_rateLimiter:{requests:[],maxRequests:100,windowMs:6e4,blockDuration:3e5},_cache:{data:new Map,timestamps:new Map,defaultTTL:3e5,maxSize:100},_getCachedData(e){const t=this._cache.data.get(e),s=this._cache.timestamps.get(e);if(!t||!s)return null;const n=Date.now()-s,o=this._cache.defaultTTL;return n>o?(this._cache.data.delete(e),this._cache.timestamps.delete(e),null):t},_setCachedData(e,t,s=null){if(this._cache.data.size>=this._cache.maxSize){const r=this._cache.timestamps.entries().sort((n,o)=>n[1]-o[1])[0]?.[0];r&&(this._cache.data.delete(r),this._cache.timestamps.delete(r))}this._cache.data.set(e,t),this._cache.timestamps.set(e,Date.now())},clearCache(e=null){if(!e){this._cache.data.clear(),this._cache.timestamps.clear();return}for(const t of this._cache.data.keys())t.includes(e)&&(this._cache.data.delete(t),this._cache.timestamps.delete(t))},invalidateReadFromSheetCacheForSheets(e){const t=Array.isArray(e)?e:[e],s=this._getCurrentUserPermissions(),r=AppState?.currentUser?.id;t.forEach(n=>{if(!n)return;const o={sheetName:String(n)};try{const l=`readFromSheet_${JSON.stringify(o)}`;this._cache.data.delete(l),this._cache.timestamps.delete(l)}catch{}if(typeof SmartCache<"u"&&SmartCache.getCacheKey)try{const l=SmartCache.getCacheKey("readFromSheet",o,r,s);localStorage.removeItem(`hse_smart_cache_${l}`)}catch{}this.clearCache(String(n))})},_checkRateLimit(){const e=Date.now(),t=e-this._rateLimiter.windowMs;if(this._rateLimiter.requests=this._rateLimiter.requests.filter(s=>s>t),this._rateLimiter.requests.length>=this._rateLimiter.maxRequests){const s=this._rateLimiter.requests[0],r=this._rateLimiter.windowMs-(e-s);throw new Error(`\u062A\u0645 \u062A\u062C\u0627\u0648\u0632 \u062D\u062F \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0645\u0633\u0645\u0648\u062D \u0628\u0647\u0627. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${Math.ceil(r/1e3)} \u062B\u0627\u0646\u064A\u0629.`)}this._rateLimiter.requests.push(e)},_openCircuitBreaker(){this._circuitBreaker.isOpen=!0,this._circuitBreaker.openUntil=Date.now()+3e4,Utils.safeWarn("\u26A0\uFE0F Circuit Breaker \u0645\u0641\u062A\u0648\u062D - \u062A\u0645 \u062A\u0639\u0637\u064A\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0624\u0642\u062A\u0627\u064B \u0628\u0633\u0628\u0628 \u0641\u0634\u0644 \u0645\u062A\u0643\u0631\u0631")},_closeCircuitBreaker(){this._circuitBreaker.isOpen&&(this._circuitBreaker.isOpen=!1,this._circuitBreaker.failureCount=0,this._circuitBreaker.openUntil=null,Utils.safeLog("\u2705 \u062A\u0645 \u0625\u063A\u0644\u0627\u0642 Circuit Breaker - \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u062A\u0627\u062D \u0645\u0631\u0629 \u0623\u062E\u0631\u0649"))},resetCircuitBreaker(){this._closeCircuitBreaker(),this._circuitBreaker.successCount=0,this._circuitBreaker.lastFailureTime=null},_checkCircuitBreaker(){if(this._circuitBreaker.isOpen)if(this._circuitBreaker.openUntil&&Date.now()<this._circuitBreaker.openUntil){const e=Math.ceil((this._circuitBreaker.openUntil-Date.now())/1e3);throw new Error(`Circuit Breaker \u0645\u0641\u062A\u0648\u062D - \u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${e} \u062B\u0627\u0646\u064A\u0629`)}else this._closeCircuitBreaker()},_recordSuccess(){this._circuitBreaker.successCount++,this._circuitBreaker.successCount>=3&&(this._closeCircuitBreaker(),this._circuitBreaker.successCount=0),this._circuitBreaker.failureCount=0},_recordFailure(){this._circuitBreaker.failureCount++,this._circuitBreaker.lastFailureTime=Date.now(),this._circuitBreaker.successCount=0,this._circuitBreaker.failureCount>=5&&this._openCircuitBreaker()},_getRequestKey(e,t){const s=JSON.stringify(t||{});return`${e}_${s}`},async _processRequestQueue(){if(this._requestQueue.length!==0&&!(this._queueWorkers>=this._maxQueueWorkers)){this._isProcessingQueue=!0,this._queueWorkers+=1;try{for(;this._requestQueue.length>0;){const e=this._requestQueue.shift(),t=this._getRequestKey(e.action,e.data);try{if(this._checkCircuitBreaker(),this._lastRequestTime){const r=Date.now()-this._lastRequestTime,n=this._minQueueDelayMs;r<n&&await new Promise(o=>setTimeout(o,n-r))}this._lastRequestTime=Date.now();const s=await this._executeRequest(e.action,e.data,e.retryCount||0);this._recordSuccess(),e.pendingPromises&&e.pendingPromises.forEach(({resolve:r})=>r(s))}catch(s){const r=(s?.message||s?.toString()||String(s)||"").toLowerCase(),n=r.includes("circuit breaker"),o=r.includes("google apps script \u063A\u064A\u0631")||r.includes("\u063A\u064A\u0631 \u0645\u0641\u0639\u0644")||r.includes("url \u063A\u064A\u0631")||r.includes("scripturl")||r.includes("spreadsheet")||r.includes("\u0645\u0639\u0631\u0641 google sheets"),l=r.includes("failed to fetch")||r.includes("networkerror")||r.includes("network request failed")||r.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629")||r.includes("timeout")||r.includes("timed out")||r.includes("aborterror")||r.includes("aborted")||r.includes("\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 google apps script \u0628\u0633\u0628\u0628 cors")||r.includes("cors")||r.includes("\u0627\u0632\u062F\u062D\u0627\u0645")||r.includes("too many concurrent")||r.includes("service invoked too many times")||r.includes("server error")||r.includes("limit exceeded")||r.includes("rate limit")||r.includes("html \u0628\u062F\u0644 json")||r.includes("\u062A\u0639\u0630\u0651\u0631 \u062A\u0633\u0644\u064A\u0645")||r.includes("doget")||r.includes("\u0646\u0634\u0631 web app"),y=r.includes("csrf")||r.includes("actor_identity")||r.includes("actor_not_registered")||r.includes("actor_inactive")||r.includes("admin_only")||r.includes("permission_denied")||r.includes("strict_admin_denied")||r.includes("\u0631\u0641\u0636 \u0623\u0645\u0646\u064A")||r.includes("\u063A\u064A\u0631 \u0645\u0633\u062C\u0644")||r.includes("\u0631\u0641\u0636 \u0642\u0631\u0627\u0621\u0629")||r.includes("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")||r.includes("action_not_recognized")||r.includes("\u0635\u0644\u0627\u062D\u064A\u0629"),p=s&&s.isAppError===!0,a=s&&(s.errorCode==="ACTION_NOT_RECOGNIZED"||s.errorCode==="INTERNAL_SERVER_ERROR"||s.errorCode==="PERMISSION_DENIED"||s.errorCode==="DUPLICATE_ENTRY");!p&&!a&&!n&&!o&&!l&&!y&&(Utils.safeError("\u274C \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0627\u0644\u062C \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 Google - \u0647\u0630\u0627 \u0627\u0644\u0633\u0628\u0628 \u0627\u0644\u062D\u0642\u064A\u0642\u064A \u0644\u0641\u062A\u062D Circuit Breaker:",s),this._recordFailure()),e.pendingPromises&&e.pendingPromises.forEach(({reject:i})=>i(s))}finally{this._activeRequests.delete(t)}}}finally{this._queueWorkers=Math.max(0,this._queueWorkers-1),this._isProcessingQueue=this._queueWorkers>0,this._requestQueue.length>0&&this._processRequestQueue().catch(e=>{Utils.safeError("\u0641\u0634\u0644 \u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u0639\u0627\u0644\u062C\u0629 \u0637\u0627\u0628\u0648\u0631 \u0627\u0644\u0637\u0644\u0628\u0627\u062A:",e)})}}},async _addToQueue(e,t,s=0){return new Promise((r,n)=>{const o=this._getRequestKey(e,t),l=this._requestQueue.find(f=>this._getRequestKey(f.action,f.data)===o);if(l){l.pendingPromises.push({resolve:r,reject:n});return}if(this._activeRequests.has(o)){const f=this._activeRequests.get(o);if(f&&f.pendingPromises){f.pendingPromises.push({resolve:r,reject:n});return}}const y={action:e,data:t,retryCount:s,pendingPromises:[{resolve:r,reject:n}],timestamp:Date.now()},p=this._isAuthRpcAction(e),a=this._shouldBypassRequestQueue(e),i=!!(p||a||t&&typeof t=="object"&&t.__highPriority===!0);if(a){this._activeRequests.set(o,y),(async()=>{try{const f=await this._executeRequest(e,t,s||0);this._recordSuccess(),y.pendingPromises.forEach(({resolve:h})=>h(f))}catch(f){y.pendingPromises.forEach(({reject:h})=>h(f))}finally{this._activeRequests.delete(o)}})();return}i?this._requestQueue.unshift(y):this._requestQueue.push(y),this._activeRequests.set(o,y),this._processRequestQueue().catch(f=>{Utils.safeError("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL:",f)}),this._queueWorkers<this._maxQueueWorkers&&this._processRequestQueue().catch(f=>{Utils.safeError("\u0641\u0634\u0644 \u062A\u0634\u063A\u064A\u0644 \u0639\u0627\u0645\u0644 \u0625\u0636\u0627\u0641\u064A \u0644\u0637\u0627\u0628\u0648\u0631 \u0627\u0644\u0637\u0644\u0628\u0627\u062A:",f)})})},_emitAuthRetryProgress_(e,t,s){try{window.dispatchEvent(new CustomEvent("authRetryProgress",{detail:{action:e,attempt:t,max:s}}))}catch{}},async _executeRequest(e,t,s=0,r=0,n=0){if(!this._isBackendRpcConfigured())return Promise.reject(new Error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u062A\u0647\u064A\u0623 \u0623\u0648 \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"));const o=this._resolveScriptUrl();if(!this.isValidGoogleAppsScriptUrl(o))throw new Error("\u0631\u0627\u0628\u0637 Web App \u063A\u064A\u0631 \u0635\u0627\u0644\u062D. \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0631\u0627\u0628\u0637 \u062E\u0627\u062F\u0645 SQL \u0645\u0646 \u0627\u0644\u0646\u0648\u0639 https://script.google.com/macros/s/.../exec");const p=["login","verifyMfaLogin","confirmMfaEnrollment","startMfaEnrollment","disableMfa","changePassword"].includes(e)?n||Date.now()+75e3:0,a=()=>!p||p-Date.now()>5e3;try{this._checkRateLimit();const i=this.getOrCreateCSRFToken(),f=this.getOrCreateClientSessionId(),h=t&&typeof t=="object"?{...t}:t,g=["login","verifyMfaLogin","confirmMfaEnrollment","startMfaEnrollment","disableMfa","changePassword"].includes(e)||!!(h&&typeof h=="object"&&h.__allowStructuredFailure===!0);h&&typeof h=="object"&&"__timeoutMs"in h&&delete h.__timeoutMs,h&&typeof h=="object"&&"__highPriority"in h&&delete h.__highPriority,h&&typeof h=="object"&&"__allowStructuredFailure"in h&&delete h.__allowStructuredFailure,h&&typeof h=="object"&&"__silent"in h&&delete h.__silent;let M=null,$="";h&&typeof h=="object"&&h.__actorUserData&&(M=h.__actorUserData,delete h.__actorUserData),h&&typeof h=="object"&&"__sessionToken"in h&&($=String(h.__sessionToken||""),delete h.__sessionToken);const _={action:e,data:h,csrfToken:i,clientSessionId:f,timestamp:new Date().toISOString()};try{const d=sessionStorage.getItem("hse_server_session_token")||localStorage.getItem("hse_server_session_token")||typeof AppState<"u"&&AppState.currentUser&&AppState.currentUser.serverSessionToken||$;d&&(_.sessionToken=d)}catch{$&&(_.sessionToken=$)}if(typeof AppState<"u"&&AppState.currentUser){const d=AppState.currentUser,D={email:String(d.email||"").trim(),id:d.id!=null&&d.id!==""?String(d.id).trim():"",name:String(d.name||"").trim(),role:String(d.role||"").trim()};if(typeof Permissions<"u"&&typeof Permissions.getEffectivePermissions=="function")try{const S=Permissions.getEffectivePermissions(d);S&&typeof S=="object"&&(D.permissions=S)}catch{}else d.permissions&&(D.permissions=d.permissions);_.userData=D}else M&&(M.email||M.id)&&(_.userData={email:String(M.email||"").trim(),id:M.id!=null?String(M.id).trim():"",name:String(M.name||"").trim(),role:String(M.role||"").trim()});let u=AppState.googleConfig.sheets?.spreadsheetId;t&&typeof t=="object"&&t.spreadsheetId&&(u=t.spreadsheetId),u&&u.trim()!==""&&u!=="YOUR_SPREADSHEET_ID_HERE"?(_.spreadsheetId=u.trim(),_._spreadsheetId=u.trim()):e!=="initializeSheets"&&(["saveToSheet","appendToSheet","readFromSheet"].includes(e)||e.startsWith("add")||e.startsWith("save")||e.startsWith("update")?Utils.safeWarn("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 getSpreadsheetId"):Utils.safeWarn("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 spreadsheetId"));const T=["readFromSheet","saveToSheet","appendToSheet","getAllData","syncData","initializeSheets","getClinicData","getFireEquipmentData","getPPEData","getPeriodicInspectionsData","getViolationsData","getActionTrackingData","getBehaviorMonitoringData","saveOrUpdate","getAll","import","getAllClinicVisits","getAllEmployees","getUserVersionsDashboard","getAllUserVersions","getUserVersionStats","saveFormSettings","getFormSettings","deleteSite","deletePlace","initFormSettingsTables","exportDailyObservationsPptReport","createDefaultDailyObservationsPptTemplate","exportPpt","updateClinicStaffAttendance"],w=["getData","readData","loadData","fetchData","add","update"],R=["login","verifyMfaLogin","confirmMfaEnrollment","startMfaEnrollment","disableMfa","changePassword"],C=typeof e=="string"&&R.includes(e),I=typeof e=="string"&&e.indexOf("delete")===0,k=T.some(d=>e===d?!0:d==="getAll"?e==="getAll"||e==="getAllData":e.includes(d)),c=w.some(d=>e.includes(d)||e===d)||I;let m=Number(t?.__timeoutMs)>0?Number(t.__timeoutMs):e==="saveFormSettings"?12e4:C||k?9e4:c?45e3:15e3;p&&(m=Math.min(m,Math.max(8e3,p-Date.now())));const v=new AbortController,A=setTimeout(()=>{v.signal.aborted||v.abort()},m);let U;try{U=await fetch(o,{method:"POST",mode:"cors",credentials:"omit",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(_),signal:v.signal}).catch(D=>{throw D.name==="AbortError"?new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 AbortError"):D.message&&(D.message.includes("runtime.lastError")||D.message.includes("message port closed")||D.message.includes("Receiving end does not exist")||D.message.includes("Could not establish connection")||D.message.includes("Extension context invalidated"))?new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 Chrome Extensions"):D}),A&&clearTimeout(A)}catch(d){A&&clearTimeout(A);const D=d.message||d.toString()||"",S=D.toLowerCase();if(S.includes("err_cert_authority_invalid")||S.includes("cert_authority_invalid")||S.includes("certificate")||S.includes("cert authority")||S.includes("ssl")||S.includes("tls")||S.includes("net::err_cert")||d.name&&d.name.toLowerCase().includes("certificate")||d.code&&(d.code==="CERT_AUTHORITY_INVALID"||d.code==="ERR_CERT_AUTHORITY_INVALID")){const F=new Date().toLocaleTimeString("ar-EG");throw new Error(`\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0634\u0647\u0627\u062F\u0629 \u0627\u0644\u0623\u0645\u0627\u0646 (SSL/TLS)!
-\u0627\u0644\u0648\u0642\u062A: ${F}
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645
-2. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062C\u062F\u0627\u0631 \u0627\u0644\u062D\u0645\u0627\u064A\u0629 \u0648\u0645\u0636\u0627\u062F \u0627\u0644\u0641\u064A\u0631\u0648\u0633\u0627\u062A
-3. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0645\u062A\u0635\u0641\u062D (\u0642\u062F \u062A\u062D\u062A\u0627\u062C \u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0645\u062A\u0635\u0641\u062D)
-4. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A (\u0642\u062F \u062A\u0643\u0648\u0646 \u0647\u0646\u0627\u0643 \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0634\u0628\u0643\u0629)`)}if(d.name==="AbortError"||S.includes("aborterror")||S.includes("aborted")||S.includes("timeout")||S.includes("timed out")||S.includes("err_connection_timed_out")||S.includes("connection_timed_out")){if(R.includes(e)||e==="login"){const B=Math.round(m/1e3);throw new Error(`\u26A0\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 (${B} \u062B\u0627\u0646\u064A\u0629).
-\u0644\u0627 \u062A\u064F\u0639\u062F \u0625\u062F\u062E\u0627\u0644 \u0646\u0641\u0633 \u0631\u0645\u0632 MFA \u0641\u0648\u0631\u0627\u064B.
-\u0627\u0646\u062A\u0638\u0631 30 \u062B\u0627\u0646\u064A\u0629\u060C \u062B\u0645 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0646 \u062C\u062F\u064A\u062F \u0648\u0627\u0637\u0644\u0628 \u0631\u0645\u0632\u0627\u064B \u062C\u062F\u064A\u062F\u0627\u064B.`)}const N=e==="saveToSheet"||e==="appendToSheet"||e.startsWith("save")||e.startsWith("update")||e.startsWith("add")||I,Q=e==="appendToSheet";let H=N&&!Q?2:1;if(k&&N&&!Q&&(H=3),s<H&&a()){const B=Math.min(Math.pow(2,s+1)*700,3e3);return Utils.safeLog(`\u23F1\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0644\u0644\u062E\u0627\u062F\u0645 (${Math.round(m/1e3)}s). \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${B/1e3} \u062B\u0627\u0646\u064A\u0629 (\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 ${s+1}/${H})`),await new Promise(z=>setTimeout(z,B)),this._executeRequest(e,t,s+1,r,p)}const j=new Date().toLocaleString("ar-SA"),V=Math.round(m/1e3);throw new Error(`\u26A0\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u062E\u0627\u062F\u0645 SQL (${V} \u062B\u0627\u0646\u064A\u0629).
-\u0627\u0644\u0639\u0645\u0644\u064A\u0629: ${e}
-\u0627\u0644\u0648\u0642\u062A: ${j}
+/**
+ * طبقة الاتصال بـ خادم SQL (Web App) كخلفية للمزامنة مع قاعدة SQL.
+ */
 
-\u062C\u0631\u0651\u0628:
-1. \u0627\u0644\u0636\u063A\u0637 \u0639\u0644\u0649 \xAB\u062A\u062D\u062F\u064A\u062B\xBB \u0628\u0639\u062F 30 \u062B\u0627\u0646\u064A\u0629
-2. \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0646\u0634\u0631 \u0627\u0644\u0633\u0643\u0631\u0628\u062A \u0628\u0631\u0627\u0628\u0637 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec
-3. \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0633\u0631\u0639\u0629 \u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0623\u0648 \u0625\u0639\u0627\u062F\u0629 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629`)}if(d.name==="TypeError"&&S.includes("failed to fetch")||d.name==="NetworkError"||S.includes("network request failed")||S.includes("networkerror")&&(S.includes("fetch")||S.includes("resource"))||S.includes("err_failed")&&(S.includes("script.google.com")||S.includes("google.com/macros"))){const F=new Date().toLocaleTimeString("ar-EG");throw new Error(`\u26A0\uFE0F \u062A\u0639\u0630\u0651\u0631 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u062E\u0627\u062F\u0645 SQL.
-\u0627\u0644\u0648\u0642\u062A: ${F}
-\u0627\u0644\u0639\u0645\u0644\u064A\u0629: ${e}
+const GoogleIntegration = {
+    // المزامنة في التقدم - المستخدمين والآخرين
+    _syncInProgress: {
+        users: false,
+        global: false,
+        lastSyncStart: null,
+        lastSyncEnd: null
+    },
 
-\u0642\u062F \u064A\u0643\u0648\u0646 \u0627\u0644\u0633\u0628\u0628 \u0628\u0637\u0621 \u0627\u0644\u062E\u0627\u062F\u0645 \u0623\u0648 \u0627\u0646\u0642\u0637\u0627\u0639 \u0627\u0644\u0634\u0628\u0643\u0629 \u2014 \u0648\u0644\u064A\u0633 \u0628\u0627\u0644\u0636\u0631\u0648\u0631\u0629 CORS.
-\u064A\u0631\u062C\u0649:
-1. \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0646\u0635\u0641 \u062F\u0642\u064A\u0642\u0629
-2. \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0631\u0627\u0628\u0637 Web App (\u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec)
-3. \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0646\u0634\u0631 \u0627\u0644\u0633\u0643\u0631\u0628\u062A: Execute as: Me / Who has access: Anyone`)}if(S.includes("cors")||S.includes("cross-origin request blocked")||S.includes("access-control-allow-origin")||S.includes("has been blocked by cors policy")||S.includes("no 'access-control-allow-origin' header")||S.includes("same origin policy")||S.includes("same-origin policy")||d.message&&d.message.toLowerCase().includes("cors")||d.message&&d.message.toLowerCase().includes("cross-origin")||d.message&&d.message.includes("Access-Control-Allow-Origin")){const F=new Date().toLocaleTimeString("ar-EG");throw new Error(`\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u062E\u0627\u062F\u0645 SQL \u0628\u0633\u0628\u0628 CORS!
-\u0627\u0644\u0648\u0642\u062A: ${F}
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0646\u0634\u0631 \u062E\u0627\u062F\u0645 SQL \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D:
-   - \u0627\u0641\u062A\u062D \u062E\u0627\u062F\u0645 SQL Editor
-   - \u0627\u0636\u063A\u0637 Deploy > Manage Deployments
-   - \u0627\u0636\u063A\u0637 Edit (\u0623\u064A\u0642\u0648\u0646\u0629 \u0627\u0644\u0642\u0644\u0645) \u0639\u0644\u0649 Deployment \u0627\u0644\u062D\u0627\u0644\u064A
-   - \u062A\u0623\u0643\u062F \u0645\u0646:
-     * Execute as: Me
-     * Who has access: Anyone (\u0645\u0647\u0645 \u062C\u062F\u0627\u064B!)
-   - \u0627\u0636\u063A\u0637 Deploy
-   - \u0627\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062C\u062F\u064A\u062F (\u064A\u062C\u0628 \u0623\u0646 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec)
-2. \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u0631\u0627\u0628\u0637 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0648\u0644\u064A\u0633 /dev
-3. \u0628\u0639\u062F clasp push \u0646\u0641\u0651\u0630 clasp deploy -i <deploymentId> \u0644\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0646\u0634\u0631 \u0627\u0644\u062D\u0627\u0644\u064A
-4. \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 doOptions() \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A Code.gs`)}if(D.includes("ERR_CONNECTION_TIMED_OUT")||D.includes("CONNECTION_TIMED_OUT")||D.includes("timeout")||D.includes("timed out")||d.name==="AbortError"||d.message?.includes("aborted")){if(R.includes(e)||e==="login"){const K=Math.round(m/1e3);throw new Error(`\u26A0\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u0627\u0644\u0645\u0635\u0627\u062F\u0642\u0629 (${K} \u062B\u0627\u0646\u064A\u0629).
-\u0644\u0627 \u062A\u064F\u0639\u062F \u0625\u062F\u062E\u0627\u0644 \u0646\u0641\u0633 \u0631\u0645\u0632 MFA \u0641\u0648\u0631\u0627\u064B.
-\u0627\u0646\u062A\u0638\u0631 30 \u062B\u0627\u0646\u064A\u0629\u060C \u062B\u0645 \u0633\u062C\u0651\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0646 \u062C\u062F\u064A\u062F \u0648\u0627\u0637\u0644\u0628 \u0631\u0645\u0632\u0627\u064B \u062C\u062F\u064A\u062F\u0627\u064B.`)}const N=e==="saveToSheet"||e==="appendToSheet"||e.startsWith("save")||e.startsWith("update")||e.startsWith("add")||I,Q=e==="appendToSheet";let H=N&&!Q?2:1;if(k&&N&&!Q&&(H=3),s<H&&a()){const K=Math.min(Math.pow(2,s+1)*700,3e3);return Utils.safeLog(`\u23F1\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0644\u0644\u062E\u0627\u062F\u0645 (${Math.round(m/1e3)}s). \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${K/1e3} \u062B\u0627\u0646\u064A\u0629 (\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 ${s+1}/${H})`),await new Promise(J=>setTimeout(J,K)),this._executeRequest(e,t,s+1,r,p)}const j=new Date().toLocaleString("ar-SA"),V=Math.round(m/1e3),B=Math.round(V/60),z=k?"\u0639\u0645\u0644\u064A\u0629 \u062B\u0642\u064A\u0644\u0629":c?"\u0639\u0645\u0644\u064A\u0629 \u0645\u062A\u0648\u0633\u0637\u0629":"\u0639\u0645\u0644\u064A\u0629 \u0639\u0627\u062F\u064A\u0629";throw e==="readFromSheet"&&t?.sheetName==="Users"&&s===0?new Error(`\u26A0\uFE0F \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL!
+    /**
+     * تنظيف رسائل خطأ GAS — لا تعرض HTML/DOCTYPE للمستخدم
+     */
+    sanitizeGasErrorText(text, fallback) {
+        const fb = fallback || 'تعذر الاتصال بالخادم. أعد المحاولة.';
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        if (!raw) return fb;
+        const looksHtml = raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+            || /<meta\s/i.test(raw);
+        if (looksHtml) {
+            return 'الخادم أعاد صفحة HTML بدل JSON (نشر Web App أو مهلة Google). أعد المحاولة بعد ثوانٍ.';
+        }
+        if (raw.length > 280) return raw.substring(0, 280) + '…';
+        return raw;
+    },
 
-\u0627\u0644\u062E\u0637\u0623: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644
-\u0627\u0644\u0648\u0642\u062A: ${j}
+    looksLikeGasHtmlResponse(text) {
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        return !!raw && (
+            raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+        );
+    },
 
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u0627\u062F\u0645 SQL
-2. \u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL
-3. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A`):new Error(`\u26A0\uFE0F \u0641\u0642\u062F\u0627\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL!
+    /**
+     * التحقق من المزامنة في التقدم
+     */
+    isSyncing(sheetName = 'users') {
+        const key = sheetName.toLowerCase();
+        return this._syncInProgress[key] === true;
+    },
 
-\u0627\u0644\u062E\u0637\u0623: \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (${V} \u062B\u0627\u0646\u064A\u0629 / ${B} \u062F\u0642\u064A\u0642\u0629)
-\u0646\u0648\u0639 \u0627\u0644\u0639\u0645\u0644\u064A\u0629: ${z}
-\u0627\u0644\u0639\u0645\u0644\u064A\u0629: ${e}
-\u0639\u062F\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A: ${s+1}/${H+1}
-\u0627\u0644\u0648\u0642\u062A: ${j}
+    /**
+     * تعيين حالة المزامنة في التقدم
+     */
+    _setSyncState(sheetName, inProgress) {
+        const key = sheetName.toLowerCase();
+        this._syncInProgress[key] = inProgress;
+        if (inProgress) {
+            this._syncInProgress.lastSyncStart = Date.now();
+        } else {
+            this._syncInProgress.lastSyncEnd = Date.now();
+        }
+    },
 
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u0627\u062F\u0645 SQL:
-   - \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u0633\u0643\u0631\u0628\u062A \u0645\u0646\u0634\u0648\u0631 \u0648\u0645\u0641\u0639\u0651\u0644
-   - \u0627\u0641\u062A\u062D \u062E\u0627\u062F\u0645 SQL Editor
-   - \u0627\u0636\u063A\u0637 Deploy > Manage Deployments
-   - \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 Deployment \u0646\u0634\u0637 \u0648\u064A\u0628\u062F\u0623 \u0628\u0640 /exec
-   - \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 "Who has access" = "Anyone"
-2. \u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL:
-   - \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL \u0635\u062D\u064A\u062D
-   - \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u062C\u062F\u0627\u0648\u0644 \u0645\u0648\u062C\u0648\u062F\u0629 \u0648\u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0648\u0635\u0648\u0644
-3. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A:
-   - \u062A\u062D\u0642\u0642 \u0645\u0646 \u0633\u0631\u0639\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 (\u0642\u062F \u064A\u0643\u0648\u0646 \u0628\u0637\u064A\u0626\u0627\u064B)
-   - \u062A\u062D\u0642\u0642 \u0645\u0646 \u062C\u062F\u0627\u0631 \u0627\u0644\u062D\u0645\u0627\u064A\u0629 \u0623\u0648 VPN
-   - \u062C\u0631\u0628 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+    /**
+     * هل خلفية خادم SQL جاهزة (رابط Web App + تفعيل الاتصال)
+     */
+    _isBackendRpcConfigured() {
+        try {
+            const sc = AppState && AppState.googleConfig && AppState.googleConfig.appsScript;
+            const url = sc && String(sc.scriptUrl || '').trim();
+            if (!url) return false;
+            return !!(sc && sc.enabled);
+        } catch (e) {
+            return false;
+        }
+    },
 
-\u{1F4A1} \u0646\u0635\u064A\u062D\u0629: \u0625\u0630\u0627 \u0627\u0633\u062A\u0645\u0631\u062A \u0627\u0644\u0645\u0634\u0643\u0644\u0629\u060C \u062D\u0627\u0648\u0644 \u062A\u0642\u0644\u064A\u0644 \u062D\u062C\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0631\u0633\u0644\u0629 \u0623\u0648 \u062A\u0642\u0633\u064A\u0645 \u0627\u0644\u0639\u0645\u0644\u064A\u0629 \u0625\u0644\u0649 \u0623\u062C\u0632\u0627\u0621 \u0623\u0635\u063A\u0631.`)}throw d.message&&(d.message.includes("runtime.lastError")||d.message.includes("message port closed")||d.message.includes("Receiving end does not exist")||d.message.includes("Could not establish connection")||d.message.includes("Extension context invalidated"))?new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 Chrome Extensions"):d}if(!U||!U.ok){const d=U?.status||0;if(d===429){if(s<3&&a()){const W=Math.pow(2,s+1)*1e3;return Utils.safeWarn(`429 Too Many Requests - \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${W/1e3}s (${s+1}/3)`),await new Promise(x=>setTimeout(x,W)),this._executeRequest(e,t,s+1,r,p)}throw new Error("\u062A\u062C\u0627\u0648\u0632 \u062D\u062F \u0627\u0644\u0637\u0644\u0628\u0627\u062A (429). \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631 \u062F\u0642\u064A\u0642\u0629 \u062B\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.")}if(d===503||d===502||d===504){if(s<3&&a()){const x=Math.pow(2,s+1)*1e3;return Utils.safeWarn(`\u0627\u0644\u062E\u0627\u062F\u0645 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D (${d}) - \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${x/1e3}s (${s+1}/3)`),await new Promise(G=>setTimeout(G,x)),this._executeRequest(e,t,s+1,r,p)}const W=d===503?"\u0627\u0644\u062E\u062F\u0645\u0629 \u0645\u0624\u0642\u062A\u0627\u064B \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629 (503)":d===502?"\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0628\u0648\u0627\u0628\u0629 (502)":"\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0628\u0648\u0627\u0628\u0629 (504)";throw new Error(`\u26A0\uFE0F ${W}
+    /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
+    ADMIN_ONLY_READ_SHEETS: ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
 
-\u0627\u0644\u062E\u0627\u062F\u0645 \u0644\u0627 \u064A\u0633\u062A\u062C\u064A\u0628 \u062D\u0627\u0644\u064A\u0627\u064B. \u062C\u0631\u0651\u0628:
-1. \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0628\u0639\u062F \u062F\u0642\u064A\u0642\u0629.
-2. \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u062E\u0627\u062F\u0645 SQL \u0645\u0646\u0634\u0648\u0631 \u0648\u0623\u0646 \u0627\u0644\u0631\u0627\u0628\u0637 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec.
-3. \u0625\u0646 \u0643\u0627\u0646 \u0627\u0644\u0633\u0643\u0631\u0628\u062A \u0639\u0644\u0649 Google: \u062A\u062D\u0642\u0642 \u0645\u0646 \u0635\u0641\u062D\u0629 \u062D\u0627\u0644\u0629 \u062E\u062F\u0645\u0627\u062A Google.`)}const D=C?5:3;if(d===404&&r<D&&a()){const b=C?300+r*500:800+r*1200;return Utils.safeWarn(`\u21A9\uFE0F 404 \u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u062A\u062D\u0648\u064A\u0644 (${e}) \u2014 \u0627\u0644\u0637\u0644\u0628 \u0644\u0645 \u064A\u064F\u0646\u0641\u064E\u0651\u0630. \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 (${r+1}/${D}) \u0628\u0639\u062F ${b}ms`),this._emitAuthRetryProgress_(e,r+1,D),await new Promise(W=>setTimeout(W,b)),this._executeRequest(e,t,s,r+1,p)}let S=`HTTP error! status: ${d}`;try{const b=await U.text();if(b&&b.trim()!=="")try{S=JSON.parse(b).message||S}catch{S=this.sanitizeGasErrorText(b,`HTTP error! status: ${d}`)}}catch{}throw new Error(S)}const O=await U.text();if(!O||O.trim()==="")throw new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 resultText");let P,L=!1;try{let d=String(O||"").replace(/^\uFEFF/,"").trim();if(this.looksLikeGasHtmlResponse(d))throw L=!0,new Error(this.sanitizeGasErrorText(d));P=JSON.parse(d)}catch(d){const D=C?5:3;if(L&&r<D&&a()){const b=C?300+r*500:800+r*1200;return Utils.safeWarn(`\u21A9\uFE0F \u0627\u0633\u062A\u062C\u0627\u0628\u0629 HTML \u0644\u0644\u0639\u0645\u0644\u064A\u0629 ${e} \u2014 \u0627\u0644\u0637\u0644\u0628 \u0644\u0645 \u064A\u064F\u0646\u0641\u064E\u0651\u0630. \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 (${r+1}/${D}) \u0628\u0639\u062F ${b}ms`),this._emitAuthRetryProgress_(e,r+1,D),await new Promise(W=>setTimeout(W,b)),this._executeRequest(e,t,s,r+1,p)}if(d&&d.message&&(d.message.includes("HTML \u0628\u062F\u0644 JSON")||d.message.includes("\u0646\u0634\u0631 Web App")))throw d;const S=this.sanitizeGasErrorText(O,"\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645");throw new Error(S.indexOf("HTML")!==-1||S.indexOf("\u0646\u0634\u0631 Web")!==-1?S:`\u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645: ${S}`)}if(!P||typeof P!="object")throw new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 result");if(P.errorCode==="REACHED_DOGET_STATUS"||P.errorCode==="WRONG_URL_ENDPOINT"||P.status==="active"&&P.message&&P.message.includes("running successfully")){const d=C?5:3;if(r<d&&a()){const S=C?300+r*500:800+r*1200;return Utils.safeWarn(`\u21A9\uFE0F \u0631\u062F doGet \u0644\u0644\u0639\u0645\u0644\u064A\u0629 ${e} \u2014 \u0627\u0644\u0637\u0644\u0628 \u0644\u0645 \u064A\u064F\u0646\u0641\u064E\u0651\u0630. \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 (${r+1}/${d}) \u0628\u0639\u062F ${S}ms`),this._emitAuthRetryProgress_(e,r+1,d),await new Promise(b=>setTimeout(b,S)),this._executeRequest(e,t,s,r+1,p)}const D=`\u062A\u0639\u0630\u0651\u0631 \u062A\u0633\u0644\u064A\u0645 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645 (\u062A\u0630\u0628\u0630\u0628 \u0645\u0624\u0642\u062A \u0641\u064A Google).
-\u0644\u0645 \u064A\u064F\u0646\u0641\u064E\u0651\u0630 \u0627\u0644\u0637\u0644\u0628 \u2014 \u0644\u0645 \u062A\u064F\u0633\u062A\u0647\u0644\u0643 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0648\u0644\u0627 \u0631\u0645\u0632 MFA.
-\u0627\u0646\u062A\u0638\u0631 \u062B\u0627\u0646\u064A\u062A\u064A\u0646 \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.`;if(!g)throw new Error(D);return{success:!1,message:D,errorCode:"REACHED_DOGET_STATUS"}}if(P.success===!1){if(g)return P;const d=P.errorCode?String(P.errorCode):"",D=P.message||"\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL";if(D.includes("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 errorMessage")){Utils.safeWarn("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 spreadsheetId");const b=new Error(D);throw b.isAppError=!0,b.errorCode=d,b}const S=new Error(D);throw S.isAppError=!0,S.errorCode=d,S}return P}catch(i){const f=["runtime.lastError","message port closed","Extension context invalidated","Receiving end does not exist","Could not establish connection","The message port closed before a response was received","Unchecked runtime.lastError"],h=i?.message||i?.toString()||"";if(f.some(C=>h.includes(C)))return Promise.reject(new Error("\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 Chrome extensions"));const g=i.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",M=this._isBackendRpcConfigured(),$=e==="getPublicIP"||g.includes("getting public IP")||g.includes("getPublicIP")||g.includes("Server error while getting public IP");if(!($||g.includes("\u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u062D\u062F\u062F")||g.includes("\u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644")||g.includes("\u062E\u0627\u062F\u0645 SQL")||g.includes("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623")||!M&&(g.includes("Failed to fetch")||g.includes("NetworkError")))&&M&&!$){const C=i?.message||i?.toString()||JSON.stringify(i)||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";!C.includes("CORS")&&!C.includes("Cross-Origin Request Blocked")&&!C.includes("Access-Control-Allow-Origin")&&!C.includes("Same Origin Policy")&&Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0637\u0644\u0628 \u0642\u0627\u0639\u062F\u0629 SQL:",C)}const u=g||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";if((u.includes("CSRF_TOKEN_VALIDATION_FAILED")||u.includes("\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 CSRF token")||u.includes("CSRF token \u0645\u0641\u0642\u0648\u062F")||u.includes("CSRF_TOKEN_MISSING")||u.includes("CSRF_TOKEN_INVALID"))&&s<1){try{sessionStorage.removeItem("csrf_token"),sessionStorage.removeItem("client_session_id"),Utils.safeWarn("\u{1F510} \u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641 \u062E\u0637\u0623 CSRF\u061B \u0625\u0639\u0627\u062F\u0629 \u062A\u0647\u064A\u0626\u0629 \u062C\u0644\u0633\u0629 \u0627\u0644\u0623\u0645\u0627\u0646 \u0648\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629...")}catch{}return this._executeRequest(e,t,s+1,r,p)}const w=2;if(s<w&&a()&&g&&(g.includes("Failed to fetch")||g.includes("NetworkError")||g.includes("Network request failed")||g.includes("ERR_CONNECTION_TIMED_OUT")||g.includes("CONNECTION_TIMED_OUT")||g.includes("timeout")||g.includes("timed out")||g.includes("429")||g.includes("Too Many Requests"))){const C=Math.pow(2,s+1)*1e3;return Utils.safeLog(`\u{1F504} \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F ${C}ms (\u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 ${s+1}/${w})`),await new Promise(I=>setTimeout(I,C)),this._executeRequest(e,t,s+1,r,p)}let R=g;return g&&(g.includes("ERR_CONNECTION_TIMED_OUT")||g.includes("CONNECTION_TIMED_OUT")||g.includes("timeout")&&g.includes("connection"))?R=`\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u062E\u0627\u062F\u0645 SQL. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A
-2. \u0631\u0627\u0628\u0637 \u062E\u0627\u062F\u0645 SQL \u0635\u062D\u064A\u062D (\u064A\u062C\u0628 \u0623\u0646 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec)
-3. \u062E\u0627\u062F\u0645 SQL \u0645\u0641\u0639\u0651\u0644 \u0648\u0645\u064F\u0646\u0634\u064E\u0631
-4. \u0639\u062F\u0645 \u0648\u062C\u0648\u062F \u0642\u064A\u0648\u062F \u0639\u0644\u0649 \u0627\u0644\u0634\u0628\u0643\u0629`:g&&(g.includes("Failed to fetch")||g.includes("NetworkError")||g.includes("CORS")||g.includes("blocked by CORS policy")||g.includes("Access-Control-Allow-Origin")||g.includes("Cross-Origin Request Blocked")||g.includes("Same Origin Policy")||i.name==="TypeError"||g.includes("Network request failed")||g.includes("\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u062E\u0627\u062F\u0645 SQL \u0628\u0633\u0628\u0628 CORS"))?g.includes("\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u062E\u0627\u062F\u0645 SQL \u0628\u0633\u0628\u0628 CORS")?R=g:R=`\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0645\u0639 \u062E\u0627\u062F\u0645 SQL \u0628\u0633\u0628\u0628 CORS!
-\u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646:
-1. \u0646\u0634\u0631 \u062E\u0627\u062F\u0645 SQL \u0628\u0634\u0643\u0644 \u0635\u062D\u064A\u062D:
-   - \u0627\u0641\u062A\u062D \u062E\u0627\u062F\u0645 SQL Editor
-   - \u0627\u0636\u063A\u0637 Deploy > New Deployment
-   - \u0627\u062E\u062A\u0631 Type: Web app
-   - Execute as: Me
-   - Who has access: Anyone (\u0645\u0647\u0645 \u062C\u062F\u0627\u064B!)
-   - \u0627\u0636\u063A\u0637 Deploy \u0648\u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062C\u062F\u064A\u062F
-2. \u062A\u0623\u0643\u062F \u0645\u0646 \u0623\u0646 \u0627\u0644\u0631\u0627\u0628\u0637 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 /exec \u0648\u0644\u064A\u0633 /dev
-3. \u0625\u0630\u0627 \u0642\u0645\u062A \u0628\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0633\u0643\u0631\u0628\u062A\u060C \u064A\u062C\u0628 \u0625\u0646\u0634\u0627\u0621 deployment \u062C\u062F\u064A\u062F`:g&&(g.includes("429")||g.includes("Too Many Requests"))?R="\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 429":g&&g.includes("HTTP error")?R="\u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062A\u0642\u062F\u0645 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0642\u0627\u0639\u062F\u0629 SQL - \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0647\u0644 \u0647\u0648 HTTP error":g&&(g.includes("AbortError")||g.includes("aborted"))&&(R="\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u062E\u0627\u062F\u0645 \u062E\u0627\u062F\u0645 SQL. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0648\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u062E\u0627\u062F\u0645 SQL"),Promise.reject(new Error(R))}},async sendToAppsScript(e,t,s=0){if(!this._shouldBypassRequestQueue(e))try{this._checkCircuitBreaker()}catch(r){const n=this.getLocalData(e,t);return n!==null&&!this._isWriteMutationAction(e)?(Utils.safeLog(`\u26A0\uFE0F Circuit Breaker \u0645\u0641\u062A\u0648\u062D - \u062A\u0645 \u062A\u062E\u0637\u064A \u0627\u0644\u0639\u0645\u0644\u064A\u0629: ${e}`),n):(n!==null&&this._isWriteMutationAction(e)&&Utils.safeWarn(`\u26A0\uFE0F Circuit Breaker: \u0644\u0646 \u062A\u064F\u0633\u062A\u062E\u062F\u0645 \u0646\u0633\u062E\u0629 \u0645\u062D\u0644\u064A\u0629 \u0642\u062F\u064A\u0645\u0629 \u0644\u0639\u0645\u0644\u064A\u0629 \u0643\u062A\u0627\u0628\u0629 (${e})`),Promise.reject(r))}return this._addToQueue(e,t,s)},_isTransientRpcError(e=""){const t=String(e||"").toLowerCase();return t.includes("timeout")||t.includes("timed out")||t.includes("aborterror")||t.includes("aborted")||t.includes("network request failed")||t.includes("failed to fetch")||t.includes("networkerror")||t.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629")},_shouldBypassReadCache_(e,t={}){if(t.skipCache===!0||t.forceRefresh===!0)return!0;if(e==="readFromSheet"||e==="batchReadSheets"){const s=String(t.sheetName||"").trim(),r=Array.isArray(t.sheetNames)?t.sheetNames.map(o=>String(o||"").trim()):[],n=new Set(["ContractorApprovalRequests","ContractorEvaluationApprovalRequests","ContractorDeletionRequests","ApprovedContractors"]);if(n.has(s)||r.some(o=>n.has(o)))return!0}return e==="getAllContractorApprovalRequests"||e==="getAllContractorEvaluationApprovalRequests"||e==="getAllContractorDeletionRequests"},_invalidateSmartCacheForRead_(e,t={}){if(!(typeof SmartCache>"u"||typeof SmartCache.getCacheKey!="function"))try{const s=this._getCurrentUserPermissions(),r=this._getDataTypeForAction(e),n=SmartCache.getCacheKey(e,t,AppState?.currentUser?.id,s);localStorage.removeItem(`hse_smart_cache_${n}`)}catch{}},async sendRequest(e){const{action:t,data:s}=e;if(!t)throw new Error("\u064A\u062C\u0628 \u0625\u062F\u062E\u0627\u0644 action \u0641\u064A \u0627\u0644\u0637\u0644\u0628");const r=!!(s&&typeof s=="object"&&s.__allowStructuredFailure===!0),n=["login","verifyMfaLogin","confirmMfaEnrollment","startMfaEnrollment","disableMfa","changePassword"].includes(t),o=["readFromSheet","batchReadSheets","getData","getSafetyTeamMembers","getSafetyTeamMember","getOrganizationalStructure","getJobDescription","getSafetyTeamKPIs","getSafetyHealthManagementSettings","getActionTrackingSettings","getAllActionTracking","getActionTracking","getAllApprovedContractors","getAllContractors","getAllEmployees","getAllAppEmergencyNumbers"],l=this._shouldBypassReadCache_(t,s||{}),y=o.includes(t)&&!l;if(l){this._invalidateSmartCacheForRead_(t,s||{});try{const p=`${t}_${JSON.stringify(s||{})}`;this._cache?.data?.delete(p),this._cache?.timestamps?.delete(p),localStorage.removeItem(this._buildLocalDataStorageKey(t,s||{}))}catch{}}if(y&&typeof SmartCache<"u"){const p=this._getCurrentUserPermissions(),a=this._getDataTypeForAction(t),i=SmartCache.getCacheKey(t,s,AppState?.currentUser?.id,p),f=SmartCache.getCache(i,p,a);if(f!==null)return AppState?.debugMode&&Utils?.safeLog(`\u2705 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 Smart Cache \u0644\u0644\u0639\u0645\u0644\u064A\u0629: ${t}`),f}if(y){const p=`${t}_${JSON.stringify(s||{})}`,a=this._getCachedData(p);if(a!==null)return AppState?.debugMode&&Utils?.safeLog(`\u2705 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0627\u0644\u0640 cache \u0627\u0644\u0642\u062F\u064A\u0645 \u0644\u0644\u0639\u0645\u0644\u064A\u0629: ${t}`),a}if(!this._isBackendRpcConfigured()){const p=this.getLocalData(t,s);if(p!==null)return Utils.safeLog(`\u2705 \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0645\u0646 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u0624\u0642\u062A \u0644\u0644\u0639\u0645\u0644\u064A\u0629: ${t}`),p;throw new Error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623. \u064A\u0631\u062C\u0649 \u0636\u0628\u0637 \u0631\u0627\u0628\u0637 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0641\u064A \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.")}try{const p=await this.sendToAppsScript(t,s||{});if(y&&p&&p.success!==!1&&typeof SmartCache<"u"){const a=this._getCurrentUserPermissions(),i=this._getDataTypeForAction(t),f=SmartCache.getCacheKey(t,s,AppState?.currentUser?.id,a);SmartCache.setCache(f,p,a,i)}if(y&&p&&p.success!==!1){const a=`${t}_${JSON.stringify(s||{})}`;this._setCachedData(a,p)}if(p&&typeof p=="object"&&p.success===!1){if(r||n)return p;if(this._shouldSkipLocalFallbackForRead_(t,p)){const f=p.errorCode?String(p.errorCode):"";throw/SESSION/i.test(f)&&typeof Auth<"u"&&typeof Auth.handleServerSessionInvalid=="function"&&Auth.handleServerSessionInvalid(p.message,f),new Error(p.message||"\u0631\u0641\u0636 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645")}const a=this.getLocalData(t,s);if(a!==null&&!this._isWriteMutationAction(t))return Utils.safeLog(`\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0643\u0628\u062F\u064A\u0644 \u0639\u0646\u062F \u0641\u0634\u0644 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629: ${t}`),a;const i=new Error(p.message||"\u0641\u0634\u0644 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u062E\u0627\u062F\u0645 SQL");throw i.isAppError=!0,p.errorCode&&(i.errorCode=p.errorCode),i}return l||this.saveLocalData(t,p,s),p}catch(p){const a=p.message||"\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641 \u0623\u062B\u0646\u0627\u0621 \u062A\u0646\u0641\u064A\u0630 \u0627\u0644\u0637\u0644\u0628";if(a.includes("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")||a.includes("Action not recognized")||a.includes("ACTION_NOT_RECOGNIZED")){const i=a;Utils.safeError(`Request Failed (${t}): ${i}`);const f=new Error(i);throw f.isAppError=!0,f.errorCode="ACTION_NOT_RECOGNIZED",f}if(a.includes("\u062E\u0627\u062F\u0645 SQL \u063A\u064A\u0631 \u0645\u062A\u0627\u062D")||a.includes("Failed to fetch")||a.includes("NetworkError")||a.includes("CORS")||a.includes("blocked by CORS policy")||a.includes("Access-Control-Allow-Origin")||a.includes("429")||a.includes("Too Many Requests")||a.includes("\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0634\u0628\u0643\u0629")||a.includes("Network request failed")){if(this._shouldSkipLocalFallbackForRead_(t,null,a))throw new Error(a);const i=this.getLocalData(t,s);if(i!==null&&!this._isWriteMutationAction(t))return Utils.safeLog(`\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0643\u0628\u062F\u064A\u0644 \u0639\u0646\u062F \u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644: ${t} (\u0627\u0644\u062E\u0637\u0623: ${a.substring(0,50)})`),i}if(a&&a.includes("Circuit Breaker \u0645\u0641\u062A\u0648\u062D")){const i=this._lastCircuitBreakerLog||{},f=Date.now();(!i[t]||f-i[t]>1e4)&&(Utils.safeWarn(`\u26A0\uFE0F Circuit Breaker \u0645\u0641\u062A\u0648\u062D - \u0633\u064A\u062A\u0645 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0641\u062A\u0631\u0629 (${t})`),this._lastCircuitBreakerLog||(this._lastCircuitBreakerLog={}),this._lastCircuitBreakerLog[t]=f)}else if(this._isTransientRpcError(a)&&(t==="batchReadSheets"||t==="readFromSheet"||t==="getAllData")){const i=`${t}:${String(a).slice(0,60)}`,f=Date.now();this._transientWarnAt=this._transientWarnAt||{};const h=this._transientWarnAt[i]||0;f-h>15e3&&(Utils.safeWarn(`\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u0625\u0643\u0645\u0627\u0644 ${t} \u062D\u0627\u0644\u064A\u0627\u064B (\u0627\u062A\u0635\u0627\u0644/\u0645\u0647\u0644\u0629). \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 fallback \u0639\u0646\u062F \u0627\u0644\u0625\u0645\u0643\u0627\u0646.`),this._transientWarnAt[i]=f)}else Utils.safeError(`sendRequest (${t}):`,a);throw new Error(a)}},_buildLocalDataStorageKey(e,t){const s=`hse_local_${e}`;return e==="readFromSheet"&&t&&t.sheetName?`${s}_${String(t.sheetName).trim()}`:e==="batchReadSheets"&&t&&Array.isArray(t.sheetNames)&&t.sheetNames.length?`${s}_${t.sheetNames.slice().sort().join("|")}`:s},_purgeLegacyReadFromSheetLocalCache_(){this._purgeAllSheetReadLocalCache_()},_purgeAllSheetReadLocalCache_(){try{if(typeof localStorage>"u")return;const e=[];for(let t=0;t<localStorage.length;t++){const s=localStorage.key(t);s&&(s.startsWith("hse_local_readFromSheet")||s.startsWith("hse_local_batchReadSheets"))&&e.push(s)}e.forEach(t=>localStorage.removeItem(t))}catch{}},_shouldSkipLocalFallbackForRead_(e,t,s){if(e!=="readFromSheet"&&e!=="batchReadSheets")return!1;const r=t&&t.errorCode?String(t.errorCode):"",n=String(t&&t.message||s||"");return["ACTOR_IDENTITY_REQUIRED","ACTOR_NOT_REGISTERED","ACTOR_INACTIVE","CSRF_TOKEN","STRICT_ADMIN_DENIED","READ_DENIED","PERMISSION_DENIED","GET_READ_DISABLED","SESSION_EXPIRED","SESSION_TOKEN_MISSING","SESSION_USER_MISMATCH","SESSION_REQUIRED","\u0631\u0641\u0636 \u0623\u0645\u0646\u064A","\u063A\u064A\u0631 \u0645\u0633\u062C\u0644","CSRF","\u0627\u0646\u062A\u0647\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u062C\u0644\u0633\u0629"].some(l=>r.includes(l)||n.includes(l))},getLocalData(e,t){try{const s=this._buildLocalDataStorageKey(e,t),r=localStorage.getItem(s);if(r){const n=JSON.parse(r);if(n.timestamp&&Date.now()-n.timestamp<864e5)return n.data}}catch(s){Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0645\u0646 localStorage:",s)}return null},saveLocalData(e,t,s){try{const r=this._buildLocalDataStorageKey(e,s),n={data:t,timestamp:Date.now()};localStorage.setItem(r,JSON.stringify(n))}catch(r){Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u064A localStorage:",r)}},async readFromSheets(e,t=15e3){if(!this._isBackendRpcConfigured()||!this._isCurrentUserEffectiveAdmin_()&&this.ADMIN_ONLY_READ_SHEETS.includes(String(e||"").trim()))return null;if(String(e||"").trim()==="Users"&&!this._canReadUsersSheet_())return typeof this.fetchUsersForApp=="function"?await this.fetchUsersForApp({timeout:typeof t=="number"?t:t?.timeout||15e3}):null;let s=15e3,r=null;typeof t=="number"?s=t:t&&typeof t=="object"&&(s=t.timeout??15e3,r=t.observationsRequestContext??null);try{const n={action:"readFromSheet",data:{sheetName:e}};(e==="ContractorApprovalRequests"||e==="ContractorEvaluationApprovalRequests"||e==="ContractorDeletionRequests"||e==="ApprovedContractors")&&(n.data.skipCache=!0),AppState.googleConfig.sheets?.spreadsheetId&&(n.data.spreadsheetId=AppState.googleConfig.sheets.spreadsheetId),e==="DailyObservations"&&r&&(n.data.observationsRequestContext=r),n.data.__timeoutMs=s;const o=await this.sendRequest(n);return o&&o.success&&o.data!==void 0?Array.isArray(o.data)?o.data:[]:o&&o.success&&Array.isArray(o)?o:null}catch(n){const o=n.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";return!(!this._isBackendRpcConfigured()||this._isExpectedReadError_(o)||o.includes("\u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u062D\u062F\u062F")||o.includes("\u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644")||o.includes("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623")||o.includes("\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")||o.includes("timeout")||o.includes("Timeout")||o.includes("not found")||o.includes("\u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F")||o.includes("Failed to fetch")||o.includes("NetworkError")||o.includes("Network request failed"))&&AppState.debugMode&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 ${e}:`,n.message||n),null}},async batchReadFromSheets(e,t={}){const{timeout:s=3e4,batchSize:r=12,skipCache:n=!1}=t;if(!this._isBackendRpcConfigured())return Utils.safeWarn("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623 - \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u062C\u0645\u0639\u0629"),{};if(!Array.isArray(e)||e.length===0)return{};if(e=this._filterSheetsForCurrentUser(e),e.length===0)return{data:{},failedSheets:[],totalSheets:0,successfulSheets:0};const o={},l=[],y=[];for(let p=0;p<e.length;p+=r)y.push(e.slice(p,p+r));Utils.safeLog(`\u{1F4E6} Batch Read: ${e.length} sheets in ${y.length} batches`);for(let p=0;p<y.length;p++){const a=y[p];try{const i={action:"batchReadSheets",data:{sheetNames:a}};AppState.googleConfig.sheets?.spreadsheetId&&(i.data.spreadsheetId=AppState.googleConfig.sheets.spreadsheetId),a.includes("DailyObservations")&&t.observationsRequestContext&&(i.data.observationsRequestContext=t.observationsRequestContext),n&&(i.data.skipCache=!0),i.data.__timeoutMs=s;const f=await this.sendRequest(i);if(f&&f.success&&f.data)Object.assign(o,f.data),f.failedSheets&&f.failedSheets.length>0&&f.failedSheets.forEach(h=>{l.push(h.sheetName),Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0642\u0631\u0627\u0621\u0629 ${h.sheetName}: ${h.error}`)}),Utils.safeLog(`\u2705 Batch ${p+1}/${y.length}: ${f.successfulSheets}/${f.totalSheets} sheets loaded`);else throw new Error(f?.message||"\u0641\u0634\u0644 \u0641\u064A \u0627\u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u062C\u0645\u0639\u0629")}catch{Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 batch ${p+1}\u060C \u062C\u0627\u0631\u064A fallback \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0646\u0641\u0635\u0644\u0629`);for(let f=0;f<a.length;f++){const h=a[f];try{const E=await this.readFromSheets(h,{timeout:Math.min(s,15e3),observationsRequestContext:t.observationsRequestContext||null});o[h]=Array.isArray(E)?E:[]}catch(E){l.push(h),AppState?.debugMode&&Utils.safeWarn(`\u26A0\uFE0F fallback failed for ${h}: ${E?.message||E}`)}}}}return l.length>0&&Utils.safeWarn(`\u26A0\uFE0F Batch Read: ${l.length}/${e.length} sheets failed`),{data:o,failedSheets:l,totalSheets:e.length,successfulSheets:e.length-l.length}},async fetchData(e,t={}){try{return await this.sendToAppsScript(e,t)}catch(s){const r=String(s?.message||"").toLowerCase();throw r.includes("circuit breaker")||r.includes("google apps script \u063A\u064A\u0631 \u0645\u0641\u0639\u0644")||r.includes("\u063A\u064A\u0631 \u0645\u0641\u0639\u0644")||Utils.safeError("Error in fetchData:",s),s}},async callBackend(e,t={}){try{return await this.sendRequest({action:e,data:t})}catch(s){throw Utils.safeError(`\u062E\u0637\u0623 \u0641\u064A callBackend (${e}):`,s),s}},async uploadFileToDrive(e,t,s,r=null,n=null){try{if(!e||!t||!s)throw new Error("\u0645\u0639\u0627\u0645\u0644\u0627\u062A \u063A\u064A\u0631 \u0643\u0627\u0641\u064A\u0629. \u064A\u062C\u0628 \u062A\u0648\u0641\u064A\u0631 base64Data, fileName, \u0648 mimeType");typeof Loading<"u"&&Loading.show&&Loading.show("\u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645...");const o={base64Data:e,fileName:t,mimeType:s,moduleName:r};n&&typeof n=="object"&&(n.ownerUserId||n.userId)&&(o.ownerUserId=n.ownerUserId||n.userId);const l=await this.sendToAppsScript("uploadFileToDrive",o);if(typeof Loading<"u"&&Loading.hide&&Loading.hide(),l&&l.success)return{success:!0,fileId:l.fileId,directLink:l.directLink,shareableLink:l.shareableLink,publicUrl:l.publicUrl||l.shareableLink||"",fileName:l.fileName,storage:l.storage||""};throw new Error(l?.message||"\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645")}catch(o){throw typeof Loading<"u"&&Loading.hide&&Loading.hide(),typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645:",o),o}},async uploadMultipleFilesToDrive(e,t=null){try{if(!Array.isArray(e)||e.length===0)throw new Error("\u064A\u062C\u0628 \u062A\u0648\u0641\u064A\u0631 \u0645\u0635\u0641\u0648\u0641\u0629 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641\u0627\u062A");typeof Loading<"u"&&Loading.show&&Loading.show(`\u062C\u0627\u0631\u064A \u0631\u0641\u0639 ${e.length} \u0645\u0644\u0641 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645...`);const s=await this.sendToAppsScript("uploadFileToDrive",{files:e,moduleName:t});return typeof Loading<"u"&&Loading.hide&&Loading.hide(),s}catch(s){throw typeof Loading<"u"&&Loading.hide&&Loading.hide(),typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641\u0627\u062A \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645:",s),s}},async processAttachments(e,t){try{if(!Array.isArray(e)||e.length===0)return[];const s=[];for(const r of e){if(r.directLink||r.shareableLink||r.cloudLink){s.push({id:r.id||(typeof Utils<"u"&&Utils.generateId?Utils.generateId("ATT"):"ATT_"+Date.now()),name:r.name||"attachment",type:r.type||"application/octet-stream",directLink:r.directLink||r.shareableLink||r.cloudLink?.url,shareableLink:r.shareableLink||r.cloudLink?.url||r.directLink,fileId:r.fileId||r.cloudLink?.id,size:r.size||0,uploadedAt:r.uploadedAt||new Date().toISOString()});continue}if(r.data||r.base64Data)try{const n=await this.uploadFileToDrive(r.data||r.base64Data,r.name||"attachment",r.type||"application/octet-stream",t);n.success?s.push({id:r.id||(typeof Utils<"u"&&Utils.generateId?Utils.generateId("ATT"):"ATT_"+Date.now()),name:n.fileName||r.name,type:r.type||"application/octet-stream",directLink:n.directLink,shareableLink:n.shareableLink,fileId:n.fileId,size:r.size||0,uploadedAt:new Date().toISOString()}):(typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u0641\u0634\u0644 \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645:",r.name),s.push(r))}catch(n){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0645\u0631\u0641\u0642 \u0625\u0644\u0649 \u0627\u0644\u062E\u0627\u062F\u0645:",n),s.push(r)}else s.push(r)}return s}catch(s){return typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A:",s),e}},async saveToSheets(e,t){if(!this._isBackendRpcConfigured())return Utils.safeWarn("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"),{success:!1,message:"\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"};try{const s=this.prepareSheetPayload(e,t),r={sheetName:e,data:s};return AppState.googleConfig.sheets.spreadsheetId&&(r.spreadsheetId=AppState.googleConfig.sheets.spreadsheetId),await this.sendToAppsScript("saveToSheet",r)}catch(s){return Utils.safeWarn("\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL:",s),{success:!1,message:s.message}}},async appendToSheets(e,t){if(!this._isBackendRpcConfigured())return Utils.safeWarn("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"),{success:!1,message:"\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"};try{const s=this.prepareSheetPayload(e,t),r={sheetName:e,data:s};AppState.googleConfig.sheets.spreadsheetId&&(r.spreadsheetId=AppState.googleConfig.sheets.spreadsheetId);const n=await this.sendToAppsScript("appendToSheet",r);return n&&n.success?Utils.safeLog(`\u2705 \u062A\u0645 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 \u0642\u0627\u0639\u062F\u0629 SQL: ${e}`):Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 \u0642\u0627\u0639\u062F\u0629 SQL: ${e}:`,n?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"),n}catch(s){return Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 \u0642\u0627\u0639\u062F\u0629 SQL:",s),{success:!1,message:s.message}}},async syncUsers(e=!1){if(!this._isBackendRpcConfigured())return!1;let t=!1;if(typeof InactivityManager<"u"&&AppState.currentUser&&(t=InactivityManager.isPaused,t||InactivityManager.pause("\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL")),this.isSyncing("users")){Utils.safeLog("\u23F3 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u062C\u0627\u0631\u064A\u0629 \u0628\u0627\u0644\u0641\u0639\u0644\u060C \u0641\u064A \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0643\u062A\u0645\u0627\u0644\u0647\u0627...");const a=3e4,i=Date.now();for(;this.isSyncing("users")&&Date.now()-i<a;)await new Promise(f=>setTimeout(f,100));if(this.isSyncing("users"))return Utils.safeWarn("\u26A0\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062C\u0627\u0631\u064A\u0629"),typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),!1}const s=Date.now(),r=AppState.syncMeta?.users||0,n=Array.isArray(AppState.appData.users)&&AppState.appData.users.length>0,o=120*1e3;if(!e&&n&&s-r<o)return Utils.safeLog("\u2705 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u0643\u0627\u0634\u060C \u0644\u0627 \u062D\u0627\u062C\u0629 \u0644\u0644\u0645\u0632\u0627\u0645\u0646\u0629"),!0;this._setSyncState("users",!0),Utils.safeLog("\u{1F504} \u0645\u0633\u062D Cache \u0627\u0644\u0642\u062F\u064A\u0645 \u0645\u0646 localStorage..."),AppState.syncMeta=AppState.syncMeta||{},AppState.syncMeta.users=0;try{localStorage.getItem("hse_cached_users")&&(localStorage.removeItem("hse_cached_users"),Utils.safeLog("\u2705 \u062A\u0645 \u0645\u0633\u062D Cache \u0627\u0644\u0642\u062F\u064A\u0645 \u0645\u0646 localStorage"))}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0633\u062D Cache \u0645\u0646 localStorage:",a)}const l={},y=a=>{try{return String(a||"").toLowerCase().trim().endsWith("@hse.local")}catch{return!1}},p=Array.isArray(AppState.appData.users)?AppState.appData.users.map(a=>({...a})):[];Array.isArray(AppState.appData.users)&&AppState.appData.users.forEach(a=>{const i=a?.email?a.email.toLowerCase().trim():"";i&&(l[i]=a)});try{Utils.safeLog("\u{1F504} \u062C\u0627\u0631\u064A \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL...");let a=null;if(this._canReadUsersSheet_()&&this._isCurrentUserEffectiveAdmin_()?a=await this.readFromSheets("Users"):a=await this.fetchUsersForApp({timeout:2e4}),!a){if(Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL \u0643\u0627\u0646\u062A null"),p.length>0){Utils.safeLog("\u26A0\uFE0F \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629..."),AppState.appData.users=p.map(i=>({...i})),AppState.syncMeta=AppState.syncMeta||{},AppState.syncMeta.users=Date.now()-6e5;try{DataManager.save(),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629")}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629:",i)}return this._setSyncState("users",!1),typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),!0}return!1}if(!Array.isArray(a)){if(Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629 \u0644\u064A\u0633\u062A \u0645\u0635\u0641\u0648\u0641\u0629:",typeof a),p.length>0){Utils.safeLog("\u26A0\uFE0F \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629..."),AppState.appData.users=p.map(i=>({...i})),AppState.syncMeta=AppState.syncMeta||{},AppState.syncMeta.users=Date.now()-6e5;try{DataManager.save(),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629")}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629:",i)}return this._setSyncState("users",!1),typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),!0}return!1}if(Utils.safeLog("\u{1F4CA} \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL:",{dataType:"array",dataLength:a.length,firstUserSample:a.length>0?{email:a[0].email||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",hasId:!!a[0].id,hasName:!!a[0].name,hasEmail:!!a[0].email,hasPasswordHash:!!a[0].passwordHash,passwordHashLength:a[0].passwordHash?.length||0,passwordHashPrefix:a[0].passwordHash&&typeof a[0].passwordHash=="string"?a[0].passwordHash.substring(0,20)+"...":"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",hasPassword:!!a[0].password,passwordValue:a[0].password&&typeof a[0].password=="string"?a[0].password.substring(0,10)+"...":typeof a[0].password,keys:Object.keys(a[0]||{}),allKeys:Object.keys(a[0]||{})}:null,sampleUsers:a.slice(0,3).map(i=>({email:i.email||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",hasPasswordHash:!!i.passwordHash,passwordHashLength:i.passwordHash?.length||0}))}),Array.isArray(a)&&a.length>0){let i=!1;const f=a.filter(_=>{if(!_||typeof _!="object")return Utils.safeWarn("\u26A0\uFE0F \u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D (\u0644\u064A\u0633 \u0643\u0627\u0626\u0646):",_),!1;const u=_.email?String(_.email).trim():"";return!u||u===""?(Utils.safeWarn("\u26A0\uFE0F \u0645\u0633\u062A\u062E\u062F\u0645 \u0628\u062F\u0648\u0646 email:",_),!1):!0});if(f.length===0)return Utils.safeWarn("\u26A0\uFE0F \u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0635\u0627\u0644\u062D\u064A\u0646 \u0641\u064A \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u0644\u0645\u0629"),!1;Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u0635\u0641\u064A\u0629 ${f.length} \u0645\u0633\u062A\u062E\u062F\u0645 \u0635\u0627\u0644\u062D \u0645\u0646 ${a.length} \u0645\u0633\u062A\u062E\u062F\u0645`);let h=await Promise.all(f.map(async _=>{const u={};if(Object.keys(_).forEach(c=>{u[c]=_[c]}),u.email&&(u.email=String(u.email).trim().toLowerCase()),u.name){let c=u.name;if(typeof c=="object"&&c!==null){if(c.value)c=String(c.value).trim();else{const m=Object.values(c);m.length===1&&typeof m[0]=="string"?c=String(m[0]).trim():c=String(c).trim()}Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0648\u064A\u0644 name \u0645\u0646 object \u0625\u0644\u0649 string: ${c}`)}else typeof c=="string"&&(c=c.trim());u.name=c}if(u.displayName){let c=u.displayName;if(typeof c=="object"&&c!==null)if(c.value)c=String(c.value).trim();else{const m=Object.values(c);m.length===1&&typeof m[0]=="string"&&(c=String(m[0]).trim())}else typeof c=="string"&&(c=c.trim());u.displayName=c}const T=u.email||"",w=l[T],R=typeof Utils<"u"&&Utils&&typeof Utils.isSha256Hex=="function";let C="";if(u.passwordHash){let c=u.passwordHash;if(typeof c=="object"&&c!==null)if(c.value)c=String(c.value).trim(),Utils.safeLog(`\u062A\u0645 \u062A\u062D\u0648\u064A\u0644 passwordHash \u0625\u0644\u0649 String: ${u.email}`);else{const m=Object.values(c);m.length===1&&typeof m[0]=="string"?(c=String(m[0]).trim(),Utils.safeLog(`\u062A\u0645 \u062A\u062D\u0648\u064A\u0644 passwordHash \u0625\u0644\u0649 String: ${u.email}`)):c=String(c).trim()}else typeof c=="string"&&(c=c.trim());c&&c!==""&&c!=="***"&&(R&&Utils.isSha256Hex(c)?C=c:Utils.safeWarn(`?? passwordHash ??? ???? ????????: ${u.email} - ????? ??? ????`))}if(!C&&u.password&&u.password!=="***"){let c=u.password;if(typeof c=="object"&&c!==null)if(c.value)c=String(c.value).trim(),Utils.safeLog(`\u062A\u0645 \u062A\u062D\u0648\u064A\u0644 password \u0625\u0644\u0649 String: ${u.email}`);else{const m=Object.values(c);m.length===1&&typeof m[0]=="string"?(c=String(m[0]).trim(),Utils.safeLog(`\u062A\u0645 \u062A\u062D\u0648\u064A\u0644 password \u0625\u0644\u0649 String: ${u.email}`)):c=String(c).trim()}else typeof c=="string"&&(c=c.trim());R&&Utils.isSha256Hex(c)&&(C=c,Utils.safeLog(`\u062A\u0645 \u062A\u062D\u0648\u064A\u0644 passwordHash \u0625\u0644\u0649 String: ${u.email}`))}let I="";if(w){if(w.passwordHash&&w.passwordHash.trim()!==""&&w.passwordHash.trim()!=="***"){const c=w.passwordHash.trim();R&&Utils.isSha256Hex(c)&&(I=c)}else if(w.password&&w.password!=="***"){const c=w.password.trim();R&&Utils.isSha256Hex(c)&&(I=c)}}!C&&u.password&&u.password!=="***"&&!Utils.isSha256Hex(u.password)&&(Utils.safeWarn(`\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F incomingHash: ${u.email}`),C=await Utils.hashPassword(u.password),i=!0),!I&&w?.password&&w.password!=="***"&&!Utils.isSha256Hex(w.password)&&(Utils.safeWarn(`\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F previousHash: ${w.email}`),I=await Utils.hashPassword(w.password),i=!0),C&&!Utils.isSha256Hex(C)&&(Utils.safeWarn(`\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F incomingHash: ${u.email} - \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u062D\u0642\u0642 \u0645\u0646 \u0648\u062C\u0648\u062F hash`),C="");let k=C||I||"";if(Utils.safeLog(`?? ??? passwordHash ???????? ${u.email}:`,{hasIncomingHash:!!C,incomingHashLength:C?.length||0,incomingHashPrefix:C?C.substring(0,20)+"...":"????",incomingHashSuffix:C?"..."+C.substring(C.length-10):"????",isIncomingHashValid:C?Utils.isSha256Hex(C):!1,hasPreviousHash:!!I,previousHashLength:I?.length||0,previousHashPrefix:I?I.substring(0,20)+"...":"????",previousHashSuffix:I?"..."+I.substring(I.length-10):"????",isPreviousHashValid:I?Utils.isSha256Hex(I):!1,resolvedHash:k?k.substring(0,20)+"...":"????",resolvedHashLength:k?.length||0,resolvedHashSuffix:k?"..."+k.substring(k.length-10):"????",isResolvedHashValid:k?Utils.isSha256Hex(k):!1,normalizedKeys:Object.keys(u),hasPasswordHashInNormalized:"passwordHash"in u,hasPasswordInNormalized:"password"in u}),(!k||!Utils.isSha256Hex(k))&&(u.forcePasswordChange=!0,Utils.safeWarn(`?????? ???????????????? ${u.email} ?????????? ?????? ?????????? ?????????? ???????? ????????????`)),(!u.createdAt||u.createdAt==="")&&w?.createdAt&&(u.createdAt=w.createdAt),(!u.updatedAt||u.updatedAt==="")&&w?.updatedAt&&(u.updatedAt=w.updatedAt),!u.loginHistory&&w?.loginHistory&&(u.loginHistory=w.loginHistory),k&&Utils.isSha256Hex(k)?(u.passwordHash=k,u.password="***",u.forcePasswordChange=u.forcePasswordChange??w?.forcePasswordChange??!1,u.passwordChanged=u.passwordChanged??w?.passwordChanged??!1,Utils.safeLog(`? ?? ????? passwordHash ???????? ${u.email}:`,{passwordHashLength:u.passwordHash?.length||0,passwordHashPrefix:u.passwordHash?u.passwordHash.substring(0,20)+"...":"????",isPasswordHashValid:!0,forcePasswordChange:u.forcePasswordChange})):(u.passwordHash="",u.password="***",u.forcePasswordChange=!0,u.passwordChanged=!1,Utils.safeWarn(`?? ???????? ${u.email} ?? ???? passwordHash ???? - ?????? ??? ????? ????? ???? ??????`)),typeof u.permissions=="string"&&u.permissions.trim()!=="")try{u.permissions=JSON.parse(u.permissions)}catch(c){Utils.safeWarn("??? ?????? ?????????? ?????????????? ???????????????? ?????????? ????????????????:",c)}if(typeof u.loginHistory=="string"&&u.loginHistory.trim()!=="")try{u.loginHistory=JSON.parse(u.loginHistory)}catch(c){Utils.safeWarn("??? ?????? ?????????? ?????? ???????????? ???????????????? ?????????? ????????????????:",c),u.loginHistory=[]}return u}));const E=h.length;h=h.filter(_=>!y(_?.email));const g=E-h.length,M=h;AppState.appData.users=M.map(_=>({..._})),AppState.syncMeta=AppState.syncMeta||{},AppState.syncMeta.users=s;try{DataManager.save(),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u062D\u0644\u064A\u0627\u064B")}catch(_){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u062D\u0644\u064A\u0627\u064B:",_)}try{localStorage.removeItem("hse_cached_users"),sessionStorage.removeItem("hse_cached_users"),Utils.safeLog("\u2705 \u062A\u0645 \u0645\u0633\u062D Cache \u0627\u0644\u0642\u062F\u064A\u0645 \u0645\u0646 \u0627\u0644\u062A\u062E\u0632\u064A\u0646 \u0627\u0644\u0645\u062D\u0644\u064A")}catch(_){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0633\u062D Cache:",_)}Utils.safeLog("\u2705 ===== \u0627\u0643\u062A\u0645\u0644\u062A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 =====",{totalUsers:M.length,fromGoogleSheets:h.length,removedLegacyDefaults:g,syncTimestamp:new Date(s).toISOString(),usersList:M.map(_=>({email:_.email,hasPasswordHash:!!_.passwordHash&&_.passwordHash!=="***",passwordHashValid:_.passwordHash?Utils.isSha256Hex(_.passwordHash):!1})).slice(0,5)}),this._setSyncState("users",!1),Utils.safeLog(`\u2705 \u0627\u0643\u062A\u0645\u0644\u062A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 (${h.length} \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL)`),i===!0&&setTimeout(()=>{const _=AppState.appData.users.map(u=>{const T={...u};return T.password&&T.password!=="***"&&delete T.password,T});this.autoSave("Users",_).catch(u=>{Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B passwordHash \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",u)})},500),typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),typeof UI<"u"&&typeof UI.updateUserConnectionStatus=="function"&&setTimeout(()=>{UI.updateUserConnectionStatus(),typeof UI.startAutoRefreshConnectionStatus=="function"&&AppState.currentUser&&UI.startAutoRefreshConnectionStatus()},300),this._setSyncState("users",!1);try{typeof window<"u"&&window.Auth&&typeof window.Auth.handleUsersSyncSuccess=="function"&&window.Auth.handleUsersSyncSuccess()}catch{}return!0}return typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),this._setSyncState("users",!1),!1}catch(a){typeof InactivityManager<"u"&&AppState.currentUser&&!t&&InactivityManager.resume(),this._setSyncState("users",!1);const i=a?.message||a?.toString()||"",f=i.includes("ERR_CONNECTION_TIMED_OUT")||i.includes("CONNECTION_TIMED_OUT")||i.includes("timeout")||i.includes("timed out")||i.includes("AbortError");if(p.length>0){Utils.safeLog("\u26A0\uFE0F \u0641\u0634\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629\u060C \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629..."),AppState.appData.users=p.map(h=>({...h})),AppState.syncMeta=AppState.syncMeta||{},AppState.syncMeta.users=Date.now()-6e5;try{DataManager.save(),Utils.safeLog("\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629")}catch(h){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0627\u062D\u062A\u064A\u0627\u0637\u064A\u0629:",h)}return f?Utils.safeWarn("\u26A0\uFE0F \u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0623\u062B\u0646\u0627\u0621 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646. \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629."):Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL. \u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0627\u0644\u0645\u062D\u0641\u0648\u0638\u0629:",a),!0}return Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL:",a),Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646:",{errorMessage:a.message,errorStack:a.stack,timestamp:new Date().toISOString(),isTimeoutError:f}),!1}},async saveAllToSheets(){if(!this._isBackendRpcConfigured())return{success:!1,message:"\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"};try{Loading.show();const e={Users:AppState.appData.users||[],Incidents:AppState.appData.incidents||[],NearMiss:AppState.appData.nearmiss||[],PTW:AppState.appData.ptw||[],Training:AppState.appData.training||[],EmployeeTrainingMatrix:AppState.appData.employeeTrainingMatrix||[],TrainingAttendance:AppState.appData.trainingAttendance||[],ClinicVisits:AppState.appData.clinicVisits||[],Medications:AppState.appData.medications||[],SickLeave:AppState.appData.sickLeave||[],Injuries:AppState.appData.injuries||[],ClinicInventory:AppState.appData.clinicInventory||[],FireEquipment:AppState.appData.fireEquipment||[],FireEquipmentAssets:AppState.appData.fireEquipmentAssets||[],FireEquipmentInspections:AppState.appData.fireEquipmentInspections||[],PeriodicInspectionCategories:AppState.appData.periodicInspectionCategories||[],PeriodicInspectionRecords:AppState.appData.periodicInspectionRecords||[],PeriodicInspectionSchedules:AppState.appData.periodicInspectionSchedules||[],PeriodicInspectionChecklists:AppState.appData.periodicInspectionChecklists||[],PeriodicEquipmentTypes:AppState.appData.periodicEquipmentTypes||[],PeriodicEquipmentAssets:AppState.appData.periodicEquipmentAssets||[],PeriodicEquipmentInspections:AppState.appData.periodicEquipmentInspections||[],PPE:AppState.appData.ppe||[],ViolationTypes:AppState.appData.violationTypes||[],Violations:AppState.appData.violations||[],Blacklist_Register:AppState.appData.blacklistRegister||[],Contractors:AppState.appData.contractors||[],ApprovedContractors:AppState.appData.approvedContractors||[],ContractorEvaluations:AppState.appData.contractorEvaluations||[],Employees:AppState.appData.employees||[],ExternalWorkforceMonthly:AppState.appData.externalWorkforceMonthly||[],BehaviorMonitoring:AppState.appData.behaviorMonitoring||[],ContractorBehaviorMonitoring:AppState.appData.contractorBehaviorMonitoring||[],ChemicalSafety:AppState.appData.chemicalSafety||[],DailyObservations:AppState.appData.dailyObservations||[],DailySafetyCheckList:AppState.appData.dailySafetyCheckList||[],ISODocuments:AppState.appData.isoDocuments||[],ISOProcedures:AppState.appData.isoProcedures||[],ISOForms:AppState.appData.isoForms||[],SOPJHA:AppState.appData.sopJHA||[],RiskAssessments:AppState.appData.riskAssessments||[],LegalDocuments:AppState.appData.legalDocuments||[],HSEAudits:AppState.appData.hseAudits||[],HSENonConformities:AppState.appData.hseNonConformities||[],HSECorrectiveActions:AppState.appData.hseCorrectiveActions||[],HSEObjectives:AppState.appData.hseObjectives||[],HSERiskAssessments:AppState.appData.hseRiskAssessments||[],EnvironmentalAspects:AppState.appData.environmentalAspects||[],EnvironmentalMonitoring:AppState.appData.environmentalMonitoring||[],Sustainability:AppState.appData.sustainability||[],CarbonFootprint:AppState.appData.carbonFootprint||[],WasteManagement:AppState.appData.wasteManagement||[],EnergyEfficiency:AppState.appData.energyEfficiency||[],WaterManagement:AppState.appData.waterManagement||[],RecyclingPrograms:AppState.appData.recyclingPrograms||[],EmergencyAlerts:AppState.appData.emergencyAlerts||[],EmergencyPlans:AppState.appData.emergencyPlans||[],EmergencyPlansUpdates:AppState.appData.emergencyPlansUpdates||[],SafetyTeamMembers:AppState.appData.safetyTeamMembers||[],SafetyOrganizationalStructure:AppState.appData.safetyOrganizationalStructure||[],SafetyJobDescriptions:AppState.appData.safetyJobDescriptions||[],SafetyTeamKPIs:AppState.appData.safetyTeamKPIs||[],SafetyTeamAttendance:AppState.appData.safetyTeamAttendance||[],SafetyTeamLeaves:AppState.appData.safetyTeamLeaves||[],SafetyTeamTasks:AppState.appData.safetyTeamTasks||[],SafetyBudgets:AppState.appData.safetyBudgets||[],SafetyBudgetTransactions:AppState.appData.safetyBudgetTransactions||[],SafetyBudgetPurchaseOrders:AppState.appData.safetyBudgetPurchaseOrders||[],SafetyPerformanceKPIs:AppState.appData.safetyPerformanceKPIs||[],ActionTrackingRegister:AppState.appData.actionTrackingRegister||[],UserActivityLog:AppState.appData.user_activity_log||[],SafetyCalendarCustomEvents:AppState.appData.safetyCalendarCustomEvents||[]};let t=0,s=0;const r=AppState.googleConfig.sheets.spreadsheetId;if(!r||r.trim()==="")return Loading.hide(),Notification.error("???????? ?????????? ???????? \u0642\u0627\u0639\u062F\u0629 SQL ???? ?????????????????? ??????????"),{success:!1,message:"?????? \u0642\u0627\u0639\u062F\u0629 SQL ?????? ????????"};for(const[n,o]of Object.entries(e))try{await this.sendToAppsScript("saveToSheet",{sheetName:n,data:o,spreadsheetId:r.trim()}),t++}catch(l){Utils.safeWarn(`?????? ?????? ${n}:`,l),s++}return Loading.hide(),s===0?(Notification.success("???? ?????? ???????? ???????????????? ???? \u0642\u0627\u0639\u062F\u0629 SQL ??????????"),{success:!0}):(Notification.warning(`???? ?????? ${t} ?????????? ???? ${s} ????????`),{success:!1,message:`?????? ???? ${s} ????????`})}catch(e){return Loading.hide(),Notification.error("?????? ???? ????????????????: "+e.message),{success:!1,message:e.message}}},async initializeSheets(){if(!this._isBackendRpcConfigured())return Promise.reject(new Error("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"));try{Loading.show();const e=AppState.googleConfig.sheets.spreadsheetId||"",t=await this.sendToAppsScript("initializeSheets",{spreadsheetId:e||void 0});return Loading.hide(),t.success?(Notification.success("???? ?????????? ???????? ?????????????? ??????????"),!0):(Notification.error("?????? ?????????? ??????????????: "+t.message),!1)}catch(e){return Loading.hide(),Notification.error("?????? ?????????? ??????????????: "+e.message),Promise.reject(e)}},getResourceConsumptionRecordSlot(e){return{WaterManagement_Records:"water",ElectricityManagement_Records:"electricity",GasManagement_Records:"gas"}[e]||null},applyResourceConsumptionSheetSyncResult(e,t){const s=this.getResourceConsumptionRecordSlot(e);if(!s)return null;const{data:r,error:n,success:o}=t||{};if(!AppState.appData)return{handled:!0,syncedRecords:0,failed:!0};if(AppState.appData.resourceConsumption||(AppState.appData.resourceConsumption={water:[],electricity:[],gas:[]}),AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),!o||n)return{handled:!0,syncedRecords:0,failed:!0};if(!Array.isArray(r))return{handled:!0,syncedRecords:0,failed:!0};const l=f=>{try{if(typeof Sustainability<"u"&&typeof Sustainability.normalizeResourceConsumptionRecord=="function")return Sustainability.normalizeResourceConsumptionRecord(f)}catch{}return f&&typeof f=="object"?f:null},y=r.map(l).filter(Boolean),p=Array.isArray(AppState.appData.resourceConsumption[s])?AppState.appData.resourceConsumption[s]:[],a=!this._currentSyncForceRefresh&&y.length===0&&p.length>0,i=a?p:y;return a||(AppState.appData.resourceConsumption[s]=y,AppState.syncMeta.sheets[e]=Date.now(),AppState.syncMeta.lastSyncTime=Date.now()),{handled:!0,syncedRecords:i.length,failed:!1}},getIncompleteSheets(e,t){try{AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={});const s=AppState.currentUser?.email||null;if(AppState.syncMeta.userEmail!==s)return null;const r=[],n=Date.now(),o=120*1e3;return t.forEach(l=>{const y=this.getResourceConsumptionRecordSlot(l);if(y){const T=AppState.syncMeta.sheets[l]||0,w=T>0&&n-T>o,R=AppState.appData&&AppState.appData.resourceConsumption?AppState.appData.resourceConsumption[y]:null,C=Array.isArray(R);(!(T>0)||w||!C)&&r.push(l);return}const p=AppState.syncMeta.sheets[l]||0,a=p>0&&n-p>o,i=e[l],f=i&&AppState.appData&&AppState.appData[i],h=Array.isArray(f)&&f.length>0,E=l==="ContractorApprovalRequests"||l==="ContractorEvaluationApprovalRequests"||l==="ContractorDeletionRequests",g=l==="ApprovedContractors",M=!!(AppState.currentUser&&typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser)),$=E&&M&&p>0&&n-p>3e4,_=!!(typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"&&Permissions.hasAccess("contractors")),u=g&&(M||_)&&p>0&&n-p>3e4;(!p||a||!h||$||u)&&r.push(l)}),r}catch(s){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u063A\u064A\u0631 \u0627\u0644\u0645\u0643\u062A\u0645\u0644\u0629:",s),null}},async syncData(e={}){const{silent:t=!1,showLoader:s=!1,notifyOnSuccess:r=!t,notifyOnError:n=!t,includeUsersSheet:o=!0,sheets:l=null,incremental:y=!1,forceRefresh:p=!1}=e;if(!this._isBackendRpcConfigured())return t||(Utils.safeLog("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623 - \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637"),Notification.warning("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u064F\u0647\u064A\u0623. \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637.")),!1;if(this._syncInProgress.global){const i=Number(this._syncInProgress.lastSyncStart||0);if(!i||Date.now()-i>18e4)this._syncInProgress.global=!1;else if(p){const h=Date.now();for(;this._syncInProgress.global&&Date.now()-h<6e4;)if(await new Promise(g=>setTimeout(g,250)),Date.now()-Number(this._syncInProgress.lastSyncStart||Date.now())>18e4){this._syncInProgress.global=!1;break}}if(this._syncInProgress.global)return this._lastSyncBusy=!0,this._lastSyncError="",t||Notification.info("\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0627\u0644\u0641\u0639\u0644\u060C \u064A\u0631\u062C\u0649 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631..."),!1}this._syncInProgress.global=!0,this._syncInProgress.lastSyncStart=Date.now(),this._lastSyncBusy=!1,this._lastSyncError=null,typeof this.resetCircuitBreaker=="function"&&this.resetCircuitBreaker(),this._currentSyncForceRefresh=!!p,p&&(this._purgeAllSheetReadLocalCache_(),AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets={},AppState.syncMeta.lastSyncTime=0);let a=!1;typeof InactivityManager<"u"&&AppState.currentUser&&(a=InactivityManager.isPaused,a||InactivityManager.pause("\u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL"));try{const i=AppState.debugMode&&!t;i&&Utils.safeLog("\u{1F504} \u0628\u062F\u0621 \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0639 \u0642\u0627\u0639\u062F\u0629 SQL..."),s&&typeof Loading<"u"&&Loading.show("\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",0);const f=["Users","Employees","ExternalWorkforceMonthly","Contractors","ApprovedContractors"];let E=["Contractors","ApprovedContractors","Incidents","NearMiss","PTW","PTWRegistry","Training","EmployeeTrainingMatrix","TrainingAttendance","TrainingAnalysisData","ClinicVisits","Medications","ExternalWorkforceMonthly","SickLeave","Injuries","ClinicInventory","FireEquipment","FireEquipmentAssets","FireEquipmentInspections","PeriodicInspectionCategories","PeriodicInspectionRecords","PeriodicInspectionSchedules","PeriodicInspectionChecklists","PeriodicEquipmentTypes","PeriodicEquipmentAssets","PeriodicEquipmentInspections","PPE","ViolationTypes","Violations","Blacklist_Register","ContractorEvaluations","ContractorApprovalRequests","ContractorEvaluationApprovalRequests","ContractorDeletionRequests","BehaviorMonitoring","ContractorBehaviorMonitoring","ChemicalSafety","DailyObservations","DailySafetyCheckList","ISODocuments","ISOProcedures","ISOForms","SOPJHA","RiskAssessments","LegalDocuments","HSEAudits","HSENonConformities","HSECorrectiveActions","HSEObjectives","HSERiskAssessments","EnvironmentalAspects","EnvironmentalMonitoring","Sustainability","CarbonFootprint","WasteManagement","EnergyEfficiency","WaterManagement","WaterManagement_Records","GasManagement_Records","ElectricityManagement_Records","RecyclingPrograms","EmergencyAlerts","EmergencyPlans","EmergencyPlansUpdates","SafetyTeamMembers","SafetyOrganizationalStructure","SafetyJobDescriptions","SafetyTeamKPIs","SafetyTeamAttendance","SafetyTeamLeaves","SafetyTeamTasks","SafetyBudgets","SafetyBudgetTransactions","SafetyBudgetPurchaseOrders","SafetyPerformanceKPIs","ActionTrackingRegister","UserActivityLog","SafetyCalendarCustomEvents"].slice();l&&Array.isArray(l)&&l.length>0&&(E=l,i&&Utils.safeLog(`\u2705 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0623\u0648\u0631\u0627\u0642 \u0627\u0644\u0645\u062D\u062F\u062F\u0629 \u0641\u064A options: ${l.join(", ")}`));const g={Users:"users",Incidents:"incidents",NearMiss:"nearmiss",PTW:"ptw",PTWRegistry:"ptwRegistry",Training:"training",ClinicVisits:"clinicVisits",ClinicContractorVisits:"clinicContractorVisits",Medications:"medications",SickLeave:"sickLeave",Injuries:"injuries",ClinicContractorInjuries:"clinicContractorInjuries",ClinicInventory:"clinicInventory",FireEquipment:"fireEquipment",FireEquipmentAssets:"fireEquipmentAssets",FireEquipmentInspections:"fireEquipmentInspections",PeriodicInspectionCategories:"periodicInspectionCategories",PeriodicInspectionRecords:"periodicInspectionRecords",PeriodicInspectionSchedules:"periodicInspectionSchedules",PeriodicInspectionChecklists:"periodicInspectionChecklists",PeriodicEquipmentTypes:"periodicEquipmentTypes",PeriodicEquipmentAssets:"periodicEquipmentAssets",PeriodicEquipmentInspections:"periodicEquipmentInspections",PPE:"ppe",ViolationTypes:"violationTypes",Violations:"violations",Blacklist_Register:"blacklistRegister",Contractors:"contractors",ApprovedContractors:"approvedContractors",ContractorEvaluations:"contractorEvaluations",ContractorApprovalRequests:"contractorApprovalRequests",ContractorEvaluationApprovalRequests:"contractorEvaluationApprovalRequests",ContractorDeletionRequests:"contractorDeletionRequests",Employees:"employees",ExternalWorkforceMonthly:"externalWorkforceMonthly",BehaviorMonitoring:"behaviorMonitoring",ContractorBehaviorMonitoring:"contractorBehaviorMonitoring",ChemicalSafety:"chemicalSafety",Chemical_Register:"chemicalRegister",DailyObservations:"dailyObservations",DailySafetyCheckList:"dailySafetyCheckList",ISODocuments:"isoDocuments",ISOProcedures:"isoProcedures",ISOForms:"isoForms",SOPJHA:"sopJHA",RiskAssessments:"riskAssessments",LegalDocuments:"legalDocuments",HSEAudits:"hseAudits",HSENonConformities:"hseNonConformities",HSECorrectiveActions:"hseCorrectiveActions",HSEObjectives:"hseObjectives",HSERiskAssessments:"hseRiskAssessments",EnvironmentalAspects:"environmentalAspects",EnvironmentalMonitoring:"environmentalMonitoring",Sustainability:"sustainability",CarbonFootprint:"carbonFootprint",WasteManagement:"wasteManagement",EnergyEfficiency:"energyEfficiency",WaterManagement:"waterManagement",RecyclingPrograms:"recyclingPrograms",EmergencyAlerts:"emergencyAlerts",EmergencyPlans:"emergencyPlans",EmergencyPlansUpdates:"emergencyPlansUpdates",SafetyTeamMembers:"safetyTeamMembers",SafetyOrganizationalStructure:"safetyOrganizationalStructure",SafetyJobDescriptions:"safetyJobDescriptions",SafetyTeamKPIs:"safetyTeamKPIs",SafetyTeamAttendance:"safetyTeamAttendance",SafetyTeamLeaves:"safetyTeamLeaves",SafetyTeamTasks:"safetyTeamTasks",SafetyBudgets:"safetyBudgets",SafetyBudgetTransactions:"safetyBudgetTransactions",SafetyBudgetPurchaseOrders:"safetyBudgetPurchaseOrders",SafetyPerformanceKPIs:"safetyPerformanceKPIs",ActionTrackingRegister:"actionTrackingRegister",UserActivityLog:"user_activity_log",SafetyCalendarCustomEvents:"safetyCalendarCustomEvents"},M={dashboard:[],users:["Users"],incidents:["Incidents"],nearmiss:["NearMiss"],ptw:["PTW","PTWRegistry"],training:["Training"],clinic:["ClinicVisits","ClinicContractorVisits","Medications","SickLeave","Injuries","ClinicContractorInjuries","ClinicInventory"],"fire-equipment":["FireEquipment","FireEquipmentAssets","FireEquipmentInspections"],"periodic-inspections":["PeriodicInspectionCategories","PeriodicInspectionRecords","PeriodicInspectionSchedules","PeriodicInspectionChecklists","DailySafetyCheckList","PeriodicEquipmentTypes","PeriodicEquipmentAssets","PeriodicEquipmentInspections"],ppe:["PPE"],violations:["Violations","ViolationTypes","Blacklist_Register"],contractors:["Contractors","ApprovedContractors","ContractorEvaluations","ContractorApprovalRequests","ContractorEvaluationApprovalRequests","ContractorDeletionRequests"],employees:["Employees","ExternalWorkforceMonthly"],"behavior-monitoring":["BehaviorMonitoring","ContractorBehaviorMonitoring"],"chemical-safety":["ChemicalSafety","Chemical_Register"],"daily-observations":["DailyObservations"],iso:["ISODocuments","ISOProcedures","ISOForms","HSEAudits"],"sop-jha":["SOPJHA"],"risk-assessment":["RiskAssessments","HSERiskAssessments"],"legal-documents":["LegalDocuments"],sustainability:["Sustainability","EnvironmentalAspects","EnvironmentalMonitoring","CarbonFootprint","WasteManagement","EnergyEfficiency","WaterManagement","WaterManagement_Records","GasManagement_Records","ElectricityManagement_Records","RecyclingPrograms"],emergency:["EmergencyAlerts","EmergencyPlans","EmergencyPlansUpdates"],"safety-budget":["SafetyBudgets","SafetyBudgetTransactions","SafetyBudgetPurchaseOrders"],"safety-performance-kpis":["SafetyPerformanceKPIs","SafetyTeamKPIs"],"safety-health-management":["SafetyTeamMembers","SafetyOrganizationalStructure","SafetyJobDescriptions","SafetyTeamKPIs","SafetyTeamAttendance","SafetyTeamLeaves","SafetyTeamTasks"],"action-tracking":["ActionTrackingRegister","HSECorrectiveActions","HSENonConformities","HSEObjectives"],"safety-calendar":["SafetyCalendarCustomEvents"]},$=!!(AppState.currentUser&&typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));if(AppState.currentUser&&!$){const c=Permissions.getAccessibleModules(!0),m=new Set;o&&Permissions.hasAccess("users")&&m.add("Users"),c.forEach(U=>{const O=M[U];Array.isArray(O)&&O.forEach(P=>m.add(P))}),Permissions.hasAccess("violations")&&m.add("ViolationTypes"),["clinic","training","ptw","violations","behavior-monitoring"].some(U=>c.includes(U))&&!c.includes("contractors")&&(["Contractors","ApprovedContractors"].forEach(O=>{E.includes(O)||E.push(O),m.add(O)}),i&&Utils.safeLog("\u2705 \u0625\u0636\u0627\u0641\u0629 \u0623\u0648\u0631\u0627\u0642 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0644\u0644\u0645\u062F\u064A\u0648\u0644\u0627\u062A \u0627\u0644\u062A\u064A \u062A\u062D\u062A\u0627\u062C\u0647\u0627")),Permissions.hasAccess("contractors")&&(m.add("ContractorApprovalRequests"),m.add("ContractorEvaluationApprovalRequests"),m.add("ContractorDeletionRequests")),E=E.filter(U=>m.has(U)),i&&Utils.safeLog("Checking sheets:",E)}else o&&!E.includes("Users")&&E.unshift("Users");if(AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),y&&!l){const c=[...f,...E],m=this.getIncompleteSheets(g,c);if(m&&m.length>0)E=m,i&&Utils.safeLog(`\u2705 \u062A\u062D\u0645\u064A\u0644 \u062A\u062F\u0631\u064A\u062C\u064A: ${m.length} \u0648\u0631\u0642\u0629 \u063A\u064A\u0631 \u0645\u0643\u062A\u0645\u0644\u0629`);else if(m!==null)return s&&typeof Loading<"u"&&Loading.hide(),r&&Notification.success("\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u062F\u062B\u0629"),this._syncInProgress.global=!1,this._currentSyncForceRefresh=!1,!0}if(AppState.syncMeta.userEmail=AppState.currentUser?.email||null,E.length===0)return s&&typeof Loading<"u"&&Loading.hide(),i&&Utils.safeLog("\u0644\u0627 \u064A\u0648\u062C\u062F \u0648\u0631\u0627\u0642 \u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL"),this._syncInProgress.global=!1,this._currentSyncForceRefresh=!1,!0;if(E=this._filterSheetsForCurrentUser(E),!l){const c=["ClinicVisits","ClinicContractorVisits","Training","Employees","ExternalWorkforceMonthly","PTW","PTWRegistry","DailyObservations","UserActivityLog"];E=E.filter(m=>!c.includes(m))}if(E.length===0)return s&&typeof Loading<"u"&&Loading.hide(),i&&Utils.safeLog("\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0648\u0631\u0627\u0642 \u0645\u0633\u0645\u0648\u062D \u0642\u0631\u0627\u0621\u062A\u0647\u0627 \u0644\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u062D\u0627\u0644\u064A"),this._syncInProgress.global=!1,this._currentSyncForceRefresh=!1,!0;const _=f.filter(c=>E.includes(c)),u=E.filter(c=>!f.includes(c));let T=0;const w=[],R=[];_.length>0&&(i&&Utils.safeLog(`\u{1F680} \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629 \u0623\u0648\u0644\u0627\u064B: ${_.join(", ")}`),s&&typeof Loading<"u"&&Loading.setProgress(10,"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),(await Promise.allSettled(_.map(m=>this.readFromSheets(m).then(v=>({sheetName:m,data:v,success:!0})).catch(v=>({sheetName:m,error:v,success:!1}))))).forEach((m,v)=>{const A=_[v];if(m.status==="fulfilled"){const{data:U,error:O,success:P}=m.value;if(P&&!O&&U){const L=g[A];if(L)if(Array.isArray(U)){const q=Array.isArray(AppState.appData[L])?AppState.appData[L]:[],d=!this._currentSyncForceRefresh&&U.length===0&&q.length>0,D=d?q:U;d||(AppState.appData[L]=U,AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),AppState.syncMeta.sheets[A]=Date.now(),AppState.syncMeta.lastSyncTime=Date.now()),D.length>0?(T++,i&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${A}: ${D.length} \u0633\u062C\u0644`)):i&&Utils.safeLog(d?`\u26A0\uFE0F ${A} \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0629 \u0642\u062F\u064A\u0645\u0629 (${q.length})`:`\u2705 ${A} \u0641\u0627\u0631\u063A\u0629 (\u062A\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0628\u0646\u062C\u0627\u062D)`)}else{const q=AppState.appData[L]||[];q.length>0?i&&Utils.safeWarn(`\u26A0\uFE0F ${A} \u0644\u0645 \u062A\u064F\u0631\u062C\u0639 array - \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629 (${q.length} \u0633\u062C\u0644)`):(AppState.appData[L]=[],i&&Utils.safeWarn(`\u26A0\uFE0F ${A} \u0644\u0645 \u062A\u064F\u0631\u062C\u0639 array \u0648\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u062F\u064A\u0645\u0629 - \u062A\u0645 \u062A\u0639\u064A\u064A\u0646\u0647\u0627 \u0625\u0644\u0649 array \u0641\u0627\u0631\u063A\u0629`))}else i&&Utils.safeWarn(`\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 mapping \u0644\u0640 ${A}`);R.push({sheetName:A,data:Array.isArray(U)?U:[],success:!0})}else{w.push(A);const L=O?.message||O||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";i&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${A}:`,L),R.push({sheetName:A,error:L,success:!1})}}else{w.push(A);const U=m.reason?.message||m.reason||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";i&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${A}:`,U),R.push({sheetName:A,error:U,success:!1})}}),T>0&&(DataManager.save(),i&&Utils.safeLog(`\u2705 \u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629: ${T} \u0648\u0631\u0642\u0629`)),_.includes("Users")&&AppState.currentUser&&setTimeout(()=>{typeof window.Auth<"u"&&typeof window.Auth.updateUserSession=="function"&&(window.Auth.updateUserSession(),i&&Utils.safeLog("\u2705 \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u062C\u0644\u0633\u0629 \u0628\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646"))},100));const C=u.length,I=_.length>0?30:10;if(s&&typeof Loading<"u"&&Loading.setProgress(I,"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),u.length>0){i&&Utils.safeLog(`\u{1F4E6} \u062A\u062D\u0645\u064A\u0644 ${u.length} \u0648\u0631\u0642\u0629 \u0628\u0627\u0633\u062A\u062E\u062F\u0627\u0645 Batch Reading...`);try{const c=await this.batchReadFromSheets(u,{batchSize:12,timeout:3e4,observationsRequestContext:null,skipCache:!!this._currentSyncForceRefresh}),m=c.data||{},v=u.map(A=>m[A]!==void 0&&m[A]!==null?{sheetName:A,data:m[A],success:!0}:{sheetName:A,error:"\u0641\u0634\u0644 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A",success:!1});R.push(...v),i&&Utils.safeLog(`\u2705 Batch Read: ${c.successfulSheets}/${c.totalSheets} sheets loaded successfully`),s&&typeof Loading<"u"&&Loading.setProgress(90,"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(c){Utils.safeError("\u274C \u0641\u0634\u0644 Batch Read:",c),i&&Utils.safeLog("\u26A0\uFE0F Fallback: \u062A\u062D\u0645\u064A\u0644 \u0641\u0631\u062F\u064A \u0644\u0644\u0623\u0648\u0631\u0627\u0642...");const v=(await Promise.allSettled(u.map(A=>this.readFromSheets(A).then(U=>({sheetName:A,data:U,success:!0})).catch(U=>({sheetName:A,error:U,success:!1}))))).map((A,U)=>A.status==="fulfilled"?A.value:{sheetName:u[U],error:A.reason?.message||A.reason||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",success:!1});R.push(...v)}}R.forEach((c,m)=>{const{sheetName:v,data:A,error:U,success:O}=c,P=this.applyResourceConsumptionSheetSyncResult(v,{data:A,error:U,success:O});if(P&&P.handled){P.failed?(w.includes(v)||w.push(v),i&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0631\u0642\u0629 ${v}:`,U||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")):P.syncedRecords>0&&T++;return}const L=g[v];if(!L){i&&Utils.safeWarn(`\u26A0\uFE0F \u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0631\u0628\u0637 (mapping) \u0644\u0644\u0648\u0631\u0642\u0629: ${v}`);return}if(U||!O){w.includes(v)||w.push(v);const q=U?.message||U||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641";if(i&&Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u0627\u0633\u062A\u0631\u062C\u0627\u0639 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0631\u0642\u0629 ${v}:`,q),!AppState.appData[L]||!Array.isArray(AppState.appData[L])){const d=AppState.appData[L];!d||Array.isArray(d)&&d.length===0?AppState.appData[L]=[]:i&&Utils.safeLog(`\u2139\uFE0F ${v}: \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 (${d.length} \u0633\u062C\u0644) \u0628\u0639\u062F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644`)}else i&&Utils.safeLog(`\u2139\uFE0F ${v}: \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 (${AppState.appData[L].length} \u0633\u062C\u0644) \u0628\u0639\u062F \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644`);return}if(Array.isArray(A)){const q=Array.isArray(AppState.appData[L])?AppState.appData[L]:[],d=!this._currentSyncForceRefresh&&v!=="ViolationTypes"&&A.length===0&&q.length>0,D=d?q:A;if(!d){if(AppState.appData[L]=A,L==="contractorApprovalRequests"&&Array.isArray(A)&&A.length>0&&typeof Contractors<"u"&&typeof Contractors.ingestApprovalRequestsFromSync=="function")try{Contractors.ingestApprovalRequestsFromSync(A,{refreshUi:!0})}catch{}if(L==="approvedContractors"&&Array.isArray(A)&&A.length>0&&typeof Contractors<"u"&&typeof Contractors.ingestApprovedContractorsFromSync=="function")try{Contractors.ingestApprovedContractorsFromSync(A,{refreshUi:!0})}catch{}AppState.syncMeta||(AppState.syncMeta={sheets:{},lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),AppState.syncMeta.sheets[v]=Date.now(),AppState.syncMeta.lastSyncTime=Date.now()}D.length>0?(T++,i&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0648\u0631\u0642\u0629 ${v} \u0628\u0646\u062C\u0627\u062D: ${D.length} \u0633\u062C\u0644`)):i&&Utils.safeLog(d?`\u26A0\uFE0F \u0627\u0644\u0648\u0631\u0642\u0629 ${v} \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0629 \u0642\u062F\u064A\u0645\u0629 (${q.length})`:`\u2705 \u0627\u0644\u0648\u0631\u0642\u0629 ${v} \u0641\u0627\u0631\u063A\u0629 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL`)}else{const q=AppState.appData[L]||[];q.length>0?i&&Utils.safeWarn(`\u26A0\uFE0F ${v} \u0644\u0645 \u062A\u064F\u0631\u062C\u0639 array - \u0627\u0644\u0627\u062D\u062A\u0641\u0627\u0638 \u0628\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u062D\u0627\u0644\u064A\u0629 (${q.length} \u0633\u062C\u0644)`):(AppState.appData[L]=[],i&&Utils.safeWarn(`\u26A0\uFE0F ${v} \u0644\u0645 \u062A\u064F\u0631\u062C\u0639 array \u0648\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0642\u062F\u064A\u0645\u0629 - \u062A\u0645 \u062A\u0639\u064A\u064A\u0646\u0647\u0627 \u0625\u0644\u0649 array \u0641\u0627\u0631\u063A\u0629`))}}),s&&typeof Loading<"u"&&Loading.setProgress(95,"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),ViolationTypesManager.ensureInitialized(),PeriodicInspectionStore.ensureInitialized(),typeof PeriodicEquipmentStore<"u"&&PeriodicEquipmentStore.ensureInitialized(),DataManager.save();try{typeof Dashboard<"u"&&typeof Dashboard.updateReportsStatistics=="function"&&Dashboard.updateReportsStatistics()}catch{}if(typeof window<"u"&&setTimeout(()=>{window.dispatchEvent(new CustomEvent("syncDataCompleted",{detail:{syncedCount:T,failedSheets:w,sheets:Object.keys(g).filter(c=>E.includes(c)&&AppState.appData[g[c]])}}))},100),typeof DataManager<"u"&&DataManager.loadCompanySettings)try{await DataManager.loadCompanySettings(),typeof UI<"u"&&(UI.updateCompanyLogoHeader&&UI.updateCompanyLogoHeader(),UI.updateLoginLogo&&UI.updateLoginLogo(),UI.updateDashboardLogo&&UI.updateDashboardLogo(),UI.updateCompanyBranding&&UI.updateCompanyBranding()),AppState.companyLogo&&window.dispatchEvent(new CustomEvent("companyLogoUpdated",{detail:{logoUrl:AppState.companyLogo}})),i&&Utils.safeLog("\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0648\u0627\u0644\u0634\u0639\u0627\u0631 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(c){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0634\u0631\u0643\u0629 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",c)}if(typeof Permissions<"u"&&typeof Permissions.initFormSettingsState=="function")try{if(await Permissions.initFormSettingsState(),i){const c=AppState.appData?.observationSites?.length||0;Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C (${c} \u0645\u0648\u0642\u0639) \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629`)}}catch(c){Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C \u0628\u0639\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629:",c)}s&&typeof Loading<"u"?(Loading.setProgress(100,"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A"),setTimeout(()=>{Loading.hide()},1e3)):s&&typeof Loading<"u"&&Loading.hide();const k=w.length===0;return k?r&&T>0?Notification.success(`\u062A\u0645\u062A \u0645\u0632\u0627\u0645\u0646\u0629 ${T} \u062C\u062F\u0627\u0648\u0644 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL \u0628\u0646\u062C\u0627\u062D`):i&&Utils.safeLog(`\u0627\u0643\u062A\u0645\u0644\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0646\u062C\u0627\u062D: ${T} \u062C\u062F\u0627\u0648\u0644 \u062A\u0645 \u062A\u062D\u062F\u064A\u062B\u0647\u0627`):(this._lastSyncError=w.length?"\u0641\u0634\u0644\u062A \u0623\u0648\u0631\u0627\u0642: "+w.slice(0,8).join(", ")+(w.length>8?"...":""):"\u0644\u0645 \u062A\u064F\u062D\u0645\u0651\u064E\u0644 \u0623\u064A \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645",n&&Notification.warning(`\u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0639\u0636 \u0627\u0644\u062C\u062F\u0627\u0648\u0644: ${w.join(", ")}`),i&&Utils.safeWarn("\u0641\u0634\u0644 \u0645\u0632\u0627\u0645\u0646\u0629 \u0628\u0639\u0636 \u0627\u0644\u062C\u062F\u0627\u0648\u0644:",w)),typeof InactivityManager<"u"&&AppState.currentUser&&!a&&InactivityManager.resume(),this._syncInProgress.global=!1,this._currentSyncForceRefresh=!1,k||T>0}catch(i){this._syncInProgress.global=!1,this._currentSyncForceRefresh=!1,s&&typeof Loading<"u"&&Loading.hide(),typeof InactivityManager<"u"&&AppState.currentUser&&!a&&InactivityManager.resume(),this._lastSyncError=i.message||String(i);const f=i.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",h=this._isBackendRpcConfigured(),E=!h||f.includes("\u0645\u0639\u0631\u0641 \u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u062D\u062F\u062F")||f.includes("\u0642\u0627\u0639\u062F\u0629 SQL \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644")||!h&&(f.includes("Failed to fetch")||f.includes("NetworkError"));return E||Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A:",i),n&&!E&&Notification.error("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u062E\u0627\u062F\u0645: "+i.message),!1}},async autoSave(e,t,s={}){const{retryCount:r=3,silent:n=!0,useQueue:o=!1}=s;if(!this._isBackendRpcConfigured())return n||Utils.safeWarn("\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644 - \u0633\u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B"),typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync(e,t),{success:!1,shouldDefer:!0,message:"\u0627\u0644\u062E\u0627\u062F\u0645 \u0627\u0644\u062E\u0644\u0641\u064A \u063A\u064A\u0631 \u0645\u0641\u0639\u0651\u0644"};const l=AppState.googleConfig.sheets?.spreadsheetId?.trim(),y=l&&l!==""&&l!=="YOUR_SPREADSHEET_ID_HERE",p=this.prepareSheetPayload(e,t);try{let a=null;for(let i=1;i<=r;i++)try{const f={sheetName:e,data:p};y&&(f.spreadsheetId=l);const h=await this.sendRequest({action:"saveToSheet",data:f});if(h&&h.success)return typeof DataManager<"u"&&DataManager.removeFromPendingSync&&DataManager.removeFromPendingSync(e),this.clearCache(e),n||Utils.safeLog(`\u2705 \u062A\u0645 \u062D\u0641\u0638 ${e} \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL \u0628\u0646\u062C\u0627\u062D`),Object.assign({message:"\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0628\u0646\u062C\u0627\u062D"},h);if(a=h?.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641",i<r){const E=Math.pow(2,i)*500;await new Promise(g=>setTimeout(g,E))}}catch(f){if(a=f,i<r){const h=Math.pow(2,i)*500;await new Promise(E=>setTimeout(E,h))}}return typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync(e,t),n||Utils.safeWarn(`\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 ${e} \u0628\u0639\u062F ${r} \u0645\u062D\u0627\u0648\u0644\u0627\u062A - \u0633\u064A\u062A\u0645 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B`),{success:!1,shouldDefer:!0,message:a?.message||a?.toString()||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0628\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0627\u062A"}}catch(a){return typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync(e,t),n||Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A autoSave:",a),{success:!1,shouldDefer:!0,message:a.message||a.toString()}}},_getCurrentUserPermissions(){try{return typeof Permissions<"u"&&typeof Permissions.getCurrentUserPermissions=="function"?Permissions.getCurrentUserPermissions():typeof Permissions<"u"&&typeof Permissions.getEffectivePermissions=="function"?Permissions.getEffectivePermissions(AppState?.currentUser):AppState?.currentUser?.permissions||{}}catch{return{}}},_getDataTypeForAction(e){return{getUserData:"user_specific",getUserTasks:"user_specific",getUserNotifications:"user_specific",getAllApprovedContractors:"shared_data",getAllEmployees:"shared_data",getAllContractors:"shared_data",getOrganizationalStructure:"static_data",getJobDescription:"static_data",getSafetyHealthManagementSettings:"static_data",getAllIncidents:"frequent_updates",getAllNearMiss:"frequent_updates",getAllViolations:"frequent_updates"}[e]||"static_data"},async reconcileMissingApprovedContractors(e={}){const t=AppState?.googleConfig?.sheets?.spreadsheetId,s={forceRefresh:!0,...e||{}};t&&String(t).trim()&&t!=="YOUR_SPREADSHEET_ID_HERE"&&(s.spreadsheetId=String(t).trim()),!s.userData&&AppState?.currentUser&&(s.userData=AppState.currentUser);try{return await this.sendRequest({action:"reconcileMissingApprovedContractors",data:s})}catch(r){const n=String(r?.message||r||""),o=e?.requestId||e?.id;if(o&&(n.includes("\u063A\u064A\u0631 \u0645\u0639\u062A\u0631\u0641")||n.includes("ACTION_NOT_RECOGNIZED")))return await this.sendRequest({action:"approveContractorApprovalRequest",data:{requestId:o,userData:AppState.currentUser}});throw r}},async refreshApprovedContractorsFromSheet(){const e=await this.readFromSheets("ApprovedContractors",45e3);return Array.isArray(e)&&AppState?.appData&&(AppState.appData.approvedContractors=e,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),typeof Contractors<"u"&&typeof Contractors.refreshApprovedEntitiesList=="function"&&Contractors.refreshApprovedEntitiesList()),e}};if(typeof window<"u"){window.GoogleIntegration=GoogleIntegration,window.BackendRpc=GoogleIntegration,window.reprocessDailySafetyFormRows=async function(t,s){const r={fromRow:t,toRow:s??t};typeof AppState<"u"&&AppState?.currentUser&&(r.userData=AppState.currentUser);const n=await GoogleIntegration.sendRequest({action:"reprocessDailySafetyFormRows",data:r});return typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("reprocessDailySafetyFormRows:",n),n};try{GoogleIntegration._purgeLegacyReadFromSheetLocalCache_()}catch{}}
+    _isCurrentUserEffectiveAdmin_() {
+        try {
+            return !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+        } catch (e) {
+            return false;
+        }
+    },
+
+    _filterSheetsForCurrentUser(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames.slice() : [];
+        if (this._isCurrentUserEffectiveAdmin_()) return list;
+        return list.filter((s) => !this.ADMIN_ONLY_READ_SHEETS.includes(s));
+    },
+
+    _canReadUsersSheet_() {
+        if (this._isCurrentUserEffectiveAdmin_()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+            return Permissions.hasAccess('users');
+        }
+        return false;
+    },
+
+    /**
+     * جلب قائمة مستخدمين مُصفّاة من الخادم (بدون passwordHash) — للمستخدمين غير المديرين
+     */
+    async fetchUsersForApp(options = {}) {
+        if (!this._isBackendRpcConfigured()) return null;
+        try {
+            const result = await this.sendToAppsScript('getUsersForApp', {
+                __timeoutMs: options.timeout || 15000
+            });
+            if (result && result.success && Array.isArray(result.data)) {
+                AppState.appData.users = result.data;
+                if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                AppState.syncMeta.users = Date.now();
+                AppState.syncMeta.sheets = AppState.syncMeta.sheets || {};
+                AppState.syncMeta.sheets.Users = Date.now();
+                if (AppState.currentUser?.email) {
+                    AppState.syncMeta.userEmail = AppState.currentUser.email;
+                }
+                if (typeof DataManager !== 'undefined' && DataManager.save) {
+                    DataManager.save();
+                }
+                return result.data;
+            }
+            return null;
+        } catch (error) {
+            if (AppState?.debugMode) {
+                Utils.safeWarn('⚠️ fetchUsersForApp:', error?.message || error);
+            }
+            return null;
+        }
+    },
+
+    _isExpectedReadError_(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('admin_only') ||
+            msg.includes('actor_identity_required') ||
+            msg.includes('ليس لديك صلاحية') ||
+            msg.includes('direct_sheet_write_blocked') ||
+            msg.includes('get_read_denied');
+    },
+
+    /**
+     * عمليات تعديل على الخادم — لا يجب أبداً اعتبار نسخة localStorage/cache قديمة «نجاحاً» لها
+     * (وإلا يظهر للمستخدم أن الزيارة/السجل حُفظ وهو غير موجود في الشيت).
+     */
+    _isWriteMutationAction(action) {
+        if (!action || typeof action !== 'string') return false;
+        const a = action.toLowerCase();
+        const readPrefixes = ['get', 'read', 'fetch', 'load', 'list', 'query', 'search', 'find'];
+        if (readPrefixes.some((p) => a.startsWith(p))) return false;
+        const writePrefixes = [
+            'add', 'update', 'delete', 'save', 'append', 'remove', 'submit', 'create',
+            'patch', 'set', 'upload', 'import', 'initialize', 'sync', 'send', 'move', 'copy',
+            'approve', 'reject', 'cancel', 'revoke', 'reset'
+        ];
+        return writePrefixes.some((p) => a.startsWith(p));
+    },
+
+    prepareSheetPayload(sheetName, data) {
+        const sanitizePTW = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const allowedFields = [
+                'id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate',
+                'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes',
+                'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow',
+                'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(row, field)) {
+                    sanitized[field] = row[field];
+                }
+            });
+            return sanitized;
+        };
+
+        const sanitizePTWRegistry = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const normalizedRow = { ...row };
+            // توافق رجعي: تطبيع case-insensitive لمفاتيح الكاتب/المحدّث من queue قديم
+            const normalizeLegacyAlias = (targetKey, aliases) => {
+                if (normalizedRow[targetKey]) return;
+                const keys = Object.keys(normalizedRow);
+                for (const key of keys) {
+                    const lowered = String(key || '').toLowerCase();
+                    if (aliases.includes(lowered)) {
+                        normalizedRow[targetKey] = normalizedRow[key];
+                        break;
+                    }
+                }
+            };
+            normalizeLegacyAlias('createdBy', ['createdby']);
+            normalizeLegacyAlias('createdById', ['createdbyid']);
+            normalizeLegacyAlias('updatedBy', ['updatedby']);
+            normalizeLegacyAlias('updatedById', ['updatedbyid']);
+            const allowedFields = [
+                'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay',
+                'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',
+                'timeFrom', 'timeTo', 'totalTime', 'authorizedParty', 'workDescription',
+                'supervisor1', 'supervisor2', 'status', 'paperPermitNumber', 'equipment', 'tools',
+                'toolsList', 'teamMembersText', 'hotWorkDetails', 'hotWorkOther',
+                'confinedSpaceDetails', 'confinedSpaceOther', 'heightWorkDetails', 'heightWorkOther',
+                'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength',
+                'excavationWidth', 'excavationDepth', 'soilType', 'preStartChecklist', 'lotoApplied',
+                'governmentPermits', 'riskAssessmentAttached', 'gasTesting', 'mocRequest', 'ppeNotes',
+                'requiredPPE', 'riskLikelihood', 'riskConsequence', 'riskScore', 'riskLevel',
+                'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'closureDate',
+                'closureReason', 'isManualEntry', 'approvalCircuitOwnerId', 'approvalCircuitName',
+                'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(normalizedRow, field)) {
+                    sanitized[field] = normalizedRow[field];
+                }
+            });
+            return sanitized;
+        };
+
+        if (sheetName === 'PTW') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTW(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTW(data);
+            }
+            return data;
+        }
+
+        if (sheetName === 'PTWRegistry') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTWRegistry(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTWRegistry(data);
+            }
+            return data;
+        }
+
+        if (sheetName === 'ContractorEvaluationApprovalRequests') {
+            const sanitizeCear = (row) => {
+                if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+                const allowedFields = [
+                    'id', 'contractorId', 'contractorName', 'evaluationData',
+                    'status', 'createdBy', 'createdByName', 'createdAt',
+                    'approvedAt', 'approvedBy', 'approvedByName',
+                    'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason',
+                    'updatedAt', 'updatedBy', 'updatedByName', 'legacySource', 'spreadsheetId'
+                ];
+                const sanitized = {};
+                allowedFields.forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(row, field)) {
+                        sanitized[field] = row[field];
+                    }
+                });
+                return sanitized;
+            };
+            if (Array.isArray(data)) return data.map((item) => sanitizeCear(item));
+            if (data && typeof data === 'object') return sanitizeCear(data);
+            return data;
+        }
+
+        if (sheetName !== 'Users') {
+            return data;
+        }
+
+        const sanitizeUser = (user) => {
+            if (!user || typeof user !== 'object') return user;
+            const sanitized = { ...user };
+            const canCheckHash = typeof Utils !== 'undefined' && Utils && typeof Utils.isSha256Hex === 'function';
+            const hasHash = sanitized.passwordHash && sanitized.passwordHash.trim() !== '';
+            const passwordValue = sanitized.password || '';
+
+            // التحقق من هل هو passwordHash
+            if (hasHash && canCheckHash && Utils.isSha256Hex(sanitized.passwordHash.trim())) {
+                // passwordHash موجود - يتم تخزينه
+            } else if (!hasHash && passwordValue && passwordValue !== '***' && canCheckHash && Utils.isSha256Hex(passwordValue)) {
+                // لا يوجد passwordHash - يتم تخزينه في passwordHash
+                sanitized.passwordHash = passwordValue.trim();
+            } else if (passwordValue && passwordValue !== '***' && !canCheckHash) {
+                // لا يوجد passwordHash - يتم تخزينه في password
+                // لا يوجد passwordHash - يتم تخزينه في passwordHash
+            }
+
+            // يتم تخزين password
+            sanitized.password = '***';
+
+            // يتم التحقق من هل هو passwordHash
+            if (sanitized.passwordHash && sanitized.passwordHash.trim() === '') {
+                delete sanitized.passwordHash;
+            } else if (sanitized.passwordHash && canCheckHash && !Utils.isSha256Hex(sanitized.passwordHash.trim())) {
+                // لا يوجد passwordHash - يتم حذفه
+                delete sanitized.passwordHash;
+            }
+
+            return sanitized;
+        };
+
+        if (Array.isArray(data)) {
+            return data.map(item => sanitizeUser(item));
+        }
+
+        if (data && typeof data === 'object') {
+            return sanitizeUser(data);
+        }
+
+        return data;
+    },
+
+    /**
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     * @param {string} action - نوع العملية (addUser, updateUser)
+     * @param {any} data - البيانات
+     * @param {number} maxRetries - عدد المحاولات (3)
+     * @returns {Promise<object>} - النتيجة
+     */
+    async immediateSyncWithRetry(action, data, maxRetries = 3) {
+        if (!this._isBackendRpcConfigured()) {
+            throw new Error('خادم SQL غير مفعل');
+        }
+
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                Utils.safeLog(`🔄 محاولة ${attempt}/${maxRetries} للـ ${action}...`);
+
+                const result = await this.sendToAppsScript(action, data);
+
+                if (result && result.success) {
+                    Utils.safeLog(`✅ تم بنجاح ${action} في المحاولة ${attempt}`);
+                    return result;
+                }
+
+                lastError = new Error(result?.message || 'فشل المزامنة');
+                Utils.safeWarn(`⚠️ فشل ${action} في المحاولة ${attempt}: ${result?.message}`);
+
+                if (result?.message && result.message.includes('invalid')) {
+                    return result;
+                }
+
+            } catch (error) {
+                lastError = error;
+                Utils.safeWarn(`❌ خطأ في ${action} (محاولة ${attempt}/${maxRetries}):`, error.message);
+            }
+            
+            if (attempt < maxRetries) {
+                const waitTime = 500 * attempt;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
+
+        throw lastError || new Error('فشل المزامنة بعد استنفاذ جميع المحاولات');
+    },
+
+    /**
+     * تطبيع رابط Web App (/dev → /exec) قبل الطلب
+     */
+    _resolveScriptUrl() {
+        if (typeof getEffectiveApiUrl === 'function') {
+            const live = getEffectiveApiUrl();
+            if (live) return live;
+        }
+        if (typeof window.LIVE_BACKEND_URL !== 'undefined' && window.LIVE_BACKEND_URL) {
+            return window.LIVE_BACKEND_URL;
+        }
+        let url = String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function') {
+            const normalized = String(Utils.getAppsScriptScriptUrl() || '').trim();
+            if (normalized) url = normalized;
+        } else if (url && url.indexOf('script.google.com/macros/s/') !== -1) {
+            url = url.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
+        return url;
+    },
+
+    /**
+     * التحقق من صحة رابط الباك إند (خادم SQL أو SQL Serverless / Tunnel)
+     */
+    isValidGoogleAppsScriptUrl(url) {
+        try {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            if (trimmed.startsWith('/') || trimmed.startsWith('./')) return true;
+            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
+            const urlObj = new URL(trimmed, base);
+            const host = urlObj.hostname.toLowerCase();
+            const path = urlObj.pathname || '';
+            if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
+                return path.endsWith('/exec');
+            }
+            if (host.includes('safety-icapp.com') || host.endsWith('.trycloudflare.com') || host.includes('vercel.app') || host === 'localhost' || host === '127.0.0.1' || host === '') {
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * التحقق من هل هو CSRF Token
+     */
+    getOrCreateCSRFToken() {
+        let token = sessionStorage.getItem('csrf_token');
+        if (!token) {
+            // لا يوجد token - يتم توليده
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            token = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+            sessionStorage.setItem('csrf_token', token);
+        }
+        return token;
+    },
+
+    /**
+     * معرف جلسة عميل بسيط لربط CSRF بالجلسة على الخادم
+     */
+    getOrCreateClientSessionId() {
+        let sessionId = sessionStorage.getItem('client_session_id');
+        if (!sessionId) {
+            const randomPart = Math.random().toString(36).slice(2, 10);
+            sessionId = `sid_${Date.now().toString(36)}_${randomPart}`;
+            sessionStorage.setItem('client_session_id', sessionId);
+        }
+        return sessionId;
+    },
+
+    /**
+     * ============================================
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     * ============================================
+     */
+
+    // Request Queue System
+    _requestQueue: [],
+    _isProcessingQueue: false,
+    _queueWorkers: 0,
+    _maxQueueWorkers: 3,
+    _lastRequestTime: null,
+    _minQueueDelayMs: 40,
+    _authRpcActions: ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'],
+
+    _isAuthRpcAction(action) {
+        return typeof action === 'string' && this._authRpcActions.includes(action);
+    },
+
+    _isClinicAttendanceRpcAction(action) {
+        return action === 'recordClinicStaffLogin' || action === 'recordClinicStaffLogout';
+    },
+
+    _shouldBypassRequestQueue(action) {
+        return this._isAuthRpcAction(action)
+            || this._isClinicAttendanceRpcAction(action)
+            || action === 'warmup'
+            || this._isCriticalUserMutation(action);
+    },
+
+    /** عمليات إدارية حرجة — لا تُحجب بـ Circuit Breaker */
+    _isCriticalUserMutation(action) {
+        const critical = new Set([
+            'deleteIncident',
+            'deleteObservation',
+            'deleteNearMiss',
+            'deletePTW',
+            'deleteEmployee',
+            'saveFormSettings',
+            'getFormSettings',
+            'getCompanySettings',
+            'saveCompanySettings'
+        ]);
+        return critical.has(action);
+    },
+
+    // Circuit Breaker
+    _circuitBreaker: {
+        isOpen: false,
+        failureCount: 0,
+        lastFailureTime: null,
+        openUntil: null,
+        successCount: 0
+    },
+
+    // Request deduplication
+    _activeRequests: new Map(), // التحقق من هل هو activeRequests
+
+    // API Rate Limiting
+    _rateLimiter: {
+        requests: [],
+        maxRequests: 100, // 100 طلب
+        windowMs: 60000, // في 60 ثانية
+        blockDuration: 300000 // حظر 5 دقائق عند تجاوز الحد
+    },
+
+    // Data Caching System
+    _cache: {
+        data: new Map(),
+        timestamps: new Map(),
+        defaultTTL: 5 * 60 * 1000, // 5 دقائق افتراضياً
+        maxSize: 100 // أقصى 100 عنصر في الـ cache
+    },
+
+    /**
+     * الحصول على بيانات من الـ cache
+     */
+    _getCachedData(key) {
+        const cached = this._cache.data.get(key);
+        const timestamp = this._cache.timestamps.get(key);
+
+        if (!cached || !timestamp) {
+            return null;
+        }
+
+        // التحقق من انتهاء صلاحية الـ cache
+        const now = Date.now();
+        const age = now - timestamp;
+        const ttl = this._cache.defaultTTL;
+
+        if (age > ttl) {
+            // انتهت صلاحية الـ cache
+            this._cache.data.delete(key);
+            this._cache.timestamps.delete(key);
+            return null;
+        }
+
+        return cached;
+    },
+
+    /**
+     * حفظ بيانات في الـ cache
+     */
+    _setCachedData(key, data, ttl = null) {
+        // التحقق من حجم الـ cache
+        if (this._cache.data.size >= this._cache.maxSize) {
+            // حذف أقدم عنصر
+            const oldestKey = this._cache.timestamps.entries()
+                .sort((a, b) => a[1] - b[1])[0]?.[0];
+            if (oldestKey) {
+                this._cache.data.delete(oldestKey);
+                this._cache.timestamps.delete(oldestKey);
+            }
+        }
+
+        this._cache.data.set(key, data);
+        this._cache.timestamps.set(key, Date.now());
+    },
+
+    /**
+     * مسح الـ cache
+     */
+    clearCache(pattern = null) {
+        if (!pattern) {
+            this._cache.data.clear();
+            this._cache.timestamps.clear();
+            return;
+        }
+
+        // مسح العناصر المطابقة للنمط
+        for (const key of this._cache.data.keys()) {
+            if (key.includes(pattern)) {
+                this._cache.data.delete(key);
+                this._cache.timestamps.delete(key);
+            }
+        }
+    },
+
+    /**
+     * إبطال نتائج readFromSheet المخزنة مؤقتاً لشيت محدد (بعد append/update من Apps Script).
+     * بدون ذلك قد تبقى الواجهة تعرض قائمة قديمة رغم نجاح الحفظ في الشيت.
+     */
+    invalidateReadFromSheetCacheForSheets(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames : [sheetNames];
+        const userPermissions = this._getCurrentUserPermissions();
+        const userId = AppState?.currentUser?.id;
+        list.forEach((sheetName) => {
+            if (!sheetName) return;
+            const data = { sheetName: String(sheetName) };
+            try {
+                const legacyKey = `readFromSheet_${JSON.stringify(data)}`;
+                this._cache.data.delete(legacyKey);
+                this._cache.timestamps.delete(legacyKey);
+            } catch (e) { /* ignore */ }
+            if (typeof SmartCache !== 'undefined' && SmartCache.getCacheKey) {
+                try {
+                    const sk = SmartCache.getCacheKey('readFromSheet', data, userId, userPermissions);
+                    localStorage.removeItem(`hse_smart_cache_${sk}`);
+                } catch (e) { /* ignore */ }
+            }
+            this.clearCache(String(sheetName));
+        });
+    },
+
+    /**
+     * التحقق من Rate Limiting للـ API
+     */
+    _checkRateLimit() {
+        const now = Date.now();
+        const windowStart = now - this._rateLimiter.windowMs;
+
+        // إزالة الطلبات القديمة خارج النافذة
+        this._rateLimiter.requests = this._rateLimiter.requests.filter(
+            timestamp => timestamp > windowStart
+        );
+
+        // التحقق من تجاوز الحد
+        if (this._rateLimiter.requests.length >= this._rateLimiter.maxRequests) {
+            const oldestRequest = this._rateLimiter.requests[0];
+            const timeUntilReset = this._rateLimiter.windowMs - (now - oldestRequest);
+            throw new Error(`تم تجاوز حد الطلبات المسموح بها. يرجى المحاولة بعد ${Math.ceil(timeUntilReset / 1000)} ثانية.`);
+        }
+
+        // إضافة الطلب الحالي
+        this._rateLimiter.requests.push(now);
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _openCircuitBreaker() {
+        this._circuitBreaker.isOpen = true;
+        this._circuitBreaker.openUntil = Date.now() + 30000; // 30 ثانية
+        Utils.safeWarn('⚠️ Circuit Breaker مفتوح - تم تعطيل الاتصال مؤقتاً بسبب فشل متكرر');
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _closeCircuitBreaker() {
+        if (this._circuitBreaker.isOpen) {
+            this._circuitBreaker.isOpen = false;
+            this._circuitBreaker.failureCount = 0;
+            this._circuitBreaker.openUntil = null;
+            Utils.safeLog('✅ تم إغلاق Circuit Breaker - الاتصال متاح مرة أخرى');
+        }
+    },
+
+    /** إعادة تعيين Circuit Breaker يدوياً (مثلاً عند تحديث لوحة إدارية) */
+    resetCircuitBreaker() {
+        this._closeCircuitBreaker();
+        this._circuitBreaker.successCount = 0;
+        this._circuitBreaker.lastFailureTime = null;
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _checkCircuitBreaker() {
+        if (this._circuitBreaker.isOpen) {
+            if (this._circuitBreaker.openUntil && Date.now() < this._circuitBreaker.openUntil) {
+                const remainingTime = Math.ceil((this._circuitBreaker.openUntil - Date.now()) / 1000);
+                throw new Error(`Circuit Breaker مفتوح - سيتم إعادة المحاولة بعد ${remainingTime} ثانية`);
+            } else {
+                // انتهت فترة Circuit Breaker - إغلاقه
+                this._closeCircuitBreaker();
+            }
+        }
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _recordSuccess() {
+        this._circuitBreaker.successCount++;
+        if (this._circuitBreaker.successCount >= 3) {
+            this._closeCircuitBreaker();
+            this._circuitBreaker.successCount = 0;
+        }
+        this._circuitBreaker.failureCount = 0;
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _recordFailure() {
+        this._circuitBreaker.failureCount++;
+        this._circuitBreaker.lastFailureTime = Date.now();
+        this._circuitBreaker.successCount = 0;
+
+        // فتح Circuit Breaker بعد 5 محاولات فاشلة
+        if (this._circuitBreaker.failureCount >= 5) {
+            this._openCircuitBreaker();
+        }
+    },
+
+    /**
+     * التحقق من هل هو getRequestKey
+     */
+    _getRequestKey(action, data) {
+        const dataStr = JSON.stringify(data || {});
+        return `${action}_${dataStr}`;
+    },
+
+    /**
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     */
+    async _processRequestQueue() {
+        if (this._requestQueue.length === 0) {
+            return;
+        }
+        if (this._queueWorkers >= this._maxQueueWorkers) {
+            return;
+        }
+
+        this._isProcessingQueue = true;
+        this._queueWorkers += 1;
+
+        try {
+            while (this._requestQueue.length > 0) {
+                const request = this._requestQueue.shift();
+
+            const requestKey = this._getRequestKey(request.action, request.data);
+
+            try {
+                // التحقق من هل هو Circuit Breaker
+                this._checkCircuitBreaker();
+
+                // Throttling: التحقق من هل هو Throttling
+                if (this._lastRequestTime) {
+                    const timeSinceLastRequest = Date.now() - this._lastRequestTime;
+                    const minDelay = this._minQueueDelayMs;
+                    if (timeSinceLastRequest < minDelay) {
+                        await new Promise(resolve => setTimeout(resolve, minDelay - timeSinceLastRequest));
+                    }
+                }
+                this._lastRequestTime = Date.now();
+
+                // التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+                const result = await this._executeRequest(request.action, request.data, request.retryCount || 0);
+
+                // التحقق من هل هو recordSuccess
+                this._recordSuccess();
+
+                // التحقق من هل هو pendingPromises
+                if (request.pendingPromises) {
+                    request.pendingPromises.forEach(({ resolve }) => resolve(result));
+                }
+
+            } catch (error) {
+                const errorMsg = (error?.message || error?.toString() || String(error) || '').toLowerCase();
+
+                // ✅ لا نزيد عداد الفشل في الحالات المتوقعة حتى لا يفتح Circuit Breaker بشكل خاطئ
+                // - عندما يكون Circuit Breaker نفسه هو سبب الرفض
+                // - أخطاء الإعداد/التكوين (Apps Script غير مفعل/URL غير صالح/SpreadsheetId غير مضبوط)
+                const isCircuitBreakerError = errorMsg.includes('circuit breaker');
+                const isConfigError =
+                    errorMsg.includes('google apps script غير') ||
+                    errorMsg.includes('غير مفعل') ||
+                    errorMsg.includes('url غير') ||
+                    errorMsg.includes('scripturl') ||
+                    errorMsg.includes('spreadsheet') ||
+                    errorMsg.includes('معرف google sheets');
+                const isTransientNetworkError =
+                    errorMsg.includes('failed to fetch') ||
+                    errorMsg.includes('networkerror') ||
+                    errorMsg.includes('network request failed') ||
+                    errorMsg.includes('انتهت مهلة') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    errorMsg.includes('aborterror') ||
+                    errorMsg.includes('aborted') ||
+                    errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
+                    errorMsg.includes('cors') ||
+                    errorMsg.includes('ازدحام') ||
+                    errorMsg.includes('too many concurrent') ||
+                    errorMsg.includes('service invoked too many times') ||
+                    errorMsg.includes('server error') ||
+                    errorMsg.includes('limit exceeded') ||
+                    errorMsg.includes('rate limit') ||
+                    // تذبذب تسليم Google (404/HTML/doGet): عابر ولا يجوز أن يفتح Circuit Breaker
+                    // ويحجب كل الطلبات بعد عدة محاولات دخول متعثرة.
+                    errorMsg.includes('html بدل json') ||
+                    errorMsg.includes('تعذّر تسليم') ||
+                    errorMsg.includes('doget') ||
+                    errorMsg.includes('نشر web app');
+                const isAuthOrPermissionError =
+                    errorMsg.includes('csrf') ||
+                    errorMsg.includes('actor_identity') ||
+                    errorMsg.includes('actor_not_registered') ||
+                    errorMsg.includes('actor_inactive') ||
+                    errorMsg.includes('admin_only') ||
+                    errorMsg.includes('permission_denied') ||
+                    errorMsg.includes('strict_admin_denied') ||
+                    errorMsg.includes('رفض أمني') ||
+                    errorMsg.includes('غير مسجل') ||
+                    errorMsg.includes('رفض قراءة') ||
+                    errorMsg.includes('الإجراء غير معروف') ||
+                    errorMsg.includes('action_not_recognized') ||
+                    errorMsg.includes('صلاحية');
+
+                const isAppError = error && error.isAppError === true;
+                const isKnownServerError = error && (
+                    error.errorCode === 'ACTION_NOT_RECOGNIZED' ||
+                    error.errorCode === 'INTERNAL_SERVER_ERROR' ||
+                    error.errorCode === 'PERMISSION_DENIED' ||
+                    error.errorCode === 'DUPLICATE_ENTRY'
+                );
+                if (!isAppError && !isKnownServerError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
+                    Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
+                    this._recordFailure();
+                }
+
+                if (request.pendingPromises) {
+                    request.pendingPromises.forEach(({ reject }) => reject(error));
+                }
+            } finally {
+                this._activeRequests.delete(requestKey);
+            }
+            }
+        } finally {
+            this._queueWorkers = Math.max(0, this._queueWorkers - 1);
+            this._isProcessingQueue = this._queueWorkers > 0;
+
+            if (this._requestQueue.length > 0) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل متابعة معالجة طابور الطلبات:', err);
+                });
+            }
+        }
+    },
+
+    async _addToQueue(action, data, retryCount = 0) {
+        return new Promise((resolve, reject) => {
+            const requestKey = this._getRequestKey(action, data);
+
+            // التحقق من هل هو existingRequest
+            const existingRequest = this._requestQueue.find(r => this._getRequestKey(r.action, r.data) === requestKey);
+            if (existingRequest) {
+                // التحقق من هل هو pendingPromises
+                existingRequest.pendingPromises.push({ resolve, reject });
+                return;
+            }
+
+            // التحقق من هل هو activeRequests
+            if (this._activeRequests.has(requestKey)) {
+                // التحقق من هل هو activeRequest
+                const activeRequest = this._activeRequests.get(requestKey);
+                if (activeRequest && activeRequest.pendingPromises) {
+                    activeRequest.pendingPromises.push({ resolve, reject });
+                    return;
+                }
+            }
+
+            // التحقق من هل هو request
+            const request = {
+                action,
+                data,
+                retryCount,
+                pendingPromises: [{ resolve, reject }],
+                timestamp: Date.now()
+            };
+
+            // أولوية عالية: مصادقة + علم __highPriority صريح (زيارات العيادة تمرّر العلم سياقياً فقط)
+            const isAuthRpc = this._isAuthRpcAction(action);
+            const bypassQueue = this._shouldBypassRequestQueue(action);
+            const isHighPriority = !!(
+                isAuthRpc
+                || bypassQueue
+                || (data && typeof data === 'object' && data.__highPriority === true)
+            );
+
+            // MFA/login/حضور العيادة: نفّذ فوراً خارج سقف عمال الطابور — لا تنتظر clinic/training (90ث)
+            if (bypassQueue) {
+                this._activeRequests.set(requestKey, request);
+                (async () => {
+                    try {
+                        const result = await this._executeRequest(action, data, retryCount || 0);
+                        this._recordSuccess();
+                        request.pendingPromises.forEach(({ resolve: ok }) => ok(result));
+                    } catch (error) {
+                        request.pendingPromises.forEach(({ reject: fail }) => fail(error));
+                    } finally {
+                        this._activeRequests.delete(requestKey);
+                    }
+                })();
+                return;
+            }
+
+            if (isHighPriority) {
+                this._requestQueue.unshift(request);
+            } else {
+                this._requestQueue.push(request);
+            }
+            this._activeRequests.set(requestKey, request);
+
+            // التحقق من هل هو processRequestQueue
+            this._processRequestQueue().catch(err => {
+                Utils.safeError('فشل المزامنة في التقدم باستخدام قاعدة SQL:', err);
+            });
+            if (this._queueWorkers < this._maxQueueWorkers) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل تشغيل عامل إضافي لطابور الطلبات:', err);
+                });
+            }
+        });
+    },
+
+    /**
+     * التحقق من هل هو executeRequest
+     */
+    _emitAuthRetryProgress_(action, attempt, max) {
+        try {
+            window.dispatchEvent(new CustomEvent('authRetryProgress', {
+                detail: { action, attempt, max }
+            }));
+        } catch (_e) { /* الواجهة اختيارية */ }
+    },
+
+    async _executeRequest(action, data, retryCount = 0, dogetRetry = 0, deadlineAt = 0) {
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مُتهيأ أو غير مفعّل'));
+        }
+
+        const scriptUrl = this._resolveScriptUrl();
+
+        if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
+            throw new Error('رابط Web App غير صالح. يجب أن يكون رابط خادم SQL من النوع https://script.google.com/macros/s/.../exec');
+        }
+
+        // سقف زمني إجمالي للمصادقة يشمل كل إعادات الإرسال والمحاولات.
+        // بدونه كانت المهلة تُحسب لكل محاولة على حدة، فتبقى شاشة «جاري التحقق»
+        // معلّقة دقائق بلا أي رسالة عند تكرار تذبذب Google.
+        const AUTH_TOTAL_BUDGET_MS = 75000;
+        const isAuthRpc = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+        const effectiveDeadline = isAuthRpc ? (deadlineAt || (Date.now() + AUTH_TOTAL_BUDGET_MS)) : 0;
+        const canRetryWithinBudget = () => !effectiveDeadline || (effectiveDeadline - Date.now()) > 5000;
+
+        try {
+            // التحقق من Rate Limiting قبل تنفيذ الطلب
+            this._checkRateLimit();
+
+            // التحقق من هل هو CSRF Token
+            const csrfToken = this.getOrCreateCSRFToken();
+            const clientSessionId = this.getOrCreateClientSessionId();
+
+            // التحقق من هل هو payload
+            // خادم SQL غير مفعل - التحقق من هل هو valid خادم SQL URL
+            const cleanData = (data && typeof data === 'object')
+                ? { ...data }
+                : data;
+            // عمليات المصادقة دائماً فشل مُهيكل — رفض الخادم ليس خطأ اتصال ولا يجوز أن يقود لمسار محلي
+            const isAuthRpcAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+            const allowStructuredFailure = isAuthRpcAction ||
+                !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
+            if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
+                delete cleanData.__timeoutMs;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__highPriority' in cleanData) {
+                delete cleanData.__highPriority;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__allowStructuredFailure' in cleanData) {
+                delete cleanData.__allowStructuredFailure;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__silent' in cleanData) {
+                delete cleanData.__silent;
+            }
+            let snapshotActor = null;
+            let snapshotSessionToken = '';
+            if (cleanData && typeof cleanData === 'object' && cleanData.__actorUserData) {
+                snapshotActor = cleanData.__actorUserData;
+                delete cleanData.__actorUserData;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__sessionToken' in cleanData) {
+                snapshotSessionToken = String(cleanData.__sessionToken || '');
+                delete cleanData.__sessionToken;
+            }
+
+            const payload = {
+                action,
+                data: cleanData,
+                csrfToken,
+                clientSessionId,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const st = sessionStorage.getItem('hse_server_session_token') ||
+                    localStorage.getItem('hse_server_session_token') ||
+                    (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken) ||
+                    snapshotSessionToken;
+                if (st) payload.sessionToken = st;
+            } catch (_stErr) {
+                if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;
+            }
+
+            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
+            // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                const cu = AppState.currentUser;
+                const envelope = {
+                    email: String(cu.email || '').trim(),
+                    id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',
+                    name: String(cu.name || '').trim(),
+                    role: String(cu.role || '').trim()
+                };
+                // مطابقة hasAccess/getEffectivePermissions: الجلسة قد لا تعكس صلاحيات الجدول بعد
+                if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                    try {
+                        const eff = Permissions.getEffectivePermissions(cu);
+                        if (eff && typeof eff === 'object') {
+                            envelope.permissions = eff;
+                        }
+                    } catch (_e) { /* ignore */ }
+                } else if (cu.permissions) {
+                    envelope.permissions = cu.permissions;
+                }
+                payload.userData = envelope;
+            } else if (snapshotActor && (snapshotActor.email || snapshotActor.id)) {
+                payload.userData = {
+                    email: String(snapshotActor.email || '').trim(),
+                    id: snapshotActor.id != null ? String(snapshotActor.id).trim() : '',
+                    name: String(snapshotActor.name || '').trim(),
+                    role: String(snapshotActor.role || '').trim()
+                };
+            }
+
+            // التحقق من هل هو spreadsheetId
+            // التحقق من هل هو AppState
+            let spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId;
+
+            // التحقق من هل هو data
+            if (data && typeof data === 'object' && data.spreadsheetId) {
+                spreadsheetId = data.spreadsheetId;
+            }
+
+            // التحقق من هل هو spreadsheetId
+            if (spreadsheetId && spreadsheetId.trim() !== '' && spreadsheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+                payload.spreadsheetId = spreadsheetId.trim();
+                // التحقق من هل هو _spreadsheetId
+                payload._spreadsheetId = spreadsheetId.trim();
+            } else if (action !== 'initializeSheets') {
+                // التحقق من هل هو initializeSheets
+                // التحقق من هل هو spreadsheetId
+                // التحقق من هل هو actions
+                const actionsRequiringSpreadsheetId = [
+                    'saveToSheet', 'appendToSheet', 'readFromSheet'
+                ];
+
+                // التحقق من هل هو action
+                const requiresSpreadsheetId = actionsRequiringSpreadsheetId.includes(action) ||
+                    action.startsWith('add') ||
+                    action.startsWith('save') ||
+                    action.startsWith('update');
+
+                if (requiresSpreadsheetId) {
+                    // التحقق من هل هو getSpreadsheetId
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو getSpreadsheetId');
+                } else {
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
+                }
+            }
+
+            // التحقق من هل هو timeout
+            // تحديد timeout ديناميكي حسب نوع العملية
+            // العمليات الثقيلة (قراءة/كتابة البيانات): 90 ثانية
+            // عمليات المصادقة والـ MFA: 25 ثانية لضمان إكمال cold-start بدون إجهاض مبكر
+            const heavyOperations = [
+                'readFromSheet', 'saveToSheet', 'appendToSheet',
+                'getAllData', 'syncData', 'initializeSheets',
+                'getClinicData', 'getFireEquipmentData', 'getPPEData',
+                'getPeriodicInspectionsData', 'getViolationsData',
+                'getActionTrackingData', 'getBehaviorMonitoringData',
+                'saveOrUpdate', 'getAll', 'import',
+                'getAllClinicVisits',
+                'getAllEmployees',
+                'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
+                'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables',
+                'exportDailyObservationsPptReport', 'createDefaultDailyObservationsPptTemplate', 'exportPpt',
+                'updateClinicStaffAttendance'
+            ];
+            const mediumOperations = [
+                'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
+            ];
+            // عمليات المصادقة والـ MFA: 60 ثانية (cold-start + ضغط الشيت)
+            const authActions = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'];
+            const isAuthAction = typeof action === 'string' && authActions.includes(action);
+            const isDeleteOperation = typeof action === 'string' && action.indexOf('delete') === 0;
+
+            const isHeavyOperation = heavyOperations.some((op) => {
+                if (action === op) return true;
+                if (op === 'getAll') {
+                    return action === 'getAll' || action === 'getAllData';
+                }
+                return action.includes(op);
+            });
+            const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
+
+            // مهلة MFA/login افتراضياً 90ث — تذبذب توجيه Google (doGet/404) يحتاج هامشاً لإعادة الإرسال
+            let timeoutDuration = Number(data?.__timeoutMs) > 0
+                ? Number(data.__timeoutMs)
+                : (action === 'saveFormSettings' ? 120000
+                    : (isAuthAction ? 90000
+                        : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
+            if (effectiveDeadline) {
+                timeoutDuration = Math.min(timeoutDuration, Math.max(8000, effectiveDeadline - Date.now()));
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                if (!controller.signal.aborted) {
+                    controller.abort();
+                }
+            }, timeoutDuration);
+
+            let response;
+            try {
+                const fetchHeaders = {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                };
+                // التحقق من هل هو fetch
+                // التحقق من هل هو CSRF Token
+                // التحقق من هل هو payload
+                // التحقق من هل هو headers
+                // التحقق من هل هو preflight requests
+                response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: fetchHeaders,
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                }).catch(error => {
+                    // التحقق من هل هو AbortController
+                    if (error.name === 'AbortError') {
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو AbortError');
+                    }
+                    // التحقق من هل هو Chrome Extensions
+                    if (error.message && (
+                        error.message.includes('runtime.lastError') ||
+                        error.message.includes('message port closed') ||
+                        error.message.includes('Receiving end does not exist') ||
+                        error.message.includes('Could not establish connection') ||
+                        error.message.includes('Extension context invalidated')
+                    )) {
+                        // التحقق من هل هو Chrome Extensions
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
+                    }
+                    throw error;
+                });
+
+                // التحقق من هل هو timeout
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            } catch (fetchError) {
+                // التحقق من هل هو timeout
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+
+                // التحقق من هل هو connection timeout
+                const errorMsg = fetchError.message || fetchError.toString() || '';
+                const errorStr = errorMsg.toLowerCase();
+                
+                // ✅ إصلاح: معالجة أخطاء الشهادة (Certificate errors)
+                const isCertificateError = 
+                    errorStr.includes('err_cert_authority_invalid') ||
+                    errorStr.includes('cert_authority_invalid') ||
+                    errorStr.includes('certificate') ||
+                    errorStr.includes('cert authority') ||
+                    errorStr.includes('ssl') ||
+                    errorStr.includes('tls') ||
+                    errorStr.includes('net::err_cert') ||
+                    (fetchError.name && fetchError.name.toLowerCase().includes('certificate')) ||
+                    (fetchError.code && (fetchError.code === 'CERT_AUTHORITY_INVALID' || fetchError.code === 'ERR_CERT_AUTHORITY_INVALID'));
+                
+                if (isCertificateError) {
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ خطأ في شهادة الأمان (SSL/TLS)!\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. إعدادات التاريخ والوقت في النظام\n` +
+                        `2. إعدادات جدار الحماية ومضاد الفيروسات\n` +
+                        `3. إعدادات المتصفح (قد تحتاج لتحديث المتصفح)\n` +
+                        `4. الاتصال بالإنترنت (قد تكون هناك مشكلة في الشبكة)`);
+                }
+
+                const isAbortOrTimeoutError =
+                    fetchError.name === 'AbortError' ||
+                    errorStr.includes('aborterror') ||
+                    errorStr.includes('aborted') ||
+                    errorStr.includes('timeout') ||
+                    errorStr.includes('timed out') ||
+                    errorStr.includes('err_connection_timed_out') ||
+                    errorStr.includes('connection_timed_out');
+
+                if (isAbortOrTimeoutError) {
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    // login/MFA: لا إعادة محاولة بعد timeout — الطلب قد نجح على الخادم ويستهلك OTP
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
+                        maxRetries = 3;
+                    }
+
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
+                        Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+
+                    const timeStr = new Date().toLocaleString('ar-SA');
+                    const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                    throw new Error(`⚠️ انتهت مهلة الاتصال بخادم خادم SQL (${timeoutSeconds} ثانية).\n` +
+                        `العملية: ${action}\n` +
+                        `الوقت: ${timeStr}\n\n` +
+                        `جرّب:\n` +
+                        `1. الضغط على «تحديث» بعد 30 ثانية\n` +
+                        `2. التأكد من نشر السكربت برابط ينتهي بـ /exec\n` +
+                        `3. التحقق من سرعة الإنترنت أو إعادة تحميل الصفحة`);
+                }
+
+                const isGenericNetworkError =
+                    (fetchError.name === 'TypeError' && errorStr.includes('failed to fetch')) ||
+                    fetchError.name === 'NetworkError' ||
+                    errorStr.includes('network request failed') ||
+                    (errorStr.includes('networkerror') && (errorStr.includes('fetch') || errorStr.includes('resource'))) ||
+                    (errorStr.includes('err_failed') && (errorStr.includes('script.google.com') || errorStr.includes('google.com/macros')));
+
+                if (isGenericNetworkError) {
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ تعذّر الاتصال بخادم خادم SQL.\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `العملية: ${action}\n\n` +
+                        `قد يكون السبب بطء الخادم أو انقطاع الشبكة — وليس بالضرورة CORS.\n` +
+                        `يرجى:\n` +
+                        `1. إعادة المحاولة بعد نصف دقيقة\n` +
+                        `2. التأكد من رابط Web App (ينتهي بـ /exec)\n` +
+                        `3. التحقق من نشر السكربت: Execute as: Me / Who has access: Anyone`);
+                }
+                
+                // معالجة أخطاء CORS الحقيقية فقط (رسالة المتصفح تذكر CORS صراحة)
+                const isCorsError = 
+                    errorStr.includes('cors') ||
+                    errorStr.includes('cross-origin request blocked') ||
+                    errorStr.includes('access-control-allow-origin') ||
+                    errorStr.includes('has been blocked by cors policy') ||
+                    errorStr.includes('no \'access-control-allow-origin\' header') ||
+                    errorStr.includes('same origin policy') ||
+                    errorStr.includes('same-origin policy') ||
+                    (fetchError.message && fetchError.message.toLowerCase().includes('cors')) ||
+                    (fetchError.message && fetchError.message.toLowerCase().includes('cross-origin')) ||
+                    (fetchError.message && fetchError.message.includes('Access-Control-Allow-Origin'));
+                
+                if (isCorsError) {
+                    // CORS error - قد يكون بسبب إعدادات خادم SQL
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
+                        `   - اضغط Deploy > Manage Deployments\n` +
+                        `   - اضغط Edit (أيقونة القلم) على Deployment الحالي\n` +
+                        `   - تأكد من:\n` +
+                        `     * Execute as: Me\n` +
+                        `     * Who has access: Anyone (مهم جداً!)\n` +
+                        `   - اضغط Deploy\n` +
+                        `   - انسخ الرابط الجديد (يجب أن ينتهي بـ /exec)\n` +
+                        `2. تأكد من أن الرابط ينتهي بـ /exec وليس /dev\n` +
+                        `3. بعد clasp push نفّذ clasp deploy -i <deploymentId> لتحديث النشر الحالي\n` +
+                        `4. تأكد من أن doOptions() موجودة في Code.gs`);
+                }
+                
+                if (errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    fetchError.name === 'AbortError' ||
+                    fetchError.message?.includes('aborted')) {
+
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
+
+                    // إعادة محاولات محدودة لتقليل التأخير التراكمي
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
+                        maxRetries = 3;
+                    }
+
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        // تأخير تصاعدي أقصر لتجنب الحجز الطويل للطابور
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
+                        Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+
+                        // إعادة المحاولة مع أمر بزيادة المهلة داخلياً إذا أمكن
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+
+                    const timeStr = new Date().toLocaleString('ar-SA');
+                    const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                    const timeoutMinutes = Math.round(timeoutSeconds / 60);
+                    const operationType = isHeavyOperation ? 'عملية ثقيلة' : (isMediumOperation ? 'عملية متوسطة' : 'عملية عادية');
+                    
+                    // رسالة خطأ مبسطة وأكثر وضوحاً
+                    // التحقق من إذا كانت هذه عملية مراقبة (قراءة بسيطة من Users بدون محاولات إعادة)
+                    const isMonitoringCheck = action === 'readFromSheet' && 
+                                             data?.sheetName === 'Users' && 
+                                             retryCount === 0;
+                    
+                    if (isMonitoringCheck) {
+                        // رسالة مبسطة لفحوصات المراقبة
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                            `الخطأ: انتهت مهلة الاتصال\n` +
+                            `الوقت: ${timeStr}\n\n` +
+                            `يرجى التحقق من:\n` +
+                            `1. إعدادات خادم SQL\n` +
+                            `2. معرف قاعدة SQL\n` +
+                            `3. الاتصال بالإنترنت`);
+                    } else {
+                        // رسالة مفصلة للعمليات الأخرى
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                            `الخطأ: انتهت مهلة الاتصال (${timeoutSeconds} ثانية / ${timeoutMinutes} دقيقة)\n` +
+                            `نوع العملية: ${operationType}\n` +
+                            `العملية: ${action}\n` +
+                            `عدد المحاولات: ${retryCount + 1}/${maxRetries + 1}\n` +
+                            `الوقت: ${timeStr}\n\n` +
+                            `يرجى التحقق من:\n` +
+                            `1. إعدادات خادم SQL:\n` +
+                            `   - تأكد من أن السكربت منشور ومفعّل\n` +
+                            `   - افتح خادم SQL Editor\n` +
+                            `   - اضغط Deploy > Manage Deployments\n` +
+                            `   - تأكد من أن Deployment نشط ويبدأ بـ /exec\n` +
+                            `   - تأكد من أن "Who has access" = "Anyone"\n` +
+                            `2. معرف قاعدة SQL:\n` +
+                            `   - تأكد من أن معرف قاعدة SQL صحيح\n` +
+                            `   - تأكد من أن الجداول موجودة وقابلة للوصول\n` +
+                            `3. الاتصال بالإنترنت:\n` +
+                            `   - تحقق من سرعة الاتصال (قد يكون بطيئاً)\n` +
+                            `   - تحقق من جدار الحماية أو VPN\n` +
+                            `   - جرب تحديث الصفحة وإعادة المحاولة\n\n` +
+                            `💡 نصيحة: إذا استمرت المشكلة، حاول تقليل حجم البيانات المرسلة أو تقسيم العملية إلى أجزاء أصغر.`);
+                    }
+                }
+
+                // التحقق من هل هو Chrome Extensions
+                if (fetchError.message && (
+                    fetchError.message.includes('runtime.lastError') ||
+                    fetchError.message.includes('message port closed') ||
+                    fetchError.message.includes('Receiving end does not exist') ||
+                    fetchError.message.includes('Could not establish connection') ||
+                    fetchError.message.includes('Extension context invalidated')
+                )) {
+                    // التحقق من هل هو Chrome Extensions
+                    throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
+                }
+
+                throw fetchError;
+            }
+
+            // التحقق من هل هو response
+            if (!response || !response.ok) {
+                const status = response?.status || 0;
+
+                // 429 Too Many Requests — إعادة المحاولة بتأخير تصاعدي
+                if (status === 429) {
+                    const maxRetries = 3;
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.pow(2, retryCount + 1) * 1000;
+                        Utils.safeWarn(`429 Too Many Requests - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+                    throw new Error('تجاوز حد الطلبات (429). يرجى الانتظار دقيقة ثم إعادة المحاولة.');
+                }
+
+                // 503 Service Unavailable / 502 Bad Gateway / 504 Gateway Timeout — الخدمة مؤقتاً غير متاحة
+                if (status === 503 || status === 502 || status === 504) {
+                    const maxRetries = 3;
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.pow(2, retryCount + 1) * 1000;
+                        Utils.safeWarn(`الخادم غير متاح (${status}) - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+                    const statusText = status === 503 ? 'الخدمة مؤقتاً غير متاحة (503)' : status === 502 ? 'خطأ في البوابة (502)' : 'انتهت مهلة البوابة (504)';
+                    throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن خادم SQL منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
+                }
+
+                // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة لكل العمليات (لا كتابة ولا استهلاك OTP حدث).
+                // المصادقة: حتى 5 محاولات بتأخير قصير — تذبذب Google شائع على /exec.
+                const max404Retries = isAuthAction ? 5 : 3;
+                if (status === 404 && dogetRetry < max404Retries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${max404Retries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, max404Retries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+
+                // باقي الأخطاء
+                let errorMessage = `HTTP error! status: ${status}`;
+                try {
+                    const errorData = await response.text();
+                    if (errorData && errorData.trim() !== '') {
+                        try {
+                            const parsed = JSON.parse(errorData);
+                            errorMessage = parsed.message || errorMessage;
+                        } catch (parseError) {
+                            errorMessage = this.sanitizeGasErrorText(
+                                errorData,
+                                `HTTP error! status: ${status}`
+                            );
+                        }
+                    }
+                } catch (e) {
+                    // التحقق من هل هو e
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            const resultText = await response.text();
+
+            if (!resultText || resultText.trim() === '') {
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو resultText');
+            }
+
+            let result;
+            let isHtmlBody = false;
+            try {
+                let trimmedText = String(resultText || '').replace(/^\uFEFF/, '').trim();
+                if (this.looksLikeGasHtmlResponse(trimmedText)) {
+                    isHtmlBody = true;
+                    throw new Error(this.sanitizeGasErrorText(trimmedText));
+                }
+                result = JSON.parse(trimmedText);
+            } catch (e) {
+                // صفحة HTML من Google تعني أن محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة (لا كتابة ولا استهلاك OTP حدث على الخادم).
+                const maxHtmlRetries = isAuthAction ? 5 : 3;
+                if (isHtmlBody && dogetRetry < maxHtmlRetries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxHtmlRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxHtmlRetries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+                if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
+                const safePreview = this.sanitizeGasErrorText(resultText, 'استجابة غير صالحة من الخادم');
+                throw new Error(
+                    safePreview.indexOf('HTML') !== -1 || safePreview.indexOf('نشر Web') !== -1
+                        ? safePreview
+                        : `استجابة غير صالحة من الخادم: ${safePreview}`
+                );
+            }
+
+            if (!result || typeof result !== 'object') {
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو result');
+            }
+
+            // فحص إجابات doGet التي ترجع عند توجيه POST أو غياب إذن الوصول "Anyone"
+            const isDoGetStatus = result.errorCode === 'REACHED_DOGET_STATUS' ||
+                result.errorCode === 'WRONG_URL_ENDPOINT' ||
+                (result.status === 'active' && result.message && result.message.includes('running successfully'));
+            if (isDoGetStatus) {
+                // رد doGet يعني أن doPost لم ينفَّذ إطلاقاً (Google أعادت استدعاء السكربت كـ GET
+                // عند تعذّر تسليم محتوى التحويل 302). لذلك إعادة الإرسال آمنة لكل العمليات —
+                // بما فيها verifyMfaLogin: لم يُستهلك أي رمز OTP على الخادم.
+                const maxDogetRetries = isAuthAction ? 5 : 3;
+                if (dogetRetry < maxDogetRetries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ رد doGet للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxDogetRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxDogetRetries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+
+                const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (تذبذب مؤقت في Google).\n' +
+                    'لم يُنفَّذ الطلب — لم تُستهلك كلمة المرور ولا رمز MFA.\n' +
+                    'انتظر ثانيتين ثم أعد المحاولة.';
+                if (!allowStructuredFailure) {
+                    throw new Error(dogetMsg);
+                }
+                return { success: false, message: dogetMsg, errorCode: 'REACHED_DOGET_STATUS' };
+            }
+
+            if (result.success === false) {
+                if (allowStructuredFailure) {
+                    return result;
+                }
+                const errorCode = result.errorCode ? String(result.errorCode) : '';
+                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام قاعدة SQL';
+                if (errorMessage.includes('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو errorMessage')) {
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
+                    const err = new Error(errorMessage);
+                    err.isAppError = true;
+                    err.errorCode = errorCode;
+                    throw err;
+                }
+                const err = new Error(errorMessage);
+                err.isAppError = true;
+                err.errorCode = errorCode;
+                throw err;
+            }
+
+            return result;
+        } catch (error) {
+            // التحقق من هل هو Chrome extensions
+            const chromeExtensionErrors = [
+                'runtime.lastError',
+                'message port closed',  // التحقق من هل هو message port closed
+                'Extension context invalidated',  // التحقق من هل هو Extension context invalidated
+                'Receiving end does not exist',  // التحقق من هل هو Receiving end does not exist
+                'Could not establish connection',  // التحقق من هل هو Could not establish connection
+                'The message port closed before a response was received',  // التحقق من هل هو The message port closed before a response was received
+                'Unchecked runtime.lastError'
+            ];
+
+            const errorMessage = error?.message || error?.toString() || '';
+            const isChromeExtensionError = chromeExtensionErrors.some(err =>
+                errorMessage.includes(err)
+            );
+
+            if (isChromeExtensionError) {
+                // التحقق من هل هو Chrome extensions
+                // فقط نعيد الخطأ بدون تسجيل
+                return Promise.reject(new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome extensions'));
+            }
+
+            // تسجيل الخطأ فقط إذا لم يكن خطأ متوقع أو عندما يكون خادم SQL مفعّل
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+
+            // تجاهل أخطاء getPublicIP بصمت (هذه عملية غير حرجة)
+            const isGetPublicIPError = action === 'getPublicIP' || 
+                errorMsg.includes('getting public IP') || 
+                errorMsg.includes('getPublicIP') ||
+                errorMsg.includes('Server error while getting public IP');
+            
+            const isExpectedError = isGetPublicIPError ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                errorMsg.includes('خادم SQL') ||
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+
+            if (!isExpectedError && isBackendRpcConfigured && !isGetPublicIPError) {
+                // Extract meaningful error message instead of logging raw object
+                const displayError = error?.message || error?.toString() || JSON.stringify(error) || 'خطأ غير معروف';
+                
+                // Suppress detailed CORS error logging (handled with user-friendly message)
+                if (!displayError.includes('CORS') && 
+                    !displayError.includes('Cross-Origin Request Blocked') &&
+                    !displayError.includes('Access-Control-Allow-Origin') &&
+                    !displayError.includes('Same Origin Policy')) {
+                    // استخدام safeError مع التحقق الإضافي (تخطي CORS errors التي يتم التعامل معها)
+                    Utils.safeError('❌ خطأ في طلب قاعدة SQL:', displayError);
+                }
+            }
+            // إذا كان الخطأ متوقعاً أو قاعدة SQL غير مفعّلة، لا نسجل أي شيء
+
+            // استخدام رسالة الخطأ من الكائن
+            const finalErrorMsg = errorMsg || 'خطأ غير معروف';
+
+            // إصلاح ذاتي لأخطاء CSRF: تدوير token + sessionId مرة واحدة ثم إعادة المحاولة
+            const isCsrfValidationError = finalErrorMsg.includes('CSRF_TOKEN_VALIDATION_FAILED') ||
+                finalErrorMsg.includes('فشل التحقق من CSRF token') ||
+                finalErrorMsg.includes('CSRF token مفقود') ||
+                finalErrorMsg.includes('CSRF_TOKEN_MISSING') ||
+                finalErrorMsg.includes('CSRF_TOKEN_INVALID');
+            if (isCsrfValidationError && retryCount < 1) {
+                try {
+                    sessionStorage.removeItem('csrf_token');
+                    sessionStorage.removeItem('client_session_id');
+                    Utils.safeWarn('🔐 تم اكتشاف خطأ CSRF؛ إعادة تهيئة جلسة الأمان وإعادة المحاولة...');
+                } catch (_e) { /* ignore */ }
+                return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+            }
+
+            // منطق إعادة المحاولة
+            const maxRetries = 2;
+            if (retryCount < maxRetries && canRetryWithinBudget()) {
+                // إعادة المحاولة فقط للأخطاء الشبكية
+                if (errorMsg && (
+                    errorMsg.includes('Failed to fetch') ||
+                    errorMsg.includes('NetworkError') ||
+                    errorMsg.includes('Network request failed') ||
+                    errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    errorMsg.includes('429') ||
+                    errorMsg.includes('Too Many Requests')
+                )) {
+                    const delay = Math.pow(2, retryCount + 1) * 1000; // 2s, 4s
+                    Utils.safeLog(`🔄 إعادة المحاولة بعد ${delay}ms (المحاولة ${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                }
+            }
+
+            // التحقق من هل هو errorMsg
+            let finalErrorMessage = errorMsg;
+
+            // التحقق من هل هو connection timeout
+            if (errorMsg && (
+                errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                (errorMsg.includes('timeout') && errorMsg.includes('connection'))
+            )) {
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من:\n' +
+                    '1. الاتصال بالإنترنت\n' +
+                    '2. رابط خادم SQL صحيح (يجب أن ينتهي بـ /exec)\n' +
+                    '3. خادم SQL مفعّل ومُنشَر\n' +
+                    '4. عدم وجود قيود على الشبكة';
+            } else if (errorMsg && (
+                errorMsg.includes('Failed to fetch') ||
+                errorMsg.includes('NetworkError') ||
+                errorMsg.includes('CORS') ||
+                errorMsg.includes('blocked by CORS policy') ||
+                errorMsg.includes('Access-Control-Allow-Origin') ||
+                errorMsg.includes('Cross-Origin Request Blocked') ||
+                errorMsg.includes('Same Origin Policy') ||
+                error.name === 'TypeError' ||
+                errorMsg.includes('Network request failed') ||
+                errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')
+            )) {
+                // CORS error - use the detailed message if already set, otherwise create one
+                if (errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')) {
+                    finalErrorMessage = errorMsg; // Use the detailed message from catch block
+                } else {
+                    finalErrorMessage = `⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
+                        `   - اضغط Deploy > New Deployment\n` +
+                        `   - اختر Type: Web app\n` +
+                        `   - Execute as: Me\n` +
+                        `   - Who has access: Anyone (مهم جداً!)\n` +
+                        `   - اضغط Deploy وقم بنسخ الرابط الجديد\n` +
+                        `2. تأكد من أن الرابط ينتهي بـ /exec وليس /dev\n` +
+                        `3. إذا قمت بتحديث السكربت، يجب إنشاء deployment جديد`;
+                }
+            } else if (errorMsg && (
+                errorMsg.includes('429') ||
+                errorMsg.includes('Too Many Requests')
+            )) {
+                // التحقق من هل هو 429
+                finalErrorMessage = 'فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو 429';
+            } else if (errorMsg && errorMsg.includes('HTTP error')) {
+                finalErrorMessage = `فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو HTTP error`;
+            } else if (errorMsg && (errorMsg.includes('AbortError') || errorMsg.includes('aborted'))) {
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
+            }
+
+            return Promise.reject(new Error(finalErrorMessage));
+        }
+    },
+
+    /**
+     * التحقق من هل هو sendToAppsScript
+     */
+    async sendToAppsScript(action, data, retryCount = 0) {
+        // المصادقة وحضور العيادة لا تُحجب بـ Circuit Breaker
+        if (!this._shouldBypassRequestQueue(action)) {
+            try {
+                this._checkCircuitBreaker();
+            } catch (error) {
+                const localData = this.getLocalData(action, data);
+                if (localData !== null && !this._isWriteMutationAction(action)) {
+                    Utils.safeLog(`⚠️ Circuit Breaker مفتوح - تم تخطي العملية: ${action}`);
+                    return localData;
+                }
+                if (localData !== null && this._isWriteMutationAction(action)) {
+                    Utils.safeWarn(`⚠️ Circuit Breaker: لن تُستخدم نسخة محلية قديمة لعملية كتابة (${action})`);
+                }
+                return Promise.reject(error);
+            }
+        }
+
+        return this._addToQueue(action, data, retryCount);
+    },
+
+    _isTransientRpcError(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('timeout') ||
+            msg.includes('timed out') ||
+            msg.includes('aborterror') ||
+            msg.includes('aborted') ||
+            msg.includes('network request failed') ||
+            msg.includes('failed to fetch') ||
+            msg.includes('networkerror') ||
+            msg.includes('انتهت مهلة');
+    },
+
+    /**
+     * تجاوز SmartCache/localStorage لقراءات يجب أن تكون حديثة (طلبات اعتماد المقاولين…)
+     */
+    _shouldBypassReadCache_(action, data = {}) {
+        if (data.skipCache === true || data.forceRefresh === true) return true;
+        if (action === 'readFromSheet' || action === 'batchReadSheets') {
+            const sheet = String(data.sheetName || '').trim();
+            const sheets = Array.isArray(data.sheetNames) ? data.sheetNames.map((s) => String(s || '').trim()) : [];
+            const volatileSheets = new Set([
+                'ContractorApprovalRequests',
+                'ContractorEvaluationApprovalRequests',
+                'ContractorDeletionRequests',
+                'ApprovedContractors'
+            ]);
+            if (volatileSheets.has(sheet)) return true;
+            if (sheets.some((s) => volatileSheets.has(s))) return true;
+        }
+        if (action === 'getAllContractorApprovalRequests' || action === 'getAllContractorEvaluationApprovalRequests' || action === 'getAllContractorDeletionRequests') {
+            return true;
+        }
+        return false;
+    },
+
+    _invalidateSmartCacheForRead_(action, data = {}) {
+        if (typeof SmartCache === 'undefined' || typeof SmartCache.getCacheKey !== 'function') return;
+        try {
+            const userPermissions = this._getCurrentUserPermissions();
+            const dataType = this._getDataTypeForAction(action);
+            const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+            localStorage.removeItem(`hse_smart_cache_${cacheKey}`);
+        } catch (_e) { /* ignore */ }
+    },
+
+    /**
+     * دوال ربط ومعالجة خادم SQL (wrapper حول sendToAppsScript)
+     * التعامل مع البيانات والعمليات المرتبطة بالنماذج، قواعد البيانات،
+     * والتكامل مع قاعدة SQL بشكل آمن ومستقر.
+     *
+     * الوظائف تشمل:
+     * - إرسال واستقبال البيانات بين الويب وApps Script
+     * - معالجة النتائج مع التحقق من الأخطاء
+     * - إعادة المحاولة عند الفشل (Retry + Circuit Breaker)
+     * - دعم حفظ البيانات والمزامنة التلقائية
+     */
+    async sendRequest(requestData) {
+        const { action, data } = requestData;
+        if (!action) {
+            throw new Error('يجب إدخال action في الطلب');
+        }
+
+        // فشل مُهيكل: المستدعي يريد { success:false, message } بدل استثناء.
+        // بدون هذا كان رفض الخادم (كلمة مرور خاطئة، رمز MFA غير صحيح…) يُرمى كخطأ اتصال
+        // فيسقط الدخول إلى التحقق المحلي، والحساب المُفعّل عليه MFA يُرفض محلياً.
+        const wantsStructuredFailure = !!(data && typeof data === 'object' && data.__allowStructuredFailure === true);
+        const isAuthAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+
+        // Actions التي يمكن cache-ها (عمليات قراءة فقط)
+        const cacheableActions = ['readFromSheet', 'batchReadSheets', 'getData', 'getSafetyTeamMembers',
+            'getSafetyTeamMember', 'getOrganizationalStructure', 'getJobDescription',
+            'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'getActionTrackingSettings',
+            'getAllActionTracking', 'getActionTracking',
+            'getAllApprovedContractors', 'getAllContractors', 'getAllEmployees', 'getAllAppEmergencyNumbers'];
+
+        const bypassReadCache = this._shouldBypassReadCache_(action, data || {});
+        const isCacheable = cacheableActions.includes(action) && !bypassReadCache;
+
+        if (bypassReadCache) {
+            this._invalidateSmartCacheForRead_(action, data || {});
+            try {
+                const legacyKey = `${action}_${JSON.stringify(data || {})}`;
+                this._cache?.data?.delete(legacyKey);
+                this._cache?.timestamps?.delete(legacyKey);
+                localStorage.removeItem(this._buildLocalDataStorageKey(action, data || {}));
+            } catch (_purgeErr) { /* ignore */ }
+        }
+
+        // محاولة الحصول من Smart Cache أولاً
+        if (isCacheable && typeof SmartCache !== 'undefined') {
+            const userPermissions = this._getCurrentUserPermissions();
+            const dataType = this._getDataTypeForAction(action);
+            const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+
+            const cached = SmartCache.getCache(cacheKey, userPermissions, dataType);
+            if (cached !== null) {
+                if (AppState?.debugMode) Utils?.safeLog(`✅ تم استخدام البيانات من Smart Cache للعملية: ${action}`);
+                return cached;
+            }
+        }
+
+        // محاولة الحصول من الـ cache القديم كـ fallback
+        if (isCacheable) {
+            const cacheKey = `${action}_${JSON.stringify(data || {})}`;
+            const cached = this._getCachedData(cacheKey);
+            if (cached !== null) {
+                if (AppState?.debugMode) Utils?.safeLog(`✅ تم استخدام البيانات من الـ cache القديم للعملية: ${action}`);
+                return cached;
+            }
+        }
+
+        if (!this._isBackendRpcConfigured()) {
+            const localData = this.getLocalData(action, data);
+            if (localData !== null) {
+                Utils.safeLog(`✅ تم استخدام البيانات المحلية من التخزين المؤقت للعملية: ${action}`);
+                return localData;
+            }
+            throw new Error('الخادم الخلفي غير مُهيأ. يرجى ضبط رابط الاتصال في الإعدادات.');
+        }
+
+        try {
+            // تنفيذ الطلب عبر sendToAppsScript
+            const result = await this.sendToAppsScript(action, data || {});
+
+            // حفظ في Smart Cache إذا كانت العملية قابلة للـ cache
+            if (isCacheable && result && result.success !== false && typeof SmartCache !== 'undefined') {
+                const userPermissions = this._getCurrentUserPermissions();
+                const dataType = this._getDataTypeForAction(action);
+                const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+                SmartCache.setCache(cacheKey, result, userPermissions, dataType);
+            }
+
+            // حفظ في الـ cache القديم كـ fallback
+            if (isCacheable && result && result.success !== false) {
+                const cacheKey = `${action}_${JSON.stringify(data || {})}`;
+                this._setCachedData(cacheKey, result);
+            }
+
+            // في حال رجع الرد ولم يكن ناجحاً
+            if (result && typeof result === 'object') {
+                if (result.success === false) {
+                    // ردّ الخادم وصل فعلاً — أعِده كما هو للمستدعي بدل تحويله إلى خطأ اتصال
+                    if (wantsStructuredFailure || isAuthAction) {
+                        return result;
+                    }
+                    if (this._shouldSkipLocalFallbackForRead_(action, result)) {
+                        const errCode = result.errorCode ? String(result.errorCode) : '';
+                        if (/SESSION/i.test(errCode) && typeof Auth !== 'undefined' && typeof Auth.handleServerSessionInvalid === 'function') {
+                            Auth.handleServerSessionInvalid(result.message, errCode);
+                        }
+                        throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
+                    }
+                    const localData = this.getLocalData(action, data);
+                    if (localData !== null && !this._isWriteMutationAction(action)) {
+                        Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
+                        return localData;
+                    }
+                    const appErr = new Error(result.message || 'فشل في المزامنة مع خادم SQL');
+                    appErr.isAppError = true;
+                    if (result.errorCode) appErr.errorCode = result.errorCode;
+                    throw appErr;
+                }
+            }
+
+            // Save successful data to local storage as cache
+            if (!bypassReadCache) {
+                this.saveLocalData(action, result, data);
+            }
+
+            return result;
+        } catch (error) {
+            // معالجة الأخطاء وإرجاع رسالة واضحة
+            const errorMessage = error.message || 'حدث خطأ غير معروف أثناء تنفيذ الطلب';
+
+                // Check if it's an "Action not recognized" error from خادم SQL
+            if (errorMessage.includes('الإجراء غير معروف') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
+                const detailedMessage = errorMessage;
+                Utils.safeError(`Request Failed (${action}): ${detailedMessage}`);
+                const appErr = new Error(detailedMessage);
+                appErr.isAppError = true;
+                appErr.errorCode = 'ACTION_NOT_RECOGNIZED';
+                throw appErr;
+            }
+
+            // Try local data as fallback if خادم SQL fails due to network/connection issues
+            if (errorMessage.includes('خادم SQL غير متاح') ||
+                errorMessage.includes('Failed to fetch') ||
+                errorMessage.includes('NetworkError') ||
+                errorMessage.includes('CORS') ||
+                errorMessage.includes('blocked by CORS policy') ||
+                errorMessage.includes('Access-Control-Allow-Origin') ||
+                errorMessage.includes('429') ||
+                errorMessage.includes('Too Many Requests') ||
+                errorMessage.includes('فشل الاتصال بالشبكة') ||
+                errorMessage.includes('Network request failed')) {
+                if (this._shouldSkipLocalFallbackForRead_(action, null, errorMessage)) {
+                    throw new Error(errorMessage);
+                }
+                const localData = this.getLocalData(action, data);
+                if (localData !== null && !this._isWriteMutationAction(action)) {
+                    Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل الاتصال: ${action} (الخطأ: ${errorMessage.substring(0, 50)})`);
+                    return localData;
+                }
+            }
+
+            // استدعاء دوال الطوارئ والنسخ الاحتياطي
+            // في حال حدوث خطأ أثناء تنفيذ الطلب سيتم تسجيله عبر safeError
+            // ثم يتم إعادة رمي الخطأ ليتم التعامل معه في المستوى الأعلى
+
+            // تقليل الضوضاء في الكونسول - Circuit Breaker أخطاء متوقعة
+            if (errorMessage && errorMessage.includes('Circuit Breaker مفتوح')) {
+                // تسجيل كتحذير بدلاً من خطأ، وتقليل التكرار
+                const lastCircuitBreakerLog = this._lastCircuitBreakerLog || {};
+                const now = Date.now();
+                if (!lastCircuitBreakerLog[action] || (now - lastCircuitBreakerLog[action] > 10000)) {
+                    Utils.safeWarn(`⚠️ Circuit Breaker مفتوح - سيتم إعادة المحاولة بعد فترة (${action})`);
+                    if (!this._lastCircuitBreakerLog) this._lastCircuitBreakerLog = {};
+                    this._lastCircuitBreakerLog[action] = now;
+                }
+            } else {
+                // أخطاء timeout/الشبكة المتقطعة متوقعة في الـ batch والقراءات الكبيرة:
+                // نسجلها كتحذير مقنن بدلاً من error متكرر يسبب ضوضاء.
+                if (this._isTransientRpcError(errorMessage) &&
+                    (action === 'batchReadSheets' || action === 'readFromSheet' || action === 'getAllData')) {
+                    const key = `${action}:${String(errorMessage).slice(0, 60)}`;
+                    const now = Date.now();
+                    this._transientWarnAt = this._transientWarnAt || {};
+                    const last = this._transientWarnAt[key] || 0;
+                    if (now - last > 15000) {
+                        Utils.safeWarn(`⚠️ تعذر إكمال ${action} حالياً (اتصال/مهلة). سيتم استخدام fallback عند الإمكان.`);
+                        this._transientWarnAt[key] = now;
+                    }
+                } else {
+                    Utils.safeError(`sendRequest (${action}):`, errorMessage);
+                }
+            }
+            throw new Error(errorMessage);
+        }
+    },
+
+    /**
+     * مفتاح تخزين محلي لكل action — readFromSheet/batchReadSheets لكل ورقة/دفعة على حدة
+     * (تجنّب إرجاع بيانات ورقة A عند فشل قراءة ورقة B — كان يسبب نفس العدد 345 في كل الموديولات)
+     */
+    _buildLocalDataStorageKey(action, data) {
+        const base = `hse_local_${action}`;
+        if (action === 'readFromSheet' && data && data.sheetName) {
+            return `${base}_${String(data.sheetName).trim()}`;
+        }
+        if (action === 'batchReadSheets' && data && Array.isArray(data.sheetNames) && data.sheetNames.length) {
+            return `${base}_${data.sheetNames.slice().sort().join('|')}`;
+        }
+        return base;
+    },
+
+    _purgeLegacyReadFromSheetLocalCache_() {
+        this._purgeAllSheetReadLocalCache_();
+    },
+
+    _purgeAllSheetReadLocalCache_() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets'))) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
+        } catch (e) { /* ignore */ }
+    },
+
+    _shouldSkipLocalFallbackForRead_(action, result, errorMessage) {
+        if (action !== 'readFromSheet' && action !== 'batchReadSheets') return false;
+        const code = result && result.errorCode ? String(result.errorCode) : '';
+        const msg = String((result && result.message) || errorMessage || '');
+        const authPatterns = [
+            'ACTOR_IDENTITY_REQUIRED', 'ACTOR_NOT_REGISTERED', 'ACTOR_INACTIVE',
+            'CSRF_TOKEN', 'STRICT_ADMIN_DENIED', 'READ_DENIED', 'PERMISSION_DENIED',
+            'GET_READ_DISABLED', 'SESSION_EXPIRED', 'SESSION_TOKEN_MISSING', 'SESSION_USER_MISMATCH',
+            'SESSION_REQUIRED', 'رفض أمني', 'غير مسجل', 'CSRF', 'انتهت صلاحية الجلسة'
+        ];
+        return authPatterns.some((p) => code.includes(p) || msg.includes(p));
+    },
+
+    /**
+     * جلب البيانات المحلية من localStorage
+     */
+    getLocalData(action, data) {
+        try {
+            const storageKey = this._buildLocalDataStorageKey(action, data);
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Check if data is still valid (not older than 24 hours)
+                if (parsed.timestamp && (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000)) {
+                    return parsed.data;
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('خطأ في قراءة البيانات المحلية من localStorage:', error);
+        }
+        return null;
+    },
+
+    /**
+     * حفظ البيانات المحلية في localStorage
+     */
+    saveLocalData(action, result, data) {
+        try {
+            const storageKey = this._buildLocalDataStorageKey(action, data);
+            const dataToStore = {
+                data: result,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+        } catch (error) {
+            Utils.safeWarn('خطأ في حفظ البيانات المحلية في localStorage:', error);
+        }
+    },
+
+    /**
+     * قراءة البيانات من قاعدة SQL باستخدام Apps Script
+     * @param {string} sheetName
+     * @param {number|object} timeoutOrOptions - رقم المهلة بالمللي، أو { timeout, observationsRequestContext }
+     */
+    async readFromSheets(sheetName, timeoutOrOptions = 15000) {
+        if (!this._isBackendRpcConfigured()) {
+            return null;
+        }
+
+        if (!this._isCurrentUserEffectiveAdmin_() && this.ADMIN_ONLY_READ_SHEETS.includes(String(sheetName || '').trim())) {
+            return null;
+        }
+
+        if (String(sheetName || '').trim() === 'Users' && !this._canReadUsersSheet_()) {
+            if (typeof this.fetchUsersForApp === 'function') {
+                return await this.fetchUsersForApp({ timeout: typeof timeoutOrOptions === 'number' ? timeoutOrOptions : (timeoutOrOptions?.timeout || 15000) });
+            }
+            return null;
+        }
+
+        let timeout = 15000;
+        let observationsRequestContext = null;
+        if (typeof timeoutOrOptions === 'number') {
+            timeout = timeoutOrOptions;
+        } else if (timeoutOrOptions && typeof timeoutOrOptions === 'object') {
+            timeout = timeoutOrOptions.timeout ?? 15000;
+            observationsRequestContext = timeoutOrOptions.observationsRequestContext ?? null;
+        }
+
+        // استخدام timeout للطلب
+        try {
+            const payload = {
+                action: 'readFromSheet',
+                data: {
+                    sheetName: sheetName
+                }
+            };
+
+            if (sheetName === 'ContractorApprovalRequests' ||
+                sheetName === 'ContractorEvaluationApprovalRequests' ||
+                sheetName === 'ContractorDeletionRequests' ||
+                sheetName === 'ApprovedContractors') {
+                payload.data.skipCache = true;
+            }
+
+            if (AppState.googleConfig.sheets?.spreadsheetId) {
+                payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+            if (sheetName === 'DailyObservations' && observationsRequestContext) {
+                payload.data.observationsRequestContext = observationsRequestContext;
+            }
+
+            // تمرير timeout مباشرة لطبقة الشبكة حتى لا يظل الطلب معلقاً في الطابور
+            payload.data.__timeoutMs = timeout;
+            const result = await this.sendRequest(payload);
+
+            if (result && result.success && result.data !== undefined) {
+                return Array.isArray(result.data) ? result.data : [];
+            } else if (result && result.success && Array.isArray(result)) {
+                return result;
+            }
+
+            return null;
+        } catch (error) {
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+
+            const isExpectedError = !isBackendRpcConfigured ||
+                this._isExpectedReadError_(errorMsg) ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
+                errorMsg.includes('انتهت مهلة قراءة البيانات') ||
+                errorMsg.includes('timeout') ||
+                errorMsg.includes('Timeout') ||
+                errorMsg.includes('not found') ||
+                errorMsg.includes('غير موجود') ||
+                errorMsg.includes('Failed to fetch') ||
+                errorMsg.includes('NetworkError') ||
+                errorMsg.includes('Network request failed');
+
+            // عرض التحذير فقط للأخطاء غير المتوقعة وفي وضع التطوير
+            if (!isExpectedError && AppState.debugMode) {
+                Utils.safeWarn(`⚠️ فشل قراءة البيانات من ${sheetName}:`, error.message || error);
+            }
+            return null;
+        }
+    },
+
+    /**
+     * ✅ NEW: قراءة بيانات من عدة أوراق في طلب واحد (Batch Read)
+     * يقلل عدد الطلبات من 70+ إلى 5-6 طلبات فقط
+     * @param {Array<string>} sheetNames - أسماء الأوراق المراد قراءتها
+     * @param {Object} options - خيارات إضافية
+     * @returns {Promise<Object>} - كائن يحتوي على جميع البيانات { sheetName: data }
+     */
+    async batchReadFromSheets(sheetNames, options = {}) {
+        const {
+            timeout = 30000,
+            batchSize = 12, // Default batch size (max 15 supported by backend)
+            skipCache = false
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مُهيأ - لا يمكن استخدام القراءة المجمعة');
+            return {};
+        }
+
+        if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
+            return {};
+        }
+
+        sheetNames = this._filterSheetsForCurrentUser(sheetNames);
+        if (sheetNames.length === 0) {
+            return { data: {}, failedSheets: [], totalSheets: 0, successfulSheets: 0 };
+        }
+
+        const results = {};
+        const failedSheets = [];
+
+        // تقسيم الأوراق إلى مجموعات بحجم batchSize
+        const batches = [];
+        for (let i = 0; i < sheetNames.length; i += batchSize) {
+            batches.push(sheetNames.slice(i, i + batchSize));
+        }
+
+        Utils.safeLog(`📦 Batch Read: ${sheetNames.length} sheets in ${batches.length} batches`);
+
+        // معالجة كل batch على حدة
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+            const batch = batches[batchIndex];
+            
+            try {
+                const payload = {
+                    action: 'batchReadSheets',
+                    data: {
+                        sheetNames: batch
+                    }
+                };
+
+                if (AppState.googleConfig.sheets?.spreadsheetId) {
+                    payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+                }
+
+                // إضافة context خاص لـ DailyObservations إذا كان في الباتش
+                if (batch.includes('DailyObservations') && options.observationsRequestContext) {
+                    payload.data.observationsRequestContext = options.observationsRequestContext;
+                }
+                if (skipCache) {
+                    payload.data.skipCache = true;
+                }
+
+                payload.data.__timeoutMs = timeout;
+                const result = await this.sendRequest(payload);
+
+                if (result && result.success && result.data) {
+                    // دمج النتائج
+                    Object.assign(results, result.data);
+                    
+                    // تسجيل الأوراق الفاشلة
+                    if (result.failedSheets && result.failedSheets.length > 0) {
+                        result.failedSheets.forEach(failed => {
+                            failedSheets.push(failed.sheetName);
+                            Utils.safeWarn(`⚠️ فشل قراءة ${failed.sheetName}: ${failed.error}`);
+                        });
+                    }
+
+                    Utils.safeLog(`✅ Batch ${batchIndex + 1}/${batches.length}: ${result.successfulSheets}/${result.totalSheets} sheets loaded`);
+                } else {
+                    throw new Error(result?.message || 'فشل في القراءة المجمعة');
+                }
+            } catch (error) {
+                Utils.safeWarn(`⚠️ فشل batch ${batchIndex + 1}، جاري fallback للقراءة المنفصلة`);
+                // fallback: قراءة كل ورقة منفصلة بدلاً من فشل الباتش بالكامل
+                for (let i = 0; i < batch.length; i++) {
+                    const sheetName = batch[i];
+                    try {
+                        const sheetData = await this.readFromSheets(sheetName, {
+                            timeout: Math.min(timeout, 15000),
+                            observationsRequestContext: options.observationsRequestContext || null
+                        });
+                        results[sheetName] = Array.isArray(sheetData) ? sheetData : [];
+                    } catch (fallbackError) {
+                        failedSheets.push(sheetName);
+                        if (AppState?.debugMode) {
+                            Utils.safeWarn(`⚠️ fallback failed for ${sheetName}: ${fallbackError?.message || fallbackError}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (failedSheets.length > 0) {
+            Utils.safeWarn(`⚠️ Batch Read: ${failedSheets.length}/${sheetNames.length} sheets failed`);
+        }
+
+        return {
+            data: results,
+            failedSheets: failedSheets,
+            totalSheets: sheetNames.length,
+            successfulSheets: sheetNames.length - failedSheets.length
+        };
+    },
+
+
+    /**
+     * جلب البيانات من خادم SQL (خادم SQL)
+     * sendToAppsScript تم استبدالها بـ sendRequest (خادم SQL)
+     */
+    async fetchData(action, data = {}) {
+        try {
+            const result = await this.sendToAppsScript(action, data);
+            return result;
+        } catch (error) {
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
+            const errorMsg = String(error?.message || '').toLowerCase();
+            if (errorMsg.includes('circuit breaker') ||
+                errorMsg.includes('google apps script غير مفعل') ||
+                errorMsg.includes('غير مفعل')) {
+                // هذه أخطاء متوقعة - إعادة رميها بدون تسجيل
+                throw error;
+            }
+            // تسجيل الأخطاء الأخرى فقط
+            Utils.safeError('Error in fetchData:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * استدعاء الدالة في الخادم (خادم SQL)
+     * wrapper لـ sendRequest تم استبدالها بـ sendRequest (خادم SQL)
+     * @param {string} action - اسم الإجراء
+     * @param {object} data - البيانات المرسلة
+     * @returns {Promise<object>} - النتيجة المستلمة
+     */
+    async callBackend(action, data = {}) {
+        try {
+            return await this.sendRequest({ action, data });
+        } catch (error) {
+            Utils.safeError(`خطأ في callBackend (${action}):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * رفع ملف إلى الخادم من Base64 أو نص
+     * @param {string} base64Data - البيانات بصيغة Base64
+     * @param {string} fileName - اسم الملف
+     * @param {string} mimeType - نوع الملف
+     * @param {string} moduleName - اسم الوحدة (اختياري)
+     * @returns {Promise<object>} {success, fileId, directLink, shareableLink}
+     */
+    async uploadFileToDrive(base64Data, fileName, mimeType, moduleName = null, options = null) {
+        try {
+            if (!base64Data || !fileName || !mimeType) {
+                throw new Error('معاملات غير كافية. يجب توفير base64Data, fileName, و mimeType');
+            }
+
+            if (typeof Loading !== 'undefined' && Loading.show) {
+                Loading.show('جاري رفع الملف إلى الخادم...');
+            }
+
+            const payload = {
+                base64Data: base64Data,
+                fileName: fileName,
+                mimeType: mimeType,
+                moduleName: moduleName
+            };
+            if (options && typeof options === 'object') {
+                if (options.ownerUserId || options.userId) {
+                    payload.ownerUserId = options.ownerUserId || options.userId;
+                }
+            }
+
+            const result = await this.sendToAppsScript('uploadFileToDrive', payload);
+
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+
+            if (result && result.success) {
+                return {
+                    success: true,
+                    fileId: result.fileId,
+                    directLink: result.directLink,
+                    shareableLink: result.shareableLink,
+                    publicUrl: result.publicUrl || result.shareableLink || '',
+                    fileName: result.fileName,
+                    storage: result.storage || ''
+                };
+            } else {
+                throw new Error(result?.message || 'فشل رفع الملف إلى الخادم');
+            }
+        } catch (error) {
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في رفع الملف إلى الخادم:', error);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * رفع عدة ملفات إلى الخادم
+     * @param {Array} files - مصفوفة الملفات [{base64Data, fileName, mimeType}, ...]
+     * @param {string} moduleName - اسم الوحدة (اختياري)
+     * @returns {Promise<object>} {success, uploadedFiles, failedFiles}
+     */
+    async uploadMultipleFilesToDrive(files, moduleName = null) {
+        try {
+            if (!Array.isArray(files) || files.length === 0) {
+                throw new Error('يجب توفير مصفوفة من الملفات');
+            }
+
+            if (typeof Loading !== 'undefined' && Loading.show) {
+                Loading.show(`جاري رفع ${files.length} ملف إلى الخادم...`);
+            }
+
+            const result = await this.sendToAppsScript('uploadFileToDrive', {
+                files: files,
+                moduleName: moduleName
+            });
+
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+
+            return result;
+        } catch (error) {
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في رفع الملفات إلى الخادم:', error);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * معالجة attachments - تحويل Base64 إلى روابط الخادم
+     * @param {Array} attachments - مصفوفة المرفقات
+     * @param {string} moduleName - اسم الوحدة
+     * @returns {Promise<Array>} مصفوفة المرفقات مع روابط الخادم بدلاً من Base64
+     */
+    async processAttachments(attachments, moduleName) {
+        try {
+            if (!Array.isArray(attachments) || attachments.length === 0) {
+                return [];
+            }
+
+            const processedAttachments = [];
+
+            for (const attachment of attachments) {
+                // إذا كان المرفق يحتوي على رابط موجود (لا يحتاج رفع)
+                if (attachment.directLink || attachment.shareableLink || attachment.cloudLink) {
+                    processedAttachments.push({
+                        id: attachment.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('ATT') : 'ATT_' + Date.now()),
+                        name: attachment.name || 'attachment',
+                        type: attachment.type || 'application/octet-stream',
+                        directLink: attachment.directLink || attachment.shareableLink || attachment.cloudLink?.url,
+                        shareableLink: attachment.shareableLink || attachment.cloudLink?.url || attachment.directLink,
+                        fileId: attachment.fileId || attachment.cloudLink?.id,
+                        size: attachment.size || 0,
+                        uploadedAt: attachment.uploadedAt || new Date().toISOString()
+                    });
+                    continue;
+                }
+
+                // إذا كان المرفق يحتوي على Base64، ارفعه إلى الخادم
+                if (attachment.data || attachment.base64Data) {
+                    try {
+                        const uploadResult = await this.uploadFileToDrive(
+                            attachment.data || attachment.base64Data,
+                            attachment.name || 'attachment',
+                            attachment.type || 'application/octet-stream',
+                            moduleName
+                        );
+
+                        if (uploadResult.success) {
+                            processedAttachments.push({
+                                id: attachment.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('ATT') : 'ATT_' + Date.now()),
+                                name: uploadResult.fileName || attachment.name,
+                                type: attachment.type || 'application/octet-stream',
+                                directLink: uploadResult.directLink,
+                                shareableLink: uploadResult.shareableLink,
+                                fileId: uploadResult.fileId,
+                                size: attachment.size || 0,
+                                uploadedAt: new Date().toISOString()
+                            });
+                        } else {
+                            // في حالة الفشل، نحتفظ بالمرفق بصيغة Base64
+                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                                Utils.safeWarn('فشل رفع المرفق إلى الخادم:', attachment.name);
+                            }
+                            processedAttachments.push(attachment);
+                        }
+                    } catch (uploadError) {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('خطأ في رفع المرفق إلى الخادم:', uploadError);
+                        }
+                        // في حالة الخطأ، نحتفظ بالمرفق بصيغة Base64
+                        processedAttachments.push(attachment);
+                    }
+                } else {
+                    // إذا لم يكن هناك Base64 أو رابط، نحتفظ بالمرفق كما هو
+                    processedAttachments.push(attachment);
+                }
+            }
+
+            return processedAttachments;
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في معالجة المرفقات:', error);
+            }
+            // في حالة الخطأ، نعيد المرفقات الأصلية
+            return attachments;
+        }
+    },
+
+    /**
+     * حفظ البيانات في قاعدة SQL (قاعدة SQL)
+     */
+    async saveToSheets(sheetName, data) {
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            const preparedData = this.prepareSheetPayload(sheetName, data);
+            const payload = {
+                sheetName,
+                data: preparedData
+            };
+            if (AppState.googleConfig.sheets.spreadsheetId) {
+                payload.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+            const result = await this.sendToAppsScript('saveToSheet', payload);
+            return result;
+        } catch (error) {
+            Utils.safeWarn('فشل حفظ البيانات في قاعدة SQL:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * إضافة البيانات الجديدة إلى قاعدة SQL (بدون استبدال)
+     */
+    async appendToSheets(sheetName, data) {
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            // إضافة spreadsheetId إذا كان موجوداً في الإعدادات
+            const preparedData = this.prepareSheetPayload(sheetName, data);
+            const payload = {
+                sheetName,
+                data: preparedData
+            };
+
+            if (AppState.googleConfig.sheets.spreadsheetId) {
+                payload.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+
+            const result = await this.sendToAppsScript('appendToSheet', payload);
+
+            if (result && result.success) {
+                Utils.safeLog(`✅ تم إضافة البيانات إلى قاعدة SQL: ${sheetName}`);
+            } else {
+                Utils.safeWarn(`⚠️ فشل إضافة البيانات إلى قاعدة SQL: ${sheetName}:`, result?.message || 'خطأ غير معروف');
+            }
+
+            return result;
+        } catch (error) {
+            Utils.safeWarn('⚠️ فشل إضافة البيانات إلى قاعدة SQL:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    async syncUsers(force = false) {
+        if (!this._isBackendRpcConfigured()) {
+            return false;
+        }
+
+        // إيقاف نظام عدم النشاط أثناء مزامنة المستخدمين
+        let inactivityWasPaused = false;
+        if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
+            inactivityWasPaused = InactivityManager.isPaused;
+            if (!inactivityWasPaused) {
+                InactivityManager.pause('مزامنة المستخدمين مع قاعدة SQL');
+            }
+        }
+
+        // التحقق من المزامنة الجارية
+        if (this.isSyncing('users')) {
+            Utils.safeLog('⏳ مزامنة المستخدمين جارية بالفعل، في انتظار اكتمالها...');
+            // انتظار المزامنة الجارية (بحد أقصى 30 ثانية)
+            const maxWait = 30000;
+            const startWait = Date.now();
+            while (this.isSyncing('users') && (Date.now() - startWait) < maxWait) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            if (this.isSyncing('users')) {
+                Utils.safeWarn('⚠️ انتهت مهلة انتظار المزامنة الجارية');
+                // إعادة تشغيل نظام عدم النشاط
+                if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                    InactivityManager.resume();
+                }
+                return false;
+            }
+        }
+
+        const now = Date.now();
+        const lastSync = AppState.syncMeta?.users || 0;
+        const hasUsers = Array.isArray(AppState.appData.users) && AppState.appData.users.length > 0;
+        const CACHE_TTL = 2 * 60 * 1000; // 2 دقيقة - محسّن ليتناسب مع فترة المزامنة
+
+        if (!force && hasUsers && (now - lastSync) < CACHE_TTL) {
+            Utils.safeLog('✅ البيانات موجودة في الكاش، لا حاجة للمزامنة');
+            return true;
+        }
+
+        // تعيين حالة المزامنة
+        this._setSyncState('users', true);
+
+        // مسح Cache القديم من localStorage
+        Utils.safeLog('🔄 مسح Cache القديم من localStorage...');
+        AppState.syncMeta = AppState.syncMeta || {};
+        AppState.syncMeta.users = 0; // مسح timestamp القديم قبل بدء المزامنة
+
+        // مسح أي بيانات محفوظة في localStorage/sessionStorage
+        try {
+            const cachedUsers = localStorage.getItem('hse_cached_users');
+            if (cachedUsers) {
+                localStorage.removeItem('hse_cached_users');
+                Utils.safeLog('✅ تم مسح Cache القديم من localStorage');
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ خطأ في مسح Cache من localStorage:', e);
+        }
+
+        const previousUsersMap = {};
+        // ⚠️ إنتاج: لا نحتفظ/نُدمج أي حسابات افتراضية. 
+        // نزيل فقط "الحسابات المحلية" الوهمية (legacy) التي كانت تُزرع قديماً (مثل نطاق @hse.local).
+        const isLegacyDefaultEmail = (email) => {
+            try {
+                const e = String(email || '').toLowerCase().trim();
+                return e.endsWith('@hse.local');
+            } catch (err) {
+                return false;
+            }
+        };
+
+        // حفظ نسخة احتياطية من جميع البيانات المحلية قبل المزامنة
+        const localUsersBackup = Array.isArray(AppState.appData.users)
+            ? AppState.appData.users.map(u => ({ ...u }))
+            : [];
+
+        if (Array.isArray(AppState.appData.users)) {
+            AppState.appData.users.forEach(user => {
+                const emailKey = user?.email ? user.email.toLowerCase().trim() : '';
+                if (emailKey) {
+                    previousUsersMap[emailKey] = user;
+                }
+            });
+        }
+
+        try {
+            Utils.safeLog('🔄 جاري قراءة المستخدمين من قاعدة SQL...');
+            let data = null;
+            if (this._canReadUsersSheet_() && this._isCurrentUserEffectiveAdmin_()) {
+                data = await this.readFromSheets('Users');
+            } else {
+                data = await this.fetchUsersForApp({ timeout: 20000 });
+            }
+
+            // التحقق من وجود البيانات المستلمة
+            if (!data) {
+                Utils.safeWarn('⚠️ البيانات المستلمة من قاعدة SQL كانت null');
+                // استخدام البيانات المحلية الاحتياطية إذا كانت متوفرة
+                if (localUsersBackup.length > 0) {
+                    Utils.safeLog('⚠️ استخدام البيانات المحلية الاحتياطية...');
+                    AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+                    AppState.syncMeta = AppState.syncMeta || {};
+                    AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت
+                    try {
+                        DataManager.save();
+                        Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                    } catch (saveError) {
+                        Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                    }
+                    this._setSyncState('users', false);
+                    if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                        InactivityManager.resume();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            if (!Array.isArray(data)) {
+                Utils.safeWarn('⚠️ البيانات المستلمة ليست مصفوفة:', typeof data);
+                // استخدام البيانات المحلية الاحتياطية إذا كانت متوفرة
+                if (localUsersBackup.length > 0) {
+                    Utils.safeLog('⚠️ استخدام البيانات المحلية الاحتياطية...');
+                    AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+                    AppState.syncMeta = AppState.syncMeta || {};
+                    AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت
+                    try {
+                        DataManager.save();
+                        Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                    } catch (saveError) {
+                        Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                    }
+                    this._setSyncState('users', false);
+                    if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                        InactivityManager.resume();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            Utils.safeLog('📊 البيانات المستلمة من قاعدة SQL:', {
+                dataType: 'array',
+                dataLength: data.length,
+                firstUserSample: data.length > 0 ? {
+                    email: data[0].email || 'غير محدد',
+                    hasId: !!data[0].id,
+                    hasName: !!data[0].name,
+                    hasEmail: !!data[0].email,
+                    hasPasswordHash: !!data[0].passwordHash,
+                    passwordHashLength: data[0].passwordHash?.length || 0,
+                    passwordHashPrefix: data[0].passwordHash && typeof data[0].passwordHash === 'string' ? (data[0].passwordHash.substring(0, 20) + '...') : 'غير محدد',
+                    hasPassword: !!data[0].password,
+                    passwordValue: data[0].password && typeof data[0].password === 'string' ? (data[0].password.substring(0, 10) + '...') : (typeof data[0].password),
+                    keys: Object.keys(data[0] || {}),
+                    allKeys: Object.keys(data[0] || {})
+                } : null,
+                sampleUsers: data.slice(0, 3).map(u => ({
+                    email: u.email || 'غير محدد',
+                    hasPasswordHash: !!u.passwordHash,
+                    passwordHashLength: u.passwordHash?.length || 0
+                }))
+            });
+
+            if (Array.isArray(data) && data.length > 0) {
+                let restoredPasswords = false;
+
+                // تصفية المستخدمين الصالحين (الذين لديهم email صحيح)
+                const validUsers = data.filter(user => {
+                    if (!user || typeof user !== 'object') {
+                        Utils.safeWarn('⚠️ مستخدم غير صالح (ليس كائن):', user);
+                        return false;
+                    }
+                    const email = user.email ? String(user.email).trim() : '';
+                    if (!email || email === '') {
+                        Utils.safeWarn('⚠️ مستخدم بدون email:', user);
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (validUsers.length === 0) {
+                    Utils.safeWarn('⚠️ لا يوجد مستخدمين صالحين في البيانات المستلمة');
+                    return false;
+                }
+
+                Utils.safeLog(`✅ تم تصفية ${validUsers.length} مستخدم صالح من ${data.length} مستخدم`);
+
+                let normalizedUsers = await Promise.all(validUsers.map(async user => {
+                    // تحويل المستخدم إلى كائن معين
+                    const normalized = {};
+                    Object.keys(user).forEach(key => {
+                        normalized[key] = user[key];
+                    });
+
+                    // تطبيع email
+                    if (normalized.email) {
+                        normalized.email = String(normalized.email).trim().toLowerCase();
+                    }
+
+                    // ✅ تطبيع name - التحقق من أنه string وليس object
+                    if (normalized.name) {
+                        let nameValue = normalized.name;
+                        // إذا كان name object (مثل {value: "Yasser"})، استخرج القيمة
+                        if (typeof nameValue === 'object' && nameValue !== null) {
+                            if (nameValue.value) {
+                                nameValue = String(nameValue.value).trim();
+                            } else {
+                                const values = Object.values(nameValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    nameValue = String(values[0]).trim();
+                                } else {
+                                    nameValue = String(nameValue).trim();
+                                }
+                            }
+                            Utils.safeLog(`✅ تم تحويل name من object إلى string: ${nameValue}`);
+                        } else if (typeof nameValue === 'string') {
+                            nameValue = nameValue.trim();
+                        }
+                        normalized.name = nameValue;
+                    }
+
+                    // ✅ تطبيع displayName أيضاً
+                    if (normalized.displayName) {
+                        let displayNameValue = normalized.displayName;
+                        if (typeof displayNameValue === 'object' && displayNameValue !== null) {
+                            if (displayNameValue.value) {
+                                displayNameValue = String(displayNameValue.value).trim();
+                            } else {
+                                const values = Object.values(displayNameValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    displayNameValue = String(values[0]).trim();
+                                }
+                            }
+                        } else if (typeof displayNameValue === 'string') {
+                            displayNameValue = displayNameValue.trim();
+                        }
+                        normalized.displayName = displayNameValue;
+                    }
+
+                    const emailKey = normalized.email || '';
+                    const previous = previousUsersMap[emailKey];
+
+                    // التحقق من وجود Utils ودالة isSha256Hex
+                    const canCheckHash = typeof Utils !== 'undefined' && Utils && typeof Utils.isSha256Hex === 'function';
+                    // التحقق من وجود passwordHash
+                    let incomingHash = '';
+
+                    // 1. التحقق من وجود passwordHash
+                    if (normalized.passwordHash) {
+                        let hashValue = normalized.passwordHash;
+
+                        // ??? ??? passwordHash object? ?????? ?????? ???
+                        if (typeof hashValue === 'object' && hashValue !== null) {
+                            if (hashValue.value) {
+                                hashValue = String(hashValue.value).trim();
+                                Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`); // التحقق من وجود Utils ودالة isSha256Hex والتحقق من وجود passwordHash      
+                            } else {
+                                // التحقق من وجود القيم في الكائن
+                                const values = Object.values(hashValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    hashValue = String(values[0]).trim();
+                                    Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`);
+                                } else {
+                                    hashValue = String(hashValue).trim();
+                                }
+                            }
+                        } else if (typeof hashValue === 'string') {
+                            hashValue = hashValue.trim();
+                        }
+
+                        if (hashValue && hashValue !== '' && hashValue !== '***') {
+                            if (canCheckHash && Utils.isSha256Hex(hashValue)) {
+                                incomingHash = hashValue;
+                            } else {
+                                Utils.safeWarn(`?? passwordHash ??? ???? ????????: ${normalized.email} - ????? ??? ????`);
+                            }
+                        }
+                    }
+
+                    // 2. التحقق من وجود passwordHash
+                    if (!incomingHash && normalized.password && normalized.password !== '***') {
+                        let passwordValue = normalized.password;
+
+                        // التحقق من وجود password object
+                        if (typeof passwordValue === 'object' && passwordValue !== null) {
+                            if (passwordValue.value) {
+                                passwordValue = String(passwordValue.value).trim();
+                                Utils.safeLog(`تم تحويل password إلى String: ${normalized.email}`);
+                            } else {
+                                const values = Object.values(passwordValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    passwordValue = String(values[0]).trim();
+                                    Utils.safeLog(`تم تحويل password إلى String: ${normalized.email}`);
+                                } else {
+                                    passwordValue = String(passwordValue).trim();
+                                }
+                            }
+                        } else if (typeof passwordValue === 'string') {
+                            passwordValue = passwordValue.trim();
+                        }
+
+                        if (canCheckHash && Utils.isSha256Hex(passwordValue)) {
+                            incomingHash = passwordValue;
+                            Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`);
+                        }
+                    }
+
+                    // 3. التحقق من وجود previousHash
+                    let previousHash = '';
+                    if (previous) {
+                        if (previous.passwordHash && previous.passwordHash.trim() !== '' && previous.passwordHash.trim() !== '***') {
+                            const prevHashValue = previous.passwordHash.trim();
+                            if (canCheckHash && Utils.isSha256Hex(prevHashValue)) {
+                                previousHash = prevHashValue;
+                            }
+                        } else if (previous.password && previous.password !== '***') {
+                            const prevPasswordValue = previous.password.trim();
+                            if (canCheckHash && Utils.isSha256Hex(prevPasswordValue)) {
+                                previousHash = prevPasswordValue;
+                            }
+                        }
+                    }
+
+                    // التحقق من وجود incomingHash
+                    if (!incomingHash && normalized.password && normalized.password !== '***' && !Utils.isSha256Hex(normalized.password)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود incomingHash: ${normalized.email}`);
+                        incomingHash = await Utils.hashPassword(normalized.password);
+                        restoredPasswords = true;
+                    }
+
+                    if (!previousHash && previous?.password && previous.password !== '***' && !Utils.isSha256Hex(previous.password)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود previousHash: ${previous.email}`);
+                        previousHash = await Utils.hashPassword(previous.password);
+                        restoredPasswords = true;
+                    }
+
+                    // التحقق من وجود incomingHash
+                    if (incomingHash && !Utils.isSha256Hex(incomingHash)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود incomingHash: ${normalized.email} - خطأ في التحقق من وجود hash`);
+                        incomingHash = '';
+                    }
+
+                    let resolvedHash = incomingHash || previousHash || '';
+
+                    Utils.safeLog(`?? ??? passwordHash ???????? ${normalized.email}:`, {
+                        hasIncomingHash: !!incomingHash,
+                        incomingHashLength: incomingHash?.length || 0,
+                        incomingHashPrefix: incomingHash ? (incomingHash.substring(0, 20) + '...') : '????',
+                        incomingHashSuffix: incomingHash ? ('...' + incomingHash.substring(incomingHash.length - 10)) : '????',
+                        isIncomingHashValid: incomingHash ? Utils.isSha256Hex(incomingHash) : false,
+                        hasPreviousHash: !!previousHash,
+                        previousHashLength: previousHash?.length || 0,
+                        previousHashPrefix: previousHash ? (previousHash.substring(0, 20) + '...') : '????',
+                        previousHashSuffix: previousHash ? ('...' + previousHash.substring(previousHash.length - 10)) : '????',
+                        isPreviousHashValid: previousHash ? Utils.isSha256Hex(previousHash) : false,
+                        resolvedHash: resolvedHash ? (resolvedHash.substring(0, 20) + '...') : '????',
+                        resolvedHashLength: resolvedHash?.length || 0,
+                        resolvedHashSuffix: resolvedHash ? ('...' + resolvedHash.substring(resolvedHash.length - 10)) : '????',
+                        isResolvedHashValid: resolvedHash ? Utils.isSha256Hex(resolvedHash) : false,
+                        normalizedKeys: Object.keys(normalized),
+                        hasPasswordHashInNormalized: 'passwordHash' in normalized,
+                        hasPasswordInNormalized: 'password' in normalized
+                    });
+
+                    // ?????? ???? ?????? ???????? hash ?????????? ?????? ?????????? ?????? ???? ???????? ???????????? ?????????? ?????? ?????????? ??????????
+                    if (!resolvedHash || !Utils.isSha256Hex(resolvedHash)) {
+                        normalized.forcePasswordChange = true;
+                        Utils.safeWarn(`?????? ???????????????? ${normalized.email} ?????????? ?????? ?????????? ?????????? ???????? ????????????`);
+                    }
+
+                    if ((!normalized.createdAt || normalized.createdAt === '') && previous?.createdAt) {
+                        normalized.createdAt = previous.createdAt;
+                    }
+
+                    if ((!normalized.updatedAt || normalized.updatedAt === '') && previous?.updatedAt) {
+                        normalized.updatedAt = previous.updatedAt;
+                    }
+
+                    if (!normalized.loginHistory && previous?.loginHistory) {
+                        normalized.loginHistory = previous.loginHistory;
+                    }
+
+                    // ?????? ?? ?? passwordHash ???? ??? ?????
+                    if (resolvedHash && Utils.isSha256Hex(resolvedHash)) {
+                        normalized.passwordHash = resolvedHash;
+                        normalized.password = '***';
+                        normalized.forcePasswordChange = normalized.forcePasswordChange ?? previous?.forcePasswordChange ?? false;
+                        normalized.passwordChanged = normalized.passwordChanged ?? previous?.passwordChanged ?? false;
+
+                        Utils.safeLog(`? ?? ????? passwordHash ???????? ${normalized.email}:`, {
+                            passwordHashLength: normalized.passwordHash?.length || 0,
+                            passwordHashPrefix: normalized.passwordHash ? (normalized.passwordHash.substring(0, 20) + '...') : '????',
+                            isPasswordHashValid: true,
+                            forcePasswordChange: normalized.forcePasswordChange
+                        });
+                    } else {
+                        // ??? ?? ??? ???? passwordHash ????? ??? ????? ??? ?????? ?????? ???? ??????
+                        normalized.passwordHash = '';
+                        normalized.password = '***';
+                        normalized.forcePasswordChange = true;
+                        normalized.passwordChanged = false;
+
+                        Utils.safeWarn(`?? ???????? ${normalized.email} ?? ???? passwordHash ???? - ?????? ??? ????? ????? ???? ??????`);
+                    }
+
+                    if (typeof normalized.permissions === 'string' && normalized.permissions.trim() !== '') {
+                        try {
+                            normalized.permissions = JSON.parse(normalized.permissions);
+                        } catch (error) {
+                            Utils.safeWarn('??? ?????? ?????????? ?????????????? ???????????????? ?????????? ????????????????:', error);
+                        }
+                    }
+
+                    if (typeof normalized.loginHistory === 'string' && normalized.loginHistory.trim() !== '') {
+                        try {
+                            normalized.loginHistory = JSON.parse(normalized.loginHistory);
+                        } catch (error) {
+                            Utils.safeWarn('??? ?????? ?????????? ?????? ???????????? ???????????????? ?????????? ????????????????:', error);
+                            normalized.loginHistory = [];
+                        }
+                    }
+
+                    return normalized;
+                }));
+
+                // ✅ إنتاج: إزالة أي حسابات افتراضية legacy من نتيجة المزامنة
+                const beforeFilterCount = normalizedUsers.length;
+                normalizedUsers = normalizedUsers.filter(u => !isLegacyDefaultEmail(u?.email));
+                const removedLegacyDefaults = beforeFilterCount - normalizedUsers.length;
+
+                // النتيجة النهائية: المستخدمون من قاعدة SQL فقط (بدون أي دمج افتراضي)
+                const finalUsers = normalizedUsers;
+
+                // تحديث AppState.appData.users - نسخ عميقة لتجنب التعديلات المباشرة
+                AppState.appData.users = finalUsers.map(u => ({ ...u }));
+
+                // تحديث timestamp المزامنة
+                AppState.syncMeta = AppState.syncMeta || {};
+                AppState.syncMeta.users = now;
+
+                // حفظ البيانات محلياً
+                try {
+                    DataManager.save();
+                    Utils.safeLog('✅ تم حفظ البيانات المستخدمين محلياً');
+                } catch (saveError) {
+                    Utils.safeWarn('⚠️ خطأ في حفظ البيانات المستخدمين محلياً:', saveError);
+                }
+
+                // مسح Cache القديم من التخزين المحلي
+                try {
+                    // مسح من localStorage
+                    localStorage.removeItem('hse_cached_users');
+                    // مسح من sessionStorage (إن وجد)
+                    sessionStorage.removeItem('hse_cached_users');
+                    Utils.safeLog('✅ تم مسح Cache القديم من التخزين المحلي');
+                } catch (cacheError) {
+                    Utils.safeWarn('⚠️ خطأ في مسح Cache:', cacheError);
+                }
+
+                // سجل المزامنة
+                Utils.safeLog(`✅ ===== اكتملت مزامنة المستخدمين =====`, {
+                    totalUsers: finalUsers.length,
+                    fromGoogleSheets: normalizedUsers.length,
+                    removedLegacyDefaults,
+                    syncTimestamp: new Date(now).toISOString(),
+                    usersList: finalUsers.map(u => ({
+                        email: u.email,
+                        hasPasswordHash: !!u.passwordHash && u.passwordHash !== '***',
+                        passwordHashValid: u.passwordHash ? Utils.isSha256Hex(u.passwordHash) : false
+                    })).slice(0, 5) // أول 5 مستخدمين فقط
+                });
+
+                // إلغاء حالة المزامنة
+                this._setSyncState('users', false);
+
+                Utils.safeLog(`✅ اكتملت مزامنة المستخدمين (${normalizedUsers.length} من قاعدة SQL)`);
+
+                // تحديث passwordHash في قاعدة SQL إذا لزم الأمر
+                // تحديث البيانات في قاعدة SQL إذا تم إنشاء hash جديد
+                // ⚠️ إصلاح: لا نُعيد كتابة كل المستخدمين عند كل مزامنة.
+                // الشرط القديم كان دائم true (سيرفر لا يرسل passwordHash في البيانات المصفّاة)
+                // → autoSave('Users') كاملة بلا هاش → مع النسخ القديمة غير المحمية كانت تمسح الهاش لجميع المستخدمين.
+                // الآن الكتابة فقط عند استعادة كلمات مرور نصية فعلية من الكاش المحلي.
+                const needsPasswordUpdate = restoredPasswords === true;
+
+                if (needsPasswordUpdate) {
+                    setTimeout(() => {
+                        // تنظيف البيانات قبل الحفظ (إزالة password غير مشفر)
+                        const cleanedUsers = AppState.appData.users.map(user => {
+                            const cleaned = { ...user };
+                            if (cleaned.password && cleaned.password !== '***') {
+                                delete cleaned.password;
+                            }
+                            return cleaned;
+                        });
+
+                        this.autoSave('Users', cleanedUsers).catch(err => {
+                            Utils.safeWarn('⚠️ فشل تحديث passwordHash في قاعدة SQL بعد المزامنة:', err);
+                        });
+                    }, 500);
+                }
+
+                // إعادة تشغيل نظام عدم النشاط بعد اكتمال المزامنة
+                if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                    InactivityManager.resume();
+                }
+
+                // تحديث زر حالة الاتصال للمستخدم بعد المزامنة
+                if (typeof UI !== 'undefined' && typeof UI.updateUserConnectionStatus === 'function') {
+                    setTimeout(() => {
+                        UI.updateUserConnectionStatus();
+                        // التأكد من أن التحديث التلقائي يعمل بعد المزامنة
+                        if (typeof UI.startAutoRefreshConnectionStatus === 'function' && AppState.currentUser) {
+                            UI.startAutoRefreshConnectionStatus();
+                        }
+                    }, 300);
+                }
+
+                // إلغاء حالة المزامنة
+                this._setSyncState('users', false);
+
+                // ✅ Bootstrap hard-disable after first successful Users sync (real users exist)
+                try {
+                    if (typeof window !== 'undefined' && window.Auth && typeof window.Auth.handleUsersSyncSuccess === 'function') {
+                        window.Auth.handleUsersSyncSuccess();
+                    }
+                } catch (e) { /* ignore */ }
+
+                return true;
+            }
+
+            // إعادة تشغيل نظام عدم النشاط
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            // إلغاء حالة المزامنة - لا توجد بيانات
+            this._setSyncState('users', false);
+            return false;
+        } catch (error) {
+            // إعادة تشغيل نظام عدم النشاط حتى في حالة الخطأ
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            // إلغاء حالة المزامنة - خطأ
+            this._setSyncState('users', false);
+
+            // التحقق من نوع الخطأ
+            const errorMsg = error?.message || error?.toString() || '';
+            const isTimeoutError = errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('timeout') ||
+                errorMsg.includes('timed out') ||
+                errorMsg.includes('AbortError');
+
+            // إذا كان هناك بيانات محلية احتياطية، نستخدمها
+            if (localUsersBackup.length > 0) {
+                Utils.safeLog('⚠️ فشلت المزامنة، استخدام البيانات المحلية الاحتياطية...');
+
+                // استعادة البيانات المحلية
+                AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+
+                // تحديث timestamp المزامنة (لكن بعلامة فشل)
+                AppState.syncMeta = AppState.syncMeta || {};
+                AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت (لإجبار المزامنة التالية)
+
+                // حفظ البيانات المحلية للتأكد من استمراريتها
+                try {
+                    DataManager.save();
+                    Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                } catch (saveError) {
+                    Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                }
+
+                if (isTimeoutError) {
+                    Utils.safeWarn('⚠️ انتهت مهلة الاتصال أثناء مزامنة المستخدمين. تم استخدام البيانات المحلية المحفوظة.');
+                } else {
+                    Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL. تم استخدام البيانات المحلية المحفوظة:', error);
+                }
+
+                // إرجاع true لأن البيانات المحلية متوفرة
+                return true;
+            }
+
+            // إذا لم تكن هناك بيانات محلية، نعيد false
+            Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL:', error);
+            Utils.safeError('❌ خطأ في مزامنة المستخدمين:', {
+                errorMessage: error.message,
+                errorStack: error.stack,
+                timestamp: new Date().toISOString(),
+                isTimeoutError: isTimeoutError
+            });
+
+            return false;
+        }
+    },
+
+    /**
+     * ?????? ???????? ???????????????? ???? قاعدة SQL (?????????????? ????????)
+     */
+    async saveAllToSheets() {
+        if (!this._isBackendRpcConfigured()) {
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            Loading.show();
+            const sheets = {
+                'Users': AppState.appData.users || [],
+                'Incidents': AppState.appData.incidents || [],
+                'NearMiss': AppState.appData.nearmiss || [],
+                'PTW': AppState.appData.ptw || [],
+                'Training': AppState.appData.training || [],
+                'EmployeeTrainingMatrix': AppState.appData.employeeTrainingMatrix || [],
+                'TrainingAttendance': AppState.appData.trainingAttendance || [],
+                'ClinicVisits': AppState.appData.clinicVisits || [],
+                'Medications': AppState.appData.medications || [],
+                'SickLeave': AppState.appData.sickLeave || [],
+                'Injuries': AppState.appData.injuries || [],
+                'ClinicInventory': AppState.appData.clinicInventory || [],
+                'FireEquipment': AppState.appData.fireEquipment || [],
+                'FireEquipmentAssets': AppState.appData.fireEquipmentAssets || [],
+                'FireEquipmentInspections': AppState.appData.fireEquipmentInspections || [],
+                'PeriodicInspectionCategories': AppState.appData.periodicInspectionCategories || [],
+                'PeriodicInspectionRecords': AppState.appData.periodicInspectionRecords || [],
+                'PeriodicInspectionSchedules': AppState.appData.periodicInspectionSchedules || [],
+                'PeriodicInspectionChecklists': AppState.appData.periodicInspectionChecklists || [],
+                'PeriodicEquipmentTypes': AppState.appData.periodicEquipmentTypes || [],
+                'PeriodicEquipmentAssets': AppState.appData.periodicEquipmentAssets || [],
+                'PeriodicEquipmentInspections': AppState.appData.periodicEquipmentInspections || [],
+                'PPE': AppState.appData.ppe || [],
+                'ViolationTypes': AppState.appData.violationTypes || [],
+                'Violations': AppState.appData.violations || [],
+                'Blacklist_Register': AppState.appData.blacklistRegister || [],
+                'Contractors': AppState.appData.contractors || [],
+                'ApprovedContractors': AppState.appData.approvedContractors || [],
+                'ContractorEvaluations': AppState.appData.contractorEvaluations || [],
+                'Employees': AppState.appData.employees || [],
+                'ExternalWorkforceMonthly': AppState.appData.externalWorkforceMonthly || [],
+                'BehaviorMonitoring': AppState.appData.behaviorMonitoring || [],
+                'ContractorBehaviorMonitoring': AppState.appData.contractorBehaviorMonitoring || [],
+                'ChemicalSafety': AppState.appData.chemicalSafety || [],
+                'DailyObservations': AppState.appData.dailyObservations || [],
+                'DailySafetyCheckList': AppState.appData.dailySafetyCheckList || [],
+                'ISODocuments': AppState.appData.isoDocuments || [],
+                'ISOProcedures': AppState.appData.isoProcedures || [],
+                'ISOForms': AppState.appData.isoForms || [],
+                'SOPJHA': AppState.appData.sopJHA || [],
+                'RiskAssessments': AppState.appData.riskAssessments || [],
+                'LegalDocuments': AppState.appData.legalDocuments || [],
+                'HSEAudits': AppState.appData.hseAudits || [],
+                'HSENonConformities': AppState.appData.hseNonConformities || [],
+                'HSECorrectiveActions': AppState.appData.hseCorrectiveActions || [],
+                'HSEObjectives': AppState.appData.hseObjectives || [],
+                'HSERiskAssessments': AppState.appData.hseRiskAssessments || [],
+                'EnvironmentalAspects': AppState.appData.environmentalAspects || [],
+                'EnvironmentalMonitoring': AppState.appData.environmentalMonitoring || [],
+                'Sustainability': AppState.appData.sustainability || [],
+                'CarbonFootprint': AppState.appData.carbonFootprint || [],
+                'WasteManagement': AppState.appData.wasteManagement || [],
+                'EnergyEfficiency': AppState.appData.energyEfficiency || [],
+                'WaterManagement': AppState.appData.waterManagement || [],
+                'RecyclingPrograms': AppState.appData.recyclingPrograms || [],
+                'EmergencyAlerts': AppState.appData.emergencyAlerts || [],
+                'EmergencyPlans': AppState.appData.emergencyPlans || [],
+                'EmergencyPlansUpdates': AppState.appData.emergencyPlansUpdates || [],
+                'SafetyTeamMembers': AppState.appData.safetyTeamMembers || [],
+                'SafetyOrganizationalStructure': AppState.appData.safetyOrganizationalStructure || [],
+                'SafetyJobDescriptions': AppState.appData.safetyJobDescriptions || [],
+                'SafetyTeamKPIs': AppState.appData.safetyTeamKPIs || [],
+                'SafetyTeamAttendance': AppState.appData.safetyTeamAttendance || [],
+                'SafetyTeamLeaves': AppState.appData.safetyTeamLeaves || [],
+                'SafetyTeamTasks': AppState.appData.safetyTeamTasks || [],
+                'SafetyBudgets': AppState.appData.safetyBudgets || [],
+                'SafetyBudgetTransactions': AppState.appData.safetyBudgetTransactions || [],
+                'SafetyBudgetPurchaseOrders': AppState.appData.safetyBudgetPurchaseOrders || [],
+                'SafetyPerformanceKPIs': AppState.appData.safetyPerformanceKPIs || [],
+                'ActionTrackingRegister': AppState.appData.actionTrackingRegister || [],
+                'UserActivityLog': AppState.appData.user_activity_log || [],
+                'SafetyCalendarCustomEvents': AppState.appData.safetyCalendarCustomEvents || []
+            };
+
+            let successCount = 0;
+            let failCount = 0;
+
+            const spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+
+            if (!spreadsheetId || spreadsheetId.trim() === '') {
+                Loading.hide();
+                Notification.error('???????? ?????????? ???????? قاعدة SQL ???? ?????????????????? ??????????');
+                return { success: false, message: '?????? قاعدة SQL ?????? ????????' };
+            }
+
+            for (const [sheetName, data] of Object.entries(sheets)) {
+                try {
+                    await this.sendToAppsScript('saveToSheet', {
+                        sheetName,
+                        data,
+                        spreadsheetId: spreadsheetId.trim()
+                    });
+                    successCount++;
+                } catch (error) {
+                    Utils.safeWarn(`?????? ?????? ${sheetName}:`, error);
+                    failCount++;
+                }
+            }
+
+            Loading.hide();
+
+            if (failCount === 0) {
+                Notification.success(`???? ?????? ???????? ???????????????? ???? قاعدة SQL ??????????`);
+                return { success: true };
+            } else {
+                Notification.warning(`???? ?????? ${successCount} ?????????? ???? ${failCount} ????????`);
+                return { success: false, message: `?????? ???? ${failCount} ????????` };
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('?????? ???? ????????????????: ' + error.message);
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * ?????????? ???????? ?????????????? ???????????????? ???????????????? ?? قاعدة SQL
+     */
+    async initializeSheets() {
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مفعّل'));
+        }
+
+        try {
+            Loading.show();
+            const spreadsheetId = AppState.googleConfig.sheets.spreadsheetId || '';
+
+            const result = await this.sendToAppsScript('initializeSheets', {
+                spreadsheetId: spreadsheetId || undefined
+            });
+
+            Loading.hide();
+            if (result.success) {
+                Notification.success('???? ?????????? ???????? ?????????????? ??????????');
+                return true;
+            } else {
+                Notification.error('?????? ?????????? ??????????????: ' + result.message);
+                return false;
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('?????? ?????????? ??????????????: ' + error.message);
+            return Promise.reject(error);
+        }
+    },
+
+    /**
+     * أوراق سجلات استهلاك الموارد (مياه / كهرباء / غاز) — تُخزَّن في AppState.appData.resourceConsumption وليس كمفتاح مستقل في appData.
+     */
+    getResourceConsumptionRecordSlot(sheetName) {
+        const RECORD_SLOTS = {
+            'WaterManagement_Records': 'water',
+            'ElectricityManagement_Records': 'electricity',
+            'GasManagement_Records': 'gas'
+        };
+        return RECORD_SLOTS[sheetName] || null;
+    },
+
+    /**
+     * دمج نتيجة قراءة ورقة سجلات الاستهلاك أثناء المزامنة (syncData / SyncImprovements).
+     * @returns {{ handled: boolean, syncedRecords: number, failed: boolean } | null} null إذا لم تكن الورقة من نوع سجلات الاستهلاك
+     */
+    applyResourceConsumptionSheetSyncResult(sheetName, payload) {
+        const slot = this.getResourceConsumptionRecordSlot(sheetName);
+        if (!slot) return null;
+
+        const { data, error, success } = payload || {};
+
+        if (!AppState.appData) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!AppState.appData.resourceConsumption) {
+            AppState.appData.resourceConsumption = {
+                water: [],
+                electricity: [],
+                gas: []
+            };
+        }
+
+        if (!AppState.syncMeta) {
+            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+        }
+        if (!AppState.syncMeta.sheets) {
+            AppState.syncMeta.sheets = {};
+        }
+
+        if (!success || error) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!Array.isArray(data)) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        const normalizeRow = (row) => {
+            try {
+                if (typeof Sustainability !== 'undefined' && typeof Sustainability.normalizeResourceConsumptionRecord === 'function') {
+                    return Sustainability.normalizeResourceConsumptionRecord(row);
+                }
+            } catch (_e) { /* ignore */ }
+            return row && typeof row === 'object' ? row : null;
+        };
+
+        const normalized = data.map(normalizeRow).filter(Boolean);
+
+        const oldData = Array.isArray(AppState.appData.resourceConsumption[slot])
+            ? AppState.appData.resourceConsumption[slot]
+            : [];
+
+        const shouldKeepOld = !this._currentSyncForceRefresh && normalized.length === 0 && oldData.length > 0;
+        const effectiveData = shouldKeepOld ? oldData : normalized;
+
+        if (!shouldKeepOld) {
+            AppState.appData.resourceConsumption[slot] = normalized;
+            AppState.syncMeta.sheets[sheetName] = Date.now();
+            AppState.syncMeta.lastSyncTime = Date.now();
+        }
+
+        return {
+            handled: true,
+            syncedRecords: effectiveData.length,
+            failed: false
+        };
+    },
+
+    /**
+     * تحديد الأوراق غير المكتملة (التي لم يتم تحميلها أو فشل تحميلها)
+     * @returns {Array|null} قائمة غير مكتملة، [] إذا اكتمل الكل، أو null لتحميل الكل
+     */
+    getIncompleteSheets(sheetMapping, allSheets) {
+        try {
+            // التأكد من تهيئة syncMeta
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            if (!AppState.syncMeta.sheets) {
+                AppState.syncMeta.sheets = {};
+            }
+            
+            // التحقق من تغيير المستخدم
+            const currentUserEmail = AppState.currentUser?.email || null;
+            if (AppState.syncMeta.userEmail !== currentUserEmail) {
+                // تغيير المستخدم - نعيد جميع الأوراق
+                return null;
+            }
+            
+            const incompleteSheets = [];
+            const currentTime = Date.now();
+            const syncTimeout = 2 * 60 * 1000; // 2 دقيقة - انتهاء صلاحية البيانات (محسّن ليتناسب مع فترة المزامنة)
+            
+            // التحقق من كل ورقة
+            allSheets.forEach(sheetName => {
+                const rcSlot = this.getResourceConsumptionRecordSlot(sheetName);
+                if (rcSlot) {
+                    const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
+                    const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
+                    const arr = AppState.appData && AppState.appData.resourceConsumption
+                        ? AppState.appData.resourceConsumption[rcSlot]
+                        : null;
+                    const hasStructure = Array.isArray(arr);
+                    const attempted = lastSync > 0;
+                    if (!attempted || isExpired || !hasStructure) {
+                        incompleteSheets.push(sheetName);
+                    }
+                    return;
+                }
+
+                const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
+                const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
+                const key = sheetMapping[sheetName];
+                const hasData = key && AppState.appData && AppState.appData[key];
+                const isLoaded = Array.isArray(hasData) && hasData.length > 0;
+
+                const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorEvaluationApprovalRequests' || sheetName === 'ContractorDeletionRequests';
+                const isApprovedSheet = sheetName === 'ApprovedContractors';
+                const isAdminUser = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                    && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                    && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+                const needsAdminApprovalRefresh = isApprovalSheet && isAdminUser && lastSync > 0
+                    && (currentTime - lastSync) > 30000;
+                const hasContractorsAccess = !!(typeof Permissions !== 'undefined'
+                    && typeof Permissions.hasAccess === 'function'
+                    && Permissions.hasAccess('contractors'));
+                const needsApprovedRefresh = isApprovedSheet && (isAdminUser || hasContractorsAccess)
+                    && lastSync > 0 && (currentTime - lastSync) > 30000;
+                
+                // إذا لم يتم تحميلها أو انتهت صلاحيتها أو لا توجد بيانات
+                if (!lastSync || isExpired || !isLoaded || needsAdminApprovalRefresh || needsApprovedRefresh) {
+                    incompleteSheets.push(sheetName);
+                }
+            });
+            
+            return incompleteSheets;
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في تحديد الأوراق غير المكتملة:', error);
+            return null; // في حالة الخطأ، نعيد جميع الأوراق
+        }
+    },
+
+    /**
+     * ???????????? ???????????????? ???? قاعدة SQL
+     */
+    async syncData(options = {}) {
+        const {
+            silent = false,
+            showLoader = false,
+            notifyOnSuccess = !silent,
+            notifyOnError = !silent,
+            includeUsersSheet = true,
+            sheets: requestedSheets = null, // ✅ إضافة دعم sheets في options
+            incremental = false, // ✅ جديد: تحميل تدريجي
+            forceRefresh = false // ✅ إجبار قراءة الخادم دون الاحتفاظ ببيانات قديمة عند الفراغ/الفشل
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            if (!silent) {
+                Utils.safeLog('الخادم الخلفي غير مُهيأ - سيتم استخدام البيانات المحلية فقط');
+                Notification.warning('الخادم الخلفي غير مُهيأ. سيتم استخدام البيانات المحلية فقط.');
+            }
+            return false;
+        }
+
+        // منع المزامنة المتزامنة — إعادة التحميل تنتظر القفل أو تصفّر القفل القديم
+        if (this._syncInProgress.global) {
+            const startedAt = Number(this._syncInProgress.lastSyncStart || 0);
+            const stale = !startedAt || (Date.now() - startedAt) > 180000;
+            if (stale) {
+                this._syncInProgress.global = false;
+            } else if (forceRefresh) {
+                const waitStart = Date.now();
+                while (this._syncInProgress.global && (Date.now() - waitStart) < 60000) {
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    const age = Date.now() - Number(this._syncInProgress.lastSyncStart || Date.now());
+                    if (age > 180000) {
+                        this._syncInProgress.global = false;
+                        break;
+                    }
+                }
+            }
+            if (this._syncInProgress.global) {
+                this._lastSyncBusy = true;
+                this._lastSyncError = '';
+                if (!silent) {
+                    Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                }
+                return false;
+            }
+        }
+
+        this._syncInProgress.global = true;
+        this._syncInProgress.lastSyncStart = Date.now();
+        this._lastSyncBusy = false;
+        this._lastSyncError = null;
+        if (typeof this.resetCircuitBreaker === 'function') {
+            this.resetCircuitBreaker();
+        }
+
+        this._currentSyncForceRefresh = !!forceRefresh;
+        if (forceRefresh) {
+            this._purgeAllSheetReadLocalCache_();
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            AppState.syncMeta.sheets = {};
+            AppState.syncMeta.lastSyncTime = 0;
+        }
+
+        // إيقاف نظام عدم النشاط أثناء المزامنة
+        let inactivityWasPaused = false;
+        if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
+            inactivityWasPaused = InactivityManager.isPaused;
+            if (!inactivityWasPaused) {
+                InactivityManager.pause('مزامنة البيانات مع قاعدة SQL');
+            }
+        }
+
+        try {
+            const shouldLog = AppState.debugMode && !silent;
+            if (shouldLog) {
+                Utils.safeLog('🔄 بدء مزامنة البيانات مع قاعدة SQL...');
+            }
+
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.show('جاري تحميل البيانات', 0);
+            }
+
+            // ✅ إصلاح: تقسيم الأوراق إلى أولوية عالية ومنخفضة لتسريع التحميل
+            const prioritySheets = [
+                'Users', // الأهم - يجب تحميله أولاً
+                'Employees', // مهم جداً - يستخدم في معظم الموديولات
+                'ExternalWorkforceMonthly',
+                'Contractors', // مهم - يستخدم في عدة موديولات
+                'ApprovedContractors' // مهم - يستخدم في عدة موديولات
+            ];
+            
+            const baseSheets = [
+                'Contractors',              // ✅ إضافة المقاولين
+                'ApprovedContractors',      // ✅ إضافة المقاولين المعتمدين
+                'Incidents',
+                'NearMiss',
+                'PTW',
+                'PTWRegistry',
+                'Training',
+                'EmployeeTrainingMatrix',
+                'TrainingAttendance',
+                'TrainingAnalysisData',
+                'ClinicVisits',
+                'Medications',
+                'ExternalWorkforceMonthly',
+                'SickLeave',
+                'Injuries',
+                'ClinicInventory',
+                'FireEquipment',
+                'FireEquipmentAssets',
+                'FireEquipmentInspections',
+                'PeriodicInspectionCategories',
+                'PeriodicInspectionRecords',
+                'PeriodicInspectionSchedules',
+                'PeriodicInspectionChecklists',
+                'PeriodicEquipmentTypes',
+                'PeriodicEquipmentAssets',
+                'PeriodicEquipmentInspections',
+                'PPE',
+                'ViolationTypes',
+                'Violations',
+                'Blacklist_Register',
+                'ContractorEvaluations',
+                'ContractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests', // ✅ طلبات اعتماد التقييمات
+                'ContractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
+                'BehaviorMonitoring',
+                'ContractorBehaviorMonitoring',
+                'ChemicalSafety',
+                'DailyObservations',
+                'DailySafetyCheckList',
+                'ISODocuments',
+                'ISOProcedures',
+                'ISOForms',
+                'SOPJHA',
+                'RiskAssessments',
+                'LegalDocuments',
+                'HSEAudits',
+                'HSENonConformities',
+                'HSECorrectiveActions',
+                'HSEObjectives',
+                'HSERiskAssessments',
+                'EnvironmentalAspects',
+                'EnvironmentalMonitoring',
+                'Sustainability',
+                'CarbonFootprint',
+                'WasteManagement',
+                'EnergyEfficiency',
+                'WaterManagement',
+                'WaterManagement_Records',
+                'GasManagement_Records',
+                'ElectricityManagement_Records',
+                'RecyclingPrograms',
+                'EmergencyAlerts',
+                'EmergencyPlans',
+                'EmergencyPlansUpdates',
+                'SafetyTeamMembers',
+                'SafetyOrganizationalStructure',
+                'SafetyJobDescriptions',
+                'SafetyTeamKPIs',
+                'SafetyTeamAttendance',
+                'SafetyTeamLeaves',
+                'SafetyTeamTasks',
+                'SafetyBudgets',
+                'SafetyBudgetTransactions',
+                'SafetyBudgetPurchaseOrders',
+                'SafetyPerformanceKPIs',
+                'ActionTrackingRegister',
+                'UserActivityLog',
+                'SafetyCalendarCustomEvents'
+            ];
+
+            let sheets = baseSheets.slice();
+            
+            // ✅ إذا تم تحديد sheets في options، استخدامها بدلاً من baseSheets
+            if (requestedSheets && Array.isArray(requestedSheets) && requestedSheets.length > 0) {
+                sheets = requestedSheets;
+                if (shouldLog) {
+                    Utils.safeLog(`✅ استخدام الأوراق المحددة في options: ${requestedSheets.join(', ')}`);
+                }
+            }
+            
+            const sheetMapping = {
+                'Users': 'users',
+                'Incidents': 'incidents',
+                'NearMiss': 'nearmiss',
+                'PTW': 'ptw',
+                'PTWRegistry': 'ptwRegistry',
+                'Training': 'training',
+                'ClinicVisits': 'clinicVisits',
+                'ClinicContractorVisits': 'clinicContractorVisits',
+                'Medications': 'medications',
+                'SickLeave': 'sickLeave',
+                'Injuries': 'injuries',
+                'ClinicContractorInjuries': 'clinicContractorInjuries',
+                'ClinicInventory': 'clinicInventory',
+                'FireEquipment': 'fireEquipment',
+                'FireEquipmentAssets': 'fireEquipmentAssets',
+                'FireEquipmentInspections': 'fireEquipmentInspections',
+                'PeriodicInspectionCategories': 'periodicInspectionCategories',
+                'PeriodicInspectionRecords': 'periodicInspectionRecords',
+                'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
+                'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
+                'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
+                'PeriodicEquipmentInspections': 'periodicEquipmentInspections',
+                'PPE': 'ppe',
+                'ViolationTypes': 'violationTypes',
+                'Violations': 'violations',
+                'Blacklist_Register': 'blacklistRegister',
+                'Contractors': 'contractors',
+                'ApprovedContractors': 'approvedContractors',
+                'ContractorEvaluations': 'contractorEvaluations',
+                'ContractorApprovalRequests': 'contractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests': 'contractorEvaluationApprovalRequests',
+                'ContractorDeletionRequests': 'contractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
+                'Employees': 'employees',
+                'ExternalWorkforceMonthly': 'externalWorkforceMonthly',
+                'BehaviorMonitoring': 'behaviorMonitoring',
+                'ContractorBehaviorMonitoring': 'contractorBehaviorMonitoring',
+                'ChemicalSafety': 'chemicalSafety',
+                'Chemical_Register': 'chemicalRegister',
+                'DailyObservations': 'dailyObservations',
+                'DailySafetyCheckList': 'dailySafetyCheckList',
+                'ISODocuments': 'isoDocuments',
+                'ISOProcedures': 'isoProcedures',
+                'ISOForms': 'isoForms',
+                'SOPJHA': 'sopJHA',
+                'RiskAssessments': 'riskAssessments',
+                'LegalDocuments': 'legalDocuments',
+                'HSEAudits': 'hseAudits',
+                'HSENonConformities': 'hseNonConformities',
+                'HSECorrectiveActions': 'hseCorrectiveActions',
+                'HSEObjectives': 'hseObjectives',
+                'HSERiskAssessments': 'hseRiskAssessments',
+                'EnvironmentalAspects': 'environmentalAspects',
+                'EnvironmentalMonitoring': 'environmentalMonitoring',
+                'Sustainability': 'sustainability',
+                'CarbonFootprint': 'carbonFootprint',
+                'WasteManagement': 'wasteManagement',
+                'EnergyEfficiency': 'energyEfficiency',
+                'WaterManagement': 'waterManagement',
+                'RecyclingPrograms': 'recyclingPrograms',
+                'EmergencyAlerts': 'emergencyAlerts',
+                'EmergencyPlans': 'emergencyPlans',
+                'EmergencyPlansUpdates': 'emergencyPlansUpdates',
+                'SafetyTeamMembers': 'safetyTeamMembers',
+                'SafetyOrganizationalStructure': 'safetyOrganizationalStructure',
+                'SafetyJobDescriptions': 'safetyJobDescriptions',
+                'SafetyTeamKPIs': 'safetyTeamKPIs',
+                'SafetyTeamAttendance': 'safetyTeamAttendance',
+                'SafetyTeamLeaves': 'safetyTeamLeaves',
+                'SafetyTeamTasks': 'safetyTeamTasks',
+                'SafetyBudgets': 'safetyBudgets',
+                'SafetyBudgetTransactions': 'safetyBudgetTransactions',
+                'SafetyBudgetPurchaseOrders': 'safetyBudgetPurchaseOrders',
+                'SafetyPerformanceKPIs': 'safetyPerformanceKPIs',
+                'ActionTrackingRegister': 'actionTrackingRegister',
+                'UserActivityLog': 'user_activity_log',
+                'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
+            };
+
+            const moduleSheetsMap = {
+                'dashboard': [],
+                'users': ['Users'],
+                'incidents': ['Incidents'],
+                'nearmiss': ['NearMiss'],
+                'ptw': ['PTW', 'PTWRegistry'],
+                'training': ['Training'],
+                'clinic': ['ClinicVisits', 'ClinicContractorVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
+                'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
+                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
+                'ppe': ['PPE'],
+                'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
+                'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
+                'employees': ['Employees', 'ExternalWorkforceMonthly'],
+                'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
+                'chemical-safety': ['ChemicalSafety', 'Chemical_Register'],
+                'daily-observations': ['DailyObservations'],
+                'iso': ['ISODocuments', 'ISOProcedures', 'ISOForms', 'HSEAudits'],
+                'sop-jha': ['SOPJHA'],
+                'risk-assessment': ['RiskAssessments', 'HSERiskAssessments'],
+                'legal-documents': ['LegalDocuments'],
+                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records', 'RecyclingPrograms'],
+                'emergency': ['EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates'],
+                'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders'],
+                'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
+                'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
+                'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives'],
+                'safety-calendar': ['SafetyCalendarCustomEvents']
+            };
+
+            const isEffectiveAdmin = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+
+            if (AppState.currentUser && !isEffectiveAdmin) {
+                const accessibleModules = Permissions.getAccessibleModules(true);
+                // ⚠️ أمان: لا يتم السماح بقراءة ورقة Users إلا لمن لديه صلاحية users صراحةً
+                const allowedSheets = new Set();
+                if (includeUsersSheet && Permissions.hasAccess('users')) {
+                    allowedSheets.add('Users');
+                }
+
+                accessibleModules.forEach(module => {
+                    const moduleSheets = moduleSheetsMap[module];
+                    if (Array.isArray(moduleSheets)) {
+                        moduleSheets.forEach(sheet => allowedSheets.add(sheet));
+                    }
+                });
+
+                // ✅ أنواع المخالفات تُدار من الإعدادات أيضاً — نضمن السماح بتحميلها لمن لديه صلاحية وصول للمخالفات
+                if (Permissions.hasAccess('violations')) {
+                    allowedSheets.add('ViolationTypes');
+                }
+
+                // ✅ إصلاح: إضافة أوراق المقاولين تلقائياً عند وجود صلاحيات لمديولات تحتاجها
+                // المديولات التي تحتاج قائمة المقاولين (dropdown/select):
+                // - clinic: تسجيل تردد المقاولين بالعيادة
+                // - training: تسجيل تدريب للمقاولين
+                // - ptw: إضافة مقاولين في تصاريح العمل (teamMembers, authorizedParty)
+                // - violations: تسجيل مخالفات للمقاولين
+                const modulesNeedingContractors = ['clinic', 'training', 'ptw', 'violations', 'behavior-monitoring'];
+                const needsContractors = modulesNeedingContractors.some(module => accessibleModules.includes(module));
+                
+                if (needsContractors && !accessibleModules.includes('contractors')) {
+                    // إضافة أوراق المقاولين الأساسية فقط (بدون التقييمات وطلبات الموافقة)
+                    const contractorSheets = ['Contractors', 'ApprovedContractors'];
+                    contractorSheets.forEach(sheet => {
+                        // إضافة الورقة إلى sheets إذا لم تكن موجودة
+                        if (!sheets.includes(sheet)) {
+                            sheets.push(sheet);
+                        }
+                        // إضافة الورقة إلى allowedSheets
+                        allowedSheets.add(sheet);
+                    });
+                    if (shouldLog) {
+                        Utils.safeLog('✅ إضافة أوراق المقاولين تلقائياً للمديولات التي تحتاجها');
+                    }
+                }
+
+                // ✅ إضافة أوراق طلبات الاعتماد لمن لديه صلاحية موديول المقاولين
+                if (Permissions.hasAccess('contractors')) {
+                    allowedSheets.add('ContractorApprovalRequests');
+                    allowedSheets.add('ContractorEvaluationApprovalRequests');
+                    allowedSheets.add('ContractorDeletionRequests');
+                }
+
+                sheets = sheets.filter(sheet => allowedSheets.has(sheet));
+
+                if (shouldLog) {
+                    Utils.safeLog('Checking sheets:', sheets);
+                }
+            } else if (includeUsersSheet && !sheets.includes('Users')) {
+                sheets.unshift('Users');
+            }
+
+            // ✅ إضافة: تهيئة syncMeta إذا لم يكن موجوداً
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            if (!AppState.syncMeta.sheets) {
+                AppState.syncMeta.sheets = {};
+            }
+            
+            // ✅ إضافة: التحقق من التحميل التدريجي (بعد تعريف sheetMapping)
+            if (incremental && !requestedSheets) {
+                const allSheetsList = [...prioritySheets, ...sheets];
+                const incompleteSheets = this.getIncompleteSheets(sheetMapping, allSheetsList);
+                if (incompleteSheets && incompleteSheets.length > 0) {
+                    sheets = incompleteSheets;
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ تحميل تدريجي: ${incompleteSheets.length} ورقة غير مكتملة`);
+                    }
+                } else if (incompleteSheets !== null) {
+                    // جميع الأوراق مكتملة
+                    if (showLoader && typeof Loading !== 'undefined') {
+                        Loading.hide();
+                    }
+                    if (notifyOnSuccess) {
+                        Notification.success('جميع البيانات محدثة');
+                    }
+                    this._syncInProgress.global = false;
+                    this._currentSyncForceRefresh = false;
+                    return true;
+                }
+            }
+            
+            // ✅ إضافة: تحديث userEmail في syncMeta
+            AppState.syncMeta.userEmail = AppState.currentUser?.email || null;
+
+            if (sheets.length === 0) {
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.hide();
+                }
+                if (shouldLog) {
+                    Utils.safeLog('لا يوجد وراق لقراءة البيانات من قاعدة SQL');
+                }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
+                return true;
+            }
+
+            sheets = this._filterSheetsForCurrentUser(sheets);
+
+            if (!requestedSheets) {
+                const ownedHeavy = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly', 'PTW', 'PTWRegistry', 'DailyObservations', 'UserActivityLog'];
+                sheets = sheets.filter((sheet) => !ownedHeavy.includes(sheet));
+            }
+
+            if (sheets.length === 0) {
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.hide();
+                }
+                if (shouldLog) {
+                    Utils.safeLog('لا توجد أوراق مسموح قراءتها للمستخدم الحالي');
+                }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
+                return true;
+            }
+
+            // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل منفصل ومتوازي
+            const prioritySheetsInList = prioritySheets.filter(sheet => sheets.includes(sheet));
+            const remainingSheets = sheets.filter(sheet => !prioritySheets.includes(sheet));
+            
+            let syncedCount = 0;
+            const failedSheets = [];
+            const results = [];
+
+            // تحميل البيانات الأساسية أولاً بشكل متوازي (بدون batches)
+            if (prioritySheetsInList.length > 0) {
+                if (shouldLog) {
+                    Utils.safeLog(`🚀 تحميل البيانات الأساسية أولاً: ${prioritySheetsInList.join(', ')}`);
+                }
+                
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.setProgress(10, 'جاري تحميل البيانات');
+                }
+
+                // تحميل البيانات الأساسية بشكل متوازي تماماً
+                const priorityResults = await Promise.allSettled(
+                    prioritySheetsInList.map(sheetName =>
+                        this.readFromSheets(sheetName)
+                            .then(data => ({ sheetName, data, success: true }))
+                            .catch(error => ({ sheetName, error, success: false }))
+                    )
+                );
+
+                // ✅ تحسين: معالجة نتائج البيانات الأساسية فوراً مع معالجة أفضل للأخطاء
+                priorityResults.forEach((result, idx) => {
+                    const sheetName = prioritySheetsInList[idx];
+                    if (result.status === 'fulfilled') {
+                        const { data, error, success } = result.value;
+                        if (success && !error && data) {
+                            const key = sheetMapping[sheetName];
+                            if (key) {
+                                // ✅ التأكد من أن البيانات هي array
+                                if (Array.isArray(data)) {
+                                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة (عند نجاح القراءة لكن بدون محتوى)
+                                    const shouldKeepOld = !this._currentSyncForceRefresh && data.length === 0 && oldData.length > 0;
+                                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                                    if (!shouldKeepOld) {
+                                        AppState.appData[key] = data;
+                                        if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                                        AppState.syncMeta.lastSyncTime = Date.now();
+                                    }
+
+                                    if (effectiveData.length > 0) {
+                                        syncedCount++;
+                                        if (shouldLog) {
+                                            Utils.safeLog(`✅ تم تحميل ${sheetName}: ${effectiveData.length} سجل`);
+                                        }
+                                    } else if (shouldLog) {
+                                        Utils.safeLog(shouldKeepOld
+                                            ? `⚠️ ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                                            : `✅ ${sheetName} فارغة (تم التحميل بنجاح)`);
+                                    }
+                                } else {
+                                    // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
+                                    const oldData = AppState.appData[key] || [];
+                                    if (oldData.length > 0) {
+                                        // الاحتفاظ بالبيانات القديمة
+                                        if (shouldLog) {
+                                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array - الاحتفاظ بالبيانات الحالية (${oldData.length} سجل)`);
+                                        }
+                                    } else {
+                                        // فقط إذا لم تكن هناك بيانات قديمة، نستخدم مصفوفة فارغة
+                                        AppState.appData[key] = [];
+                                        if (shouldLog) {
+                                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array ولا توجد بيانات قديمة - تم تعيينها إلى array فارغة`);
+                                        }
+                                    }
+                                }
+                            } else if (shouldLog) {
+                                Utils.safeWarn(`⚠️ لم يتم العثور على mapping لـ ${sheetName}`);
+                            }
+                            results.push({ sheetName, data: Array.isArray(data) ? data : [], success: true });
+                        } else {
+                            failedSheets.push(sheetName);
+                            const errorMsg = error?.message || error || 'خطأ غير معروف';
+                            if (shouldLog) {
+                                Utils.safeWarn(`⚠️ فشل تحميل ${sheetName}:`, errorMsg);
+                            }
+                            results.push({ sheetName, error: errorMsg, success: false });
+                        }
+                    } else {
+                        failedSheets.push(sheetName);
+                        const errorMsg = result.reason?.message || result.reason || 'خطأ غير معروف';
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ فشل تحميل ${sheetName}:`, errorMsg);
+                        }
+                        results.push({ 
+                            sheetName, 
+                            error: errorMsg, 
+                            success: false 
+                        });
+                    }
+                });
+
+                // حفظ البيانات الأساسية فوراً
+                if (syncedCount > 0) {
+                    DataManager.save();
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ تم حفظ البيانات الأساسية: ${syncedCount} ورقة`);
+                    }
+                }
+
+                // ✅ إصلاح: تحديث الجلسة بعد تحميل بيانات المستخدمين
+                if (prioritySheetsInList.includes('Users') && AppState.currentUser) {
+                    setTimeout(() => {
+                        if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
+                            window.Auth.updateUserSession();
+                            if (shouldLog) {
+                                Utils.safeLog('✅ تم تحديث الجلسة بعد تحميل بيانات المستخدمين');
+                            }
+                        }
+                    }, 100);
+                }
+            }
+
+            // ✅ تحسين: تحميل جميع الأوراق المتبقية باستخدام Batch Reading (أسرع 10x)
+            const totalSheets = remainingSheets.length;
+
+            // ✅ إصلاح: تعريف baseProgress مرة واحدة قبل الحلقة لتجنب إعادة التعريف
+            const baseProgress = prioritySheetsInList.length > 0 ? 30 : 10;
+
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(baseProgress, 'جاري تحميل البيانات');
+            }
+
+            // ✅ NEW: استخدام Batch Reading لتقليل عدد الطلبات من 70+ إلى 5-6 فقط
+            if (remainingSheets.length > 0) {
+                if (shouldLog) {
+                    Utils.safeLog(`📦 تحميل ${remainingSheets.length} ورقة باستخدام Batch Reading...`);
+                }
+
+                try {
+                    // تحميل الأوراق المتبقية باستخدام batch reading
+                    const batchResult = await this.batchReadFromSheets(remainingSheets, {
+                        batchSize: 12, // 12 sheets per request
+                        timeout: 30000, // 30 seconds timeout
+                        observationsRequestContext: null,
+                        skipCache: !!this._currentSyncForceRefresh
+                    });
+
+                    // تحويل النتائج إلى format موحد
+                    const batchData = batchResult.data || {};
+                    const normalizedRemainingResults = remainingSheets.map(sheetName => {
+                        if (batchData[sheetName] !== undefined && batchData[sheetName] !== null) {
+                            return {
+                                sheetName: sheetName,
+                                data: batchData[sheetName],
+                                success: true
+                            };
+                        } else {
+                            return {
+                                sheetName: sheetName,
+                                error: 'فشل في تحميل البيانات',
+                                success: false
+                            };
+                        }
+                    });
+
+                    results.push(...normalizedRemainingResults);
+
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ Batch Read: ${batchResult.successfulSheets}/${batchResult.totalSheets} sheets loaded successfully`);
+                    }
+
+                    // تحديث شريط التقدم بعد اكتمال التحميل
+                    if (showLoader && typeof Loading !== 'undefined') {
+                        Loading.setProgress(90, 'جاري تحميل البيانات');
+                    }
+                } catch (batchError) {
+                    Utils.safeError('❌ فشل Batch Read:', batchError);
+                    // Fallback: تحميل فردي (لكن هذا لن يحدث إلا في حالات نادرة)
+                    if (shouldLog) {
+                        Utils.safeLog('⚠️ Fallback: تحميل فردي للأوراق...');
+                    }
+                    
+                    const fallbackResults = await Promise.allSettled(
+                        remainingSheets.map(sheetName =>
+                            this.readFromSheets(sheetName)
+                                .then(data => ({ sheetName, data, success: true }))
+                                .catch(error => ({ sheetName, error, success: false }))
+                        )
+                    );
+
+                    const normalizedFallbackResults = fallbackResults.map((result, idx) => {
+                        if (result.status === 'fulfilled') {
+                            return result.value;
+                        } else {
+                            return {
+                                sheetName: remainingSheets[idx],
+                                error: result.reason?.message || result.reason || 'خطأ غير معروف',
+                                success: false
+                            };
+                        }
+                    });
+
+                    results.push(...normalizedFallbackResults);
+                }
+            }
+
+            // ✅ تحسين: معالجة النتائج وتحديث الحالة مع معالجة أفضل للأخطاء
+            results.forEach((result, index) => {
+                // النتائج الآن في format موحد: { sheetName, data, error, success }
+                const { sheetName, data, error, success } = result;
+
+                const rcMerge = this.applyResourceConsumptionSheetSyncResult(sheetName, { data, error, success });
+                if (rcMerge && rcMerge.handled) {
+                    if (rcMerge.failed) {
+                        if (!failedSheets.includes(sheetName)) {
+                            failedSheets.push(sheetName);
+                        }
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ فشل استرجاع بيانات الورقة ${sheetName}:`, error || 'خطأ غير معروف');
+                        }
+                    } else if (rcMerge.syncedRecords > 0) {
+                        syncedCount++;
+                    }
+                    return;
+                }
+
+                const key = sheetMapping[sheetName];
+
+                if (!key) {
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠️ لم يتم العثور على ربط (mapping) للورقة: ${sheetName}`);
+                    }
+                    return;
+                }
+
+                // ✅ تحسين: معالجة الأخطاء بشكل أفضل
+                if (error || !success) {
+                    if (!failedSheets.includes(sheetName)) {
+                        failedSheets.push(sheetName);
+                    }
+                    const errorMsg = error?.message || error || 'خطأ غير معروف';
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠️ فشل استرجاع بيانات الورقة ${sheetName}:`, errorMsg);
+                    }
+                    // ✅ تحسين: الاحتفاظ بالبيانات المحلية إذا فشل التحميل
+                    if (!AppState.appData[key] || !Array.isArray(AppState.appData[key])) {
+                        // فقط إذا لم تكن هناك بيانات محلية، نستخدم مصفوفة فارغة
+                        const oldData = AppState.appData[key];
+                        if (!oldData || (Array.isArray(oldData) && oldData.length === 0)) {
+                            AppState.appData[key] = [];
+                        } else {
+                            // الاحتفاظ بالبيانات القديمة
+                            if (shouldLog) {
+                                Utils.safeLog(`ℹ️ ${sheetName}: الاحتفاظ بالبيانات المحلية (${oldData.length} سجل) بعد فشل التحميل`);
+                            }
+                        }
+                    } else {
+                        // البيانات المحلية موجودة - الاحتفاظ بها
+                        if (shouldLog) {
+                            Utils.safeLog(`ℹ️ ${sheetName}: الاحتفاظ بالبيانات المحلية (${AppState.appData[key].length} سجل) بعد فشل التحميل`);
+                        }
+                    }
+                    return;
+                }
+
+                // ✅ تحسين: التأكد من أن البيانات هي array قبل التحديث
+                if (Array.isArray(data)) {
+                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
+                    // ملاحظة: ورقة ViolationTypes يجب أن تعكس الشيت بدقة. لا نحتفظ بالقديم إذا كانت القراءة ناجحة لكنها فارغة.
+                    const shouldKeepOld = !this._currentSyncForceRefresh
+                        && sheetName !== 'ViolationTypes'
+                        && data.length === 0
+                        && oldData.length > 0;
+                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                    if (!shouldKeepOld) {
+                        AppState.appData[key] = data;
+                        if (key === 'contractorApprovalRequests' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovalRequestsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovalRequestsFromSync(data, { refreshUi: true });
+                            } catch (_carSync) { /* ignore */ }
+                        }
+                        if (key === 'approvedContractors' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovedContractorsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovedContractorsFromSync(data, { refreshUi: true });
+                            } catch (_acSync) { /* ignore */ }
+                        }
+                        if (!AppState.syncMeta) {
+                            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                        }
+                        if (!AppState.syncMeta.sheets) {
+                            AppState.syncMeta.sheets = {};
+                        }
+                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                        AppState.syncMeta.lastSyncTime = Date.now();
+                    }
+
+                    if (effectiveData.length > 0) {
+                        syncedCount++;
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ تم تحديث بيانات الورقة ${sheetName} بنجاح: ${effectiveData.length} سجل`);
+                        }
+                    } else if (shouldLog) {
+                        Utils.safeLog(shouldKeepOld
+                            ? `⚠️ الورقة ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                            : `✅ الورقة ${sheetName} فارغة في قاعدة SQL`);
+                    }
+                } else {
+                    // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
+                    const oldData = AppState.appData[key] || [];
+                    if (oldData.length > 0) {
+                        // الاحتفاظ بالبيانات القديمة
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array - الاحتفاظ بالبيانات الحالية (${oldData.length} سجل)`);
+                        }
+                    } else {
+                        // فقط إذا لم تكن هناك بيانات قديمة، نستخدم مصفوفة فارغة
+                        AppState.appData[key] = [];
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array ولا توجد بيانات قديمة - تم تعيينها إلى array فارغة`);
+                        }
+                    }
+                }
+            });
+
+            // حفظ البيانات في localStorage
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(95, 'جاري تحميل البيانات');
+            }
+
+            ViolationTypesManager.ensureInitialized();
+            PeriodicInspectionStore.ensureInitialized();
+            if (typeof PeriodicEquipmentStore !== 'undefined') {
+                PeriodicEquipmentStore.ensureInitialized();
+            }
+
+            DataManager.save();
+
+            try {
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                    Dashboard.updateReportsStatistics();
+                }
+            } catch (_dashRc) { /* ignore */ }
+
+            // ✅ إضافة: إرسال حدث لإعلام الموديولات باكتمال المزامنة
+            // نرسل الحدث بعد حفظ البيانات للتأكد من تحديث الموديولات بالبيانات الجديدة
+            if (typeof window !== 'undefined') {
+                // استخدام setTimeout للتأكد من اكتمال حفظ البيانات
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('syncDataCompleted', {
+                        detail: { 
+                            syncedCount,
+                            failedSheets,
+                            sheets: Object.keys(sheetMapping).filter(sheet => 
+                                sheets.includes(sheet) && AppState.appData[sheetMapping[sheet]]
+                            )
+                        }
+                    }));
+                }, 100);
+            }
+
+            // ✅ إصلاح: تحميل إعدادات الشركة (بما في ذلك الشعار) من قاعدة البيانات
+            if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                try {
+                    await DataManager.loadCompanySettings();
+
+                    // تحديث الشعار في جميع الأماكن المخصصة بعد تحميله
+                    if (typeof UI !== 'undefined') {
+                        if (UI.updateCompanyLogoHeader) {
+                            UI.updateCompanyLogoHeader();
+                        }
+                        if (UI.updateLoginLogo) {
+                            UI.updateLoginLogo();
+                        }
+                        if (UI.updateDashboardLogo) {
+                            UI.updateDashboardLogo();
+                        }
+                        if (UI.updateCompanyBranding) {
+                            UI.updateCompanyBranding();
+                        }
+                    }
+
+                    // إرسال حدث لتحديث الشعار
+                    if (AppState.companyLogo) {
+                        window.dispatchEvent(new CustomEvent('companyLogoUpdated', {
+                            detail: { logoUrl: AppState.companyLogo }
+                        }));
+                    }
+
+                    if (shouldLog) {
+                        Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار من قاعدة البيانات');
+                    }
+                } catch (error) {
+                    Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة أثناء المزامنة:', error);
+                }
+            }
+
+            // ✅ إصلاح: تحميل إعدادات النماذج (المواقع والمواقع الفرعية) بعد اكتمال المزامنة
+            // هذا يضمن تحميل المواقع لجميع المستخدمين بعد المزامنة
+            if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                try {
+                    await Permissions.initFormSettingsState();
+                    if (shouldLog) {
+                        const sitesCount = AppState.appData?.observationSites?.length || 0;
+                        Utils.safeLog(`✅ تم تحميل إعدادات النماذج (${sitesCount} موقع) بعد المزامنة`);
+                    }
+                } catch (error) {
+                    Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج بعد المزامنة:', error);
+                }
+            }
+
+            // اكتمال المزامنة
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(100, 'جاري تحميل البيانات');
+                // إخفاء شريط التقدم بعد ثانية واحدة
+                setTimeout(() => {
+                    Loading.hide();
+                }, 1000);
+            } else if (showLoader && typeof Loading !== 'undefined') {
+                Loading.hide();
+            }
+
+            const success = failedSheets.length === 0;
+
+            if (success) {
+                if (notifyOnSuccess && syncedCount > 0) {
+                    Notification.success(`تمت مزامنة ${syncedCount} جداول من قاعدة SQL بنجاح`);
+                } else if (shouldLog) {
+                    Utils.safeLog(`اكتملت المزامنة بنجاح: ${syncedCount} جداول تم تحديثها`);
+                }
+            } else {
+                this._lastSyncError = failedSheets.length
+                    ? ('فشلت أوراق: ' + failedSheets.slice(0, 8).join(', ') + (failedSheets.length > 8 ? '...' : ''))
+                    : 'لم تُحمَّل أي بيانات من الخادم';
+                if (notifyOnError) {
+                    Notification.warning(`فشل مزامنة بعض الجداول: ${failedSheets.join(', ')}`);
+                }
+                if (shouldLog) {
+                    Utils.safeWarn('فشل مزامنة بعض الجداول:', failedSheets);
+                }
+            }
+
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
+            return success || syncedCount > 0;
+        } catch (error) {
+            this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.hide();
+            }
+
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            this._lastSyncError = error.message || String(error);
+
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+            const isExpectedError = !isBackendRpcConfigured ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+
+            if (!isExpectedError) {
+                Utils.safeError('❌ خطأ في مزامنة البيانات:', error);
+            }
+
+            if (notifyOnError && !isExpectedError) {
+                Notification.error('خطأ في المزامنة مع الخادم: ' + error.message);
+            }
+            return false;
+        }
+    },
+
+    /**
+     * يتم حفظ البيانات إلى قاعدة SQL عند توفر الاتصال
+     * @param {string} sheetName - اسم الورقة في قاعدة SQL
+     * @param {Array|Object} data - البيانات المراد حفظها
+     * @param {Object} options - خيارات الحفظ
+     * @returns {Promise<Object>} نتيجة الحفظ
+     */
+    async autoSave(sheetName, data, options = {}) {
+        const {
+            retryCount = 3,
+            silent = true,
+            useQueue = false
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            if (!silent) {
+                Utils.safeWarn('الخادم الخلفي غير مفعّل - سيتم حفظ البيانات محلياً');
+            }
+            // إضافة البيانات إلى قائمة الانتظار للمزامنة
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+            return { success: false, shouldDefer: true, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        // التحقق من spreadsheetId — إذا كان غير محدد في الـ Frontend نتركه للـ Backend
+        // الـ Backend يملك معرّفه الخاص في دالة getSpreadsheetId() في Config.gs
+        const spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId?.trim();
+        const hasLocalSpreadsheetId = spreadsheetId && spreadsheetId !== '' && spreadsheetId !== 'YOUR_SPREADSHEET_ID_HERE';
+
+        const preparedData = this.prepareSheetPayload(sheetName, data);
+
+        try {
+            // محاولة الحفظ مع إعادة المحاولة
+            let lastError = null;
+
+            for (let attempt = 1; attempt <= retryCount; attempt++) {
+                try {
+                    // بناء payload الطلب — نمرر spreadsheetId فقط إذا كان محددًا في الـ Frontend
+                    // إذا لم يكن محددًا، يستخدم الـ Backend قيمته الخاصة من getSpreadsheetId() في Config.gs
+                    const requestData = {
+                        sheetName: sheetName,
+                        data: preparedData
+                    };
+                    if (hasLocalSpreadsheetId) {
+                        requestData.spreadsheetId = spreadsheetId;
+                    }
+                    const result = await this.sendRequest({
+                        action: 'saveToSheet',
+                        data: requestData
+                    });
+
+                    if (result && result.success) {
+                        // نجحت العملية - إزالة من قائمة الانتظار إن وجدت
+                        if (typeof DataManager !== 'undefined' && DataManager.removeFromPendingSync) {
+                            DataManager.removeFromPendingSync(sheetName);
+                        }
+
+                        this.clearCache(sheetName);
+
+                        if (!silent) {
+                            Utils.safeLog(`✅ تم حفظ ${sheetName} في قاعدة SQL بنجاح`);
+                        }
+
+                        return Object.assign({ message: 'تم الحفظ بنجاح' }, result);
+                    } else {
+                        lastError = result?.message || 'خطأ غير معروف';
+
+                        if (attempt < retryCount) {
+                            // انتظار قبل إعادة المحاولة (exponential backoff)
+                            const delay = Math.pow(2, attempt) * 500; // 500ms, 1s, 2s
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                    }
+                } catch (attemptError) {
+                    lastError = attemptError;
+
+                    if (attempt < retryCount) {
+                        const delay = Math.pow(2, attempt) * 500;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            // فشلت جميع المحاولات - إضافة إلى قائمة الانتظار
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+
+            if (!silent) {
+                Utils.safeWarn(`⚠️ فشل حفظ ${sheetName} بعد ${retryCount} محاولات - سيتم المحاولة لاحقاً`);
+            }
+
+            return {
+                success: false,
+                shouldDefer: true,
+                message: lastError?.message || lastError?.toString() || 'فشل الحفظ بعد المحاولات'
+            };
+
+        } catch (error) {
+            // في حالة الخطأ، إضافة إلى قائمة الانتظار
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+
+            if (!silent) {
+                Utils.safeError('❌ خطأ في autoSave:', error);
+            }
+
+            return {
+                success: false,
+                shouldDefer: true,
+                message: error.message || error.toString()
+            };
+        }
+    },
+
+    /**
+     * الحصول على صلاحيات المستخدم الحالي
+     */
+    _getCurrentUserPermissions() {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
+                return Permissions.getCurrentUserPermissions();
+            }
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                return Permissions.getEffectivePermissions(AppState?.currentUser);
+            }
+            return AppState?.currentUser?.permissions || {};
+        } catch (e) {
+            return {};
+        }
+    },
+
+    /**
+     * تحديد نوع البيانات للـ action
+     */
+    _getDataTypeForAction(action) {
+        const actionDataTypes = {
+            // بيانات المستخدم الخاصة
+            'getUserData': 'user_specific',
+            'getUserTasks': 'user_specific',
+            'getUserNotifications': 'user_specific',
+
+            // بيانات مشتركة
+            'getAllApprovedContractors': 'shared_data',
+            'getAllEmployees': 'shared_data',
+            'getAllContractors': 'shared_data',
+
+            // بيانات ثابتة
+            'getOrganizationalStructure': 'static_data',
+            'getJobDescription': 'static_data',
+            'getSafetyHealthManagementSettings': 'static_data',
+
+            // بيانات تتحدث كثيراً
+            'getAllIncidents': 'frequent_updates',
+            'getAllNearMiss': 'frequent_updates',
+            'getAllViolations': 'frequent_updates'
+        };
+
+        return actionDataTypes[action] || 'static_data';
+    },
+
+    /**
+     * مزامنة طلبات معتمدة بدون سجل في ApprovedContractors
+     * fallback: إعادة approveContractorApprovalRequest إذا action جديد غير منشور بعد
+     */
+    async reconcileMissingApprovedContractors(options = {}) {
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
+        const data = { forceRefresh: true, ...(options || {}) };
+        if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+            data.spreadsheetId = String(sheetId).trim();
+        }
+        if (!data.userData && AppState?.currentUser) {
+            data.userData = AppState.currentUser;
+        }
+        try {
+            return await this.sendRequest({ action: 'reconcileMissingApprovedContractors', data });
+        } catch (err) {
+            const msg = String(err?.message || err || '');
+            const requestId = options?.requestId || options?.id;
+            if (requestId && (msg.includes('غير معترف') || msg.includes('ACTION_NOT_RECOGNIZED'))) {
+                return await this.sendRequest({
+                    action: 'approveContractorApprovalRequest',
+                    data: { requestId, userData: AppState.currentUser }
+                });
+            }
+            throw err;
+        }
+    },
+
+    async refreshApprovedContractorsFromSheet() {
+        const rows = await this.readFromSheets('ApprovedContractors', 45000);
+        if (Array.isArray(rows) && AppState?.appData) {
+            AppState.appData.approvedContractors = rows;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            if (typeof Contractors !== 'undefined' && typeof Contractors.refreshApprovedEntitiesList === 'function') {
+                Contractors.refreshApprovedEntitiesList();
+            }
+        }
+        return rows;
+    }
+};
+
+// تصدير للواجهة — الاسم التاريخي GoogleIntegration؛ BackendRpc للوحدات الجديدة
+if (typeof window !== 'undefined') {
+    window.GoogleIntegration = GoogleIntegration;
+    window.BackendRpc = GoogleIntegration;
+    /**
+     * استرجاع صف/صفوف من جدول إجابات فورم المرور اليومي إلى DailySafetyCheckList.
+     * يتطلب تسجيل دخول بصلاحية مدير.
+     * مثال من كونسول المتصفح: reprocessDailySafetyFormRows(492, 492)
+     */
+    window.reprocessDailySafetyFormRows = async function reprocessDailySafetyFormRows(fromRow, toRow) {
+        const payload = {
+            fromRow,
+            toRow: toRow != null ? toRow : fromRow
+        };
+        if (typeof AppState !== 'undefined' && AppState?.currentUser) {
+            payload.userData = AppState.currentUser;
+        }
+        const result = await GoogleIntegration.sendRequest({
+            action: 'reprocessDailySafetyFormRows',
+            data: payload
+        });
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('reprocessDailySafetyFormRows:', result);
+        } else {
+            console.log('reprocessDailySafetyFormRows:', result);
+        }
+        return result;
+    };
+    try {
+        GoogleIntegration._purgeLegacyReadFromSheetLocalCache_();
+    } catch (e) { /* ignore */ }
+}

@@ -1,17 +1,284 @@
-const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._attendanceDataLoadPromise)return;const e=Array.isArray(AppState.appData?.clinicStaff)&&AppState.appData.clinicStaff.length>0,t=Array.isArray(AppState.appData?.clinicStaffAttendance)&&AppState.appData.clinicStaffAttendance.length>0,i=this.canViewAllAttendanceData();if(!(!a&&this._attendanceDataFetchedInSession===!0&&(!i||e&&t))){if(!a&&!i&&e&&t){this._attendanceDataFetchedInSession=!0;return}this._attendanceDataLoadPromise=this.loadClinicAttendanceData(!!a).then(o=>{o&&(this._attendanceDataFetchedInSession=!0),this.state?.activeTab==="attendance"&&this.renderAttendanceTab({force:!0})}).catch(()=>{}).finally(()=>{this._attendanceDataLoadPromise=null})}},_isAttendanceDataLoading(){return!!this._attendanceDataLoadPromise},_renderAttendanceTableLoadingRow(a,e){const t=Utils.escapeHTML(e||"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...");return`<tr><td colspan="${a}" class="text-center text-gray-500 py-10">
-            <i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>${t}
-        </td></tr>`},async loadClinicStaffActivities(a){if(typeof GoogleIntegration>"u"||!GoogleIntegration.sendRequest||this.state?.activeTab&&this.state.activeTab!=="attendance")return;const e=Array.isArray(AppState.appData?.clinicStaffSystemActivities)&&AppState.appData.clinicStaffSystemActivities.length>0;if(!a&&e)return;if(this._clinicStaffActivitiesLoading=!0,this._clinicVisitsLoadPromise)try{await this._clinicVisitsLoadPromise}catch{}await new Promise(c=>setTimeout(c,800));const t=this.state.filters?.attendance||{},i=this._resolveAttendanceFilterDates(t),o={limit:200,dateFrom:i.dateFrom||"",dateTo:i.dateTo||"",moduleKey:t.activityModule&&t.activityModule!=="all"?t.activityModule:""};t.staffId&&t.staffId!=="all"&&this.canViewAllAttendanceData()&&(o.staffId=t.staffId);const n=this._buildLocalClinicVisitActivities_(o);try{const c=await GoogleIntegration.sendRequest({action:"getClinicStaffSystemActivities",data:{filters:o}}),s=c?.success&&Array.isArray(c.data)?c.data:[];AppState.appData.clinicStaffSystemActivities=this._mergeClinicStaffActivities_([n,s]).slice(0,o.limit||200),this._clinicStaffActivitiesFetched=!0}catch{n.length&&(AppState.appData.clinicStaffSystemActivities=n,this._clinicStaffActivitiesFetched=!0)}finally{this._clinicStaffActivitiesLoading=!1}},getCurrentUserStaffRecord(){const a=AppState.currentUser;if(!a)return null;const e=String(a.id||"").trim(),t=String(a.email||"").trim().toLowerCase();return(this.getClinicStaffList()||[]).find(i=>{const o=String(i.userId||i.id||"").trim(),n=String(i.userEmail||"").trim().toLowerCase();return e&&o===e||t&&n===t})||null},isActiveClinicStaffMember(){const a=this.getCurrentUserStaffRecord();return a?String(a.isActive||"true").toLowerCase()!=="false":!1},canAccessAttendanceTab(){return this.isCurrentUserAdmin()?!0:typeof Permissions<"u"&&!Permissions.hasDetailedPermission("clinic","attendance")?!1:this.isActiveClinicStaffMember()},canViewAllAttendanceData(){return this.isCurrentUserAdmin()},_attendanceRowBelongsToCurrentUser_(a){const e=AppState.currentUser;if(!e||!a)return!1;const t=String(e.id||"").trim(),i=String(e.email||"").trim().toLowerCase(),o=this.getCurrentUserStaffRecord();return!!(o&&o.id&&String(a.staffId)===String(o.id)||t&&String(a.userId||"")===t||i&&String(a.userEmail||"").trim().toLowerCase()===i)},getTimeOffRequestTypeLabel(a){return{leave:"\u0625\u062C\u0627\u0632\u0629",permission:"\u0625\u0630\u0646",overtime:"\u0625\u0636\u0627\u0641\u064A"}[String(a||"").trim()]||a||"\u2014"},getTimeOffStatusBadge(a){return{pending:'<span class="badge badge-warning">\u0645\u0639\u0644\u0642</span>',approved:'<span class="badge badge-success">\u0645\u0639\u062A\u0645\u062F</span>',rejected:'<span class="badge badge-danger">\u0645\u0631\u0641\u0648\u0636</span>',cancelled:'<span class="badge badge-secondary">\u0645\u0644\u063A\u0649</span>'}[String(a||"").trim()]||'<span class="badge badge-secondary">\u2014</span>'},formatTimeOffRequestDetails(a){const e=String(a.requestType||"").trim();if(e==="leave")return`${a.dateFrom||"\u2014"} \u2192 ${a.dateTo||"\u2014"} (${a.durationDays||"\u2014"} \u064A\u0648\u0645)`;if(e==="permission")return`${a.dateFrom||"\u2014"} | ${a.timeFrom||"\u2014"} - ${a.timeTo||"\u2014"}`;if(e==="overtime"){const t=a.durationHours?`${a.durationHours} \u0633`:"",i=a.timeFrom&&a.timeTo?`${a.timeFrom} - ${a.timeTo}`:"";return`${a.dateFrom||"\u2014"} ${t||i}`.trim()}return"\u2014"},getStaffRoleLabel(a){return{doctor:"\u0637\u0628\u064A\u0628",nurse:"\u062A\u0645\u0631\u064A\u0636",clinic_officer:"\u0645\u0633\u0626\u0648\u0644 \u0639\u064A\u0627\u062F\u0629"}[String(a||"").trim()]||a||"\u2014"},getAttendanceStatusLabel(a){return{present:"\u062D\u0627\u0636\u0631",partial:"\u062E\u0631\u0648\u062C \u062C\u0632\u0626\u064A",absent:"\u063A\u0627\u0626\u0628"}[String(a||"").trim()]||a||"\u2014"},getAttendanceStatusBadgeClass(a){const e=String(a||"").trim();return e==="present"?"badge-success":e==="partial"?"badge-warning":"badge-secondary"},_toDatetimeLocalValue(a,e){try{if(a){const t=new Date(a);if(!Number.isNaN(t.getTime())){const i=t.getFullYear(),o=String(t.getMonth()+1).padStart(2,"0"),n=String(t.getDate()).padStart(2,"0"),c=String(t.getHours()).padStart(2,"0"),s=String(t.getMinutes()).padStart(2,"0");return`${i}-${o}-${n}T${c}:${s}`}}if(e){const t=String(a||"").includes("checkout")||String(a||"")==="checkOut"?"17:00":"08:00";return`${e}T${t}`}return""}catch{return e?`${e}T08:00`:""}},_renderAttendancePunchActions(a){if(!a||!this.canAccessAttendanceTab())return'<span class="text-xs text-gray-400">\u2014</span>';const e=[],t=Utils.escapeAttr(String(a.id||""));return a.checkIn||e.push(`<button type="button" class="btn-secondary btn-sm" title="\u0625\u0636\u0627\u0641\u0629 \u0628\u0635\u0645\u0629 \u062F\u062E\u0648\u0644 \u0645\u0641\u0642\u0648\u062F\u0629" onclick="Clinic.showAttendancePunchModal('${t}', 'checkIn')"><i class="fas fa-sign-in-alt ml-1"></i>\u062F\u062E\u0648\u0644</button>`),a.checkOut||e.push(`<button type="button" class="btn-secondary btn-sm" title="\u0625\u0636\u0627\u0641\u0629 \u0628\u0635\u0645\u0629 \u062E\u0631\u0648\u062C \u0645\u0641\u0642\u0648\u062F\u0629" onclick="Clinic.showAttendancePunchModal('${t}', 'checkOut')"><i class="fas fa-sign-out-alt ml-1"></i>\u062E\u0631\u0648\u062C</button>`),e.length?`<div class="flex items-center gap-1 flex-wrap">${e.join("")}</div>`:'<span class="text-xs text-gray-400">\u0645\u0643\u062A\u0645\u0644</span>'},_findAttendanceRecordById(a){const e=String(a||"").trim();return e&&(this.getClinicStaffAttendanceList()||[]).find(t=>String(t.id)===e)||null},showAttendancePunchModal(a,e){if(!this.canAccessAttendanceTab()){Notification?.error?.("\u063A\u064A\u0631 \u0645\u0635\u0631\u062D");return}const t=this._findAttendanceRecordById(a);if(!t){Notification?.error?.("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=String(e||"").trim(),o=i==="checkIn",n=i==="checkOut";if(o&&t.checkIn){Notification?.warning?.("\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u0645\u0633\u062C\u0651\u0644 \u0645\u0633\u0628\u0642\u0627\u064B");return}if(n&&t.checkOut){Notification?.warning?.("\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C \u0645\u0633\u062C\u0651\u0644 \u0645\u0633\u0628\u0642\u0627\u064B");return}if(!o&&!n)return;const c=this._attendanceDayKey(t.date);let s=o?`${c}T07:30`:`${c}T15:30`;if(n&&t.checkIn)try{const m=new Date(t.checkIn),x=m.getHours(),b=m.getMinutes(),f=`${String(x).padStart(2,"0")}:${String(b).padStart(2,"0")}`,u=this.getClinicShiftRules(),y=u.find(w=>w.isOvernight||w.id==="shift_3")||{startTime:"22:30",endTime:"07:30"},v=u.find(w=>w.id==="shift_2")||{startTime:"15:30",endTime:"22:30"},A=u.find(w=>w.id==="shift_1")||{startTime:"07:30",endTime:"15:30"};if(f>=y.startTime||f<A.startTime){const w=new Date(m);w.setDate(w.getDate()+1),s=`${this._attendanceDayKey(w)}T${y.endTime}`}else f>=v.startTime?s=`${c}T${v.endTime}`:s=`${c}T${A.endTime}`}catch{s=`${c}T15:30`}const d=`
+/**
+ * Clinic Attendance submodule — extracted from clinic.js
+ */
+const ClinicAttendanceMixin = {
+    _scheduleAttendanceDataLoadIfNeeded(force) {
+        if (this._attendanceDataLoadPromise) return;
+        const hasStaff = Array.isArray(AppState.appData?.clinicStaff) && AppState.appData.clinicStaff.length > 0;
+        const hasAttendanceRecords = Array.isArray(AppState.appData?.clinicStaffAttendance) && AppState.appData.clinicStaffAttendance.length > 0;
+        const isAdmin = this.canViewAllAttendanceData();
+        if (!force && this._attendanceDataFetchedInSession === true) {
+            if (!isAdmin || (hasStaff && hasAttendanceRecords)) return;
+        }
+        if (!force && !isAdmin && hasStaff && hasAttendanceRecords) {
+            this._attendanceDataFetchedInSession = true;
+            return;
+        }
+        this._attendanceDataLoadPromise = this.loadClinicAttendanceData(!!force)
+            .then((ok) => {
+                if (ok) this._attendanceDataFetchedInSession = true;
+                if (this.state?.activeTab === 'attendance') this.renderAttendanceTab({ force: true });
+            })
+            .catch(() => { })
+            .finally(() => { this._attendanceDataLoadPromise = null; });
+    },
+
+    _isAttendanceDataLoading() {
+        return !!this._attendanceDataLoadPromise;
+    },
+
+    _renderAttendanceTableLoadingRow(colspan, label) {
+        const safeLabel = Utils.escapeHTML(label || 'جاري تحميل البيانات...');
+        return `<tr><td colspan="${colspan}" class="text-center text-gray-500 py-10">
+            <i class="fas fa-spinner fa-spin ml-2" style="color:#0d9488;"></i>${safeLabel}
+        </td></tr>`;
+    },
+
+    async loadClinicStaffActivities(force) {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return;
+        if (this.state?.activeTab && this.state.activeTab !== 'attendance') return;
+        const hasLocal = Array.isArray(AppState.appData?.clinicStaffSystemActivities) && AppState.appData.clinicStaffSystemActivities.length > 0;
+        if (!force && hasLocal) return;
+
+        this._clinicStaffActivitiesLoading = true;
+
+        if (this._clinicVisitsLoadPromise) {
+            try { await this._clinicVisitsLoadPromise; } catch (_e) { /* ignore */ }
+        }
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const f = this.state.filters?.attendance || {};
+        const range = this._resolveAttendanceFilterDates(f);
+        const payload = {
+            limit: 200,
+            dateFrom: range.dateFrom || '',
+            dateTo: range.dateTo || '',
+            moduleKey: f.activityModule && f.activityModule !== 'all' ? f.activityModule : ''
+        };
+        if (f.staffId && f.staffId !== 'all' && this.canViewAllAttendanceData()) {
+            payload.staffId = f.staffId;
+        }
+
+        const localVisitActivities = this._buildLocalClinicVisitActivities_(payload);
+
+        try {
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'getClinicStaffSystemActivities',
+                data: { filters: payload }
+            });
+            const remote = (resp?.success && Array.isArray(resp.data)) ? resp.data : [];
+            AppState.appData.clinicStaffSystemActivities = this._mergeClinicStaffActivities_([
+                localVisitActivities,
+                remote
+            ]).slice(0, payload.limit || 200);
+            this._clinicStaffActivitiesFetched = true;
+        } catch (_e) {
+            if (localVisitActivities.length) {
+                AppState.appData.clinicStaffSystemActivities = localVisitActivities;
+                this._clinicStaffActivitiesFetched = true;
+            }
+        } finally {
+            this._clinicStaffActivitiesLoading = false;
+        }
+    },
+
+    getCurrentUserStaffRecord() {
+        const user = AppState.currentUser;
+        if (!user) return null;
+        const uid = String(user.id || '').trim();
+        const email = String(user.email || '').trim().toLowerCase();
+        return (this.getClinicStaffList() || []).find(s => {
+            const suid = String(s.userId || s.id || '').trim();
+            const semail = String(s.userEmail || '').trim().toLowerCase();
+            return (uid && suid === uid) || (email && semail === email);
+        }) || null;
+    },
+
+    isActiveClinicStaffMember() {
+        const staff = this.getCurrentUserStaffRecord();
+        if (!staff) return false;
+        return String(staff.isActive || 'true').toLowerCase() !== 'false';
+    },
+
+    canAccessAttendanceTab() {
+        if (this.isCurrentUserAdmin()) return true;
+        if (typeof Permissions !== 'undefined' && !Permissions.hasDetailedPermission('clinic', 'attendance')) return false;
+        return this.isActiveClinicStaffMember();
+    },
+
+    canViewAllAttendanceData() {
+        return this.isCurrentUserAdmin();
+    },
+
+    _attendanceRowBelongsToCurrentUser_(row) {
+        const user = AppState.currentUser;
+        if (!user || !row) return false;
+        const uid = String(user.id || '').trim();
+        const email = String(user.email || '').trim().toLowerCase();
+        const staff = this.getCurrentUserStaffRecord();
+        if (staff && staff.id && String(row.staffId) === String(staff.id)) return true;
+        if (uid && String(row.userId || '') === uid) return true;
+        if (email && String(row.userEmail || '').trim().toLowerCase() === email) return true;
+        return false;
+    },
+
+    getTimeOffRequestTypeLabel(type) {
+        const map = { leave: 'إجازة', permission: 'إذن', overtime: 'إضافي' };
+        return map[String(type || '').trim()] || type || '—';
+    },
+
+    getTimeOffStatusBadge(status) {
+        const map = {
+            pending: '<span class="badge badge-warning">معلق</span>',
+            approved: '<span class="badge badge-success">معتمد</span>',
+            rejected: '<span class="badge badge-danger">مرفوض</span>',
+            cancelled: '<span class="badge badge-secondary">ملغى</span>'
+        };
+        return map[String(status || '').trim()] || '<span class="badge badge-secondary">—</span>';
+    },
+
+    formatTimeOffRequestDetails(req) {
+        const type = String(req.requestType || '').trim();
+        if (type === 'leave') {
+            return `${req.dateFrom || '—'} → ${req.dateTo || '—'} (${req.durationDays || '—'} يوم)`;
+        }
+        if (type === 'permission') {
+            return `${req.dateFrom || '—'} | ${req.timeFrom || '—'} - ${req.timeTo || '—'}`;
+        }
+        if (type === 'overtime') {
+            const hours = req.durationHours ? `${req.durationHours} س` : '';
+            const times = (req.timeFrom && req.timeTo) ? `${req.timeFrom} - ${req.timeTo}` : '';
+            return `${req.dateFrom || '—'} ${hours || times}`.trim();
+        }
+        return '—';
+    },
+
+    getStaffRoleLabel(role) {
+        const map = { doctor: 'طبيب', nurse: 'تمريض', clinic_officer: 'مسئول عيادة' };
+        return map[String(role || '').trim()] || role || '—';
+    },
+
+    getAttendanceStatusLabel(status) {
+        const map = { present: 'حاضر', partial: 'خروج جزئي', absent: 'غائب' };
+        return map[String(status || '').trim()] || status || '—';
+    },
+
+    getAttendanceStatusBadgeClass(status) {
+        const s = String(status || '').trim();
+        if (s === 'present') return 'badge-success';
+        if (s === 'partial') return 'badge-warning';
+        return 'badge-secondary';
+    },
+
+    _toDatetimeLocalValue(val, dateKey) {
+        try {
+            if (val) {
+                const d = new Date(val);
+                if (!Number.isNaN(d.getTime())) {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const h = String(d.getHours()).padStart(2, '0');
+                    const min = String(d.getMinutes()).padStart(2, '0');
+                    return `${y}-${m}-${day}T${h}:${min}`;
+                }
+            }
+            if (dateKey) {
+                const defaultTime = String(val || '').includes('checkout') || String(val || '') === 'checkOut' ? '17:00' : '08:00';
+                return `${dateKey}T${defaultTime}`;
+            }
+            return '';
+        } catch (_e) {
+            return dateKey ? `${dateKey}T08:00` : '';
+        }
+    },
+
+    _renderAttendancePunchActions(record) {
+        if (!record || !this.canAccessAttendanceTab()) return '<span class="text-xs text-gray-400">—</span>';
+        const parts = [];
+        const rid = Utils.escapeAttr(String(record.id || ''));
+        if (!record.checkIn) {
+            parts.push(`<button type="button" class="btn-secondary btn-sm" title="إضافة بصمة دخول مفقودة" onclick="Clinic.showAttendancePunchModal('${rid}', 'checkIn')"><i class="fas fa-sign-in-alt ml-1"></i>دخول</button>`);
+        }
+        if (!record.checkOut) {
+            parts.push(`<button type="button" class="btn-secondary btn-sm" title="إضافة بصمة خروج مفقودة" onclick="Clinic.showAttendancePunchModal('${rid}', 'checkOut')"><i class="fas fa-sign-out-alt ml-1"></i>خروج</button>`);
+        }
+        if (!parts.length) return '<span class="text-xs text-gray-400">مكتمل</span>';
+        return `<div class="flex items-center gap-1 flex-wrap">${parts.join('')}</div>`;
+    },
+
+    _findAttendanceRecordById(recordId) {
+        const id = String(recordId || '').trim();
+        if (!id) return null;
+        return (this.getClinicStaffAttendanceList() || []).find(r => String(r.id) === id) || null;
+    },
+
+    showAttendancePunchModal(recordId, punchType) {
+        if (!this.canAccessAttendanceTab()) {
+            Notification?.error?.('غير مصرح');
+            return;
+        }
+        const record = this._findAttendanceRecordById(recordId);
+        if (!record) {
+            Notification?.error?.('السجل غير موجود');
+            return;
+        }
+        const type = String(punchType || '').trim();
+        const isCheckIn = type === 'checkIn';
+        const isCheckOut = type === 'checkOut';
+        if (isCheckIn && record.checkIn) {
+            Notification?.warning?.('وقت الدخول مسجّل مسبقاً');
+            return;
+        }
+        if (isCheckOut && record.checkOut) {
+            Notification?.warning?.('وقت الخروج مسجّل مسبقاً');
+            return;
+        }
+        if (!isCheckIn && !isCheckOut) return;
+
+        const dayKey = this._attendanceDayKey(record.date);
+        let adjustedDefault = isCheckIn ? `${dayKey}T07:30` : `${dayKey}T15:30`;
+
+        if (isCheckOut && record.checkIn) {
+            try {
+                const inDate = new Date(record.checkIn);
+                const hh = inDate.getHours();
+                const mm = inDate.getMinutes();
+                const timeStr = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+                const shifts = this.getClinicShiftRules();
+                const s3 = shifts.find(s => s.isOvernight || s.id === 'shift_3') || { startTime: '22:30', endTime: '07:30' };
+                const s2 = shifts.find(s => s.id === 'shift_2') || { startTime: '15:30', endTime: '22:30' };
+                const s1 = shifts.find(s => s.id === 'shift_1') || { startTime: '07:30', endTime: '15:30' };
+
+                if (timeStr >= s3.startTime || timeStr < s1.startTime) {
+                    const nextDay = new Date(inDate);
+                    nextDay.setDate(nextDay.getDate() + 1);
+                    const nextDayKey = this._attendanceDayKey(nextDay);
+                    adjustedDefault = `${nextDayKey}T${s3.endTime}`;
+                } else if (timeStr >= s2.startTime) {
+                    adjustedDefault = `${dayKey}T${s2.endTime}`;
+                } else {
+                    adjustedDefault = `${dayKey}T${s1.endTime}`;
+                }
+            } catch (_e) {
+                adjustedDefault = `${dayKey}T15:30`;
+            }
+        }
+        const title = isCheckIn ? 'إضافة بصمة دخول مفقودة' : 'إضافة بصمة خروج مفقودة';
+        const icon = isCheckIn ? 'fa-sign-in-alt' : 'fa-sign-out-alt';
+
+        const html = `
             <div class="modal-overlay active" id="clinic-attendance-punch-modal" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 9999;">
                 <div class="modal-content" style="max-width: 500px; width: 92%; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: none; background: #ffffff;">
                     <!-- Header -->
                     <div style="background: linear-gradient(135deg, #0b2a55 0%, #1e40af 100%); color: #ffffff; padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
                             <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(255, 255, 255, 0.18); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
-                                <i class="fas ${o?"fa-sign-in-alt":"fa-sign-out-alt"}"></i>
+                                <i class="fas ${icon}"></i>
                             </div>
                             <div>
-                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #ffffff;">${o?"\u0625\u0636\u0627\u0641\u0629 \u0628\u0635\u0645\u0629 \u062F\u062E\u0648\u0644 \u0645\u0641\u0642\u0648\u062F\u0629":"\u0625\u0636\u0627\u0641\u0629 \u0628\u0635\u0645\u0629 \u062E\u0631\u0648\u062C \u0645\u0641\u0642\u0648\u062F\u0629"}</h3>
-                                <p style="margin: 2px 0 0; font-size: 0.72rem; opacity: 0.85;">\u062A\u0633\u062C\u064A\u0644 \u0648\u0642\u062A ${o?"\u0627\u0644\u062F\u062E\u0648\u0644":"\u0627\u0644\u062E\u0631\u0648\u062C"} \u064A\u062F\u0648\u064A\u0627\u064B \u0644\u0644\u0645\u0633\u0626\u0648\u0644</p>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: #ffffff;">${title}</h3>
+                                <p style="margin: 2px 0 0; font-size: 0.72rem; opacity: 0.85;">تسجيل وقت ${isCheckIn ? 'الدخول' : 'الخروج'} يدوياً للمسئول</p>
                             </div>
                         </div>
                         <button type="button" style="background: none; border: none; color: #ffffff; opacity: 0.75; font-size: 1.25rem; cursor: pointer; padding: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">
@@ -28,182 +295,707 @@ const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._att
                                     <i class="fas fa-user-md"></i>
                                 </div>
                                 <div>
-                                    <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">${Utils.escapeHTML(t.userName||t.userEmail||"\u2014")}</div>
-                                    <div style="font-size: 0.74rem; color: #64748b;">${Utils.escapeHTML(this.getStaffRoleLabel(t.staffRole))}</div>
+                                    <div style="font-size: 0.88rem; font-weight: 700; color: #1e293b;">${Utils.escapeHTML(record.userName || record.userEmail || '—')}</div>
+                                    <div style="font-size: 0.74rem; color: #64748b;">${Utils.escapeHTML(this.getStaffRoleLabel(record.staffRole))}</div>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.4rem; background: #f1f5f9; padding: 0.4rem 0.75rem; border-radius: 8px; font-size: 0.76rem; font-weight: 600; color: #475569;">
                                 <i class="far fa-calendar-alt text-blue-500"></i>
-                                <span>${Utils.escapeHTML(c||"\u2014")}</span>
+                                <span>${Utils.escapeHTML(dayKey || '—')}</span>
                             </div>
                         </div>
 
                         <!-- DateTime Input Field -->
                         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                             <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.4rem;">
-                                <i class="fas ${o?"fa-sign-in-alt text-emerald-600":"fa-sign-out-alt text-amber-600"}"></i>
-                                <span>${o?"\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u0637\u0644\u0648\u0628":"\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C \u0627\u0644\u0645\u0637\u0644\u0648\u0628"}</span>
+                                <i class="fas ${isCheckIn ? 'fa-sign-in-alt text-emerald-600' : 'fa-sign-out-alt text-amber-600'}"></i>
+                                <span>${isCheckIn ? 'وقت الدخول المطلوب' : 'وقت الخروج المطلوب'}</span>
                                 <span style="color: #ef4444;">*</span>
                             </label>
-                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.95rem; font-weight: 600; color: #0f172a; background: #ffffff;" value="${Utils.escapeAttr(s)}" required>
-                            <span style="font-size: 0.72rem; color: #64748b;"><i class="fas fa-info-circle ml-1"></i> \u062A\u0645 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0648\u0642\u062A \u0627\u0644\u0645\u0642\u062A\u0631\u062D \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0645\u0648\u0627\u0639\u064A\u062F \u0627\u0644\u0648\u0631\u062F\u064A\u0629\u060C \u0648\u064A\u0645\u0643\u0646\u0643 \u062A\u0639\u062F\u064A\u0644\u0647.</span>
+                            <input type="datetime-local" id="clinic-attendance-punch-time" class="form-input" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.7rem 0.9rem; font-size: 0.95rem; font-weight: 600; color: #0f172a; background: #ffffff;" value="${Utils.escapeAttr(adjustedDefault)}" required>
+                            <span style="font-size: 0.72rem; color: #64748b;"><i class="fas fa-info-circle ml-1"></i> تم تحديد الوقت المقترح تلقائياً بناءً على مواعيد الوردية، ويمكنك تعديله.</span>
                         </div>
 
                         <!-- Notes Field -->
                         <div style="display: flex; flex-direction: column; gap: 0.4rem;">
                             <label style="font-size: 0.85rem; font-weight: 700; color: #334155; display: flex; align-items: center; gap: 0.4rem;">
                                 <i class="far fa-comment-dots text-gray-500"></i>
-                                <span>\u0645\u0644\u0627\u062D\u0638\u0629 \u0623\u0648 \u0633\u0628\u0628 \u0627\u0644\u0625\u0636\u0627\u0641\u0629</span>
-                                <span style="font-size: 0.72rem; font-weight: 400; color: #94a3b8;">(\u0627\u062E\u062A\u064A\u0627\u0631\u064A)</span>
+                                <span>ملاحظة أو سبب الإضافة</span>
+                                <span style="font-size: 0.72rem; font-weight: 400; color: #94a3b8;">(اختياري)</span>
                             </label>
-                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.85rem; resize: none; background: #ffffff;" placeholder="\u0623\u062F\u062E\u0644 \u0633\u0628\u0628 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0628\u0635\u0645\u0629 \u064A\u062F\u0648\u064A\u0627\u064B..."></textarea>
+                            <textarea id="clinic-attendance-punch-notes" class="form-textarea" rows="2" style="width: 100%; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0.6rem 0.9rem; font-size: 0.85rem; resize: none; background: #ffffff;" placeholder="أدخل سبب تسجيل البصمة يدوياً..."></textarea>
                         </div>
                     </div>
 
                     <!-- Footer -->
                     <div style="padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem;">
                         <button type="button" style="padding: 0.6rem 1.25rem; border-radius: 10px; border: 1px solid #cbd5e1; background: #ffffff; color: #475569; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#ffffff'" onclick="document.getElementById('clinic-attendance-punch-modal')?.remove()">
-                            \u0625\u0644\u063A\u0627\u0621
+                            إلغاء
                         </button>
                         <button type="button" id="clinic-attendance-punch-save" style="padding: 0.6rem 1.5rem; border-radius: 10px; border: none; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3); transition: all 0.2s;">
                             <i class="fas fa-check"></i>
-                            <span>\u062D\u0641\u0638 \u0627\u0644\u0628\u0635\u0645\u0629</span>
+                            <span>حفظ البصمة</span>
                         </button>
                     </div>
                 </div>
-            </div>`;document.getElementById("clinic-attendance-punch-modal")?.remove(),document.body.insertAdjacentHTML("beforeend",d),document.getElementById("clinic-attendance-punch-save")?.addEventListener("click",()=>{const m=document.getElementById("clinic-attendance-punch-time")?.value||"",x=document.getElementById("clinic-attendance-punch-notes")?.value?.trim()||"";if(!m){Notification?.warning?.("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0648\u0642\u062A");return}const b=this._formatLocalDatetimeToIso(m);if(document.getElementById("clinic-attendance-punch-modal")?.remove(),t){if(o&&(t.checkIn=b),n&&(t.checkOut=b),t.checkIn&&t.checkOut){try{const f=new Date(t.checkIn).getTime(),u=new Date(t.checkOut).getTime();!isNaN(f)&&!isNaN(u)&&u>f&&(t.workDuration=Math.round((u-f)/36e5*100)/100+" \u0633\u0627\u0639\u0629")}catch{}t.status="present"}typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save()}this.renderAttendanceTab({force:!0}),Notification?.success?.("\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0628\u0635\u0645\u0629 \u0628\u0646\u062C\u0627\u062D \u0648\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0633\u064A\u0631\u0641\u0631..."),GoogleIntegration.sendRequest({action:"updateClinicStaffAttendance",data:{recordId:t.id,staffId:t.staffId||"",userId:t.userId||"",userEmail:t.userEmail||"",date:t.date||c||"",punchType:i,[o?"checkIn":"checkOut"]:b,notes:x,__timeoutMs:9e4}}).then(f=>{f&&f.success?(Notification?.success?.("\u062A\u0645 \u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0633\u064A\u0631\u0641\u0631 \u0628\u0646\u062C\u0627\u062D"),this.loadClinicAttendanceData(!0).then(()=>{this.renderAttendanceTab({force:!0})}).catch(()=>{})):f&&f.message&&Notification?.warning?.(f.message)}).catch(f=>{AppState?.debugMode})})},_formatLocalDatetimeToIso(a){if(!a)return"";const e=String(a).trim();if(!e)return"";if(/[Z+-]\d{2}:?\d{2}$/i.test(e)||/Z$/i.test(e))return e;const t=e.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/);if(t){const o=new Date(Number(t[1]),Number(t[2])-1,Number(t[3]),Number(t[4]),Number(t[5]),0,0);if(!isNaN(o.getTime()))return o.toISOString()}const i=new Date(e);return isNaN(i.getTime())?e:i.toISOString()},getClinicShiftRules(){return Array.isArray(AppState.appData?.clinicShiftRules)&&AppState.appData.clinicShiftRules.length>0?AppState.appData.clinicShiftRules:[{id:"shift_1",name:"\u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0627\u0644\u0623\u0648\u0644\u0649",startTime:"07:30",endTime:"15:30",isOvernight:!1},{id:"shift_2",name:"\u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0627\u0644\u062B\u0627\u0646\u064A\u0629",startTime:"15:30",endTime:"22:30",isOvernight:!1},{id:"shift_3",name:"\u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0627\u0644\u062B\u0627\u0644\u062B\u0629",startTime:"22:30",endTime:"07:30",isOvernight:!0}]},showClinicShiftSettingsModal(){if(!this.isCurrentUserAdmin()){Notification?.error?.("\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const a=this.getClinicShiftRules(),e=`
+            </div>`;
+        document.getElementById('clinic-attendance-punch-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-attendance-punch-save')?.addEventListener('click', () => {
+            const timeValRaw = document.getElementById('clinic-attendance-punch-time')?.value || '';
+            const notes = document.getElementById('clinic-attendance-punch-notes')?.value?.trim() || '';
+            if (!timeValRaw) {
+                Notification?.warning?.('يرجى تحديد الوقت');
+                return;
+            }
+            const timeVal = this._formatLocalDatetimeToIso(timeValRaw);
+            
+            // 1. إغلاق النافذة فوراً في 0 ثانية
+            document.getElementById('clinic-attendance-punch-modal')?.remove();
+
+            // 2. تحديث السجل محلياً وحفظه فورياً
+            if (record) {
+                if (isCheckIn) record.checkIn = timeVal;
+                if (isCheckOut) record.checkOut = timeVal;
+                if (record.checkIn && record.checkOut) {
+                    try {
+                        const inMs = new Date(record.checkIn).getTime();
+                        const outMs = new Date(record.checkOut).getTime();
+                        if (!isNaN(inMs) && !isNaN(outMs) && outMs > inMs) {
+                            record.workDuration = (Math.round(((outMs - inMs) / (1000 * 60 * 60)) * 100) / 100) + ' ساعة';
+                        }
+                    } catch (_) {}
+                    record.status = 'present';
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                }
+            }
+
+            // 3. إعادة رسم الجدول فورياً
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم تسجيل البصمة بنجاح وجاري المزامنة مع السيرفر...');
+
+            // 4. مزامنة مع السيرفر في الخلفية بمهلة كافية
+            GoogleIntegration.sendRequest({
+                action: 'updateClinicStaffAttendance',
+                data: {
+                    recordId: record.id,
+                    staffId: record.staffId || '',
+                    userId: record.userId || '',
+                    userEmail: record.userEmail || '',
+                    date: record.date || dayKey || '',
+                    punchType: type,
+                    [isCheckIn ? 'checkIn' : 'checkOut']: timeVal,
+                    notes,
+                    __timeoutMs: 90000
+                }
+            }).then((resp) => {
+                if (resp && resp.success) {
+                    Notification?.success?.('تم تأكيد المزامنة مع السيرفر بنجاح');
+                    this.loadClinicAttendanceData(true).then(() => {
+                        this.renderAttendanceTab({ force: true });
+                    }).catch(() => {});
+                } else if (resp && resp.message) {
+                    Notification?.warning?.(resp.message);
+                }
+            }).catch((err) => {
+                if (AppState?.debugMode) console.warn('Clinic attendance background sync notice:', err);
+            });
+        });
+    },
+
+    _formatLocalDatetimeToIso(localStr) {
+        if (!localStr) return '';
+        const s = String(localStr).trim();
+        if (!s) return '';
+        if (/[Z+-]\d{2}:?\d{2}$/i.test(s) || /Z$/i.test(s)) return s;
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{1,2}):(\d{2})/);
+        if (m) {
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0, 0);
+            if (!isNaN(d.getTime())) return d.toISOString();
+        }
+        const dFallback = new Date(s);
+        if (!isNaN(dFallback.getTime())) return dFallback.toISOString();
+        return s;
+    },
+
+    getClinicShiftRules() {
+        if (Array.isArray(AppState.appData?.clinicShiftRules) && AppState.appData.clinicShiftRules.length > 0) {
+            return AppState.appData.clinicShiftRules;
+        }
+        return [
+            { id: 'shift_1', name: 'الوردية الأولى', startTime: '07:30', endTime: '15:30', isOvernight: false },
+            { id: 'shift_2', name: 'الوردية الثانية', startTime: '15:30', endTime: '22:30', isOvernight: false },
+            { id: 'shift_3', name: 'الوردية الثالثة', startTime: '22:30', endTime: '07:30', isOvernight: true }
+        ];
+    },
+
+    showClinicShiftSettingsModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const shifts = this.getClinicShiftRules();
+        const html = `
             <div class="modal-overlay active" id="clinic-shift-settings-modal">
                 <div class="modal-content" style="max-width:560px;">
                     <div class="modal-header">
-                        <h3><i class="fas fa-clock ml-2"></i>\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0645\u0648\u0627\u0639\u064A\u062F \u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A (\u0627\u0644\u0639\u064A\u0627\u062F\u0629)</h3>
+                        <h3><i class="fas fa-clock ml-2"></i>إعدادات مواعيد الورديات (العيادة)</h3>
                         <button type="button" class="modal-close" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body space-y-4">
-                        <p class="text-xs text-gray-500 mb-2">\u062A\u0639\u062F\u064A\u0644 \u0645\u0648\u0627\u0639\u064A\u062F \u0628\u062F\u0627\u064A\u0629 \u0648\u0646\u0647\u0627\u064A\u0629 \u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0627\u0644\u0631\u0633\u0645\u064A\u0629. \u0627\u0644\u0648\u0631\u062F\u064A\u0629 \u0627\u0644\u062B\u0627\u0644\u062B\u0629 \u0644\u064A\u0644\u064A\u0629 (\u062A\u062A\u062C\u0627\u0648\u0632 \u0645\u0646\u062A\u0635\u0641 \u0627\u0644\u0644\u064A\u0644).</p>
-                        ${a.map((t,i)=>`
-                            <div class="border rounded-lg p-3 bg-gray-50 space-y-2" data-shift-idx="${i}">
+                        <p class="text-xs text-gray-500 mb-2">تعديل مواعيد بداية ونهاية الورديات الرسمية. الوردية الثالثة ليلية (تتجاوز منتصف الليل).</p>
+                        ${shifts.map((s, idx) => `
+                            <div class="border rounded-lg p-3 bg-gray-50 space-y-2" data-shift-idx="${idx}">
                                 <div class="font-bold text-sm text-blue-700 flex items-center justify-between">
-                                    <span>${Utils.escapeHTML(t.name)}</span>
-                                    ${t.isOvernight?'<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold">\u0648\u0631\u062F\u064A\u0629 \u0644\u064A\u0644\u064A\u0629</span>':""}
+                                    <span>${Utils.escapeHTML(s.name)}</span>
+                                    ${s.isOvernight ? '<span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-semibold">وردية ليلية</span>' : ''}
                                 </div>
                                 <div class="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label class="form-label text-xs">\u0648\u0642\u062A \u0627\u0644\u0628\u062F\u0627\u064A\u0629</label>
-                                        <input type="time" class="form-input shift-start-time" value="${Utils.escapeAttr(t.startTime)}" required>
+                                        <label class="form-label text-xs">وقت البداية</label>
+                                        <input type="time" class="form-input shift-start-time" value="${Utils.escapeAttr(s.startTime)}" required>
                                     </div>
                                     <div>
-                                        <label class="form-label text-xs">\u0648\u0642\u062A \u0627\u0644\u0646\u0647\u0627\u064A\u0629</label>
-                                        <input type="time" class="form-input shift-end-time" value="${Utils.escapeAttr(t.endTime)}" required>
+                                        <label class="form-label text-xs">وقت النهاية</label>
+                                        <input type="time" class="form-input shift-end-time" value="${Utils.escapeAttr(s.endTime)}" required>
                                     </div>
                                 </div>
                             </div>
-                        `).join("")}
+                        `).join('')}
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()">\u0625\u0644\u063A\u0627\u0621</button>
-                        <button type="button" class="btn-primary" id="clinic-shift-settings-save"><i class="fas fa-save ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0642\u0648\u0627\u0639\u062F</button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-shift-settings-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-shift-settings-save"><i class="fas fa-save ml-2"></i>حفظ القواعد</button>
                     </div>
                 </div>
-            </div>`;document.getElementById("clinic-shift-settings-modal")?.remove(),document.body.insertAdjacentHTML("beforeend",e),document.getElementById("clinic-shift-settings-save")?.addEventListener("click",()=>{const t=document.getElementById("clinic-shift-settings-modal"),i=t.querySelectorAll("[data-shift-idx]"),o=[];i.forEach((n,c)=>{const s=a[c],r=n.querySelector(".shift-start-time")?.value||s.startTime,g=n.querySelector(".shift-end-time")?.value||s.endTime;o.push({...s,startTime:r,endTime:g})}),AppState.appData.clinicShiftRules=o,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),typeof GoogleIntegration<"u"&&GoogleIntegration.autoSave&&GoogleIntegration.autoSave("ClinicShiftRules",o).catch(()=>{}),Notification?.success?.("\u062A\u0645 \u062D\u0641\u0638 \u0642\u0648\u0627\u0639\u062F \u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),t.remove(),this.renderAttendanceTab({force:!0})})},_applyShiftPresetToMissingPunchForm(a){const e=document.getElementById("clinic-attendance-add-modal");if(!e)return;const t=e.querySelector("#clinic-attendance-add-date"),i=e.querySelector("#clinic-attendance-add-checkin"),o=e.querySelector("#clinic-attendance-add-checkout"),n=this._attendanceDayKey(t?.value||this._getTodayLocalKey());if(!a)return;const c=(this.getClinicShiftRules()||[]).find(r=>String(r.id)===String(a));if(!c)return;i&&(i.value=`${n}T${c.startTime||"07:30"}`);let s=n;if(c.isOvernight)try{const r=new Date(`${n}T12:00:00`);r.setDate(r.getDate()+1),s=this._attendanceDayKey(r)}catch{s=n}o&&(o.value=`${s}T${c.endTime||"15:30"}`)},showAddMissingAttendanceModal(){if(!this.isCurrentUserAdmin()){Notification?.error?.("\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const a=(this.getClinicStaffList()||[]).filter(d=>String(d.isActive||"true").toLowerCase()!=="false").map(d=>`<option value="${Utils.escapeAttr(d.id)}">${Utils.escapeHTML(d.userName||d.userEmail||d.id)}</option>`).join(""),e=this.getClinicShiftRules(),t=e.map(d=>`<option value="${Utils.escapeAttr(d.id)}">${Utils.escapeHTML(d.name)} (${Utils.escapeHTML(d.startTime)}\u2013${Utils.escapeHTML(d.endTime)}${d.isOvernight?" \xB7 \u0644\u064A\u0644\u064A":""})</option>`).join(""),i=this._getTodayLocalKey(),o=e.find(d=>d.id==="shift_1")||e[0],n=`${i}T${o?.startTime||"07:30"}`,c=`${i}T${o?.endTime||"15:30"}`,s=`
+            </div>`;
+        document.getElementById('clinic-shift-settings-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-shift-settings-save')?.addEventListener('click', () => {
+            const modal = document.getElementById('clinic-shift-settings-modal');
+            const items = modal.querySelectorAll('[data-shift-idx]');
+            const updated = [];
+            items.forEach((item, idx) => {
+                const s = shifts[idx];
+                const startTime = item.querySelector('.shift-start-time')?.value || s.startTime;
+                const endTime = item.querySelector('.shift-end-time')?.value || s.endTime;
+                updated.push({ ...s, startTime, endTime });
+            });
+            AppState.appData.clinicShiftRules = updated;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.autoSave) {
+                GoogleIntegration.autoSave('ClinicShiftRules', updated).catch(() => {});
+            }
+            Notification?.success?.('تم حفظ قواعد الورديات بنجاح');
+            modal.remove();
+            this.renderAttendanceTab({ force: true });
+        });
+    },
+
+    _applyShiftPresetToMissingPunchForm(shiftId) {
+        const modal = document.getElementById('clinic-attendance-add-modal');
+        if (!modal) return;
+        const dateEl = modal.querySelector('#clinic-attendance-add-date');
+        const inEl = modal.querySelector('#clinic-attendance-add-checkin');
+        const outEl = modal.querySelector('#clinic-attendance-add-checkout');
+        const dayKey = this._attendanceDayKey(dateEl?.value || this._getTodayLocalKey());
+        if (!shiftId) return;
+        const shift = (this.getClinicShiftRules() || []).find(s => String(s.id) === String(shiftId));
+        if (!shift) return;
+        if (inEl) inEl.value = `${dayKey}T${shift.startTime || '07:30'}`;
+        let outDay = dayKey;
+        if (shift.isOvernight) {
+            try {
+                const d = new Date(`${dayKey}T12:00:00`);
+                d.setDate(d.getDate() + 1);
+                outDay = this._attendanceDayKey(d);
+            } catch (_e) { outDay = dayKey; }
+        }
+        if (outEl) outEl.value = `${outDay}T${shift.endTime || '15:30'}`;
+    },
+
+    showAddMissingAttendanceModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const staffOptions = (this.getClinicStaffList() || [])
+            .filter(s => String(s.isActive || 'true').toLowerCase() !== 'false')
+            .map(s => `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.userName || s.userEmail || s.id)}</option>`)
+            .join('');
+        const shifts = this.getClinicShiftRules();
+        const shiftOptions = shifts.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.name)} (${Utils.escapeHTML(s.startTime)}–${Utils.escapeHTML(s.endTime)}${s.isOvernight ? ' · ليلي' : ''})</option>`
+        ).join('');
+        const today = this._getTodayLocalKey();
+        const defaultShift = shifts.find(s => s.id === 'shift_1') || shifts[0];
+        const defaultIn = `${today}T${defaultShift?.startTime || '07:30'}`;
+        const defaultOut = `${today}T${defaultShift?.endTime || '15:30'}`;
+        const html = `
             <div class="modal-overlay active" id="clinic-attendance-add-modal">
                 <div class="modal-content" style="max-width:560px; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
                     <div class="modal-header" style="background: linear-gradient(125deg, #0b2a55, #1e40af 70%, #2563eb); color: white; padding: 1.5rem; border-bottom: none;">
-                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>\u0625\u0636\u0627\u0641\u0629 \u0633\u062C\u0644 \u062D\u0636\u0648\u0631 / \u0628\u0635\u0645\u0629 \u0645\u0641\u0642\u0648\u062F\u0629</h3>
+                        <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600; display: flex; align-items: center;"><i class="fas fa-fingerprint ml-3" style="font-size: 1.5rem; opacity: 0.9;"></i>إضافة سجل حضور / بصمة مفقودة</h3>
                         <button type="button" class="modal-close" style="color: white; opacity: 0.8; transition: opacity 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.8'" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body space-y-5" style="padding: 1.5rem; background-color: #f8fafc;">
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> \u0627\u0644\u0645\u0633\u0626\u0648\u0644 <span class="text-red-500 mr-1">*</span></label>
-                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">\u2014 \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0633\u0626\u0648\u0644 \u2014</option>${a}</select>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-user-circle ml-2 text-teal-500"></i> المسئول <span class="text-red-500 mr-1">*</span></label>
+                            <select id="clinic-attendance-add-staff" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);"><option value="">— اختر المسئول —</option>${staffOptions}</select>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
                             <div class="form-group" style="margin:0;">
-                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> \u0627\u0644\u062A\u0627\u0631\u064A\u062E <span class="text-red-500 mr-1">*</span></label>
-                                <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem;" value="${Utils.escapeAttr(i)}" required>
+                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-calendar-alt ml-2 text-teal-500"></i> التاريخ <span class="text-red-500 mr-1">*</span></label>
+                                <input type="date" id="clinic-attendance-add-date" class="form-input" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem;" value="${Utils.escapeAttr(today)}" required>
                             </div>
                             <div class="form-group" style="margin:0;">
-                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-clock ml-2 text-amber-500"></i> \u0627\u0644\u0648\u0631\u062F\u064A\u0629</label>
+                                <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="fas fa-clock ml-2 text-amber-500"></i> الوردية</label>
                                 <select id="clinic-attendance-add-shift" class="form-input" style="border: 1px solid #f59e0b; border-radius: 0.5rem; padding: 0.75rem; background:#fffbeb;">
-                                    <option value="">\u2014 \u064A\u062F\u0648\u064A \u0628\u062F\u0648\u0646 \u0648\u0631\u062F\u064A\u0629 \u2014</option>
-                                    ${t}
+                                    <option value="">— يدوي بدون وردية —</option>
+                                    ${shiftOptions}
                                 </select>
                             </div>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: #ffffff; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e2e8f0;">
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> \u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(n)}">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-in-alt ml-1 text-green-500"></i> وقت الدخول</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkin" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(defaultIn)}">
                             </div>
                             <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> \u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C</label>
-                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(c)}">
+                                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; color: #475569;"><i class="fas fa-sign-out-alt ml-1 text-orange-500"></i> وقت الخروج</label>
+                                <input type="datetime-local" id="clinic-attendance-add-checkout" class="form-input" style="padding: 0.5rem; font-size: 0.9rem;" value="${Utils.escapeAttr(defaultOut)}">
                             </div>
-                            <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> \u0627\u062E\u062A\u0631 \u0648\u0631\u062F\u064A\u0629 \u0644\u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0623\u0648\u0642\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B\u060C \u0623\u0648 \u0627\u062A\u0631\u0643 \u062D\u0642\u0644\u0627\u064B \u0641\u0627\u0631\u063A\u0627\u064B \u0644\u0628\u0635\u0645\u0629 \u062F\u062E\u0648\u0644/\u062E\u0631\u0648\u062C \u0641\u0642\u0637. \u0639\u062F\u0651\u0644 \u0645\u0648\u0627\u0639\u064A\u062F \u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0645\u0646 \u0632\u0631 \xAB\u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A\xBB.</div>
+                            <div style="grid-column: span 2; font-size: 0.75rem; color: #64748b; text-align: center; margin-top: -0.25rem;"><i class="fas fa-info-circle ml-1"></i> اختر وردية لتعبئة الأوقات تلقائياً، أو اترك حقلاً فارغاً لبصمة دخول/خروج فقط. عدّل مواعيد الورديات من زر «الورديات».</div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> \u0645\u0644\u0627\u062D\u0638\u0629</label>
-                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="\u0633\u0628\u0628 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0627\u0644\u064A\u062F\u0648\u064A\u0629..."></textarea>
+                            <label class="form-label" style="font-weight: 600; color: #334155; display: flex; align-items: center;"><i class="far fa-comment-alt ml-2 text-gray-400"></i> ملاحظة</label>
+                            <textarea id="clinic-attendance-add-notes" class="form-textarea" rows="2" style="border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.75rem; resize: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);" placeholder="سبب الإضافة اليدوية..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer" style="padding: 1.25rem 1.5rem; background-color: #ffffff; border-top: 1px solid #e2e8f0; display: flex; gap: 1rem; justify-content: flex-end;">
-                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">\u0625\u0644\u063A\u0627\u0621</button>
-                        <button type="button" class="btn-primary" id="clinic-attendance-add-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #0f766e; border: none; box-shadow: 0 4px 6px -1px rgba(15, 118, 110, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644</button>
+                        <button type="button" class="btn-secondary" style="padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: 500;" onclick="document.getElementById('clinic-attendance-add-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-attendance-add-save" style="padding: 0.6rem 1.5rem; border-radius: 0.5rem; font-weight: 600; background: #0f766e; border: none; box-shadow: 0 4px 6px -1px rgba(15, 118, 110, 0.3); transition: all 0.2s;"><i class="fas fa-check ml-2"></i>حفظ السجل</button>
                     </div>
                 </div>
-            </div>`;document.getElementById("clinic-attendance-add-modal")?.remove(),document.body.insertAdjacentHTML("beforeend",s);const r=document.getElementById("clinic-attendance-add-shift"),g=document.getElementById("clinic-attendance-add-date");o?.id&&r&&(r.value=o.id,this._applyShiftPresetToMissingPunchForm(o.id)),r?.addEventListener("change",()=>this._applyShiftPresetToMissingPunchForm(r.value)),g?.addEventListener("change",()=>{r?.value&&this._applyShiftPresetToMissingPunchForm(r.value)}),document.getElementById("clinic-attendance-add-save")?.addEventListener("click",async d=>{const m=d.currentTarget||document.getElementById("clinic-attendance-add-save"),x=document.getElementById("clinic-attendance-add-staff")?.value||"",b=document.getElementById("clinic-attendance-add-date")?.value||"",f=document.getElementById("clinic-attendance-add-checkin")?.value||"",u=document.getElementById("clinic-attendance-add-checkout")?.value||"",y=document.getElementById("clinic-attendance-add-notes")?.value?.trim()||"";if(!x||!b){Notification?.warning?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0645\u0633\u0626\u0648\u0644 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E");return}if(!f&&!u){Notification?.warning?.("\u0623\u062F\u062E\u0644 \u0648\u0642\u062A \u062F\u062E\u0648\u0644 \u0623\u0648 \u062E\u0631\u0648\u062C \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644");return}m&&(m.disabled=!0,m.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i>\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{const v={staffId:x,date:b,notes:y};f&&(v.checkIn=this._formatLocalDatetimeToIso(f)),u&&(v.checkOut=this._formatLocalDatetimeToIso(u));const A=await GoogleIntegration.sendRequest({action:"updateClinicStaffAttendance",data:v});A?.success?(Notification?.success?.(A.message||"\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644 \u0628\u0646\u062C\u0627\u062D"),document.getElementById("clinic-attendance-add-modal")?.remove(),this.renderAttendanceTab({force:!0}),this.loadClinicAttendanceData(!0).then(()=>{this.renderAttendanceTab({force:!0})}).catch(()=>{})):(Notification?.error?.(A?.message||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638"),m&&(m.disabled=!1,m.innerHTML='<i class="fas fa-check ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644'))}catch(v){Notification?.error?.(v?.message||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638"),m&&(m.disabled=!1,m.innerHTML='<i class="fas fa-check ml-2"></i>\u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644')}})},_attendanceDayKey(a){if(!a)return"";try{const e=String(a).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(e))return e;const t=new Date(a);if(Number.isNaN(t.getTime()))return e.slice(0,10);const i=t.getFullYear(),o=String(t.getMonth()+1).padStart(2,"0"),n=String(t.getDate()).padStart(2,"0");return`${i}-${o}-${n}`}catch{return String(a).slice(0,10)}},_getTodayLocalKey(){return this._attendanceDayKey(new Date)},_countActiveAttendanceFilters(a){if(!a)return 0;let e=0;return String(a.search||"").trim()&&e++,a.staffRole&&a.staffRole!=="all"&&e++,a.status&&a.status!=="all"&&e++,a.staffId&&a.staffId!=="all"&&e++,a.month&&e++,a.dateFrom&&e++,a.dateTo&&e++,e},_normalizeAttendanceDateRange(a,e){let t=String(a||"").trim(),i=String(e||"").trim();if(t&&i&&t>i){const o=t;t=i,i=o}return{dateFrom:t,dateTo:i}},_getAttendanceMonthRange(a){const e=String(a||"").trim();if(!/^\d{4}-\d{2}$/.test(e))return{dateFrom:"",dateTo:""};const t=e.split("-"),i=parseInt(t[0],10),o=parseInt(t[1],10);if(!i||!o||o<1||o>12)return{dateFrom:"",dateTo:""};const n=String(o).padStart(2,"0"),c=new Date(i,o,0).getDate();return{dateFrom:`${i}-${n}-01`,dateTo:`${i}-${n}-${String(c).padStart(2,"0")}`}},_getAttendanceStaffOptions(){const a=new Map;return(this.getClinicStaffList()||[]).forEach(e=>{const t=String(e.userId||e.id||e.userEmail||"").trim();t&&a.set(t,{id:t,staffId:e.id||"",name:e.userName||e.userEmail||t,role:e.staffRole||""})}),(this.getClinicStaffAttendanceList()||[]).forEach(e=>{const t=String(e.userId||e.staffId||e.userEmail||"").trim();!t||a.has(t)||a.set(t,{id:t,staffId:e.staffId||"",name:e.userName||e.userEmail||t,role:e.staffRole||""})}),Array.from(a.values()).sort((e,t)=>String(e.name).localeCompare(String(t.name),"ar"))},_resolveAttendanceFilterDates(a){const e=a||{};if(e.month){const t=this._getAttendanceMonthRange(e.month);if(t.dateFrom&&t.dateTo)return t}return this._normalizeAttendanceDateRange(e.dateFrom,e.dateTo)},_filterAttendanceRows(a,e){const t=e||{};let i=(a||[]).slice();if(t.staffId&&t.staffId!=="all"){const n=String(t.staffId).trim(),c=new Set([n,n.toLowerCase()]),s=(this.getClinicStaffList()||[]).find(r=>String(r.userId||"").trim()===n||String(r.id||"").trim()===n||String(r.userEmail||"").trim().toLowerCase()===n.toLowerCase());s&&["id","userId","userEmail"].forEach(r=>{const g=String(s[r]||"").trim();g&&(c.add(g),c.add(g.toLowerCase()))}),i=i.filter(r=>[r.staffId,r.userId,r.userEmail].map(d=>String(d||"").trim()).filter(Boolean).some(d=>c.has(d)||c.has(d.toLowerCase())))}if(t.search){const n=String(t.search).trim().toLowerCase();i=i.filter(c=>String(c.userName||"").toLowerCase().includes(n)||String(c.userEmail||"").toLowerCase().includes(n))}t.staffRole&&t.staffRole!=="all"&&(i=i.filter(n=>String(n.staffRole)===String(t.staffRole))),t.status&&t.status!=="all"&&(i=i.filter(n=>String(n.status)===String(t.status)));const o=this._resolveAttendanceFilterDates(t);return o.dateFrom&&(i=i.filter(n=>this._attendanceDayKey(n.date)>=o.dateFrom)),o.dateTo&&(i=i.filter(n=>this._attendanceDayKey(n.date)<=o.dateTo)),i.sort((n,c)=>{const s=this._attendanceDayKey(c.date)+String(c.checkIn||""),r=this._attendanceDayKey(n.date)+String(n.checkIn||"");return s.localeCompare(r)}),i},_computeAttendanceReportStats(a){const e=a||[];let t=0,i=0,o=0;const n=new Set;return e.forEach(c=>{const s=parseFloat(c.workDuration);Number.isNaN(s)||(t+=s),String(c.status)==="present"?i++:String(c.status)==="partial"&&o++;const r=String(c.userId||c.staffId||c.userEmail||c.userName||"");r&&n.add(r)}),{total:e.length,present:i,partial:o,staffCount:n.size,totalHours:Math.round(t*100)/100}},_buildAttendanceReportMeta(a){const e=a||{},t=[];if(e.staffId&&e.staffId!=="all"){const o=this._getAttendanceStaffOptions().find(n=>String(n.id)===String(e.staffId)||String(n.staffId)===String(e.staffId));t.push("\u0627\u0644\u0645\u0633\u0626\u0648\u0644: "+(o?.name||e.staffId))}if(e.month){const[o,n]=String(e.month).split("-"),c=["","\u064A\u0646\u0627\u064A\u0631","\u0641\u0628\u0631\u0627\u064A\u0631","\u0645\u0627\u0631\u0633","\u0623\u0628\u0631\u064A\u0644","\u0645\u0627\u064A\u0648","\u064A\u0648\u0646\u064A\u0648","\u064A\u0648\u0644\u064A\u0648","\u0623\u063A\u0633\u0637\u0633","\u0633\u0628\u062A\u0645\u0628\u0631","\u0623\u0643\u062A\u0648\u0628\u0631","\u0646\u0648\u0641\u0645\u0628\u0631","\u062F\u064A\u0633\u0645\u0628\u0631"];t.push("\u0627\u0644\u0634\u0647\u0631: "+(c[parseInt(n,10)]||n)+" "+o)}const i=this._resolveAttendanceFilterDates(e);return(i.dateFrom||i.dateTo)&&t.push("\u0627\u0644\u0645\u062F\u0629: "+(i.dateFrom||"\u2026")+" \u2192 "+(i.dateTo||"\u2026")),e.staffRole&&e.staffRole!=="all"&&t.push("\u0627\u0644\u062F\u0648\u0631: "+this.getStaffRoleLabel(e.staffRole)),e.status&&e.status!=="all"&&t.push("\u0627\u0644\u062D\u0627\u0644\u0629: "+this.getAttendanceStatusLabel(e.status)),e.search&&t.push("\u0628\u062D\u062B: "+String(e.search).trim()),t.length?t.join(" | "):"\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A"},_attendanceReportFileSuffix(a){const e=a||{};if(e.month)return String(e.month);if(e.staffId&&e.staffId!=="all")return(this._getAttendanceStaffOptions().find(n=>String(n.id)===String(e.staffId))?.name||"staff").replace(/[^\w\u0600-\u06FF-]+/g,"_").slice(0,24);const t=this._resolveAttendanceFilterDates(e);return t.dateFrom&&t.dateTo?`${t.dateFrom}_${t.dateTo}`:t.dateFrom?`from_${t.dateFrom}`:new Date().toISOString().slice(0,10)},getFilteredClinicAttendance(){return this._filterAttendanceRows(this.getClinicStaffAttendanceList(),this.state.filters.attendance||{})},async loadClinicAttendanceData(a){if(typeof GoogleIntegration>"u"||!GoogleIntegration.sendRequest)return!1;try{this.canViewAllAttendanceData()&&await this._ensureClinicStaffLoadedForAttendance();const[e,t,i]=await Promise.all([GoogleIntegration.sendRequest({action:"getClinicStaffAttendance",data:a?{skipCache:!0}:{}}),GoogleIntegration.sendRequest({action:"getAllClinicStaff",data:{}}),GoogleIntegration.sendRequest({action:"getClinicStaffTimeOffRequests",data:a?{skipCache:!0}:{}})]);return e?.success&&Array.isArray(e.data)&&(AppState.appData.clinicStaffAttendance=e.data),t?.success&&Array.isArray(t.data)&&(AppState.appData.clinicStaff=t.data),i?.success&&Array.isArray(i.data)&&(AppState.appData.clinicStaffTimeOffRequests=i.data),this.ensureData(),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),!!(e?.success||t?.success||i?.success)}catch{return!1}},exportAttendanceToExcel(a){const e=a||this.state.filters.attendance||{},t=this._filterAttendanceRows(this.getClinicStaffAttendanceList(),e);if(!t.length){Notification?.info?.("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}if(typeof XLSX>"u"){Notification?.error?.("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");return}const i=t.map(c=>({\u0627\u0644\u0627\u0633\u0645:c.userName||"",\u0627\u0644\u0628\u0631\u064A\u062F:c.userEmail||"",\u0627\u0644\u062F\u0648\u0631:this.getStaffRoleLabel(c.staffRole),\u0627\u0644\u062A\u0627\u0631\u064A\u062E:c.date||"","\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644":c.checkIn?Utils.formatDateTime?Utils.formatDateTime(c.checkIn):c.checkIn:"","\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C":c.checkOut?Utils.formatDateTime?Utils.formatDateTime(c.checkOut):c.checkOut:"","\u0645\u062F\u0629 \u0627\u0644\u0639\u0645\u0644 (\u0633\u0627\u0639\u0629)":c.workDuration||"",\u0627\u0644\u062D\u0627\u0644\u0629:this.getAttendanceStatusLabel(c.status),"\u0645\u0639\u0631\u0641 \u0627\u0644\u062C\u0644\u0633\u0629":c.sessionId||""})),o=XLSX.utils.book_new(),n=XLSX.utils.json_to_sheet(i);XLSX.utils.book_append_sheet(o,n,"Attendance"),XLSX.writeFile(o,`Clinic_Attendance_${this._attendanceReportFileSuffix(e)}.xlsx`)},_buildAttendanceReportContent(a,e){const t=this._computeAttendanceReportStats(e),i=this._buildAttendanceReportMeta(a),o=!this.canViewAllAttendanceData(),n=this.formatDate(new Date,!0),s=[{label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A",value:t.total,color:"#2563eb",bg:"#eff6ff"},{label:"\u062D\u0627\u0636\u0631",value:t.present,color:"#059669",bg:"#ecfdf5"},{label:"\u062E\u0631\u0648\u062C \u062C\u0632\u0626\u064A",value:t.partial,color:"#d97706",bg:"#fffbeb"},{label:"\u0627\u0644\u0645\u0633\u0626\u0648\u0644\u0648\u0646",value:t.staffCount,color:"#4f46e5",bg:"#eef2ff"},{label:"\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u0627\u0639\u0627\u062A",value:t.totalHours,color:"#0d9488",bg:"#f0fdfa"}].map(d=>`
-            <div style="background:${d.bg};border:1px solid rgba(0,0,0,0.06);border-radius:10px;padding:12px 14px;text-align:center;">
-                <div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px;">${d.label}</div>
-                <div style="font-size:20px;font-weight:800;color:${d.color};line-height:1.1;">${d.value}</div>
+            </div>`;
+        document.getElementById('clinic-attendance-add-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        const shiftEl = document.getElementById('clinic-attendance-add-shift');
+        const dateEl = document.getElementById('clinic-attendance-add-date');
+        if (defaultShift?.id && shiftEl) {
+            shiftEl.value = defaultShift.id;
+            this._applyShiftPresetToMissingPunchForm(defaultShift.id);
+        }
+        shiftEl?.addEventListener('change', () => this._applyShiftPresetToMissingPunchForm(shiftEl.value));
+        dateEl?.addEventListener('change', () => {
+            if (shiftEl?.value) this._applyShiftPresetToMissingPunchForm(shiftEl.value);
+        });
+        document.getElementById('clinic-attendance-add-save')?.addEventListener('click', async (e) => {
+            const saveBtn = e.currentTarget || document.getElementById('clinic-attendance-add-save');
+            const staffId = document.getElementById('clinic-attendance-add-staff')?.value || '';
+            const date = document.getElementById('clinic-attendance-add-date')?.value || '';
+            const checkInRaw = document.getElementById('clinic-attendance-add-checkin')?.value || '';
+            const checkOutRaw = document.getElementById('clinic-attendance-add-checkout')?.value || '';
+            const notes = document.getElementById('clinic-attendance-add-notes')?.value?.trim() || '';
+            if (!staffId || !date) {
+                Notification?.warning?.('يرجى اختيار المسئول والتاريخ');
+                return;
+            }
+            if (!checkInRaw && !checkOutRaw) {
+                Notification?.warning?.('أدخل وقت دخول أو خروج على الأقل');
+                return;
+            }
+
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i>جاري الحفظ...';
+            }
+
+            try {
+                const data = { staffId, date, notes };
+                if (checkInRaw) data.checkIn = this._formatLocalDatetimeToIso(checkInRaw);
+                if (checkOutRaw) data.checkOut = this._formatLocalDatetimeToIso(checkOutRaw);
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'updateClinicStaffAttendance',
+                    data
+                });
+                if (resp?.success) {
+                    Notification?.success?.(resp.message || 'تم حفظ السجل بنجاح');
+                    document.getElementById('clinic-attendance-add-modal')?.remove();
+                    this.renderAttendanceTab({ force: true });
+                    this.loadClinicAttendanceData(true).then(() => {
+                        this.renderAttendanceTab({ force: true });
+                    }).catch(() => {});
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الحفظ');
+                    if (saveBtn) {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = '<i class="fas fa-check ml-2"></i>حفظ السجل';
+                    }
+                }
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الحفظ');
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-check ml-2"></i>حفظ السجل';
+                }
+            }
+        });
+    },
+    _attendanceDayKey(dateVal) {
+        if (!dateVal) return '';
+        try {
+            const raw = String(dateVal).trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const d = new Date(dateVal);
+            if (Number.isNaN(d.getTime())) return raw.slice(0, 10);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        } catch (_e) {
+            return String(dateVal).slice(0, 10);
+        }
+    },
+
+    _getTodayLocalKey() {
+        return this._attendanceDayKey(new Date());
+    },
+
+    _countActiveAttendanceFilters(filters) {
+        if (!filters) return 0;
+        let n = 0;
+        if (String(filters.search || '').trim()) n++;
+        if (filters.staffRole && filters.staffRole !== 'all') n++;
+        if (filters.status && filters.status !== 'all') n++;
+        if (filters.staffId && filters.staffId !== 'all') n++;
+        if (filters.month) n++;
+        if (filters.dateFrom) n++;
+        if (filters.dateTo) n++;
+        return n;
+    },
+
+    _normalizeAttendanceDateRange(dateFrom, dateTo) {
+        let from = String(dateFrom || '').trim();
+        let to = String(dateTo || '').trim();
+        if (from && to && from > to) {
+            const tmp = from;
+            from = to;
+            to = tmp;
+        }
+        return { dateFrom: from, dateTo: to };
+    },
+
+    _getAttendanceMonthRange(monthVal) {
+        const raw = String(monthVal || '').trim();
+        if (!/^\d{4}-\d{2}$/.test(raw)) return { dateFrom: '', dateTo: '' };
+        const parts = raw.split('-');
+        const y = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10);
+        if (!y || !m || m < 1 || m > 12) return { dateFrom: '', dateTo: '' };
+        const mm = String(m).padStart(2, '0');
+        const lastDay = new Date(y, m, 0).getDate();
+        return {
+            dateFrom: `${y}-${mm}-01`,
+            dateTo: `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
+        };
+    },
+
+    _getAttendanceStaffOptions() {
+        const staffMap = new Map();
+        (this.getClinicStaffList() || []).forEach(s => {
+            const key = String(s.userId || s.id || s.userEmail || '').trim();
+            if (!key) return;
+            staffMap.set(key, {
+                id: key,
+                staffId: s.id || '',
+                name: s.userName || s.userEmail || key,
+                role: s.staffRole || ''
+            });
+        });
+        (this.getClinicStaffAttendanceList() || []).forEach(r => {
+            const key = String(r.userId || r.staffId || r.userEmail || '').trim();
+            if (!key || staffMap.has(key)) return;
+            staffMap.set(key, {
+                id: key,
+                staffId: r.staffId || '',
+                name: r.userName || r.userEmail || key,
+                role: r.staffRole || ''
+            });
+        });
+        return Array.from(staffMap.values()).sort((a, b) => String(a.name).localeCompare(String(b.name), 'ar'));
+    },
+
+    _resolveAttendanceFilterDates(filters) {
+        const f = filters || {};
+        if (f.month) {
+            const mr = this._getAttendanceMonthRange(f.month);
+            if (mr.dateFrom && mr.dateTo) return mr;
+        }
+        return this._normalizeAttendanceDateRange(f.dateFrom, f.dateTo);
+    },
+
+    _filterAttendanceRows(sourceRows, filters) {
+        const f = filters || {};
+        let rows = (sourceRows || []).slice();
+        if (f.staffId && f.staffId !== 'all') {
+            const sid = String(f.staffId).trim();
+            const matchKeys = new Set([sid, sid.toLowerCase()]);
+            const staffRec = (this.getClinicStaffList() || []).find(s =>
+                String(s.userId || '').trim() === sid ||
+                String(s.id || '').trim() === sid ||
+                String(s.userEmail || '').trim().toLowerCase() === sid.toLowerCase()
+            );
+            if (staffRec) {
+                ['id', 'userId', 'userEmail'].forEach(k => {
+                    const v = String(staffRec[k] || '').trim();
+                    if (v) { matchKeys.add(v); matchKeys.add(v.toLowerCase()); }
+                });
+            }
+            rows = rows.filter(r => {
+                const vals = [r.staffId, r.userId, r.userEmail].map(v => String(v || '').trim()).filter(Boolean);
+                return vals.some(v => matchKeys.has(v) || matchKeys.has(v.toLowerCase()));
+            });
+        }
+        if (f.search) {
+            const q = String(f.search).trim().toLowerCase();
+            rows = rows.filter(r => String(r.userName || '').toLowerCase().includes(q) || String(r.userEmail || '').toLowerCase().includes(q));
+        }
+        if (f.staffRole && f.staffRole !== 'all') {
+            rows = rows.filter(r => String(r.staffRole) === String(f.staffRole));
+        }
+        if (f.status && f.status !== 'all') {
+            rows = rows.filter(r => String(r.status) === String(f.status));
+        }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom) {
+            rows = rows.filter(r => this._attendanceDayKey(r.date) >= range.dateFrom);
+        }
+        if (range.dateTo) {
+            rows = rows.filter(r => this._attendanceDayKey(r.date) <= range.dateTo);
+        }
+        rows.sort((a, b) => {
+            const da = this._attendanceDayKey(b.date) + String(b.checkIn || '');
+            const db = this._attendanceDayKey(a.date) + String(a.checkIn || '');
+            return da.localeCompare(db);
+        });
+        return rows;
+    },
+
+    _computeAttendanceReportStats(rows) {
+        const list = rows || [];
+        let totalHours = 0;
+        let present = 0;
+        let partial = 0;
+        const staffSet = new Set();
+        list.forEach(r => {
+            const h = parseFloat(r.workDuration);
+            if (!Number.isNaN(h)) totalHours += h;
+            if (String(r.status) === 'present') present++;
+            else if (String(r.status) === 'partial') partial++;
+            const sk = String(r.userId || r.staffId || r.userEmail || r.userName || '');
+            if (sk) staffSet.add(sk);
+        });
+        return {
+            total: list.length,
+            present,
+            partial,
+            staffCount: staffSet.size,
+            totalHours: Math.round(totalHours * 100) / 100
+        };
+    },
+
+    _buildAttendanceReportMeta(filters) {
+        const f = filters || {};
+        const parts = [];
+        if (f.staffId && f.staffId !== 'all') {
+            const staff = this._getAttendanceStaffOptions().find(s => String(s.id) === String(f.staffId) || String(s.staffId) === String(f.staffId));
+            parts.push('المسئول: ' + (staff?.name || f.staffId));
+        }
+        if (f.month) {
+            const [y, m] = String(f.month).split('-');
+            const monthNames = ['', 'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            parts.push('الشهر: ' + (monthNames[parseInt(m, 10)] || m) + ' ' + y);
+        }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom || range.dateTo) {
+            parts.push('المدة: ' + (range.dateFrom || '…') + ' → ' + (range.dateTo || '…'));
+        }
+        if (f.staffRole && f.staffRole !== 'all') parts.push('الدور: ' + this.getStaffRoleLabel(f.staffRole));
+        if (f.status && f.status !== 'all') parts.push('الحالة: ' + this.getAttendanceStatusLabel(f.status));
+        if (f.search) parts.push('بحث: ' + String(f.search).trim());
+        return parts.length ? parts.join(' | ') : 'جميع السجلات';
+    },
+
+    _attendanceReportFileSuffix(filters) {
+        const f = filters || {};
+        if (f.month) return String(f.month);
+        if (f.staffId && f.staffId !== 'all') {
+            const staff = this._getAttendanceStaffOptions().find(s => String(s.id) === String(f.staffId));
+            const nm = (staff?.name || 'staff').replace(/[^\w\u0600-\u06FF-]+/g, '_').slice(0, 24);
+            return nm;
+        }
+        const range = this._resolveAttendanceFilterDates(f);
+        if (range.dateFrom && range.dateTo) return `${range.dateFrom}_${range.dateTo}`;
+        if (range.dateFrom) return `from_${range.dateFrom}`;
+        return new Date().toISOString().slice(0, 10);
+    },
+
+    getFilteredClinicAttendance() {
+        return this._filterAttendanceRows(this.getClinicStaffAttendanceList(), this.state.filters.attendance || {});
+    },
+
+    async loadClinicAttendanceData(force) {
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) return false;
+        try {
+            if (this.canViewAllAttendanceData()) {
+                await this._ensureClinicStaffLoadedForAttendance();
+            }
+            const [attResp, staffResp, timeOffResp] = await Promise.all([
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffAttendance', data: force ? { skipCache: true } : {} }),
+                GoogleIntegration.sendRequest({ action: 'getAllClinicStaff', data: {} }),
+                GoogleIntegration.sendRequest({ action: 'getClinicStaffTimeOffRequests', data: force ? { skipCache: true } : {} })
+            ]);
+            if (attResp?.success && Array.isArray(attResp.data)) AppState.appData.clinicStaffAttendance = attResp.data;
+            if (staffResp?.success && Array.isArray(staffResp.data)) AppState.appData.clinicStaff = staffResp.data;
+            if (timeOffResp?.success && Array.isArray(timeOffResp.data)) AppState.appData.clinicStaffTimeOffRequests = timeOffResp.data;
+            this.ensureData();
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+            return !!(attResp?.success || staffResp?.success || timeOffResp?.success);
+        } catch (_e) {
+            return false;
+        }
+    },
+
+    exportAttendanceToExcel(overrideFilters) {
+        const filters = overrideFilters || this.state.filters.attendance || {};
+        const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
+        if (!rows.length) {
+            Notification?.info?.('لا توجد بيانات لتصديرها');
+            return;
+        }
+        if (typeof XLSX === 'undefined') {
+            Notification?.error?.('مكتبة Excel غير متوفرة');
+            return;
+        }
+        const excelData = rows.map(r => ({
+            'الاسم': r.userName || '',
+            'البريد': r.userEmail || '',
+            'الدور': this.getStaffRoleLabel(r.staffRole),
+            'التاريخ': r.date || '',
+            'وقت الدخول': r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : r.checkIn) : '',
+            'وقت الخروج': r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : r.checkOut) : '',
+            'مدة العمل (ساعة)': r.workDuration || '',
+            'الحالة': this.getAttendanceStatusLabel(r.status),
+            'معرف الجلسة': r.sessionId || ''
+        }));
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Attendance');
+        XLSX.writeFile(workbook, `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.xlsx`);
+    },
+
+    _buildAttendanceReportContent(filters, rows) {
+        const stats = this._computeAttendanceReportStats(rows);
+        const meta = this._buildAttendanceReportMeta(filters);
+        const isSelfView = !this.canViewAllAttendanceData();
+        const generatedAt = this.formatDate(new Date(), true);
+
+        const kpiItems = [
+            { label: 'إجمالي السجلات', value: stats.total, color: '#2563eb', bg: '#eff6ff' },
+            { label: 'حاضر', value: stats.present, color: '#059669', bg: '#ecfdf5' },
+            { label: 'خروج جزئي', value: stats.partial, color: '#d97706', bg: '#fffbeb' },
+            { label: 'المسئولون', value: stats.staffCount, color: '#4f46e5', bg: '#eef2ff' },
+            { label: 'إجمالي الساعات', value: stats.totalHours, color: '#0d9488', bg: '#f0fdfa' }
+        ];
+
+        const kpiHtml = kpiItems.map(k => `
+            <div style="background:${k.bg};border:1px solid rgba(0,0,0,0.06);border-radius:10px;padding:12px 14px;text-align:center;">
+                <div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:4px;">${k.label}</div>
+                <div style="font-size:20px;font-weight:800;color:${k.color};line-height:1.1;">${k.value}</div>
             </div>
-        `).join(""),r=e.map((d,m)=>{const x=m%2===0?"#ffffff":"#f8fafc",b=this.getAttendanceStatusLabel(d.status);return o?`<tr style="background:${x};">
-                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(d.date||"\u2014")}</td>
-                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(d.checkIn)}</td>
-                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(d.checkOut)}</td>
-                    <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(d.workDuration||"\u2014"))}</td>
-                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(b)}</td>
-                </tr>`:`<tr style="background:${x};">
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(d.userName||"\u2014")}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:10px;">${Utils.escapeHTML(d.userEmail||"\u2014")}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(this.getStaffRoleLabel(d.staffRole))}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(d.date||"\u2014")}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(d.checkIn)}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(d.checkOut)}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(d.workDuration||"\u2014"))}</td>
-                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(b)}</td>
-            </tr>`}).join(""),g=o?`<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">\u0627\u0644\u0645\u062F\u0629 (\u0633)</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
-            </tr>`:`<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u0627\u0633\u0645</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u0628\u0631\u064A\u062F</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u062F\u0648\u0631</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">\u0627\u0644\u0645\u062F\u0629 (\u0633)</th>
-                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
-            </tr>`;return`
+        `).join('');
+
+        const tableRows = rows.map((r, i) => {
+            const bg = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+            const statusLabel = this.getAttendanceStatusLabel(r.status);
+            if (isSelfView) {
+                return `<tr style="background:${bg};">
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.date || '—')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(r.checkIn)}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(r.checkOut)}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                    <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(statusLabel)}</td>
+                </tr>`;
+            }
+            return `<tr style="background:${bg};">
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.userName || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:10px;">${Utils.escapeHTML(r.userEmail || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(r.date || '—')}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(r.checkIn)}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${this._formatAttendanceReportCellDate_(r.checkOut)}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;">${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td style="padding:8px 10px;border:1px solid #e2e8f0;">${Utils.escapeHTML(statusLabel)}</td>
+            </tr>`;
+        }).join('');
+
+        const thead = isSelfView
+            ? `<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الحالة</th>
+            </tr>`
+            : `<tr style="background:linear-gradient(90deg,#1e40af,#2563eb);color:#fff;">
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الاسم</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">البريد</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الدور</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">التاريخ</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الدخول</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">وقت الخروج</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:center;">المدة (س)</th>
+                <th style="padding:10px;border:1px solid #0f2a55;text-align:right;">الحالة</th>
+            </tr>`;
+
+        return `
             <div style="margin-bottom:18px;">
                 <div style="background:linear-gradient(125deg,#0b2a55 0%,#1e40af 70%,#2563eb 100%);color:#fff;padding:16px 20px;border-radius:12px;margin-bottom:14px;box-shadow:0 6px 18px rgba(11,42,85,0.28);">
-                    <div style="font-size:17px;font-weight:800;margin-bottom:6px;">\u062A\u0642\u0631\u064A\u0631 \u062D\u0636\u0648\u0631 \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629</div>
+                    <div style="font-size:17px;font-weight:800;margin-bottom:6px;">تقرير حضور مسئولي العيادة</div>
                     <div style="font-size:11px;opacity:0.92;line-height:1.6;">
-                        <span><strong>\u0627\u0644\u0646\u0637\u0627\u0642:</strong> ${Utils.escapeHTML(i)}</span>
+                        <span><strong>النطاق:</strong> ${Utils.escapeHTML(meta)}</span>
                         <span style="margin-right:12px;"> | </span>
-                        <span><strong>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</strong> ${Utils.escapeHTML(n)}</span>
+                        <span><strong>تاريخ الإصدار:</strong> ${Utils.escapeHTML(generatedAt)}</span>
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:16px;">
-                    ${s}
+                    ${kpiHtml}
                 </div>
             </div>
             <table style="width:100%;border-collapse:collapse;font-size:11px;direction:rtl;">
-                <thead>${g}</thead>
-                <tbody>${r}</tbody>
+                <thead>${thead}</thead>
+                <tbody>${tableRows}</tbody>
             </table>
-        `},ATTENDANCE_A4_WIDTH_PX:794,_formatAttendanceReportCellDate_(a){if(!a)return"\u2014";try{const e=Utils.formatDateTime?Utils.formatDateTime(a):String(a);return Utils.escapeHTML(e)}catch{return Utils.escapeHTML(String(a))}},_prepareAttendancePdfHtml_(a){const e=`
+        `;
+    },
+
+    ATTENDANCE_A4_WIDTH_PX: 794,
+
+    _formatAttendanceReportCellDate_(value) {
+        if (!value) return '—';
+        try {
+            const formatted = Utils.formatDateTime ? Utils.formatDateTime(value) : String(value);
+            return Utils.escapeHTML(formatted);
+        } catch (_e) {
+            return Utils.escapeHTML(String(value));
+        }
+    },
+
+    _prepareAttendancePdfHtml_(htmlContent) {
+        const arabicFix = `
 <style id="clinic-attendance-arabic-pdf-fix">
     html, body {
         font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
@@ -235,7 +1027,68 @@ const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._att
         overflow-wrap: normal !important;
     }
     table, thead, tbody, tr { direction: rtl !important; }
-</style>`,t=String(a||"").replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,"");return t?t.includes("</head>")?t.replace("</head>",`${e}</head>`):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${e}</head><body>${t}</body></html>`:e},async _waitAttendancePdfFontsReady_(a){if(!(!a||!a.fonts||typeof a.fonts.load!="function"))try{await Promise.all([a.fonts.load("400 12px Cairo"),a.fonts.load("600 14px Cairo"),a.fonts.load("700 18px Cairo"),a.fonts.load("800 16px Cairo")]),await a.fonts.ready}catch{}},async _ensureHtml2CanvasInAttendanceFrame_(a,e){if(!a||!e)return!1;if(typeof e.html2canvas=="function")return!0;if(typeof html2canvas=="function"){try{e.html2canvas=html2canvas}catch{}if(typeof e.html2canvas=="function")return!0}return new Promise(t=>{const i=a.createElement("script");i.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js",i.async=!0,i.onload=()=>t(typeof e.html2canvas=="function"),i.onerror=()=>t(!1),(a.head||a.documentElement).appendChild(i)})},_addAttendancePdfPageImage_(a,e,t){const i=a.internal.pageSize.getWidth(),o=a.internal.pageSize.getHeight(),n=i-t*2,c=o-t*2,s=Math.min(n/e.width,c/e.height),r=e.width*s,g=e.height*s,d=t+(n-r)/2,m=t;Utils.PdfExport.addCanvasToPdf(a,e,d,m,r,g)},_buildAttendanceReportFullHtml(a,e){const t=this._buildAttendanceReportContent(a,e),i=Utils.escapeHTML(AppState?.companySettings?.name||"\u0646\u0638\u0627\u0645 HSE"),o=typeof AppState?.companyLogo=="string"?AppState.companyLogo:"",n=Utils.escapeHTML(`CLINIC-ATT-${this._attendanceReportFileSuffix(a)}`);return`<!DOCTYPE html>
+</style>`;
+        const cleaned = String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+        if (!cleaned) return arabicFix;
+        if (cleaned.includes('</head>')) {
+            return cleaned.replace('</head>', `${arabicFix}</head>`);
+        }
+        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
+    },
+
+    async _waitAttendancePdfFontsReady_(doc) {
+        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
+        try {
+            await Promise.all([
+                doc.fonts.load('400 12px Cairo'),
+                doc.fonts.load('600 14px Cairo'),
+                doc.fonts.load('700 18px Cairo'),
+                doc.fonts.load('800 16px Cairo')
+            ]);
+            await doc.fonts.ready;
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _ensureHtml2CanvasInAttendanceFrame_(iDoc, iWin) {
+        if (!iDoc || !iWin) return false;
+        if (typeof iWin.html2canvas === 'function') return true;
+        if (typeof html2canvas === 'function') {
+            try { iWin.html2canvas = html2canvas; } catch (_e) { /* ignore */ }
+            if (typeof iWin.html2canvas === 'function') return true;
+        }
+        return new Promise((resolve) => {
+            const s = iDoc.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+            s.async = true;
+            s.onload = () => resolve(typeof iWin.html2canvas === 'function');
+            s.onerror = () => resolve(false);
+            (iDoc.head || iDoc.documentElement).appendChild(s);
+        });
+    },
+
+    _addAttendancePdfPageImage_(pdf, canvas, marginMm) {
+        const pdfW = pdf.internal.pageSize.getWidth();
+        const pdfH = pdf.internal.pageSize.getHeight();
+        const contentWmm = pdfW - marginMm * 2;
+        const contentHmm = pdfH - marginMm * 2;
+        const ratio = Math.min(contentWmm / canvas.width, contentHmm / canvas.height);
+        const drawWmm = canvas.width * ratio;
+        const drawHmm = canvas.height * ratio;
+        const offsetX = marginMm + (contentWmm - drawWmm) / 2;
+        const offsetY = marginMm;
+        Utils.PdfExport.addCanvasToPdf(pdf, canvas, offsetX, offsetY, drawWmm, drawHmm);
+    },
+
+    _buildAttendanceReportFullHtml(filters, rows) {
+        const content = this._buildAttendanceReportContent(filters, rows);
+        const companyName = Utils.escapeHTML(AppState?.companySettings?.name || 'نظام HSE');
+        const logo = typeof AppState?.companyLogo === 'string' ? AppState.companyLogo : '';
+        const formCode = Utils.escapeHTML(`CLINIC-ATT-${this._attendanceReportFileSuffix(filters)}`);
+        const logoHtml = logo
+            ? `<img src="${Utils.escapeAttr(logo)}" alt="" style="max-height:52px;max-width:96px;object-fit:contain;display:block;">`
+            : '';
+
+        return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -256,66 +1109,288 @@ const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._att
 <div class="att-report-doc" id="attendance-report-root">
     <div class="att-report-top">
         <div class="att-report-brand">
-            ${o?`<img src="${Utils.escapeAttr(o)}" alt="" style="max-height:52px;max-width:96px;object-fit:contain;display:block;">`:""}
-            <div class="att-report-brand-name">${i}</div>
+            ${logoHtml}
+            <div class="att-report-brand-name">${companyName}</div>
         </div>
-        <div class="att-report-code">${n}</div>
+        <div class="att-report-code">${formCode}</div>
     </div>
-    ${t}
-    <div class="att-report-footer">${i} \u2014 \u062A\u0642\u0631\u064A\u0631 \u062D\u0636\u0648\u0631 \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629</div>
+    ${content}
+    <div class="att-report-footer">${companyName} — تقرير حضور مسئولي العيادة</div>
 </div>
 </body>
-</html>`},_loadAttendancePdfLib_(a,e){if(e())return Promise.resolve(!0);const t=Array.isArray(a)?a:[a],i=o=>{if(o>=t.length)return Promise.resolve(!1);const n=t[o],c=Array.from(document.querySelectorAll("script[src]")).find(s=>String(s.src||"").includes(n.replace(/^https?:\/\//,"").split("/").slice(-2).join("/")));return c?new Promise(s=>{const r=()=>s(!!e());c.addEventListener("load",r,{once:!0}),setTimeout(r,4e3)}):new Promise(s=>{const r=document.createElement("script");r.src=n,r.async=!0,r.onload=()=>s(!!e()),r.onerror=()=>s(i(o+1)),document.head.appendChild(r)})};return i(0)},async _ensureAttendancePdfLibs_(){const a=await this._loadAttendancePdfLib_(["https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js","https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"],()=>typeof window.jspdf<"u"||typeof window.jsPDF<"u"),e=await this._loadAttendancePdfLib_(["https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js","https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js","https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"],()=>typeof html2canvas<"u");return a&&e},_getJsPdfConstructor_(){return window.jspdf&&window.jspdf.jsPDF?window.jspdf.jsPDF:window.jsPDF&&window.jsPDF.jsPDF?window.jsPDF.jsPDF:typeof window.jsPDF=="function"?window.jsPDF:null},async _preloadAttendancePdfFonts_(a){const e=a||document,t=e.head||e.documentElement;if(t&&!e.getElementById("clinic-att-cairo-font")){const i=e.createElement("link");i.id="clinic-att-cairo-font",i.rel="stylesheet",i.href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap",t.appendChild(i)}try{e.fonts&&typeof e.fonts.load=="function"&&(await e.fonts.load("400 14px Cairo"),await e.fonts.load("700 18px Cairo"),await e.fonts.ready)}catch{}},async _captureAttendanceHtmlToCanvas_(a,e){const t=this.ATTENDANCE_A4_WIDTH_PX||794,i=Math.max(a?.scrollWidth||t,t),o=Math.max(a?.scrollHeight||1,1);let n=Utils.PdfExport.getOptimalCaptureScale(i,o,Utils.PdfExport.DEFAULT_CAPTURE_SCALE);const c=e&&typeof e.html2canvas=="function"?e.html2canvas:html2canvas,s={scale:n,backgroundColor:"#ffffff",logging:!1,width:i,height:o,windowWidth:i,windowHeight:o,scrollX:0,scrollY:0,useCORS:!0,allowTaint:!0,imageTimeout:8e3},r=[s,{...s,useCORS:!1,allowTaint:!0},{...s,scale:Math.max(1.25,n-.5)}];let g=null;for(let d=0;d<r.length;d++)try{const m=await c(a,r[d]);if(m&&m.width>0&&m.height>0)return m}catch(m){g=m}if(g)throw g;return null},async _downloadAttendanceHtmlAsPdf(a,e){if(!this._getJsPdfConstructor_()||typeof html2canvas>"u")return!1;const i=String(e||"report.pdf").toLowerCase().endsWith(".pdf")?String(e):`${String(e)}.pdf`,o=this.ATTENDANCE_A4_WIDTH_PX||794,n=6,c=this._prepareAttendancePdfHtml_(a);await this._preloadAttendancePdfFonts_();const s=document.createElement("iframe");s.setAttribute("aria-hidden","true"),s.style.cssText=`position:fixed;left:-20000px;top:0;width:${o}px;height:200px;border:0;visibility:hidden;`,document.body.appendChild(s);try{s.srcdoc=c,await new Promise(u=>{s.onload=u,s.onerror=u,setTimeout(u,4e3)});const r=s.contentDocument||s.contentWindow?.document,g=s.contentWindow;if(!r||!g)return!1;await this._preloadAttendancePdfFonts_(r),await this._waitAttendancePdfFontsReady_(r);const d=Array.from(r.images||[]);await Promise.all(d.map(u=>new Promise(y=>{if(u.complete)return y();u.onload=y,u.onerror=y,setTimeout(y,2e3)}))),await this._ensureHtml2CanvasInAttendanceFrame_(r,g),await new Promise(u=>setTimeout(u,300));const m=r.getElementById("attendance-report-root")||r.querySelector(".att-report-doc")||r.body;if(!m)return!1;const x=Math.max(m.scrollHeight,m.offsetHeight,1);s.style.height=`${x+80}px`,await new Promise(u=>setTimeout(u,150));const b=await this._captureAttendanceHtmlToCanvas_(m,g);if(!b)return!1;const f=Utils.PdfExport.createPdf({orientation:"portrait",unit:"mm",format:"a4"});return f?(Utils.PdfExport.appendCanvasAsPdfPages(f,b,{marginMm:n}),Utils.PdfExport.savePdf(f,i),!0):!1}catch(r){return Utils.safeWarn("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u062D\u0636\u0648\u0631 PDF:",r),!1}finally{s.remove()}},async exportAttendanceToPDF(a){const e=a||this.state.filters.attendance||{},t=this._filterAttendanceRows(this.getClinicStaffAttendanceList(),e);if(!t.length){Notification?.info?.("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u062A\u0635\u062F\u064A\u0631\u0647\u0627");return}const i=`Clinic_Attendance_${this._attendanceReportFileSuffix(e)}.pdf`;typeof Loading<"u"&&Loading.show&&Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u062A\u0642\u0631\u064A\u0631...");try{if(!await this._ensureAttendancePdfLibs_()){Notification?.error?.("\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0627\u062A PDF \u2014 \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A");return}const n=this._buildAttendanceReportFullHtml(e,t);await this._downloadAttendanceHtmlAsPdf(n,i)?Notification?.success?.("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 PDF \u0628\u0646\u062C\u0627\u062D"):Notification?.error?.("\u062A\u0639\u0630\u0651\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF \u2014 \u062D\u0627\u0648\u0644 \u0645\u062C\u062F\u062F\u0627\u064B")}catch(o){Utils.safeError("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0636\u0648\u0631 PDF:",o),Notification?.error?.("\u062A\u0639\u0630\u0631 \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0636\u0648\u0631: "+(o?.message||""))}finally{typeof Loading<"u"&&Loading.hide&&Loading.hide()}},showAttendanceReportModal(){document.getElementById("clinic-attendance-report-modal")?.remove();const a=this.canViewAllAttendanceData(),e=a?this._getAttendanceStaffOptions():[],t=new Date,i=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,"0")}`,o=e.map(f=>`<option value="${Utils.escapeAttr(f.id)}">${Utils.escapeHTML(f.name)}${f.role?" \u2014 "+Utils.escapeHTML(this.getStaffRoleLabel(f.role)):""}</option>`).join(""),n="border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fafafa;",c=f=>`display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;margin:0 0 6px;background:${f?"#f0fdfa":"transparent"};border:1px solid ${f?"#99f6e4":"transparent"};`,s=`
+</html>`;
+    },
+
+    _loadAttendancePdfLib_(urls, checkFn) {
+        if (checkFn()) return Promise.resolve(true);
+        const list = Array.isArray(urls) ? urls : [urls];
+        const tryAt = (index) => {
+            if (index >= list.length) return Promise.resolve(false);
+            const src = list[index];
+            const existing = Array.from(document.querySelectorAll('script[src]'))
+                .find(s => String(s.src || '').includes(src.replace(/^https?:\/\//, '').split('/').slice(-2).join('/')));
+            if (existing) {
+                return new Promise((resolve) => {
+                    const done = () => resolve(!!checkFn());
+                    existing.addEventListener('load', done, { once: true });
+                    setTimeout(done, 4000);
+                });
+            }
+            return new Promise((resolve) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => resolve(!!checkFn());
+                script.onerror = () => resolve(tryAt(index + 1));
+                document.head.appendChild(script);
+            });
+        };
+        return tryAt(0);
+    },
+
+    async _ensureAttendancePdfLibs_() {
+        const jsPdfOk = await this._loadAttendancePdfLib_([
+            'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+        ], () => typeof window.jspdf !== 'undefined' || typeof window.jsPDF !== 'undefined');
+        const h2cOk = await this._loadAttendancePdfLib_([
+            'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+        ], () => typeof html2canvas !== 'undefined');
+        return jsPdfOk && h2cOk;
+    },
+
+    _getJsPdfConstructor_() {
+        if (window.jspdf && window.jspdf.jsPDF) return window.jspdf.jsPDF;
+        if (window.jsPDF && window.jsPDF.jsPDF) return window.jsPDF.jsPDF;
+        if (typeof window.jsPDF === 'function') return window.jsPDF;
+        return null;
+    },
+
+    async _preloadAttendancePdfFonts_(targetDoc) {
+        const doc = targetDoc || document;
+        const head = doc.head || doc.documentElement;
+        if (head && !doc.getElementById('clinic-att-cairo-font')) {
+            const link = doc.createElement('link');
+            link.id = 'clinic-att-cairo-font';
+            link.rel = 'stylesheet';
+            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
+            head.appendChild(link);
+        }
+        try {
+            if (doc.fonts && typeof doc.fonts.load === 'function') {
+                await doc.fonts.load('400 14px Cairo');
+                await doc.fonts.load('700 18px Cairo');
+                await doc.fonts.ready;
+            }
+        } catch (_e) { /* ignore */ }
+    },
+
+    async _captureAttendanceHtmlToCanvas_(root, iWin) {
+        const a4W = this.ATTENDANCE_A4_WIDTH_PX || 794;
+        const scrollW = Math.max(root?.scrollWidth || a4W, a4W);
+        const scrollH = Math.max(root?.scrollHeight || 1, 1);
+        let scale = Utils.PdfExport.getOptimalCaptureScale(scrollW, scrollH, Utils.PdfExport.DEFAULT_CAPTURE_SCALE);
+        const h2c = (iWin && typeof iWin.html2canvas === 'function') ? iWin.html2canvas : html2canvas;
+        const baseOpts = {
+            scale,
+            backgroundColor: '#ffffff',
+            logging: false,
+            width: scrollW,
+            height: scrollH,
+            windowWidth: scrollW,
+            windowHeight: scrollH,
+            scrollX: 0,
+            scrollY: 0,
+            useCORS: true,
+            allowTaint: true,
+            imageTimeout: 8000
+        };
+        const attempts = [
+            baseOpts,
+            { ...baseOpts, useCORS: false, allowTaint: true },
+            { ...baseOpts, scale: Math.max(1.25, scale - 0.5) }
+        ];
+        let lastError = null;
+        for (let i = 0; i < attempts.length; i++) {
+            try {
+                const canvas = await h2c(root, attempts[i]);
+                if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
+            } catch (err) {
+                lastError = err;
+            }
+        }
+        if (lastError) throw lastError;
+        return null;
+    },
+
+    async _downloadAttendanceHtmlAsPdf(htmlContent, fileName) {
+        const JsPDF = this._getJsPdfConstructor_();
+        if (!JsPDF || typeof html2canvas === 'undefined') return false;
+
+        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
+            ? String(fileName)
+            : `${String(fileName)}.pdf`;
+        const a4W = this.ATTENDANCE_A4_WIDTH_PX || 794;
+        const marginMm = 6;
+        const preparedHtml = this._prepareAttendancePdfHtml_(htmlContent);
+
+        await this._preloadAttendancePdfFonts_();
+
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.style.cssText = `position:fixed;left:-20000px;top:0;width:${a4W}px;height:200px;border:0;visibility:hidden;`;
+        document.body.appendChild(iframe);
+
+        try {
+            iframe.srcdoc = preparedHtml;
+            await new Promise((resolve) => {
+                iframe.onload = resolve;
+                iframe.onerror = resolve;
+                setTimeout(resolve, 4000);
+            });
+
+            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+            const iWin = iframe.contentWindow;
+            if (!iDoc || !iWin) return false;
+
+            await this._preloadAttendancePdfFonts_(iDoc);
+            await this._waitAttendancePdfFontsReady_(iDoc);
+
+            const images = Array.from(iDoc.images || []);
+            await Promise.all(images.map((img) => new Promise((resolve) => {
+                if (img.complete) return resolve();
+                img.onload = resolve;
+                img.onerror = resolve;
+                setTimeout(resolve, 2000);
+            })));
+
+            await this._ensureHtml2CanvasInAttendanceFrame_(iDoc, iWin);
+            await new Promise((r) => setTimeout(r, 300));
+
+            const root = iDoc.getElementById('attendance-report-root')
+                || iDoc.querySelector('.att-report-doc')
+                || iDoc.body;
+            if (!root) return false;
+
+            const contentHeight = Math.max(root.scrollHeight, root.offsetHeight, 1);
+            iframe.style.height = `${contentHeight + 80}px`;
+            await new Promise((r) => setTimeout(r, 150));
+
+            const canvas = await this._captureAttendanceHtmlToCanvas_(root, iWin);
+            if (!canvas) return false;
+
+            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            if (!pdf) return false;
+            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm });
+            Utils.PdfExport.savePdf(pdf, pdfFileName);
+            return true;
+        } catch (error) {
+            Utils.safeWarn('فشل تحميل تقرير حضور PDF:', error);
+            return false;
+        } finally {
+            iframe.remove();
+        }
+    },
+
+    async exportAttendanceToPDF(overrideFilters) {
+        const filters = overrideFilters || this.state.filters.attendance || {};
+        const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
+        if (!rows.length) {
+            Notification?.info?.('لا توجد بيانات لتصديرها');
+            return;
+        }
+
+        const fileName = `Clinic_Attendance_${this._attendanceReportFileSuffix(filters)}.pdf`;
+
+        if (typeof Loading !== 'undefined' && Loading.show) Loading.show('جاري إعداد التقرير...');
+        try {
+            const libsReady = await this._ensureAttendancePdfLibs_();
+            if (!libsReady) {
+                Notification?.error?.('تعذّر تحميل مكتبات PDF — تحقق من الاتصال بالإنترنت');
+                return;
+            }
+
+            const htmlContent = this._buildAttendanceReportFullHtml(filters, rows);
+            const ok = await this._downloadAttendanceHtmlAsPdf(htmlContent, fileName);
+            if (ok) {
+                Notification?.success?.('تم تحميل تقرير PDF بنجاح');
+            } else {
+                Notification?.error?.('تعذّر إنشاء ملف PDF — حاول مجدداً');
+            }
+        } catch (error) {
+            Utils.safeError('فشل تصدير تقرير الحضور PDF:', error);
+            Notification?.error?.('تعذر تصدير تقرير الحضور: ' + (error?.message || ''));
+        } finally {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+        }
+    },
+
+    showAttendanceReportModal() {
+        document.getElementById('clinic-attendance-report-modal')?.remove();
+        const isAdmin = this.canViewAllAttendanceData();
+        const staffOptions = isAdmin ? this._getAttendanceStaffOptions() : [];
+        const curMonth = new Date();
+        const defaultMonth = `${curMonth.getFullYear()}-${String(curMonth.getMonth() + 1).padStart(2, '0')}`;
+        const staffOptsHtml = staffOptions.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHTML(s.name)}${s.role ? ' — ' + Utils.escapeHTML(this.getStaffRoleLabel(s.role)) : ''}</option>`
+        ).join('');
+        const sectionStyle = 'border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:#fafafa;';
+        const dateOptStyle = (active) => `display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;margin:0 0 6px;background:${active ? '#f0fdfa' : 'transparent'};border:1px solid ${active ? '#99f6e4' : 'transparent'};`;
+
+        const html = `
             <div class="modal-overlay active" id="clinic-attendance-report-modal">
                 <div class="modal-content" style="max-width:580px;border-radius:14px;overflow:hidden;">
                     <div class="modal-header" style="background:linear-gradient(125deg,#0b2a55,#1e40af 70%,#2563eb);color:#fff;">
-                        <h3 style="margin:0;color:#fff;"><i class="fas fa-file-export ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0636\u0648\u0631</h3>
+                        <h3 style="margin:0;color:#fff;"><i class="fas fa-file-export ml-2"></i>تصدير تقرير الحضور</h3>
                         <button type="button" class="modal-close" style="color:#fff;" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body" style="padding:20px;">
-                        <p style="font-size:0.82rem;color:#64748b;margin:0 0 14px;">\u062D\u062F\u0651\u062F \u0627\u0644\u0641\u062A\u0631\u0629 \u0648\u0627\u0644\u0645\u0633\u0626\u0648\u0644 (\u0627\u062E\u062A\u064A\u0627\u0631\u064A) \u0628\u0634\u0643\u0644 \u0645\u0633\u062A\u0642\u0644\u060C \u062B\u0645 \u0627\u062E\u062A\u0631 \u0635\u064A\u063A\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631.</p>
+                        <p style="font-size:0.82rem;color:#64748b;margin:0 0 14px;">حدّد الفترة والمسئول (اختياري) بشكل مستقل، ثم اختر صيغة التصدير.</p>
 
                         <label id="att-report-current-wrap" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:2px solid #f59e0b;border-radius:10px;background:#fffbeb;cursor:pointer;margin-bottom:12px;">
                             <input type="checkbox" id="att-report-use-current">
-                            <span><i class="fas fa-filter" style="color:#f59e0b;margin-left:6px;"></i><strong>\u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0634\u0627\u0634\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629</strong></span>
+                            <span><i class="fas fa-filter" style="color:#f59e0b;margin-left:6px;"></i><strong>استخدام فلاتر الشاشة الحالية</strong></span>
                         </label>
 
                         <div id="att-report-custom-filters">
-                            <div style="${n}margin-bottom:12px;">
-                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-calendar-alt ml-1" style="color:#0d9488;"></i> \u0627\u0644\u0641\u062A\u0631\u0629 \u0627\u0644\u0632\u0645\u0646\u064A\u0629</div>
-                                <label style="${c(!0)}" data-date-opt="month">
+                            <div style="${sectionStyle}margin-bottom:12px;">
+                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-calendar-alt ml-1" style="color:#0d9488;"></i> الفترة الزمنية</div>
+                                <label style="${dateOptStyle(true)}" data-date-opt="month">
                                     <input type="radio" name="att-report-date-scope" value="month" checked>
-                                    <span>\u0634\u0647\u0631 \u0645\u062D\u062F\u062F</span>
+                                    <span>شهر محدد</span>
                                 </label>
                                 <div id="att-report-month-wrap" style="padding-right:28px;margin-bottom:8px;">
-                                    <input type="month" id="att-report-month" class="form-input" value="${i}" style="width:100%;box-sizing:border-box;">
+                                    <input type="month" id="att-report-month" class="form-input" value="${defaultMonth}" style="width:100%;box-sizing:border-box;">
                                 </div>
-                                <label style="${c(!1)}" data-date-opt="period">
+                                <label style="${dateOptStyle(false)}" data-date-opt="period">
                                     <input type="radio" name="att-report-date-scope" value="period">
-                                    <span>\u0645\u062F\u0629 \u0645\u062D\u062F\u062F\u0629 (\u0645\u0646 \u2014 \u0625\u0644\u0649)</span>
+                                    <span>مدة محددة (من — إلى)</span>
                                 </label>
                                 <div id="att-report-period-wrap" style="padding-right:28px;margin-bottom:8px;display:none;">
                                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                                        <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">\u0645\u0646 \u062A\u0627\u0631\u064A\u062E</label><input type="date" id="att-report-from" class="form-input" style="width:100%;box-sizing:border-box;"></div>
-                                        <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E</label><input type="date" id="att-report-to" class="form-input" style="width:100%;box-sizing:border-box;"></div>
+                                        <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">من تاريخ</label><input type="date" id="att-report-from" class="form-input" style="width:100%;box-sizing:border-box;"></div>
+                                        <div><label class="form-label" style="font-size:0.72rem;display:block;margin-bottom:4px;">إلى تاريخ</label><input type="date" id="att-report-to" class="form-input" style="width:100%;box-sizing:border-box;"></div>
                                     </div>
                                 </div>
-                                <label style="${c(!1)}" data-date-opt="all">
+                                <label style="${dateOptStyle(false)}" data-date-opt="all">
                                     <input type="radio" name="att-report-date-scope" value="all">
-                                    <span>\u062C\u0645\u064A\u0639 \u0627\u0644\u062A\u0648\u0627\u0631\u064A\u062E (\u0628\u062F\u0648\u0646 \u062A\u0642\u064A\u064A\u062F \u0632\u0645\u0646\u064A)</span>
+                                    <span>جميع التواريخ (بدون تقييد زمني)</span>
                                 </label>
                             </div>
 
-                            ${a?`
-                            <div style="${n}margin-bottom:12px;">
-                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-user ml-1" style="color:#6366f1;"></i> \u0627\u0644\u0645\u0633\u0626\u0648\u0644</div>
+                            ${isAdmin ? `
+                            <div style="${sectionStyle}margin-bottom:12px;">
+                                <div style="font-size:0.78rem;font-weight:700;color:#334155;margin-bottom:8px;"><i class="fas fa-user ml-1" style="color:#6366f1;"></i> المسئول</div>
                                 <select id="att-report-staff" class="form-input" style="width:100%;box-sizing:border-box;">
-                                    <option value="all">\u2014 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u0626\u0648\u0644\u064A\u0646 \u2014</option>${o}
+                                    <option value="all">— جميع المسئولين —</option>${staffOptsHtml}
                                 </select>
-                                <p style="font-size:0.72rem;color:#64748b;margin:8px 0 0;">\u064A\u0645\u0643\u0646 \u0627\u0644\u062C\u0645\u0639 \u0645\u0639 \u0623\u064A \u062E\u064A\u0627\u0631 \u0632\u0645\u0646\u064A \u0623\u0639\u0644\u0627\u0647.</p>
-                            </div>`:""}
+                                <p style="font-size:0.72rem;color:#64748b;margin:8px 0 0;">يمكن الجمع مع أي خيار زمني أعلاه.</p>
+                            </div>` : ''}
                         </div>
-                        <div style="margin-bottom:4px;font-size:0.78rem;font-weight:700;color:#64748b;">\u0635\u064A\u063A\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631</div>
+                        <div style="margin-bottom:4px;font-size:0.78rem;font-weight:700;color:#64748b;">صيغة التصدير</div>
                         <div style="display:flex;gap:8px;">
                             <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border:2px solid #0d9488;border-radius:10px;cursor:pointer;background:#f0fdfa;font-weight:600;color:#134e4a;">
                                 <input type="radio" name="att-report-format" value="pdf" checked> PDF
@@ -326,173 +1401,717 @@ const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._att
                         </div>
                     </div>
                     <div class="modal-footer" style="gap:8px;">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()">\u0625\u0644\u063A\u0627\u0621</button>
-                        <button type="button" class="btn-primary" id="att-report-export-btn"><i class="fas fa-download ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-attendance-report-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="att-report-export-btn"><i class="fas fa-download ml-2"></i>تصدير التقرير</button>
                     </div>
                 </div>
-            </div>`;document.body.insertAdjacentHTML("beforeend",s);const r=document.getElementById("clinic-attendance-report-modal");if(!r)return;const g=r.querySelector("#att-report-custom-filters"),d=r.querySelector("#att-report-use-current"),m=f=>{g&&(g.style.opacity=f?"1":"0.45",g.style.pointerEvents=f?"auto":"none")},x=()=>{const f=r.querySelector('input[name="att-report-date-scope"]:checked')?.value||"month";r.querySelector("#att-report-month-wrap").style.display=f==="month"?"block":"none",r.querySelector("#att-report-period-wrap").style.display=f==="period"?"block":"none",r.querySelectorAll("[data-date-opt]").forEach(u=>{const y=u.dataset.dateOpt===f;u.style.background=y?"#f0fdfa":"transparent",u.style.borderColor=y?"#99f6e4":"transparent"})};d?.addEventListener("change",()=>m(!d.checked)),r.querySelectorAll('input[name="att-report-date-scope"]').forEach(f=>{f.addEventListener("change",x)}),x(),m(!0);const b=()=>{if(d?.checked)return Object.assign({},this.state.filters.attendance||{});const f={search:"",staffRole:"all",status:"all",staffId:"all",month:"",dateFrom:"",dateTo:"",period:"all"},u=r.querySelector('input[name="att-report-date-scope"]:checked')?.value||"month";if(u==="month"){const v=r.querySelector("#att-report-month")?.value||"";if(!v)return Notification?.warning?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0634\u0647\u0631"),null;f.month=v}else if(u==="period"){const v=r.querySelector("#att-report-from")?.value||"",A=r.querySelector("#att-report-to")?.value||"";if(!v&&!A)return Notification?.warning?.("\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062F \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u0623\u0648 \u0627\u0644\u0646\u0647\u0627\u064A\u0629"),null;const w=this._normalizeAttendanceDateRange(v,A);f.dateFrom=w.dateFrom,f.dateTo=w.dateTo}const y=r.querySelector("#att-report-staff")?.value||"all";return y&&y!=="all"&&(f.staffId=y),f};r.querySelector("#att-report-export-btn")?.addEventListener("click",()=>{const f=r.querySelector('input[name="att-report-format"]:checked')?.value||"pdf",u=b();if(!u)return;if(!this._filterAttendanceRows(this.getClinicStaffAttendanceList(),u).length){Notification?.info?.("\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0646\u0637\u0627\u0642 \u0627\u0644\u062A\u0642\u0631\u064A\u0631");return}r.remove(),f==="excel"?(this.exportAttendanceToExcel(u),Notification?.success?.("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 Excel")):this.exportAttendanceToPDF(u)})},showAddClinicStaffModal(){if(!this.isCurrentUserAdmin()){Notification?.error?.("\u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0641\u0642\u0637");return}const a=this.getClinicStaffList(),e=new Set(a.map(n=>String(n.userId||n.userEmail||"").toLowerCase()).filter(Boolean)),o=`
+            </div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+
+        const modal = document.getElementById('clinic-attendance-report-modal');
+        if (!modal) return;
+
+        const customFiltersEl = modal.querySelector('#att-report-custom-filters');
+        const useCurrentEl = modal.querySelector('#att-report-use-current');
+
+        const setCustomFiltersEnabled = (enabled) => {
+            if (customFiltersEl) {
+                customFiltersEl.style.opacity = enabled ? '1' : '0.45';
+                customFiltersEl.style.pointerEvents = enabled ? 'auto' : 'none';
+            }
+        };
+
+        const syncDateScopeUi = () => {
+            const dateScope = modal.querySelector('input[name="att-report-date-scope"]:checked')?.value || 'month';
+            modal.querySelector('#att-report-month-wrap').style.display = dateScope === 'month' ? 'block' : 'none';
+            modal.querySelector('#att-report-period-wrap').style.display = dateScope === 'period' ? 'block' : 'none';
+            modal.querySelectorAll('[data-date-opt]').forEach(label => {
+                const active = label.dataset.dateOpt === dateScope;
+                label.style.background = active ? '#f0fdfa' : 'transparent';
+                label.style.borderColor = active ? '#99f6e4' : 'transparent';
+            });
+        };
+
+        useCurrentEl?.addEventListener('change', () => setCustomFiltersEnabled(!useCurrentEl.checked));
+        modal.querySelectorAll('input[name="att-report-date-scope"]').forEach(r => {
+            r.addEventListener('change', syncDateScopeUi);
+        });
+        syncDateScopeUi();
+        setCustomFiltersEnabled(true);
+
+        const buildReportFiltersFromModal = () => {
+            if (useCurrentEl?.checked) {
+                return Object.assign({}, this.state.filters.attendance || {});
+            }
+
+            const filters = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+            const dateScope = modal.querySelector('input[name="att-report-date-scope"]:checked')?.value || 'month';
+
+            if (dateScope === 'month') {
+                const monthVal = modal.querySelector('#att-report-month')?.value || '';
+                if (!monthVal) {
+                    Notification?.warning?.('يرجى اختيار الشهر');
+                    return null;
+                }
+                filters.month = monthVal;
+            } else if (dateScope === 'period') {
+                const fromVal = modal.querySelector('#att-report-from')?.value || '';
+                const toVal = modal.querySelector('#att-report-to')?.value || '';
+                if (!fromVal && !toVal) {
+                    Notification?.warning?.('يرجى تحديد تاريخ البداية أو النهاية');
+                    return null;
+                }
+                const range = this._normalizeAttendanceDateRange(fromVal, toVal);
+                filters.dateFrom = range.dateFrom;
+                filters.dateTo = range.dateTo;
+            }
+
+            const staffVal = modal.querySelector('#att-report-staff')?.value || 'all';
+            if (staffVal && staffVal !== 'all') filters.staffId = staffVal;
+
+            return filters;
+        };
+
+        modal.querySelector('#att-report-export-btn')?.addEventListener('click', () => {
+            const format = modal.querySelector('input[name="att-report-format"]:checked')?.value || 'pdf';
+            const filters = buildReportFiltersFromModal();
+            if (!filters) return;
+
+            const rows = this._filterAttendanceRows(this.getClinicStaffAttendanceList(), filters);
+            if (!rows.length) {
+                Notification?.info?.('لا توجد سجلات مطابقة لنطاق التقرير');
+                return;
+            }
+
+            modal.remove();
+            if (format === 'excel') {
+                this.exportAttendanceToExcel(filters);
+                Notification?.success?.('تم تحميل تقرير Excel');
+            } else {
+                this.exportAttendanceToPDF(filters);
+            }
+        });
+    },
+
+    showAddClinicStaffModal() {
+        if (!this.isCurrentUserAdmin()) {
+            Notification?.error?.('هذا الإجراء متاح لمدير النظام فقط');
+            return;
+        }
+        const staffList = this.getClinicStaffList();
+        const staffIds = new Set(staffList.map(s => String(s.userId || s.userEmail || '').toLowerCase()).filter(Boolean));
+        const users = (AppState.appData.users || []).filter(u => u && u.active !== false && u.email);
+        const options = users.filter(u => !staffIds.has(String(u.id || '').toLowerCase()) && !staffIds.has(String(u.email || '').toLowerCase()))
+            .map(u => `<option value="${Utils.escapeAttr(u.id || '')}" data-email="${Utils.escapeAttr(u.email || '')}" data-name="${Utils.escapeAttr(u.name || '')}" data-dept="${Utils.escapeAttr(u.department || '')}" data-job="${Utils.escapeAttr(u.jobTitle || u.position || '')}">${Utils.escapeHTML(u.name || u.email)}</option>`)
+            .join('');
+        const html = `
             <div class="modal-overlay active" id="clinic-staff-modal">
                 <div class="modal-content" style="max-width:520px;">
-                    <div class="modal-header"><h3><i class="fas fa-user-plus ml-2"></i>\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u0626\u0648\u0644 \u0639\u064A\u0627\u062F\u0629</h3>
+                    <div class="modal-header"><h3><i class="fas fa-user-plus ml-2"></i>إضافة مسئول عيادة</h3>
                         <button type="button" class="modal-close" onclick="document.getElementById('clinic-staff-modal')?.remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body space-y-4">
                         <div class="form-group">
-                            <label class="form-label">\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645</label>
-                            <select id="clinic-staff-user" class="form-input"><option value="">\u2014 \u0627\u062E\u062A\u0631 \u2014</option>${(AppState.appData.users||[]).filter(n=>n&&n.active!==!1&&n.email).filter(n=>!e.has(String(n.id||"").toLowerCase())&&!e.has(String(n.email||"").toLowerCase())).map(n=>`<option value="${Utils.escapeAttr(n.id||"")}" data-email="${Utils.escapeAttr(n.email||"")}" data-name="${Utils.escapeAttr(n.name||"")}" data-dept="${Utils.escapeAttr(n.department||"")}" data-job="${Utils.escapeAttr(n.jobTitle||n.position||"")}">${Utils.escapeHTML(n.name||n.email)}</option>`).join("")}</select>
+                            <label class="form-label">المستخدم</label>
+                            <select id="clinic-staff-user" class="form-input"><option value="">— اختر —</option>${options}</select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">\u0627\u0644\u062F\u0648\u0631</label>
+                            <label class="form-label">الدور</label>
                             <select id="clinic-staff-role" class="form-input">
-                                <option value="doctor">\u0637\u0628\u064A\u0628</option>
-                                <option value="nurse">\u062A\u0645\u0631\u064A\u0636</option>
-                                <option value="clinic_officer">\u0645\u0633\u0626\u0648\u0644 \u0639\u064A\u0627\u062F\u0629</option>
+                                <option value="doctor">طبيب</option>
+                                <option value="nurse">تمريض</option>
+                                <option value="clinic_officer">مسئول عيادة</option>
                             </select>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-staff-modal')?.remove()">\u0625\u0644\u063A\u0627\u0621</button>
-                        <button type="button" class="btn-primary" id="clinic-staff-save-btn"><i class="fas fa-save ml-2"></i>\u062D\u0641\u0638</button>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('clinic-staff-modal')?.remove()">إلغاء</button>
+                        <button type="button" class="btn-primary" id="clinic-staff-save-btn"><i class="fas fa-save ml-2"></i>حفظ</button>
                     </div>
                 </div>
-            </div>`;document.getElementById("clinic-staff-modal")?.remove(),document.body.insertAdjacentHTML("beforeend",o),document.getElementById("clinic-staff-save-btn")?.addEventListener("click",async()=>{const n=document.getElementById("clinic-staff-user"),c=n?.selectedOptions?.[0];if(!n?.value||!c){Notification?.warning?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0633\u062A\u062E\u062F\u0645");return}const s=document.getElementById("clinic-staff-role")?.value||"clinic_officer";try{const r=await GoogleIntegration.sendRequest({action:"addClinicStaff",data:{userId:n.value,userEmail:c.dataset.email||"",userName:c.dataset.name||"",department:c.dataset.dept||"",jobTitle:c.dataset.job||"",staffRole:s,isActive:"true"}});r?.success?(Notification?.success?.("\u062A\u0645\u062A \u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u0626\u0648\u0644 \u0627\u0644\u0639\u064A\u0627\u062F\u0629"),document.getElementById("clinic-staff-modal")?.remove(),await this.loadClinicAttendanceData(!0),this.renderAttendanceTab({force:!0})):Notification?.error?.(r?.message||"\u0641\u0634\u0644 \u0627\u0644\u0625\u0636\u0627\u0641\u0629")}catch(r){Notification?.error?.(r?.message||"\u0641\u0634\u0644 \u0627\u0644\u0625\u0636\u0627\u0641\u0629")}})},async toggleClinicStaffActive(a,e){if(!(!this.isCurrentUserAdmin()||!a))try{const t=await GoogleIntegration.sendRequest({action:"updateClinicStaff",data:{staffId:a,updateData:{isActive:e?"true":"false"}}});t?.success?(await this.loadClinicAttendanceData(!0),this.renderAttendanceTab({force:!0}),Notification?.success?.("\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u0633\u0626\u0648\u0644")):Notification?.error?.(t?.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B")}catch(t){Notification?.error?.(t?.message||"\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u062F\u064A\u062B")}},async deleteClinicStaffMember(a){if(!(!this.isCurrentUserAdmin()||!a)&&confirm("\u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u0626\u0648\u0644 \u0645\u0646 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0639\u064A\u0627\u062F\u0629\u061F (\u0633\u062C\u0644 \u0627\u0644\u062D\u0636\u0648\u0631 \u0627\u0644\u0633\u0627\u0628\u0642 \u064A\u0628\u0642\u0649 \u0645\u062D\u0641\u0648\u0638\u0627\u064B)"))try{const e=await GoogleIntegration.sendRequest({action:"deleteClinicStaff",data:{staffId:a}});e?.success?(await this.loadClinicAttendanceData(!0),this.renderAttendanceTab({force:!0}),Notification?.success?.("\u062A\u0645 \u0627\u0644\u062D\u0630\u0641")):Notification?.error?.(e?.message||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0630\u0641")}catch(e){Notification?.error?.(e?.message||"\u0641\u0634\u0644 \u0627\u0644\u062D\u0630\u0641")}},async notifyAdminAboutTimeOffRequest(a){if(!(!a||!a.id))try{if(this.isCurrentUserAdmin()){const e=Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)?AppState.appData.clinicStaffTimeOffRequests:[];e.some(i=>String(i.id)===String(a.id))||(AppState.appData.clinicStaffTimeOffRequests=[a,...e]),this._updatePendingApprovalsBadgeFromLocal_(),typeof UI<"u"&&typeof UI.updateNotificationsBadge=="function"&&UI.updateNotificationsBadge()}}catch(e){Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0625\u0634\u0639\u0627\u0631\u0627\u062A \u0637\u0644\u0628 \u0627\u0644\u062D\u0636\u0648\u0631:",e)}},async submitTimeOffRequest(){this._saveTimeOffFormDraftFromDom(),this._timeOffFormSubmitting=!0;const a=document.getElementById("timeoff-request-type")?.value||"",e=document.getElementById("timeoff-reason")?.value?.trim()||"";let t="",i="";const o=document.getElementById("timeoff-time-from")?.value||"",n=document.getElementById("timeoff-time-to")?.value||"",c=document.getElementById("timeoff-duration-hours")?.value||"";if(a==="leave"?(t=document.getElementById("timeoff-date-from")?.value||"",i=document.getElementById("timeoff-date-to")?.value||""):a==="permission"?(t=document.getElementById("timeoff-perm-date")?.value||"",i=t):a==="overtime"&&(t=document.getElementById("timeoff-ot-date")?.value||"",i=t),!a){this._timeOffFormSubmitting=!1,Notification?.error?.("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0646\u0648\u0639 \u0627\u0644\u0637\u0644\u0628");return}if(!e){this._timeOffFormSubmitting=!1,Notification?.error?.("\u0633\u0628\u0628 \u0627\u0644\u0637\u0644\u0628 \u0645\u0637\u0644\u0648\u0628");return}Loading.show();try{const s={requestType:a,reason:e,dateFrom:t,dateTo:i,timeFrom:o,timeTo:n,durationHours:c},r=await GoogleIntegration.sendRequest({action:"addClinicStaffTimeOffRequest",data:s});if(r&&r.success){const g=await GoogleIntegration.sendRequest({action:"getClinicStaffTimeOffRequests",data:{}});g?.success&&Array.isArray(g.data)&&(AppState.appData.clinicStaffTimeOffRequests=g.data),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();const d=(AppState.appData.clinicStaffTimeOffRequests||[]).find(m=>m.id===r.data?.id)||{id:r.data?.id,requestType:a,reason:e,dateFrom:t,dateTo:i,timeFrom:o,timeTo:n,durationHours:c,status:"pending"};this._invalidateApprovalsCache(),this.notifyAdminAboutTimeOffRequest(d),Loading.hide(),Notification?.success?.("\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0637\u0644\u0628 \u0628\u0646\u062C\u0627\u062D \u2014 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0645\u0648\u0627\u0641\u0642\u0629 \u0627\u0644\u0645\u062F\u064A\u0631"),this.state&&(this.state.timeOffFormDraft=this._getDefaultTimeOffFormDraft()),document.getElementById("clinic-timeoff-request-modal")?.remove(),this._attendanceRenderPending=!1,this.renderAttendanceTab({force:!0})}else throw new Error(r?.message||"\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0637\u0644\u0628")}catch(s){Loading.hide(),Notification?.error?.(s?.message||"\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0637\u0644\u0628")}finally{this._timeOffFormSubmitting=!1}},async cancelTimeOffRequest(a){if(!(!a||!confirm("\u0647\u0644 \u062A\u0631\u064A\u062F \u0625\u0644\u063A\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u0637\u0644\u0628\u061F"))){Loading.show();try{const t=await GoogleIntegration.sendRequest({action:"cancelClinicStaffTimeOffRequest",data:{requestId:a}});if(t&&t.success){const i=await GoogleIntegration.sendRequest({action:"getClinicStaffTimeOffRequests",data:{}});i?.success&&Array.isArray(i.data)&&(AppState.appData.clinicStaffTimeOffRequests=i.data),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),Loading.hide(),Notification?.success?.("\u062A\u0645 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0637\u0644\u0628"),this.renderAttendanceTab({force:!0})}else throw new Error(t?.message||"\u0641\u0634\u0644 \u0627\u0644\u0625\u0644\u063A\u0627\u0621")}catch(t){Loading.hide(),Notification?.error?.(t?.message||"\u0641\u0634\u0644 \u0625\u0644\u063A\u0627\u0621 \u0627\u0644\u0637\u0644\u0628")}}},renderTimeOffRequestsTable(a){if(!a||!a.length)return'<p class="text-center text-gray-500 py-6">\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A</p>';const e=a.map(t=>{const i=String(t.status)==="pending";return`<tr>
-                <td><span class="badge badge-info">${Utils.escapeHTML(this.getTimeOffRequestTypeLabel(t.requestType))}</span></td>
-                <td>${Utils.escapeHTML(this.formatTimeOffRequestDetails(t))}</td>
-                <td class="text-sm">${Utils.escapeHTML(t.reason||"\u2014")}</td>
-                <td>${this.getTimeOffStatusBadge(t.status)}</td>
-                <td>${this.formatDate(t.requestedAt||t.createdAt,!0)}</td>
-                <td>${i?`<button type="button" class="btn-icon btn-icon-danger" title="\u0625\u0644\u063A\u0627\u0621" onclick="Clinic.cancelTimeOffRequest('${Utils.escapeAttr(t.id)}')"><i class="fas fa-ban"></i></button>`:"\u2014"}</td>
-            </tr>`}).join("");return this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
-            <thead><tr><th>\u0627\u0644\u0646\u0648\u0639</th><th>\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644</th><th>\u0627\u0644\u0633\u0628\u0628</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th><th>\u0625\u062C\u0631\u0627\u0621</th></tr></thead>
-            <tbody>${e}</tbody>
-        </table>`)},renderAttendanceSelfTab(a){this._saveTimeOffFormDraftFromDom(),this._scheduleLeaveBalancesLoadIfNeeded(!1),this.ensureData();const e=this._isAttendanceDataLoading(),t=this._isLeaveBalancesLoading(),i=this._getLeaveBalancePeriodDefaults(),o=this.getClinicStaffLeaveBalancesList()[0]||{},n=o.month||{},c=o.year||{};this.state.filters=this.state.filters||{},this.state.filters.attendance=Object.assign({search:"",staffRole:"all",status:"all",staffId:"all",month:"",dateFrom:"",dateTo:"",period:"all"},this.state.filters.attendance||{});const s=this.state.filters.attendance,r=this.getFilteredClinicAttendance(),g=this.getClinicStaffTimeOffRequestsList().sort((p,S)=>new Date(S.requestedAt||S.createdAt)-new Date(p.requestedAt||p.createdAt)),d=g.filter(p=>p.status==="pending").length,m=this._computeAttendanceReportStats(r),x=this.getCurrentUserStaffRecord(),b=this.getFilteredClinicStaffActivities(),f=!!this._clinicStaffActivitiesLoading,u=this.state.attendanceFilterPanelOpen!==!1,y=s.period||"all",v={today:"\u0627\u0644\u064A\u0648\u0645",week:"7 \u0623\u064A\u0627\u0645",month:"30 \u064A\u0648\u0645",all:"\u0627\u0644\u0643\u0644"},A=e&&r.length===0?this._renderAttendanceTableLoadingRow(5):r.length?r.map(p=>`
+            </div>`;
+        document.getElementById('clinic-staff-modal')?.remove();
+        document.body.insertAdjacentHTML('beforeend', html);
+        document.getElementById('clinic-staff-save-btn')?.addEventListener('click', async () => {
+            const sel = document.getElementById('clinic-staff-user');
+            const opt = sel?.selectedOptions?.[0];
+            if (!sel?.value || !opt) {
+                Notification?.warning?.('يرجى اختيار مستخدم');
+                return;
+            }
+            const role = document.getElementById('clinic-staff-role')?.value || 'clinic_officer';
+            try {
+                const resp = await GoogleIntegration.sendRequest({
+                    action: 'addClinicStaff',
+                    data: {
+                        userId: sel.value,
+                        userEmail: opt.dataset.email || '',
+                        userName: opt.dataset.name || '',
+                        department: opt.dataset.dept || '',
+                        jobTitle: opt.dataset.job || '',
+                        staffRole: role,
+                        isActive: 'true'
+                    }
+                });
+                if (resp?.success) {
+                    Notification?.success?.('تمت إضافة مسئول العيادة');
+                    document.getElementById('clinic-staff-modal')?.remove();
+                    await this.loadClinicAttendanceData(true);
+                    this.renderAttendanceTab({ force: true });
+                } else {
+                    Notification?.error?.(resp?.message || 'فشل الإضافة');
+                }
+            } catch (err) {
+                Notification?.error?.(err?.message || 'فشل الإضافة');
+            }
+        });
+    },
+
+    async toggleClinicStaffActive(staffId, isActive) {
+        if (!this.isCurrentUserAdmin() || !staffId) return;
+        try {
+            const resp = await GoogleIntegration.sendRequest({
+                action: 'updateClinicStaff',
+                data: { staffId, updateData: { isActive: isActive ? 'true' : 'false' } }
+            });
+            if (resp?.success) {
+                await this.loadClinicAttendanceData(true);
+                this.renderAttendanceTab({ force: true });
+                Notification?.success?.('تم تحديث حالة المسئول');
+            } else {
+                Notification?.error?.(resp?.message || 'فشل التحديث');
+            }
+        } catch (err) {
+            Notification?.error?.(err?.message || 'فشل التحديث');
+        }
+    },
+
+    async deleteClinicStaffMember(staffId) {
+        if (!this.isCurrentUserAdmin() || !staffId) return;
+        if (!confirm('حذف هذا المسئول من قائمة العيادة؟ (سجل الحضور السابق يبقى محفوظاً)')) return;
+        try {
+            const resp = await GoogleIntegration.sendRequest({ action: 'deleteClinicStaff', data: { staffId } });
+            if (resp?.success) {
+                await this.loadClinicAttendanceData(true);
+                this.renderAttendanceTab({ force: true });
+                Notification?.success?.('تم الحذف');
+            } else {
+                Notification?.error?.(resp?.message || 'فشل الحذف');
+            }
+        } catch (err) {
+            Notification?.error?.(err?.message || 'فشل الحذف');
+        }
+    },
+
+    async notifyAdminAboutTimeOffRequest(request) {
+        // الإشعار يُرسل من الخادم عند addClinicStaffTimeOffRequest (مسئول العيادة لا يقرأ ورقة Users)
+        if (!request || !request.id) return;
+        try {
+            if (this.isCurrentUserAdmin()) {
+                const list = Array.isArray(AppState.appData?.clinicStaffTimeOffRequests)
+                    ? AppState.appData.clinicStaffTimeOffRequests : [];
+                const exists = list.some(r => String(r.id) === String(request.id));
+                if (!exists) {
+                    AppState.appData.clinicStaffTimeOffRequests = [request, ...list];
+                }
+                this._updatePendingApprovalsBadgeFromLocal_();
+                if (typeof UI !== 'undefined' && typeof UI.updateNotificationsBadge === 'function') {
+                    UI.updateNotificationsBadge();
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('خطأ في تحديث إشعارات طلب الحضور:', error);
+        }
+    },
+
+    async submitTimeOffRequest() {
+        this._saveTimeOffFormDraftFromDom();
+        this._timeOffFormSubmitting = true;
+        const requestType = document.getElementById('timeoff-request-type')?.value || '';
+        const reason = document.getElementById('timeoff-reason')?.value?.trim() || '';
+        let dateFrom = '';
+        let dateTo = '';
+        const timeFrom = document.getElementById('timeoff-time-from')?.value || '';
+        const timeTo = document.getElementById('timeoff-time-to')?.value || '';
+        const durationHours = document.getElementById('timeoff-duration-hours')?.value || '';
+
+        if (requestType === 'leave') {
+            dateFrom = document.getElementById('timeoff-date-from')?.value || '';
+            dateTo = document.getElementById('timeoff-date-to')?.value || '';
+        } else if (requestType === 'permission') {
+            dateFrom = document.getElementById('timeoff-perm-date')?.value || '';
+            dateTo = dateFrom;
+        } else if (requestType === 'overtime') {
+            dateFrom = document.getElementById('timeoff-ot-date')?.value || '';
+            dateTo = dateFrom;
+        }
+
+        if (!requestType) {
+            this._timeOffFormSubmitting = false;
+            Notification?.error?.('يرجى اختيار نوع الطلب');
+            return;
+        }
+        if (!reason) {
+            this._timeOffFormSubmitting = false;
+            Notification?.error?.('سبب الطلب مطلوب');
+            return;
+        }
+
+        Loading.show();
+        try {
+            const payload = { requestType, reason, dateFrom, dateTo, timeFrom, timeTo, durationHours };
+            const result = await GoogleIntegration.sendRequest({
+                action: 'addClinicStaffTimeOffRequest',
+                data: payload
+            });
+
+            if (result && result.success) {
+                const refresh = await GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: {}
+                });
+                if (refresh?.success && Array.isArray(refresh.data)) {
+                    AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+
+                const newReq = (AppState.appData.clinicStaffTimeOffRequests || []).find(r => r.id === result.data?.id) || {
+                    id: result.data?.id,
+                    requestType,
+                    reason,
+                    dateFrom,
+                    dateTo,
+                    timeFrom,
+                    timeTo,
+                    durationHours,
+                    status: 'pending'
+                };
+                this._invalidateApprovalsCache();
+                this.notifyAdminAboutTimeOffRequest(newReq);
+
+                Loading.hide();
+                Notification?.success?.('تم إرسال الطلب بنجاح — بانتظار موافقة المدير');
+                if (this.state) this.state.timeOffFormDraft = this._getDefaultTimeOffFormDraft();
+                document.getElementById('clinic-timeoff-request-modal')?.remove();
+                this._attendanceRenderPending = false;
+                this.renderAttendanceTab({ force: true });
+            } else {
+                throw new Error(result?.message || 'فشل إرسال الطلب');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification?.error?.(error?.message || 'فشل إرسال الطلب');
+        } finally {
+            this._timeOffFormSubmitting = false;
+        }
+    },
+
+    async cancelTimeOffRequest(requestId) {
+        if (!requestId) return;
+        const confirmed = confirm('هل تريد إلغاء هذا الطلب؟');
+        if (!confirmed) return;
+
+        Loading.show();
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: 'cancelClinicStaffTimeOffRequest',
+                data: { requestId }
+            });
+            if (result && result.success) {
+                const refresh = await GoogleIntegration.sendRequest({
+                    action: 'getClinicStaffTimeOffRequests',
+                    data: {}
+                });
+                if (refresh?.success && Array.isArray(refresh.data)) {
+                    AppState.appData.clinicStaffTimeOffRequests = refresh.data;
+                }
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
+                Loading.hide();
+                Notification?.success?.('تم إلغاء الطلب');
+                this.renderAttendanceTab({ force: true });
+            } else {
+                throw new Error(result?.message || 'فشل الإلغاء');
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification?.error?.(error?.message || 'فشل إلغاء الطلب');
+        }
+    },
+
+    renderTimeOffRequestsTable(requests) {
+        if (!requests || !requests.length) {
+            return '<p class="text-center text-gray-500 py-6">لا توجد طلبات</p>';
+        }
+        const rows = requests.map(req => {
+            const isPending = String(req.status) === 'pending';
+            return `<tr>
+                <td><span class="badge badge-info">${Utils.escapeHTML(this.getTimeOffRequestTypeLabel(req.requestType))}</span></td>
+                <td>${Utils.escapeHTML(this.formatTimeOffRequestDetails(req))}</td>
+                <td class="text-sm">${Utils.escapeHTML(req.reason || '—')}</td>
+                <td>${this.getTimeOffStatusBadge(req.status)}</td>
+                <td>${this.formatDate(req.requestedAt || req.createdAt, true)}</td>
+                <td>${isPending ? `<button type="button" class="btn-icon btn-icon-danger" title="إلغاء" onclick="Clinic.cancelTimeOffRequest('${Utils.escapeAttr(req.id)}')"><i class="fas fa-ban"></i></button>` : '—'}</td>
+            </tr>`;
+        }).join('');
+        return this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
+            <thead><tr><th>النوع</th><th>التفاصيل</th><th>السبب</th><th>الحالة</th><th>التاريخ</th><th>إجراء</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>`);
+    },
+
+    renderAttendanceSelfTab(panel) {
+        this._saveTimeOffFormDraftFromDom();
+        this._scheduleLeaveBalancesLoadIfNeeded(false);
+        this.ensureData();
+        const dataLoading = this._isAttendanceDataLoading();
+        const balancesLoading = this._isLeaveBalancesLoading();
+        const balancePeriods = this._getLeaveBalancePeriodDefaults();
+        const myBalance = this.getClinicStaffLeaveBalancesList()[0] || {};
+        const bm = myBalance.month || {};
+        const by = myBalance.year || {};
+        this.state.filters = this.state.filters || {};
+        this.state.filters.attendance = Object.assign(
+            { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
+            this.state.filters.attendance || {}
+        );
+        const filters = this.state.filters.attendance;
+        const rows = this.getFilteredClinicAttendance();
+        const myRequests = this.getClinicStaffTimeOffRequestsList().sort((a, b) =>
+            new Date(b.requestedAt || b.createdAt) - new Date(a.requestedAt || a.createdAt)
+        );
+        const pendingCount = myRequests.filter(r => r.status === 'pending').length;
+        const stats = this._computeAttendanceReportStats(rows);
+        const staff = this.getCurrentUserStaffRecord();
+        const activityList = this.getFilteredClinicStaffActivities();
+        const activitiesLoading = !!this._clinicStaffActivitiesLoading;
+        const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
+        const period = filters.period || 'all';
+        const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
+        const tableRows = dataLoading && rows.length === 0
+            ? this._renderAttendanceTableLoadingRow(5)
+            : (rows.length ? rows.map(r => `
             <tr>
-                <td>${Utils.escapeHTML(p.date||"\u2014")}</td>
-                <td>${p.checkIn?Utils.formatDateTime?Utils.formatDateTime(p.checkIn):Utils.escapeHTML(String(p.checkIn)):"\u2014"}</td>
-                <td>${p.checkOut?Utils.formatDateTime?Utils.formatDateTime(p.checkOut):Utils.escapeHTML(String(p.checkOut)):"\u2014"}</td>
-                <td>${Utils.escapeHTML(String(p.workDuration||"\u2014"))}</td>
-                <td><span class="badge ${this.getAttendanceStatusBadgeClass(p.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(p.status))}</span></td>
-                <td>${this._renderAttendancePunchActions(p)}</td>
+                <td>${Utils.escapeHTML(r.date || '—')}</td>
+                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
+                <td>${this._renderAttendancePunchActions(r)}</td>
             </tr>
-        `).join(""):'<tr><td colspan="6" class="text-center text-gray-500 py-8">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u062D\u0636\u0648\u0631</td></tr>',w=[{id:"clinic-attendance-section-timeoff",label:"\u0637\u0644\u0628 \u062C\u062F\u064A\u062F",icon:"fa-paper-plane"},{id:"clinic-attendance-section-my-requests",label:"\u0637\u0644\u0628\u0627\u062A\u064A",icon:"fa-list"},{id:"clinic-attendance-section-records",label:"\u0633\u062C\u0644 \u062D\u0636\u0648\u0631\u064A",icon:"fa-clipboard-user"},{id:"clinic-staff-activities-section",label:"\u0646\u0634\u0627\u0637\u064A",icon:"fa-history"},{id:"clinic-leave-balances-section",label:"\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A",icon:"fa-wallet"},{id:"clinic-approved-timeoff-section",label:"\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629",icon:"fa-check-circle"}];a.innerHTML=`
+        `).join('') : `<tr><td colspan="6" class="text-center text-gray-500 py-8">لا توجد سجلات حضور</td></tr>`);
+
+        const selfNavSections = [
+            { id: 'clinic-attendance-section-timeoff', label: 'طلب جديد', icon: 'fa-paper-plane' },
+            { id: 'clinic-attendance-section-my-requests', label: 'طلباتي', icon: 'fa-list' },
+            { id: 'clinic-attendance-section-records', label: 'سجل حضوري', icon: 'fa-clipboard-user' },
+            { id: 'clinic-staff-activities-section', label: 'نشاطي', icon: 'fa-history' },
+            { id: 'clinic-leave-balances-section', label: 'أرصدة الإجازات', icon: 'fa-wallet' },
+            { id: 'clinic-approved-timeoff-section', label: 'الإجازات المعتمدة', icon: 'fa-check-circle' }
+        ];
+
+        panel.innerHTML = `
             <div id="clinic-attendance-self-root">
-                ${this.renderAttendanceQuickNav(w)}
+                ${this.renderAttendanceQuickNav(selfNavSections)}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;">
-                    ${[{label:"\u0623\u064A\u0627\u0645 \u062D\u0636\u0648\u0631\u064A",value:m.total,icon:"fa-calendar-check",color:"#059669",bg:"#ecfdf5"},{label:"\u0633\u0627\u0639\u0627\u062A\u064A",value:m.totalHours,icon:"fa-clock",color:"#2563eb",bg:"#eff6ff"},{label:"\u0637\u0644\u0628\u0627\u062A \u0645\u0639\u0644\u0642\u0629",value:d,icon:"fa-hourglass-half",color:"#d97706",bg:"#fffbeb"},{label:"\u0625\u062C\u0627\u0632\u0629 \u0645\u062A\u0628\u0642\u064A\u0629 (\u0634\u0647\u0631)",value:t?"\u2026":n.leaveRemaining??0,icon:"fa-umbrella-beach",color:"#0d9488",bg:"#f0fdfa"},{label:"\u0623\u0630\u0648\u0646\u0627\u062A \u0645\u062A\u0628\u0642\u064A\u0629 (\u0634\u0647\u0631)",value:t?"\u2026":n.permissionRemaining??0,icon:"fa-door-open",color:"#7c3aed",bg:"#f5f3ff"},{label:"\u0625\u062C\u0627\u0632\u0629 \u0645\u062A\u0628\u0642\u064A\u0629 (\u0633\u0646\u0629)",value:t?"\u2026":c.leaveRemaining??0,icon:"fa-calendar",color:"#0369a1",bg:"#f0f9ff"}].map(p=>`
-                        <div style="background:${p.bg};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;">
-                            <i class="fas ${p.icon}" style="color:${p.color};font-size:1.2rem;"></i>
-                            <div><p style="margin:0;font-size:0.72rem;color:#64748b;">${p.label}</p><p style="margin:0;font-size:1.35rem;font-weight:800;color:${p.color};">${p.value}</p></div>
-                        </div>`).join("")}
+                    ${[
+                        { label: 'أيام حضوري', value: stats.total, icon: 'fa-calendar-check', color: '#059669', bg: '#ecfdf5' },
+                        { label: 'ساعاتي', value: stats.totalHours, icon: 'fa-clock', color: '#2563eb', bg: '#eff6ff' },
+                        { label: 'طلبات معلقة', value: pendingCount, icon: 'fa-hourglass-half', color: '#d97706', bg: '#fffbeb' },
+                        { label: 'إجازة متبقية (شهر)', value: balancesLoading ? '…' : (bm.leaveRemaining ?? 0), icon: 'fa-umbrella-beach', color: '#0d9488', bg: '#f0fdfa' },
+                        { label: 'أذونات متبقية (شهر)', value: balancesLoading ? '…' : (bm.permissionRemaining ?? 0), icon: 'fa-door-open', color: '#7c3aed', bg: '#f5f3ff' },
+                        { label: 'إجازة متبقية (سنة)', value: balancesLoading ? '…' : (by.leaveRemaining ?? 0), icon: 'fa-calendar', color: '#0369a1', bg: '#f0f9ff' }
+                    ].map(k => `
+                        <div style="background:${k.bg};border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;">
+                            <i class="fas ${k.icon}" style="color:${k.color};font-size:1.2rem;"></i>
+                            <div><p style="margin:0;font-size:0.72rem;color:#64748b;">${k.label}</p><p style="margin:0;font-size:1.35rem;font-weight:800;color:${k.color};">${k.value}</p></div>
+                        </div>`).join('')}
                 </div>
 
                 <div style="padding:14px 18px;background:linear-gradient(125deg,#0b2a55 0%,#1e3a75 70%,#245a9b 100%);border-radius:14px;color:#fff;margin-bottom:14px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;align-items:center;box-shadow:0 10px 26px rgba(11,42,85,.25);">
                     <div>
-                        <h3 style="margin:0;font-size:1rem;font-weight:700;">\u062D\u0636\u0648\u0631\u064A \u0648\u0637\u0644\u0628\u0627\u062A\u064A</h3>
-                        <p style="margin:4px 0 0;font-size:0.72rem;opacity:0.9;">${Utils.escapeHTML(x?.userName||AppState.currentUser?.name||"")} \u2014 ${Utils.escapeHTML(this.getStaffRoleLabel(x?.staffRole))}</p>
+                        <h3 style="margin:0;font-size:1rem;font-weight:700;">حضوري وطلباتي</h3>
+                        <p style="margin:4px 0 0;font-size:0.72rem;opacity:0.9;">${Utils.escapeHTML(staff?.userName || AppState.currentUser?.name || '')} — ${Utils.escapeHTML(this.getStaffRoleLabel(staff?.staffRole))}</p>
                     </div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        ${["today","week","month","all"].map(p=>{const S=y===p;return`<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${S?"#fff":"rgba(255,255,255,0.14)"};color:${S?"#0b2a55":"#fff"};">${v[p]}</button>`}).join("")}
-                        <button type="button" id="clinic-attendance-new-request-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12;font-size:0.74rem;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18);"><i class="fas fa-paper-plane"></i> \u0637\u0644\u0628 \u062C\u062F\u064A\u062F</button>
-                        <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> \u0641\u0644\u0627\u062A\u0631</button>
-                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt${e?" fa-spin":""}"></i></button>
+                        ${['today', 'week', 'month', 'all'].map(p => {
+                            const active = period === p;
+                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 10px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#0b2a55' : '#fff'};">${periodLabels[p]}</button>`;
+                        }).join('')}
+                        <button type="button" id="clinic-attendance-new-request-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#7c2d12;font-size:0.74rem;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18);"><i class="fas fa-paper-plane"></i> طلب جديد</button>
+                        <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-sliders-h"></i> فلاتر</button>
+                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(255,255,255,0.14);color:#fff;cursor:pointer;"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
                         <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-pdf"></i> PDF</button>
                         <button type="button" id="clinic-attendance-export-btn" style="padding:6px 10px;border-radius:8px;border:none;background:rgba(0,0,0,0.22);color:#fff;font-size:0.74rem;cursor:pointer;"><i class="fas fa-file-excel"></i> Excel</button>
                     </div>
                 </div>
 
-                <div id="clinic-attendance-filter-panel" style="display:${u?"block":"none"};margin-bottom:14px;">
-                    <div class="registry-filter-grid" role="search" aria-label="\u0641\u0644\u0627\u062A\u0631 \u0633\u062C\u0644 \u062D\u0636\u0648\u0631\u064A">
+                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};margin-bottom:14px;">
+                    <div class="registry-filter-grid" role="search" aria-label="فلاتر سجل حضوري">
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>\u0627\u0644\u0634\u0647\u0631</label>
-                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(s.month||"")}">
+                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>الشهر</label>
+                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(filters.month || '')}">
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>الحالة</label>
                             <select id="clinic-attendance-status" class="form-input">
-                                <option value="all">\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
-                                <option value="present" ${s.status==="present"?"selected":""}>\u062D\u0627\u0636\u0631</option>
-                                <option value="partial" ${s.status==="partial"?"selected":""}>\u062E\u0631\u0648\u062C \u062C\u0632\u0626\u064A</option>
-                                <option value="absent" ${s.status==="absent"?"selected":""}>\u063A\u0627\u0626\u0628</option>
+                                <option value="all">كل الحالات</option>
+                                <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
+                                <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
+                                <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
                             </select>
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0636\u0648\u0631</label>
-                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(s.dateFrom||"")}">
+                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>من تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(filters.dateFrom || '')}">
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0636\u0648\u0631</label>
-                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(s.dateTo||"")}">
+                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>إلى تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(filters.dateTo || '')}">
                         </div>
                         <div class="registry-filter-field tx-reg-filter-actions">
-                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0641\u0644\u0627\u062A\u0631</button>
+                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                         </div>
                     </div>
                 </div>
 
                 <div class="content-card mb-4" id="clinic-attendance-section-my-requests">
-                    <div class="card-header"><h4 class="card-title"><i class="fas fa-list ml-2"></i>\u0637\u0644\u0628\u0627\u062A\u064A (${g.length})</h4></div>
-                    <div class="card-body" style="padding:0;">${this.renderTimeOffRequestsTable(g)}</div>
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-list ml-2"></i>طلباتي (${myRequests.length})</h4></div>
+                    <div class="card-body" style="padding:0;">${this.renderTimeOffRequestsTable(myRequests)}</div>
                 </div>
 
                 <div class="content-card" id="clinic-attendance-section-records">
-                    <div class="card-header"><h4 class="card-title"><i class="fas fa-clipboard-user ml-2"></i>\u0633\u062C\u0644 \u062D\u0636\u0648\u0631\u064A (${r.length})</h4></div>
+                    <div class="card-header"><h4 class="card-title"><i class="fas fa-clipboard-user ml-2"></i>سجل حضوري (${rows.length})</h4></div>
                     <div class="card-body" style="padding:0;">
                         ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
-                            <thead><tr><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th><th>\u062F\u062E\u0648\u0644</th><th>\u062E\u0631\u0648\u062C</th><th>\u0645\u062F\u0629 (\u0633)</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th></tr></thead>
-                            <tbody>${A}</tbody>
+                            <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>مدة (س)</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                            <tbody>${tableRows}</tbody>
                         </table>`)}
                     </div>
                 </div>
 
-                ${this.renderClinicStaffActivitiesSection({showUserColumn:!1,activities:b,loading:f,title:"\u0646\u0634\u0627\u0637\u064A \u062F\u0627\u062E\u0644 \u0627\u0644\u0646\u0638\u0627\u0645"})}
+                ${this.renderClinicStaffActivitiesSection({
+                    showUserColumn: false,
+                    activities: activityList,
+                    loading: activitiesLoading,
+                    title: 'نشاطي داخل النظام'
+                })}
 
-                ${this.renderClinicStaffLeaveBalancesSection({balances:this.getClinicStaffLeaveBalancesList(),loading:t,month:i.month,year:i.year})}
+                ${this.renderClinicStaffLeaveBalancesSection({
+                    balances: this.getClinicStaffLeaveBalancesList(),
+                    loading: balancesLoading,
+                    month: balancePeriods.month,
+                    year: balancePeriods.year
+                })}
 
-                ${this.renderApprovedTimeOffRequestsSection(this.getClinicStaffLeaveBalancesList(),i.month)}
-            </div>`;const R=()=>{const p=document.getElementById("clinic-attendance-month")?.value||"";let S=document.getElementById("clinic-attendance-from")?.value||"",T=document.getElementById("clinic-attendance-to")?.value||"";if(p&&!S&&!T){const $=this._getAttendanceMonthRange(p);S=$.dateFrom,T=$.dateTo}else{const $=this._normalizeAttendanceDateRange(S,T);S=$.dateFrom,T=$.dateTo}return{search:"",staffRole:"all",status:document.getElementById("clinic-attendance-status")?.value||"all",staffId:"all",month:p,dateFrom:S,dateTo:T,period:this.state.filters.attendance?.period||"all"}},D=()=>{this.state.filters.attendance=R.call(this),this.renderAttendanceTab({force:!0})},U=p=>{const S=this._getTodayLocalKey();let T="",$="";if(p==="today")T=S,$=S;else if(p==="week"){const L=new Date;L.setDate(L.getDate()-6),T=this._attendanceDayKey(L),$=S}else if(p==="month"){const L=new Date;L.setDate(L.getDate()-29),T=this._attendanceDayKey(L),$=S}this.state.filters.attendance=Object.assign({},this.state.filters.attendance||{},{period:p,month:"",dateFrom:T,dateTo:$}),this.renderAttendanceTab({force:!0})};a.querySelector("#clinic-attendance-status")?.addEventListener("change",D),a.querySelector("#clinic-attendance-month")?.addEventListener("change",D),a.querySelector("#clinic-attendance-from")?.addEventListener("change",D),a.querySelector("#clinic-attendance-to")?.addEventListener("change",D),a.querySelector("#clinic-attendance-reset-filters")?.addEventListener("click",()=>{this.state.filters.attendance={search:"",staffRole:"all",status:"all",staffId:"all",month:"",dateFrom:"",dateTo:"",period:"all"},this.renderAttendanceTab({force:!0})}),a.querySelector("#clinic-attendance-toggle-filters")?.addEventListener("click",()=>{this.state.attendanceFilterPanelOpen=!u;const p=a.querySelector("#clinic-attendance-filter-panel");p&&(p.style.display=this.state.attendanceFilterPanelOpen?"block":"none")}),a.querySelectorAll(".clinic-attendance-period-btn").forEach(p=>{p.addEventListener("click",()=>U(p.dataset.period||"all"))}),a.querySelector("#clinic-attendance-export-btn")?.addEventListener("click",()=>this.exportAttendanceToExcel()),a.querySelector("#clinic-attendance-pdf-btn")?.addEventListener("click",()=>this.exportAttendanceToPDF()),a.querySelector("#clinic-attendance-refresh-btn")?.addEventListener("click",async()=>{Notification?.info?.("\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B..."),this._attendanceDataFetchedInSession=!1,await this.loadClinicAttendanceData(!0),this._attendanceDataFetchedInSession=!0,this.renderAttendanceTab({force:!0}),Notification?.success?.("\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B")}),this.bindClinicStaffActivitiesEvents(a),this.bindClinicStaffLeaveBalanceEvents(a),this.bindAttendanceQuickNav(a),this.initAttendanceTableScroll(a),a.querySelector("#clinic-attendance-new-request-btn")?.addEventListener("click",()=>this.showTimeOffRequestModal())},renderAttendanceTab(a){if(!(a&&a.force===!0)&&this._shouldDeferAttendanceRender()){this._attendanceRenderPending=!0;return}this._attendanceRenderPending=!1;const t=document.querySelector('.clinic-tab-panel[data-tab-panel="attendance"]');if(!t)return;if(!this.canAccessAttendanceTab()){t.innerHTML=`<div class="text-center py-12 text-gray-500">
+                ${this.renderApprovedTimeOffRequestsSection(this.getClinicStaffLeaveBalancesList(), balancePeriods.month)}
+            </div>`;
+
+        const readFilterInputs = () => {
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            let dateFrom = document.getElementById('clinic-attendance-from')?.value || '';
+            let dateTo = document.getElementById('clinic-attendance-to')?.value || '';
+            if (month && !dateFrom && !dateTo) {
+                const mr = this._getAttendanceMonthRange(month);
+                dateFrom = mr.dateFrom;
+                dateTo = mr.dateTo;
+            } else {
+                const range = this._normalizeAttendanceDateRange(dateFrom, dateTo);
+                dateFrom = range.dateFrom;
+                dateTo = range.dateTo;
+            }
+            return {
+                search: '',
+                staffRole: 'all',
+                status: document.getElementById('clinic-attendance-status')?.value || 'all',
+                staffId: 'all',
+                month,
+                dateFrom,
+                dateTo,
+                period: this.state.filters.attendance?.period || 'all'
+            };
+        };
+
+        const applyFilters = () => {
+            this.state.filters.attendance = readFilterInputs.call(this);
+            this.renderAttendanceTab({ force: true });
+        };
+
+        const applyPeriodPreset = (preset) => {
+            const today = this._getTodayLocalKey();
+            let dateFrom = '';
+            let dateTo = '';
+            if (preset === 'today') { dateFrom = today; dateTo = today; }
+            else if (preset === 'week') {
+                const d = new Date(); d.setDate(d.getDate() - 6);
+                dateFrom = this._attendanceDayKey(d); dateTo = today;
+            } else if (preset === 'month') {
+                const d = new Date(); d.setDate(d.getDate() - 29);
+                dateFrom = this._attendanceDayKey(d); dateTo = today;
+            }
+            this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, { period: preset, month: '', dateFrom, dateTo });
+            this.renderAttendanceTab({ force: true });
+        };
+
+        panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-month')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-from')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-to')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
+            this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+            this.renderAttendanceTab({ force: true });
+        });
+        panel.querySelector('#clinic-attendance-toggle-filters')?.addEventListener('click', () => {
+            this.state.attendanceFilterPanelOpen = !filterPanelOpen;
+            const fp = panel.querySelector('#clinic-attendance-filter-panel');
+            if (fp) fp.style.display = this.state.attendanceFilterPanelOpen ? 'block' : 'none';
+        });
+        panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
+        });
+        panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
+        panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
+        panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
+            Notification?.info?.('جاري التحديث...');
+            this._attendanceDataFetchedInSession = false;
+            await this.loadClinicAttendanceData(true);
+            this._attendanceDataFetchedInSession = true;
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم التحديث');
+        });
+
+        this.bindClinicStaffActivitiesEvents(panel);
+        this.bindClinicStaffLeaveBalanceEvents(panel);
+        this.bindAttendanceQuickNav(panel);
+        this.initAttendanceTableScroll(panel);
+        panel.querySelector('#clinic-attendance-new-request-btn')?.addEventListener('click', () => this.showTimeOffRequestModal());
+    },
+
+    renderAttendanceTab(options) {
+        const force = options && options.force === true;
+        if (!force && this._shouldDeferAttendanceRender()) {
+            this._attendanceRenderPending = true;
+            return;
+        }
+        this._attendanceRenderPending = false;
+
+        const panel = document.querySelector('.clinic-tab-panel[data-tab-panel="attendance"]');
+        if (!panel) return;
+
+        if (!this.canAccessAttendanceTab()) {
+            panel.innerHTML = `<div class="text-center py-12 text-gray-500">
                 <i class="fas fa-lock text-4xl mb-4 opacity-40"></i>
-                <p class="font-semibold">\u063A\u064A\u0631 \u0645\u0635\u0631\u062D</p>
-                <p class="text-sm mt-2">\u062A\u0628\u0648\u064A\u0628 \u0627\u0644\u062D\u0636\u0648\u0631 \u0645\u062A\u0627\u062D \u0644\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645 \u0623\u0648 \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629 \u0627\u0644\u0645\u0633\u062C\u0651\u0644\u064A\u0646 \u0648\u0627\u0644\u0646\u0634\u0637\u064A\u0646 \u0641\u0642\u0637.</p>
-            </div>`;return}this.isCurrentUserAdmin()&&this.prefetchClinicAttendanceForAdminIfNeeded(!1),this._scheduleAttendanceDataLoadIfNeeded(!1),this._scheduleLeaveBalancesLoadIfNeeded(!1);const i=this._isAttendanceDataLoading(),o=this._isLeaveBalancesLoading(),n=this._getLeaveBalancePeriodDefaults(),c=this.getClinicStaffLeaveBalancesList();if(!this.canViewAllAttendanceData())return this.renderAttendanceSelfTab(t);this.ensureData(),this.state.filters=this.state.filters||{},this.state.filters.attendance=Object.assign({search:"",staffRole:"all",status:"all",staffId:"all",month:"",dateFrom:"",dateTo:"",period:"all"},this.state.filters.attendance||{});const s=this.state.filters.attendance,r=this.getFilteredClinicAttendance(),g=this.getClinicStaffList(),d=this._getAttendanceStaffOptions(),m=g.filter(l=>String(l.isActive||"true").toLowerCase()!=="false"),x=this._getTodayLocalKey(),b=this.getClinicStaffAttendanceList(),f=b.filter(l=>this._attendanceDayKey(l.date)===x),u=f.filter(l=>l.checkIn).length,y=f.filter(l=>l.checkIn&&!l.checkOut).length,v=this.isCurrentUserAdmin(),A=this.getFilteredClinicStaffActivities(),w=!!this._clinicStaffActivitiesLoading,R=this._countActiveAttendanceFilters(s),D=this.state.attendanceFilterPanelOpen!==!1,U=s.period||"all",p={today:"\u0627\u0644\u064A\u0648\u0645",week:"7 \u0623\u064A\u0627\u0645",month:"30 \u064A\u0648\u0645",all:"\u0627\u0644\u0643\u0644"},S=d.map(l=>`<option value="${Utils.escapeAttr(l.id)}" ${String(s.staffId)===String(l.id)?"selected":""}>${Utils.escapeHTML(l.name)}</option>`).join(""),T=i&&r.length===0?this._renderAttendanceTableLoadingRow(10):r.length?r.map(l=>`
+                <p class="font-semibold">غير مصرح</p>
+                <p class="text-sm mt-2">تبويب الحضور متاح لمدير النظام أو مسئولي العيادة المسجّلين والنشطين فقط.</p>
+            </div>`;
+            return;
+        }
+
+        // ✅ بنية فورية + جلب البيانات بالخلفية (لا انتظار الشبكة قبل عرض الواجهة)
+        if (this.isCurrentUserAdmin()) {
+            void this.prefetchClinicAttendanceForAdminIfNeeded(false);
+        }
+        this._scheduleAttendanceDataLoadIfNeeded(false);
+        this._scheduleLeaveBalancesLoadIfNeeded(false);
+        const dataLoading = this._isAttendanceDataLoading();
+        const balancesLoading = this._isLeaveBalancesLoading();
+        const balancePeriods = this._getLeaveBalancePeriodDefaults();
+        const leaveBalances = this.getClinicStaffLeaveBalancesList();
+
+        if (!this.canViewAllAttendanceData()) {
+            return this.renderAttendanceSelfTab(panel);
+        }
+
+        this.ensureData();
+        this.state.filters = this.state.filters || {};
+        this.state.filters.attendance = Object.assign(
+            { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' },
+            this.state.filters.attendance || {}
+        );
+        const filters = this.state.filters.attendance;
+        const rows = this.getFilteredClinicAttendance();
+        const staffList = this.getClinicStaffList();
+        const staffFilterOptions = this._getAttendanceStaffOptions();
+        const activeStaff = staffList.filter(s => String(s.isActive || 'true').toLowerCase() !== 'false');
+        const todayKey = this._getTodayLocalKey();
+        const allAttendance = this.getClinicStaffAttendanceList();
+        const todayRows = allAttendance.filter(r => this._attendanceDayKey(r.date) === todayKey);
+        const presentToday = todayRows.filter(r => r.checkIn).length;
+        const openSessions = todayRows.filter(r => r.checkIn && !r.checkOut).length;
+        const isAdmin = this.isCurrentUserAdmin();
+        const activityList = this.getFilteredClinicStaffActivities();
+        const activitiesLoading = !!this._clinicStaffActivitiesLoading;
+        const activeFilterCount = this._countActiveAttendanceFilters(filters);
+        const filterPanelOpen = this.state.attendanceFilterPanelOpen !== false;
+        const period = filters.period || 'all';
+        const periodLabels = { today: 'اليوم', week: '7 أيام', month: '30 يوم', all: 'الكل' };
+        const staffFilterOpts = staffFilterOptions.map(s =>
+            `<option value="${Utils.escapeAttr(s.id)}" ${String(filters.staffId) === String(s.id) ? 'selected' : ''}>${Utils.escapeHTML(s.name)}</option>`
+        ).join('');
+
+        const tableRows = dataLoading && rows.length === 0
+            ? this._renderAttendanceTableLoadingRow(10)
+            : (rows.length ? rows.map(r => `
             <tr>
-                <td>${Utils.escapeHTML(l.userName||"\u2014")}</td>
-                <td>${Utils.escapeHTML(l.userEmail||"\u2014")}</td>
-                <td>${Utils.escapeHTML(this.getStaffRoleLabel(l.staffRole))}</td>
-                <td>${Utils.escapeHTML(l.date||"\u2014")}</td>
-                <td>${l.checkIn?Utils.formatDateTime?Utils.formatDateTime(l.checkIn):Utils.escapeHTML(String(l.checkIn)):"\u2014"}</td>
-                <td>${l.checkOut?Utils.formatDateTime?Utils.formatDateTime(l.checkOut):Utils.escapeHTML(String(l.checkOut)):"\u2014"}</td>
-                <td>${Utils.escapeHTML(String(l.workDuration||"\u2014"))}</td>
-                <td><span class="badge ${this.getAttendanceStatusBadgeClass(l.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(l.status))}</span></td>
-                <td class="text-xs text-gray-500">${Utils.escapeHTML(String(l.sessionId||"\u2014").slice(0,18))}</td>
-                <td>${this._renderAttendancePunchActions(l)}</td>
+                <td>${Utils.escapeHTML(r.userName || '—')}</td>
+                <td>${Utils.escapeHTML(r.userEmail || '—')}</td>
+                <td>${Utils.escapeHTML(this.getStaffRoleLabel(r.staffRole))}</td>
+                <td>${Utils.escapeHTML(r.date || '—')}</td>
+                <td>${r.checkIn ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkIn) : Utils.escapeHTML(String(r.checkIn))) : '—'}</td>
+                <td>${r.checkOut ? (Utils.formatDateTime ? Utils.formatDateTime(r.checkOut) : Utils.escapeHTML(String(r.checkOut))) : '—'}</td>
+                <td>${Utils.escapeHTML(String(r.workDuration || '—'))}</td>
+                <td><span class="badge ${this.getAttendanceStatusBadgeClass(r.status)}">${Utils.escapeHTML(this.getAttendanceStatusLabel(r.status))}</span></td>
+                <td class="text-xs text-gray-500">${Utils.escapeHTML(String(r.sessionId || '—').slice(0, 18))}</td>
+                <td>${this._renderAttendancePunchActions(r)}</td>
             </tr>
-        `).join(""):'<tr><td colspan="10" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0641\u0644\u0627\u062A\u0631</td></tr>',$=v?g.length?g.map(l=>{const h=String(l.isActive||"true").toLowerCase()!=="false";return`<tr>
-                <td>${Utils.escapeHTML(l.userName||"\u2014")}</td>
-                <td>${Utils.escapeHTML(this.getStaffRoleLabel(l.staffRole))}</td>
-                <td>${h?'<span class="badge badge-success">\u0646\u0634\u0637</span>':'<span class="badge badge-secondary">\u0645\u0648\u0642\u0648\u0641</span>'}</td>
+        `).join('') : `<tr><td colspan="10" class="text-center text-gray-500 py-8"><i class="fas fa-calendar-times ml-2 opacity-60"></i>لا توجد سجلات مطابقة للفلاتر</td></tr>`);
+
+        const staffAdminRows = isAdmin ? (staffList.length ? staffList.map(s => {
+            const active = String(s.isActive || 'true').toLowerCase() !== 'false';
+            return `<tr>
+                <td>${Utils.escapeHTML(s.userName || '—')}</td>
+                <td>${Utils.escapeHTML(this.getStaffRoleLabel(s.staffRole))}</td>
+                <td>${active ? '<span class="badge badge-success">نشط</span>' : '<span class="badge badge-secondary">موقوف</span>'}</td>
                 <td>
-                    <button type="button" class="btn-icon btn-icon-warning" title="${h?"\u0625\u064A\u0642\u0627\u0641":"\u062A\u0641\u0639\u064A\u0644"}" onclick="Clinic.toggleClinicStaffActive('${Utils.escapeAttr(l.id)}', ${!h})"><i class="fas fa-${h?"pause":"play"}"></i></button>
-                    <button type="button" class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641" onclick="Clinic.deleteClinicStaffMember('${Utils.escapeAttr(l.id)}')"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn-icon btn-icon-warning" title="${active ? 'إيقاف' : 'تفعيل'}" onclick="Clinic.toggleClinicStaffActive('${Utils.escapeAttr(s.id)}', ${!active})"><i class="fas fa-${active ? 'pause' : 'play'}"></i></button>
+                    <button type="button" class="btn-icon btn-icon-danger" title="حذف" onclick="Clinic.deleteClinicStaffMember('${Utils.escapeAttr(s.id)}')"><i class="fas fa-trash"></i></button>
                 </td>
-            </tr>`}).join(""):'<tr><td colspan="4" class="text-center text-gray-500 py-4">\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u0633\u0626\u0648\u0644\u0648\u0646 \u2014 \u0623\u0636\u0641 \u0645\u0646 \u0627\u0644\u0642\u0627\u0626\u0645\u0629</td></tr>':"",L=[{id:"clinic-attendance-section-records",label:"\u0633\u062C\u0644 \u0627\u0644\u062D\u0636\u0648\u0631",icon:"fa-clipboard-user"},{id:"clinic-staff-activities-section",label:"\u0646\u0634\u0627\u0637 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",icon:"fa-history"},{id:"clinic-leave-balances-section",label:"\u0623\u0631\u0635\u062F\u0629 \u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A",icon:"fa-wallet"},{id:"clinic-approved-timeoff-section",label:"\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629",icon:"fa-check-circle"}];v&&L.push({id:"clinic-attendance-section-staff",label:"\u0645\u0633\u0626\u0648\u0644\u0648 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",icon:"fa-users"}),t.innerHTML=`
+            </tr>`;
+        }).join('') : `<tr><td colspan="4" class="text-center text-gray-500 py-4">لا يوجد مسئولون — أضف من القائمة</td></tr>`) : '';
+
+        const adminNavSections = [
+            { id: 'clinic-attendance-section-records', label: 'سجل الحضور', icon: 'fa-clipboard-user' },
+            { id: 'clinic-staff-activities-section', label: 'نشاط المستخدمين', icon: 'fa-history' },
+            { id: 'clinic-leave-balances-section', label: 'أرصدة الإجازات', icon: 'fa-wallet' },
+            { id: 'clinic-approved-timeoff-section', label: 'الإجازات المعتمدة', icon: 'fa-check-circle' }
+        ];
+        if (isAdmin) {
+            adminNavSections.push({ id: 'clinic-attendance-section-staff', label: 'مسئولو العيادة', icon: 'fa-users' });
+        }
+
+        panel.innerHTML = `
             <div id="clinic-attendance-root" style="font-family:inherit;">
-                ${this.renderAttendanceQuickNav(L)}
+                ${this.renderAttendanceQuickNav(adminNavSections)}
                 <!-- KPI -->
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:14px;">
-                    ${[{label:"\u062D\u0627\u0636\u0631\u0648\u0646 \u0627\u0644\u064A\u0648\u0645",value:u,icon:"fa-user-check",color:"#059669",bg:"#ecfdf5"},{label:"\u0628\u062F\u0648\u0646 \u062A\u0633\u062C\u064A\u0644 \u062E\u0631\u0648\u062C",value:y,icon:"fa-door-open",color:"#d97706",bg:"#fffbeb"},{label:"\u0646\u062A\u0627\u0626\u062C \u0627\u0644\u0641\u0644\u062A\u0631",value:r.length,icon:"fa-filter",color:"#2563eb",bg:"#eff6ff"},{label:"\u0645\u0633\u0626\u0648\u0644\u0648\u0646 \u0646\u0634\u0637\u0648\u0646",value:m.length,icon:"fa-users",color:"#4f46e5",bg:"#eef2ff"}].map(l=>`
-                        <div style="background:${l.bg};border:1px solid rgba(0,0,0,0.04);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
+                    ${[
+                        { label: 'حاضرون اليوم', value: presentToday, icon: 'fa-user-check', color: '#059669', bg: '#ecfdf5' },
+                        { label: 'بدون تسجيل خروج', value: openSessions, icon: 'fa-door-open', color: '#d97706', bg: '#fffbeb' },
+                        { label: 'نتائج الفلتر', value: rows.length, icon: 'fa-filter', color: '#2563eb', bg: '#eff6ff' },
+                        { label: 'مسئولون نشطون', value: activeStaff.length, icon: 'fa-users', color: '#4f46e5', bg: '#eef2ff' }
+                    ].map(k => `
+                        <div style="background:${k.bg};border:1px solid rgba(0,0,0,0.04);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;">
                             <div style="width:40px;height:40px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.06);">
-                                <i class="fas ${l.icon}" style="color:${l.color};font-size:1rem;"></i>
+                                <i class="fas ${k.icon}" style="color:${k.color};font-size:1rem;"></i>
                             </div>
                             <div>
-                                <p style="margin:0;font-size:0.72rem;color:#64748b;font-weight:600;">${l.label}</p>
-                                <p style="margin:2px 0 0;font-size:1.45rem;font-weight:800;color:${l.color};line-height:1.1;">${l.value}</p>
+                                <p style="margin:0;font-size:0.72rem;color:#64748b;font-weight:600;">${k.label}</p>
+                                <p style="margin:2px 0 0;font-size:1.45rem;font-weight:800;color:${k.color};line-height:1.1;">${k.value}</p>
                             </div>
                         </div>
-                    `).join("")}
+                    `).join('')}
                 </div>
 
-                <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0623\u062F\u0648\u0627\u062A -->
+                <!-- شريط الأدوات -->
                 <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;padding:14px 18px;background:linear-gradient(125deg,#0b2a55 0%,#1e3a75 70%,#245a9b 100%);border-radius:14px;color:#fff;box-shadow:0 10px 28px rgba(11,42,85,.25);">
                     <div style="display:flex;align-items:center;gap:10px;min-width:0;">
                         <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
@@ -500,126 +2119,278 @@ const ClinicAttendanceMixin={_scheduleAttendanceDataLoadIfNeeded(a){if(this._att
                                 <i class="fas fa-clipboard-user" style="font-size:18px;"></i>
                             </div>
                             <div>
-                                <h3 style="margin:0;font-size:1rem;font-weight:700;">\u0633\u062C\u0644 \u062D\u0636\u0648\u0631 \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629</h3>
-                                <p style="margin:0;font-size:0.72rem;opacity:0.88;">\u062A\u0633\u062C\u064A\u0644 \u062A\u0644\u0642\u0627\u0626\u064A \u0639\u0646\u062F \u0627\u0644\u062F\u062E\u0648\u0644 \u0648\u0627\u0644\u062E\u0631\u0648\u062C \u2022 ${i&&r.length===0?"\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...":`${b.length} \u0633\u062C\u0644 \u0625\u062C\u0645\u0627\u0644\u064A`}</p>
+                                <h3 style="margin:0;font-size:1rem;font-weight:700;">سجل حضور مسئولي العيادة</h3>
+                                <p style="margin:0;font-size:0.72rem;opacity:0.88;">تسجيل تلقائي عند الدخول والخروج • ${dataLoading && rows.length === 0 ? 'جاري تحميل البيانات...' : `${allAttendance.length} سجل إجمالي`}</p>
                             </div>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;">
-                        ${v?`
+                        ${isAdmin ? `
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:nowrap;flex-shrink:0;padding:6px 8px;background:rgba(0,0,0,0.18);border-radius:10px;border:1px solid rgba(255,255,255,0.2);">
-                            <span style="font-size:0.68rem;font-weight:700;opacity:0.85;margin-inline:4px;white-space:nowrap;">\u0625\u062F\u0627\u0631\u0629:</span>
-                            <button type="button" id="clinic-attendance-shift-rules-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fbbf24;color:#78350f;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;" title="\u0645\u0648\u0627\u0639\u064A\u062F \u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A \u0648\u0627\u0644\u0642\u0648\u0627\u0639\u062F"><i class="fas fa-clock"></i><span>\u0627\u0644\u0648\u0631\u062F\u064A\u0627\u062A</span></button>
-                            <button type="button" id="clinic-attendance-add-punch-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#0b2a55;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;" title="\u0625\u0636\u0627\u0641\u0629 \u0633\u062C\u0644 \u062D\u0636\u0648\u0631 \u0623\u0648 \u0628\u0635\u0645\u0629 \u0645\u0641\u0642\u0648\u062F\u0629"><i class="fas fa-fingerprint"></i><span>\u0628\u0635\u0645\u0629 \u0645\u0641\u0642\u0648\u062F\u0629</span></button>
-                            <button type="button" id="clinic-attendance-add-staff-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><i class="fas fa-user-plus"></i><span>\u0625\u0636\u0627\u0641\u0629 \u0645\u0633\u0626\u0648\u0644</span></button>
-                        </div>`:""}
-                        <span style="font-size:0.72rem;opacity:0.9;">\u0627\u0644\u0641\u062A\u0631\u0629:</span>
-                        ${["today","week","month","all"].map(l=>{const h=U===l;return`<button type="button" class="clinic-attendance-period-btn" data-period="${l}" style="padding:5px 11px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all .2s;background:${h?"#fff":"rgba(255,255,255,0.14)"};color:${h?"#0b2a55":"#fff"};">${p[l]}</button>`}).join("")}
+                            <span style="font-size:0.68rem;font-weight:700;opacity:0.85;margin-inline:4px;white-space:nowrap;">إدارة:</span>
+                            <button type="button" id="clinic-attendance-shift-rules-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fbbf24;color:#78350f;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;" title="مواعيد الورديات والقواعد"><i class="fas fa-clock"></i><span>الورديات</span></button>
+                            <button type="button" id="clinic-attendance-add-punch-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:#fff;color:#0b2a55;font-size:0.76rem;font-weight:800;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;" title="إضافة سجل حضور أو بصمة مفقودة"><i class="fas fa-fingerprint"></i><span>بصمة مفقودة</span></button>
+                            <button type="button" id="clinic-attendance-add-staff-btn" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;"><i class="fas fa-user-plus"></i><span>إضافة مسئول</span></button>
+                        </div>` : ''}
+                        <span style="font-size:0.72rem;opacity:0.9;">الفترة:</span>
+                        ${['today', 'week', 'month', 'all'].map(p => {
+                            const active = period === p;
+                            return `<button type="button" class="clinic-attendance-period-btn" data-period="${p}" style="padding:5px 11px;border-radius:8px;border:none;cursor:pointer;font-size:0.74rem;font-weight:600;transition:all .2s;background:${active ? '#fff' : 'rgba(255,255,255,0.14)'};color:${active ? '#0b2a55' : '#fff'};">${periodLabels[p]}</button>`;
+                        }).join('')}
                         <button type="button" id="clinic-attendance-toggle-filters" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.35);cursor:pointer;background:rgba(255,255,255,0.12);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;">
-                            <i class="fas fa-sliders-h"></i><span>\u0641\u0644\u0627\u062A\u0631</span>
-                            ${R?`<span style="background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 6px;border-radius:10px;">${R}</span>`:""}
+                            <i class="fas fa-sliders-h"></i><span>فلاتر</span>
+                            ${activeFilterCount ? `<span style="background:#fbbf24;color:#78350f;font-size:0.65rem;padding:1px 6px;border-radius:10px;">${activeFilterCount}</span>` : ''}
                         </button>
-                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="\u062A\u062D\u062F\u064A\u062B \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645"><i class="fas fa-sync-alt${i?" fa-spin":""}"></i></button>
-                        <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631"><i class="fas fa-file-export"></i><span>\u062A\u0642\u0631\u064A\u0631</span></button>
-                        <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF \u0644\u0644\u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u064A"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
-                        <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel \u0644\u0644\u0641\u0644\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u064A"><i class="fas fa-file-excel"></i><span>Excel</span></button>
+                        <button type="button" id="clinic-attendance-refresh-btn" style="padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.14);color:#fff;font-size:0.76rem;" title="تحديث من الخادم"><i class="fas fa-sync-alt${dataLoading ? ' fa-spin' : ''}"></i></button>
+                        <button type="button" id="clinic-attendance-report-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.92);color:#0b2a55;font-size:0.76rem;font-weight:700;display:flex;align-items:center;gap:5px;" title="تصدير تقرير"><i class="fas fa-file-export"></i><span>تقرير</span></button>
+                        <button type="button" id="clinic-attendance-pdf-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="PDF للفلتر الحالي"><i class="fas fa-file-pdf"></i><span>PDF</span></button>
+                        <button type="button" id="clinic-attendance-export-btn" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.22);color:#fff;font-size:0.76rem;font-weight:600;display:flex;align-items:center;gap:5px;" title="Excel للفلتر الحالي"><i class="fas fa-file-excel"></i><span>Excel</span></button>
                     </div>
                 </div>
 
-                <!-- \u0644\u0648\u062D\u0629 \u0627\u0644\u0641\u0644\u0627\u062A\u0631 -->
-                <div id="clinic-attendance-filter-panel" style="display:${D?"block":"none"};margin-bottom:14px;">
-                    <div id="clinic-attendance-filter-grid" class="registry-filter-grid" role="search" aria-label="\u0641\u0644\u0627\u062A\u0631 \u0633\u062C\u0644 \u062D\u0636\u0648\u0631 \u0627\u0644\u0639\u064A\u0627\u062F\u0629">
+                <!-- لوحة الفلاتر -->
+                <div id="clinic-attendance-filter-panel" style="display:${filterPanelOpen ? 'block' : 'none'};margin-bottom:14px;">
+                    <div id="clinic-attendance-filter-grid" class="registry-filter-grid" role="search" aria-label="فلاتر سجل حضور العيادة">
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-search"><i class="fas fa-search"></i>\u0628\u062D\u062B</label>
-                            <input type="search" id="clinic-attendance-search" class="form-input" placeholder="\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u0626\u0648\u0644 \u0623\u0648 \u0627\u0644\u0628\u0631\u064A\u062F..." value="${Utils.escapeAttr(s.search||"")}" autocomplete="off">
+                            <label for="clinic-attendance-search"><i class="fas fa-search"></i>بحث</label>
+                            <input type="search" id="clinic-attendance-search" class="form-input" placeholder="اسم المسئول أو البريد..." value="${Utils.escapeAttr(filters.search || '')}" autocomplete="off">
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>\u0627\u0644\u0634\u0647\u0631</label>
-                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(s.month||"")}">
+                            <label for="clinic-attendance-month"><i class="fas fa-calendar-alt"></i>الشهر</label>
+                            <input type="month" id="clinic-attendance-month" class="form-input" value="${Utils.escapeAttr(filters.month || '')}">
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-staff"><i class="fas fa-user"></i>\u0627\u0644\u0645\u0633\u0626\u0648\u0644</label>
+                            <label for="clinic-attendance-staff"><i class="fas fa-user"></i>المسئول</label>
                             <select id="clinic-attendance-staff" class="form-input">
-                                <option value="all" ${!s.staffId||s.staffId==="all"?"selected":""}>\u0643\u0644 \u0627\u0644\u0645\u0633\u0626\u0648\u0644\u064A\u0646</option>
-                                ${S}
+                                <option value="all" ${!filters.staffId || filters.staffId === 'all' ? 'selected' : ''}>كل المسئولين</option>
+                                ${staffFilterOpts}
                             </select>
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-role"><i class="fas fa-user-tag"></i>\u0627\u0644\u062F\u0648\u0631</label>
+                            <label for="clinic-attendance-role"><i class="fas fa-user-tag"></i>الدور</label>
                             <select id="clinic-attendance-role" class="form-input">
-                                <option value="all" ${s.staffRole==="all"||!s.staffRole?"selected":""}>\u0643\u0644 \u0627\u0644\u0623\u062F\u0648\u0627\u0631</option>
-                                <option value="doctor" ${s.staffRole==="doctor"?"selected":""}>\u0637\u0628\u064A\u0628</option>
-                                <option value="nurse" ${s.staffRole==="nurse"?"selected":""}>\u062A\u0645\u0631\u064A\u0636</option>
-                                <option value="clinic_officer" ${s.staffRole==="clinic_officer"?"selected":""}>\u0645\u0633\u0626\u0648\u0644 \u0639\u064A\u0627\u062F\u0629</option>
+                                <option value="all" ${filters.staffRole === 'all' || !filters.staffRole ? 'selected' : ''}>كل الأدوار</option>
+                                <option value="doctor" ${filters.staffRole === 'doctor' ? 'selected' : ''}>طبيب</option>
+                                <option value="nurse" ${filters.staffRole === 'nurse' ? 'selected' : ''}>تمريض</option>
+                                <option value="clinic_officer" ${filters.staffRole === 'clinic_officer' ? 'selected' : ''}>مسئول عيادة</option>
                             </select>
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                            <label for="clinic-attendance-status"><i class="fas fa-circle-check"></i>الحالة</label>
                             <select id="clinic-attendance-status" class="form-input">
-                                <option value="all" ${s.status==="all"||!s.status?"selected":""}>\u0643\u0644 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
-                                <option value="present" ${s.status==="present"?"selected":""}>\u062D\u0627\u0636\u0631</option>
-                                <option value="partial" ${s.status==="partial"?"selected":""}>\u062E\u0631\u0648\u062C \u062C\u0632\u0626\u064A</option>
-                                <option value="absent" ${s.status==="absent"?"selected":""}>\u063A\u0627\u0626\u0628</option>
+                                <option value="all" ${filters.status === 'all' || !filters.status ? 'selected' : ''}>كل الحالات</option>
+                                <option value="present" ${filters.status === 'present' ? 'selected' : ''}>حاضر</option>
+                                <option value="partial" ${filters.status === 'partial' ? 'selected' : ''}>خروج جزئي</option>
+                                <option value="absent" ${filters.status === 'absent' ? 'selected' : ''}>غائب</option>
                             </select>
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>\u0645\u0646 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0636\u0648\u0631</label>
-                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(s.dateFrom||"")}">
+                            <label for="clinic-attendance-from"><i class="fas fa-calendar-day"></i>من تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-from" class="form-input" value="${Utils.escapeAttr(filters.dateFrom || '')}">
                         </div>
                         <div class="registry-filter-field">
-                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062D\u0636\u0648\u0631</label>
-                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(s.dateTo||"")}">
+                            <label for="clinic-attendance-to"><i class="fas fa-calendar-check"></i>إلى تاريخ الحضور</label>
+                            <input type="date" id="clinic-attendance-to" class="form-input" value="${Utils.escapeAttr(filters.dateTo || '')}">
                         </div>
                         <div class="registry-filter-field tx-reg-filter-actions">
-                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>\u0625\u0639\u0627\u062F\u0629 \u062A\u0639\u064A\u064A\u0646 \u0627\u0644\u0641\u0644\u0627\u062A\u0631</button>
+                            <button type="button" id="clinic-attendance-reset-filters" class="registry-filter-reset-btn"><i class="fas fa-rotate-left"></i>إعادة تعيين الفلاتر</button>
                         </div>
                     </div>
-                    ${R?`
+                    ${activeFilterCount ? `
                     <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #bfdbfe;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
-                        <span style="font-size:0.72rem;color:#64748b;font-weight:600;">\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u0645\u0637\u0628\u0651\u0642\u0629:</span>
-                        ${s.search?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">\u0628\u062D\u062B: ${Utils.escapeHTML(String(s.search).slice(0,24))}</span>`:""}
-                        ${s.staffRole&&s.staffRole!=="all"?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getStaffRoleLabel(s.staffRole))}</span>`:""}
-                        ${s.staffId&&s.staffId!=="all"?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML((d.find(l=>String(l.id)===String(s.staffId))||{}).name||s.staffId)}</span>`:""}
-                        ${s.month?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">\u0634\u0647\u0631 ${Utils.escapeHTML(s.month)}</span>`:""}
-                        ${s.status&&s.status!=="all"?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getAttendanceStatusLabel(s.status))}</span>`:""}
-                        ${s.dateFrom?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">\u0645\u0646 ${Utils.escapeHTML(s.dateFrom)}</span>`:""}
-                        ${s.dateTo?`<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">\u0625\u0644\u0649 ${Utils.escapeHTML(s.dateTo)}</span>`:""}
-                    </div>`:""}
+                        <span style="font-size:0.72rem;color:#64748b;font-weight:600;">الفلاتر المطبّقة:</span>
+                        ${filters.search ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">بحث: ${Utils.escapeHTML(String(filters.search).slice(0, 24))}</span>` : ''}
+                        ${filters.staffRole && filters.staffRole !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getStaffRoleLabel(filters.staffRole))}</span>` : ''}
+                        ${filters.staffId && filters.staffId !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML((staffFilterOptions.find(s => String(s.id) === String(filters.staffId)) || {}).name || filters.staffId)}</span>` : ''}
+                        ${filters.month ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">شهر ${Utils.escapeHTML(filters.month)}</span>` : ''}
+                        ${filters.status && filters.status !== 'all' ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">${Utils.escapeHTML(this.getAttendanceStatusLabel(filters.status))}</span>` : ''}
+                        ${filters.dateFrom ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">من ${Utils.escapeHTML(filters.dateFrom)}</span>` : ''}
+                        ${filters.dateTo ? `<span style="background:#fff;border:1px solid #bfdbfe;color:#1e40af;padding:3px 8px;border-radius:999px;font-size:0.72rem;">إلى ${Utils.escapeHTML(filters.dateTo)}</span>` : ''}
+                    </div>` : ''}
                 </div>
 
                 <p style="font-size:0.78rem;color:#64748b;margin:0 0 10px;display:flex;align-items:center;gap:6px;">
                     <i class="fas fa-info-circle" style="color:#2563eb;"></i>
-                    \u064A\u064F\u0633\u062C\u0651\u064E\u0644 \u0627\u0644\u062D\u0636\u0648\u0631 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0639\u0646\u062F \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644/\u0627\u0644\u062E\u0631\u0648\u062C. \u064A\u0645\u0643\u0646 \u0625\u0636\u0627\u0641\u0629 \u0628\u0635\u0645\u0629 \u062F\u062E\u0648\u0644 \u0623\u0648 \u062E\u0631\u0648\u062C \u0645\u0641\u0642\u0648\u062F\u0629 \u0645\u0646 \u0639\u0645\u0648\u062F \u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A.
+                    يُسجَّل الحضور تلقائياً عند تسجيل الدخول/الخروج. يمكن إضافة بصمة دخول أو خروج مفقودة من عمود الإجراءات.
                 </p>
 
                 <div class="content-card" id="clinic-attendance-section-records" style="margin:0;">
                     <div class="card-body" style="padding:0;">
                         ${this._clinicAttendanceScrollTable(`<table class="data-table table-header-green">
                             <thead><tr>
-                                <th>\u0627\u0644\u0627\u0633\u0645</th><th>\u0627\u0644\u0628\u0631\u064A\u062F</th><th>\u0627\u0644\u062F\u0648\u0631</th><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
-                                <th>\u0648\u0642\u062A \u0627\u0644\u062F\u062E\u0648\u0644</th><th>\u0648\u0642\u062A \u0627\u0644\u062E\u0631\u0648\u062C</th><th>\u0645\u062F\u0629 (\u0633)</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><th>\u0627\u0644\u062C\u0644\u0633\u0629</th><th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                                <th>الاسم</th><th>البريد</th><th>الدور</th><th>التاريخ</th>
+                                <th>وقت الدخول</th><th>وقت الخروج</th><th>مدة (س)</th><th>الحالة</th><th>الجلسة</th><th>إجراءات</th>
                             </tr></thead>
-                            <tbody>${T}</tbody>
-                        </table>`,"48vh")}
+                            <tbody>${tableRows}</tbody>
+                        </table>`, '48vh')}
                     </div>
                 </div>
 
-                ${this.renderClinicStaffActivitiesSection({showUserColumn:!0,activities:A,loading:w,title:"\u0646\u0634\u0627\u0637 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646 \u062F\u0627\u062E\u0644 \u0627\u0644\u0646\u0638\u0627\u0645"})}
+                ${this.renderClinicStaffActivitiesSection({
+                    showUserColumn: true,
+                    activities: activityList,
+                    loading: activitiesLoading,
+                    title: 'نشاط المستخدمين داخل النظام'
+                })}
 
-                ${this.renderClinicStaffLeaveBalancesSection({balances:c,loading:o,month:n.month,year:n.year})}
+                ${this.renderClinicStaffLeaveBalancesSection({
+                    balances: leaveBalances,
+                    loading: balancesLoading,
+                    month: balancePeriods.month,
+                    year: balancePeriods.year
+                })}
 
-                ${this.renderApprovedTimeOffRequestsSection(c,n.month)}
+                ${this.renderApprovedTimeOffRequestsSection(leaveBalances, balancePeriods.month)}
 
-                ${v?`
+                ${isAdmin ? `
                 <div class="content-card mt-4" id="clinic-attendance-section-staff">
                     <div class="card-header" style="padding:14px 18px;border-bottom:1px solid #f1f5f9;">
-                        <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#0b2a55;"><i class="fas fa-users ml-2" style="color:#2563eb;"></i>\u0642\u0627\u0626\u0645\u0629 \u0645\u0633\u0626\u0648\u0644\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629</h4>
+                        <h4 style="margin:0;font-size:0.95rem;font-weight:700;color:#0b2a55;"><i class="fas fa-users ml-2" style="color:#2563eb;"></i>قائمة مسئولي العيادة</h4>
                     </div>
                     <div class="card-body" style="padding:0;">
                         ${this._clinicAttendanceScrollTable(`<table class="data-table">
-                            <thead><tr><th>\u0627\u0644\u0627\u0633\u0645</th><th>\u0627\u0644\u062F\u0648\u0631</th><th>\u0627\u0644\u062D\u0627\u0644\u0629</th><th>\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th></tr></thead>
-                            <tbody>${$}</tbody>
+                            <thead><tr><th>الاسم</th><th>الدور</th><th>الحالة</th><th>إجراءات</th></tr></thead>
+                            <tbody>${staffAdminRows}</tbody>
                         </table>`)}
                     </div>
-                </div>`:""}
-            </div>`;const F=()=>{const l=document.getElementById("clinic-attendance-month")?.value||"";let h=document.getElementById("clinic-attendance-from")?.value||"",_=document.getElementById("clinic-attendance-to")?.value||"";if(l&&!h&&!_){const k=this._getAttendanceMonthRange(l);h=k.dateFrom,_=k.dateTo}else{const k=this._normalizeAttendanceDateRange(h,_);h=k.dateFrom,_=k.dateTo}return{search:document.getElementById("clinic-attendance-search")?.value||"",staffRole:document.getElementById("clinic-attendance-role")?.value||"all",status:document.getElementById("clinic-attendance-status")?.value||"all",staffId:document.getElementById("clinic-attendance-staff")?.value||"all",month:l,dateFrom:h,dateTo:_,period:this.state.filters.attendance?.period||"all"}},I=()=>{this.state.filters.attendance=F.call(this),this.renderAttendanceTab({force:!0})},M=l=>{const h=this._getTodayLocalKey();let _="",k="";if(l==="today")_=h,k=h;else if(l==="week"){const E=new Date;E.setDate(E.getDate()-6),_=this._attendanceDayKey(E),k=h}else if(l==="month"){const E=new Date;E.setDate(E.getDate()-29),_=this._attendanceDayKey(E),k=h}this.state.filters.attendance=Object.assign({},this.state.filters.attendance||{},{period:l,month:"",dateFrom:_,dateTo:k}),this.renderAttendanceTab({force:!0})},C=t.querySelector("#clinic-attendance-search");if(C?.addEventListener("input",l=>{this._attendanceSearchFocused=!0,this._attendanceSearchCursor=l.target.selectionStart,clearTimeout(this._attendanceSearchTimer),this._attendanceSearchTimer=setTimeout(I,280)}),C?.addEventListener("focus",()=>{this._attendanceSearchFocused=!0}),C?.addEventListener("blur",()=>{this._attendanceSearchFocused=!1}),t.querySelector("#clinic-attendance-role")?.addEventListener("change",I),t.querySelector("#clinic-attendance-status")?.addEventListener("change",I),t.querySelector("#clinic-attendance-staff")?.addEventListener("change",I),t.querySelector("#clinic-attendance-month")?.addEventListener("change",()=>{const l=document.getElementById("clinic-attendance-month")?.value||"",h=l?this._getAttendanceMonthRange(l):{dateFrom:"",dateTo:""};this.state.filters.attendance=Object.assign({},F.call(this),{month:l,dateFrom:h.dateFrom,dateTo:h.dateTo,period:"monthPick"}),I()}),t.querySelector("#clinic-attendance-from")?.addEventListener("change",()=>{this.state.filters.attendance=Object.assign({},F.call(this),{month:"",period:"custom"}),I()}),t.querySelector("#clinic-attendance-to")?.addEventListener("change",()=>{this.state.filters.attendance=Object.assign({},F.call(this),{month:"",period:"custom"}),I()}),t.querySelector("#clinic-attendance-reset-filters")?.addEventListener("click",()=>{this.state.filters.attendance={search:"",staffRole:"all",status:"all",staffId:"all",month:"",dateFrom:"",dateTo:"",period:"all"},this.renderAttendanceTab({force:!0})}),t.querySelector("#clinic-attendance-toggle-filters")?.addEventListener("click",()=>{this.state.attendanceFilterPanelOpen=!D;const l=t.querySelector("#clinic-attendance-filter-panel");l&&(l.style.display=this.state.attendanceFilterPanelOpen?"block":"none")}),t.querySelectorAll(".clinic-attendance-period-btn").forEach(l=>{l.addEventListener("click",()=>M(l.dataset.period||"all"))}),t.querySelector("#clinic-attendance-export-btn")?.addEventListener("click",()=>this.exportAttendanceToExcel()),t.querySelector("#clinic-attendance-pdf-btn")?.addEventListener("click",()=>this.exportAttendanceToPDF()),t.querySelector("#clinic-attendance-report-btn")?.addEventListener("click",()=>this.showAttendanceReportModal()),t.querySelector("#clinic-attendance-add-staff-btn")?.addEventListener("click",()=>this.showAddClinicStaffModal()),t.querySelector("#clinic-attendance-add-punch-btn")?.addEventListener("click",()=>this.showAddMissingAttendanceModal()),t.querySelector("#clinic-attendance-shift-rules-btn")?.addEventListener("click",()=>this.showClinicShiftSettingsModal()),t.querySelector("#clinic-attendance-refresh-btn")?.addEventListener("click",async()=>{Notification?.info?.("\u062C\u0627\u0631\u064A \u062A\u062D\u062F\u064A\u062B \u0633\u062C\u0644 \u0627\u0644\u062D\u0636\u0648\u0631..."),this._attendanceDataFetchedInSession=!1,await this.loadClinicAttendanceData(!0),this._attendanceDataFetchedInSession=!0,this.renderAttendanceTab({force:!0}),Notification?.success?.("\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062B")}),this.bindClinicStaffActivitiesEvents(t),this.bindClinicStaffLeaveBalanceEvents(t),this.bindAttendanceQuickNav(t),this.initAttendanceTableScroll(t),this._attendanceSearchFocused&&C){C.focus();const l=this._attendanceSearchCursor;if(l!=null&&typeof C.setSelectionRange=="function")try{C.setSelectionRange(l,l)}catch{}}}};typeof Clinic<"u"&&Object.assign(Clinic,ClinicAttendanceMixin);
+                </div>` : ''}
+            </div>`;
+
+        const readFilterInputs = () => {
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            let dateFrom = document.getElementById('clinic-attendance-from')?.value || '';
+            let dateTo = document.getElementById('clinic-attendance-to')?.value || '';
+            if (month && !dateFrom && !dateTo) {
+                const mr = this._getAttendanceMonthRange(month);
+                dateFrom = mr.dateFrom;
+                dateTo = mr.dateTo;
+            } else {
+                const range = this._normalizeAttendanceDateRange(dateFrom, dateTo);
+                dateFrom = range.dateFrom;
+                dateTo = range.dateTo;
+            }
+            return {
+                search: document.getElementById('clinic-attendance-search')?.value || '',
+                staffRole: document.getElementById('clinic-attendance-role')?.value || 'all',
+                status: document.getElementById('clinic-attendance-status')?.value || 'all',
+                staffId: document.getElementById('clinic-attendance-staff')?.value || 'all',
+                month,
+                dateFrom,
+                dateTo,
+                period: this.state.filters.attendance?.period || 'all'
+            };
+        };
+
+        const applyFilters = () => {
+            this.state.filters.attendance = readFilterInputs.call(this);
+            this.renderAttendanceTab({ force: true });
+        };
+
+        const applyPeriodPreset = (preset) => {
+            const today = this._getTodayLocalKey();
+            let dateFrom = '';
+            let dateTo = '';
+            if (preset === 'today') {
+                dateFrom = today;
+                dateTo = today;
+            } else if (preset === 'week') {
+                const d = new Date();
+                d.setDate(d.getDate() - 6);
+                dateFrom = this._attendanceDayKey(d);
+                dateTo = today;
+            } else if (preset === 'month') {
+                const d = new Date();
+                d.setDate(d.getDate() - 29);
+                dateFrom = this._attendanceDayKey(d);
+                dateTo = today;
+            }
+            this.state.filters.attendance = Object.assign({}, this.state.filters.attendance || {}, {
+                period: preset,
+                month: '',
+                dateFrom,
+                dateTo
+            });
+            this.renderAttendanceTab({ force: true });
+        };
+
+        const searchEl = panel.querySelector('#clinic-attendance-search');
+        searchEl?.addEventListener('input', (e) => {
+            this._attendanceSearchFocused = true;
+            this._attendanceSearchCursor = e.target.selectionStart;
+            clearTimeout(this._attendanceSearchTimer);
+            this._attendanceSearchTimer = setTimeout(applyFilters, 280);
+        });
+        searchEl?.addEventListener('focus', () => { this._attendanceSearchFocused = true; });
+        searchEl?.addEventListener('blur', () => { this._attendanceSearchFocused = false; });
+
+        panel.querySelector('#clinic-attendance-role')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-status')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-staff')?.addEventListener('change', applyFilters);
+        panel.querySelector('#clinic-attendance-month')?.addEventListener('change', () => {
+            const month = document.getElementById('clinic-attendance-month')?.value || '';
+            const mr = month ? this._getAttendanceMonthRange(month) : { dateFrom: '', dateTo: '' };
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), {
+                month,
+                dateFrom: mr.dateFrom,
+                dateTo: mr.dateTo,
+                period: 'monthPick'
+            });
+            applyFilters();
+        });
+        panel.querySelector('#clinic-attendance-from')?.addEventListener('change', () => {
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { month: '', period: 'custom' });
+            applyFilters();
+        });
+        panel.querySelector('#clinic-attendance-to')?.addEventListener('change', () => {
+            this.state.filters.attendance = Object.assign({}, readFilterInputs.call(this), { month: '', period: 'custom' });
+            applyFilters();
+        });
+
+        panel.querySelector('#clinic-attendance-reset-filters')?.addEventListener('click', () => {
+            this.state.filters.attendance = { search: '', staffRole: 'all', status: 'all', staffId: 'all', month: '', dateFrom: '', dateTo: '', period: 'all' };
+            this.renderAttendanceTab({ force: true });
+        });
+
+        panel.querySelector('#clinic-attendance-toggle-filters')?.addEventListener('click', () => {
+            this.state.attendanceFilterPanelOpen = !filterPanelOpen;
+            const fp = panel.querySelector('#clinic-attendance-filter-panel');
+            if (fp) fp.style.display = this.state.attendanceFilterPanelOpen ? 'block' : 'none';
+        });
+
+        panel.querySelectorAll('.clinic-attendance-period-btn').forEach(btn => {
+            btn.addEventListener('click', () => applyPeriodPreset(btn.dataset.period || 'all'));
+        });
+
+        panel.querySelector('#clinic-attendance-export-btn')?.addEventListener('click', () => this.exportAttendanceToExcel());
+        panel.querySelector('#clinic-attendance-pdf-btn')?.addEventListener('click', () => this.exportAttendanceToPDF());
+        panel.querySelector('#clinic-attendance-report-btn')?.addEventListener('click', () => this.showAttendanceReportModal());
+        panel.querySelector('#clinic-attendance-add-staff-btn')?.addEventListener('click', () => this.showAddClinicStaffModal());
+        panel.querySelector('#clinic-attendance-add-punch-btn')?.addEventListener('click', () => this.showAddMissingAttendanceModal());
+        panel.querySelector('#clinic-attendance-shift-rules-btn')?.addEventListener('click', () => this.showClinicShiftSettingsModal());
+        panel.querySelector('#clinic-attendance-refresh-btn')?.addEventListener('click', async () => {
+            Notification?.info?.('جاري تحديث سجل الحضور...');
+            this._attendanceDataFetchedInSession = false;
+            await this.loadClinicAttendanceData(true);
+            this._attendanceDataFetchedInSession = true;
+            this.renderAttendanceTab({ force: true });
+            Notification?.success?.('تم التحديث');
+        });
+
+        this.bindClinicStaffActivitiesEvents(panel);
+        this.bindClinicStaffLeaveBalanceEvents(panel);
+        this.bindAttendanceQuickNav(panel);
+        this.initAttendanceTableScroll(panel);
+
+        if (this._attendanceSearchFocused && searchEl) {
+            searchEl.focus();
+            const pos = this._attendanceSearchCursor;
+            if (pos != null && typeof searchEl.setSelectionRange === 'function') {
+                try { searchEl.setSelectionRange(pos, pos); } catch (_e) { /* ignore */ }
+            }
+        }
+    },
+};
+
+if (typeof Clinic !== 'undefined') {
+    Object.assign(Clinic, ClinicAttendanceMixin);
+}

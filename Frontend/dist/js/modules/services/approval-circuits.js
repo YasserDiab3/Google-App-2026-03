@@ -1,67 +1,329 @@
-const ApprovalCircuits={_ensureStore(){return AppState.companySettings||(AppState.companySettings={}),(!AppState.companySettings.approvalCircuits||typeof AppState.companySettings.approvalCircuits!="object")&&(AppState.companySettings.approvalCircuits={}),AppState.companySettings.approvalCircuits},_normalizeOwnerKey(e){return!e||e==="__default__"?"__default__":String(e)},getAll(){return this._ensureStore()},getCircuit(e){const a=this.getAll(),r=this._normalizeOwnerKey(e);return a[r]||null},getCircuitForUser(e){const a=this.getAll(),r=this._normalizeOwnerKey(e);return r!=="__default__"&&a[r]?a[r]:a.__default__||null},listOwners(){const e=this.getAll();return Object.keys(e)},createEmptyCircuit(e="__default__"){return{id:Utils.generateId("CIR"),ownerId:this._normalizeOwnerKey(e),name:e==="__default__"?"\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0627\u0644\u0639\u0627\u0645\u0629":"",steps:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}},saveCircuit(e){if(!e||!e.ownerId)return;const a=this.getAll(),r=this._normalizeOwnerKey(e.ownerId);a[r]=Object.assign({},e,{ownerId:r,updatedAt:new Date().toISOString()}),DataManager.saveCompanySettings(),DataManager.save()},deleteCircuit(e){const a=this.getAll(),r=this._normalizeOwnerKey(e);a[r]&&(delete a[r],DataManager.saveCompanySettings(),DataManager.save())},getUsersList(){return(Array.isArray(AppState.appData.users)?[...AppState.appData.users]:[]).sort((a,r)=>(a.name||"").localeCompare(r.name||"","ar",{sensitivity:"base"}))},getUserById(e){return e?(Array.isArray(AppState.appData.users)?AppState.appData.users:[]).find(r=>r&&(r.id===e||r.email===e)):null},toCandidate(e){return e?{id:e.id||e.email||"",name:e.name||e.fullName||e.displayName||e.email||"",email:e.email||"",role:e.role||""}:null},buildUserSnapshot(e){return e?{id:e.id||"",name:e.name||e.fullName||e.displayName||"",email:e.email||"",role:e.role||""}:null},_createApprovalFromStep(e,a=0,r="__default__"){const s=(Array.isArray(e?.userIds)?e.userIds.filter(Boolean):[]).map(n=>this.toCandidate(this.getUserById(n))).filter(Boolean),i=s.length===1?s[0]:null;return{role:e?.name||e?.role||"",required:e?.required!==!1,status:"pending",order:a,approverId:i?.id||"",approver:i?.name||"",approverEmail:i?.email||"",candidates:s,history:[],assignedAt:i?new Date().toISOString():"",assignedBy:null,isSafetyOfficer:e?.isSafetyOfficer===!0,circuitOwnerId:r}},enrichApprovals(e=[],a="__default__"){return e.map((r,t)=>this._attachMetadataToApproval(r,t,a))},_attachMetadataToApproval(e,a=0,r="__default__"){const t=Object.assign({},e);if(t.order=typeof t.order=="number"?t.order:a,t.status=t.status||(t.approved?"approved":t.rejected?"rejected":"pending"),t.required=t.required!==!1,t.circuitOwnerId=t.circuitOwnerId||r,Array.isArray(t.candidates)?t.candidates=t.candidates.map(s=>s?s.id&&s.name&&s.email!==void 0?s:this.toCandidate(this.getUserById(s.id||s)):null).filter(Boolean):t.candidates=[],t.approverId&&!t.approver){const s=this.getUserById(t.approverId);s&&(t.approver=s.name||"",t.approverEmail=s.email||"")}if(!t.approverId&&t.approverEmail){const s=t.candidates.find(i=>i.email&&i.email.toLowerCase()===t.approverEmail.toLowerCase());s&&(t.approverId=s.id)}return t.history=Array.isArray(t.history)?t.history:[],t.assignedAt=t.assignedAt||"",t.assignedBy=t.assignedBy||null,t},generateApprovalsForUser(e){const a=this.getCircuitForUser(e);return!a||!Array.isArray(a.steps)||a.steps.length===0?typeof PTW<"u"&&PTW.getDefaultApprovals?{approvals:this.enrichApprovals(PTW.getDefaultApprovals(),"__default__"),circuitOwnerId:"__default__",circuitName:"\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0627\u0644\u0639\u0627\u0645\u0629"}:{approvals:[],circuitOwnerId:"__default__",circuitName:"\u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A\u0629 \u0627\u0644\u0639\u0627\u0645\u0629"}:{approvals:[...a.steps].sort((s,i)=>(s.order||0)-(i.order||0)).map((s,i)=>this._attachMetadataToApproval(this._createApprovalFromStep(s,i,a.ownerId||"__default__"),i,a.ownerId||"__default__")),circuitOwnerId:a.ownerId||"__default__",circuitName:a.name||""}},buildHistoryEntry(e,a={}){return Object.assign({id:Utils.generateId("APRLOG"),action:e,timestamp:new Date().toISOString()},a)},renderManager(e="ptw"){try{const a=this.getAll(),r=this.listOwners(),t=this.getUsersList();return!r||r.length===0||r.length===1&&r[0]==="__default__"&&!a.__default__?`
+/**
+ * Approval Circuits Service
+ * Handles approval workflow circuits and user management
+ */
+
+const ApprovalCircuits = {
+    _ensureStore() {
+        if (!AppState.companySettings) {
+            AppState.companySettings = {};
+        }
+        if (!AppState.companySettings.approvalCircuits || typeof AppState.companySettings.approvalCircuits !== 'object') {
+            AppState.companySettings.approvalCircuits = {};
+        }
+        return AppState.companySettings.approvalCircuits;
+    },
+
+    _normalizeOwnerKey(ownerId) {
+        if (!ownerId || ownerId === '__default__') {
+            return '__default__';
+        }
+        return String(ownerId);
+    },
+
+    getAll() {
+        return this._ensureStore();
+    },
+
+    getCircuit(ownerId) {
+        const circuits = this.getAll();
+        const key = this._normalizeOwnerKey(ownerId);
+        return circuits[key] || null;
+    },
+
+    getCircuitForUser(userId) {
+        const circuits = this.getAll();
+        const key = this._normalizeOwnerKey(userId);
+        if (key !== '__default__' && circuits[key]) {
+            return circuits[key];
+        }
+        return circuits.__default__ || null;
+    },
+
+    listOwners() {
+        const circuits = this.getAll();
+        return Object.keys(circuits);
+    },
+
+    createEmptyCircuit(ownerId = '__default__') {
+        return {
+            id: Utils.generateId('CIR'),
+            ownerId: this._normalizeOwnerKey(ownerId),
+            name: ownerId === '__default__' ? 'الدائرة الافتراضية العامة' : '',
+            steps: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+    },
+
+    saveCircuit(circuit) {
+        if (!circuit || !circuit.ownerId) return;
+        const circuits = this.getAll();
+        const key = this._normalizeOwnerKey(circuit.ownerId);
+        circuits[key] = Object.assign({}, circuit, {
+            ownerId: key,
+            updatedAt: new Date().toISOString()
+        });
+        DataManager.saveCompanySettings();
+        DataManager.save();
+    },
+
+    deleteCircuit(ownerId) {
+        const circuits = this.getAll();
+        const key = this._normalizeOwnerKey(ownerId);
+        if (circuits[key]) {
+            delete circuits[key];
+            DataManager.saveCompanySettings();
+            DataManager.save();
+        }
+    },
+
+    getUsersList() {
+        const users = Array.isArray(AppState.appData.users) ? [...AppState.appData.users] : [];
+        return users.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar', { sensitivity: 'base' }));
+    },
+
+    getUserById(userId) {
+        if (!userId) return null;
+        const users = Array.isArray(AppState.appData.users) ? AppState.appData.users : [];
+        return users.find(user => user && (user.id === userId || user.email === userId));
+    },
+
+    toCandidate(user) {
+        if (!user) return null;
+        return {
+            id: user.id || user.email || '',
+            name: user.name || user.fullName || user.displayName || user.email || '',
+            email: user.email || '',
+            role: user.role || ''
+        };
+    },
+
+    buildUserSnapshot(user) {
+        if (!user) return null;
+        return {
+            id: user.id || '',
+            name: user.name || user.fullName || user.displayName || '',
+            email: user.email || '',
+            role: user.role || ''
+        };
+    },
+
+    _createApprovalFromStep(step, order = 0, ownerId = '__default__') {
+        const userIds = Array.isArray(step?.userIds) ? step.userIds.filter(Boolean) : [];
+        const candidates = userIds
+            .map(id => this.toCandidate(this.getUserById(id)))
+            .filter(Boolean);
+
+        const singleCandidate = candidates.length === 1 ? candidates[0] : null;
+
+        return {
+            role: step?.name || step?.role || '',
+            required: step?.required !== false,
+            status: 'pending',
+            order,
+            approverId: singleCandidate?.id || '',
+            approver: singleCandidate?.name || '',
+            approverEmail: singleCandidate?.email || '',
+            candidates,
+            history: [],
+            assignedAt: singleCandidate ? new Date().toISOString() : '',
+            assignedBy: null,
+            isSafetyOfficer: step?.isSafetyOfficer === true,
+            circuitOwnerId: ownerId
+        };
+    },
+
+    enrichApprovals(approvals = [], ownerId = '__default__') {
+        return approvals.map((approval, index) => this._attachMetadataToApproval(approval, index, ownerId));
+    },
+
+    _attachMetadataToApproval(approval, order = 0, ownerId = '__default__') {
+        const normalized = Object.assign({}, approval);
+        normalized.order = typeof normalized.order === 'number' ? normalized.order : order;
+        normalized.status = normalized.status || (normalized.approved ? 'approved' : normalized.rejected ? 'rejected' : 'pending');
+        normalized.required = normalized.required !== false;
+        normalized.circuitOwnerId = normalized.circuitOwnerId || ownerId;
+
+        if (Array.isArray(normalized.candidates)) {
+            normalized.candidates = normalized.candidates
+                .map(candidate => {
+                    if (!candidate) return null;
+                    if (candidate.id && candidate.name && candidate.email !== undefined) {
+                        return candidate;
+                    }
+                    return this.toCandidate(this.getUserById(candidate.id || candidate));
+                })
+                .filter(Boolean);
+        } else {
+            normalized.candidates = [];
+        }
+
+        if (normalized.approverId && !normalized.approver) {
+            const user = this.getUserById(normalized.approverId);
+            if (user) {
+                normalized.approver = user.name || '';
+                normalized.approverEmail = user.email || '';
+            }
+        }
+
+        if (!normalized.approverId && normalized.approverEmail) {
+            const candidate = normalized.candidates.find(c => c.email && c.email.toLowerCase() === normalized.approverEmail.toLowerCase());
+            if (candidate) {
+                normalized.approverId = candidate.id;
+            }
+        }
+
+        normalized.history = Array.isArray(normalized.history) ? normalized.history : [];
+        normalized.assignedAt = normalized.assignedAt || '';
+        normalized.assignedBy = normalized.assignedBy || null;
+
+        return normalized;
+    },
+
+    generateApprovalsForUser(userId) {
+        const circuit = this.getCircuitForUser(userId);
+        if (!circuit || !Array.isArray(circuit.steps) || circuit.steps.length === 0) {
+            if (typeof PTW !== 'undefined' && PTW.getDefaultApprovals) {
+                return {
+                    approvals: this.enrichApprovals(PTW.getDefaultApprovals(), '__default__'),
+                    circuitOwnerId: '__default__',
+                    circuitName: 'الدائرة الافتراضية العامة'
+                };
+            }
+            return { approvals: [], circuitOwnerId: '__default__', circuitName: 'الدائرة الافتراضية العامة' };
+        }
+
+        const steps = [...circuit.steps].sort((a, b) => (a.order || 0) - (b.order || 0));
+        const approvals = steps.map((step, index) => this._attachMetadataToApproval(
+            this._createApprovalFromStep(step, index, circuit.ownerId || '__default__'),
+            index,
+            circuit.ownerId || '__default__'
+        ));
+
+        return {
+            approvals,
+            circuitOwnerId: circuit.ownerId || '__default__',
+            circuitName: circuit.name || ''
+        };
+    },
+
+    buildHistoryEntry(action, details = {}) {
+        return Object.assign({
+            id: Utils.generateId('APRLOG'),
+            action,
+            timestamp: new Date().toISOString()
+        }, details);
+    },
+
+    /**
+     * عرض مدير مسارات الاعتماد في واجهة المستخدم
+     * @param {string} moduleType - نوع الوحدة (ptw, etc.)
+     * @returns {string} HTML content for the approval circuits manager
+     */
+    renderManager(moduleType = 'ptw') {
+        try {
+            const circuits = this.getAll();
+            const owners = this.listOwners();
+            const users = this.getUsersList();
+
+            // إذا لم تكن هناك دوائر، اعرض رسالة توضيحية
+            if (!owners || owners.length === 0 || (owners.length === 1 && owners[0] === '__default__' && !circuits.__default__)) {
+                return `
                     <div class="text-center py-8">
                         <div class="bg-purple-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-route text-purple-400 text-2xl"></i>
                         </div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">\u0625\u062F\u0627\u0631\u0629 \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F</h3>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">إدارة مسارات الاعتماد</h3>
                         <p class="text-gray-500 text-sm max-w-md mx-auto mb-4">
-                            \u064A\u0645\u0643\u0646\u0643 \u0625\u062F\u0627\u0631\u0629 \u062A\u0643\u0648\u064A\u0646\u0627\u062A \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0648\u062A\u062D\u062F\u064A\u062F \u0627\u0644\u0645\u0648\u0627\u0641\u0642\u064A\u0646 \u0645\u0646 \u062E\u0644\u0627\u0644 \u0642\u0633\u0645 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A.
+                            يمكنك إدارة تكوينات مسارات الاعتماد وتحديد الموافقين من خلال قسم الإعدادات.
                         </p>
-                        <a href="javascript:void(0)" onclick="if(typeof AppUI !== 'undefined' && typeof Settings !== 'undefined') { AppUI.switchModule('settings'); setTimeout(() => { const settingsTab = document.querySelector('[data-tab="approval-circuits"]'); if(settingsTab) settingsTab.click(); }, 300); }" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                        <a href="javascript:void(0)" onclick="if(typeof AppUI !== 'undefined' && typeof Settings !== 'undefined') { AppUI.switchModule('settings'); setTimeout(() => { const settingsTab = document.querySelector('[data-tab=\"approval-circuits\"]'); if(settingsTab) settingsTab.click(); }, 300); }" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
                             <i class="fas fa-cog ml-2"></i>
-                            \u0627\u0644\u0630\u0647\u0627\u0628 \u0625\u0644\u0649 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A
+                            الذهاب إلى الإعدادات
                         </a>
                     </div>
-                `:`
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">\u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u0643\u0648\u0646\u0629</h3>
-                            <p class="text-sm text-gray-600 mt-1">\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u0639\u0631\u0641\u0629 \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645</p>
-                        </div>
-                        <a href="javascript:void(0)" onclick="if(typeof AppUI !== 'undefined' && typeof Settings !== 'undefined') { AppUI.switchModule('settings'); setTimeout(() => { const settingsTab = document.querySelector('[data-tab="approval-circuits"]'); if(settingsTab) settingsTab.click(); }, 300); }" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
-                            <i class="fas fa-cog ml-2"></i>
-                            \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u0627\u0631\u0627\u062A
-                        </a>
-                    </div>
-                    <div class="space-y-3">
-                        ${r.filter(i=>a[i]).map(i=>{const n=a[i],p=i==="__default__"?null:this.getUserById(i),d=i==="__default__"?"\u0627\u0644\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0641\u062A\u0631\u0627\u0636\u064A (\u064A\u0637\u0628\u0642 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646)":p?.name||p?.email||`\u0645\u0633\u062A\u062E\u062F\u0645 ${i}`,l=Array.isArray(n.steps)?n.steps.length:0;return`
+                `;
+            }
+
+            // عرض قائمة مسارات الاعتماد
+            const circuitsList = owners
+                .filter(ownerId => circuits[ownerId])
+                .map(ownerId => {
+                    const circuit = circuits[ownerId];
+                    const owner = ownerId === '__default__' ? null : this.getUserById(ownerId);
+                    const ownerName = ownerId === '__default__' 
+                        ? 'المسار الافتراضي (يطبق على جميع المستخدمين)'
+                        : (owner?.name || owner?.email || `مستخدم ${ownerId}`);
+                    const stepsCount = Array.isArray(circuit.steps) ? circuit.steps.length : 0;
+
+                    return `
                         <div class="border border-gray-200 rounded-lg p-4 mb-4 bg-white hover:shadow-md transition-shadow">
                             <div class="flex items-center justify-between">
                                 <div class="flex-1">
-                                    <h4 class="font-semibold text-gray-800 mb-1">${Utils.escapeHTML(n.name||d)}</h4>
+                                    <h4 class="font-semibold text-gray-800 mb-1">${Utils.escapeHTML(circuit.name || ownerName)}</h4>
                                     <p class="text-sm text-gray-600">
-                                        ${i==="__default__"?"":`\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645: ${Utils.escapeHTML(d)} \u2022 `}
-                                        \u0639\u062F\u062F \u0627\u0644\u0645\u0633\u062A\u0648\u064A\u0627\u062A: <span class="font-medium">${l}</span>
+                                        ${ownerId === '__default__' ? '' : `المستخدم: ${Utils.escapeHTML(ownerName)} • `}
+                                        عدد المستويات: <span class="font-medium">${stepsCount}</span>
                                     </p>
                                 </div>
                                 <div class="ml-4">
-                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${l>0?"bg-green-100 text-green-800":"bg-gray-100 text-gray-600"}">
-                                        ${l>0?"\u0645\u0641\u0639\u0644":"\u063A\u064A\u0631 \u0645\u0641\u0639\u0644"}
+                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                        stepsCount > 0 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                                    }">
+                                        ${stepsCount > 0 ? 'مفعل' : 'غير مفعل'}
                                     </span>
                                 </div>
                             </div>
-                            ${l>0?`
+                            ${stepsCount > 0 ? `
                                 <div class="mt-3 pt-3 border-t border-gray-100">
                                     <div class="flex flex-wrap gap-2">
-                                        ${n.steps.map((o,c)=>`
+                                        ${circuit.steps.map((step, idx) => `
                                             <span class="inline-flex items-center px-2 py-1 bg-gray-100 rounded text-xs text-gray-700">
-                                                ${c+1}. ${Utils.escapeHTML(o.name||o.role||"\u0645\u0633\u062A\u0648\u0649 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}
-                                                ${o.isSafetyOfficer?' <i class="fas fa-shield-alt mr-1 text-orange-500"></i>':""}
+                                                ${idx + 1}. ${Utils.escapeHTML(step.name || step.role || 'مستوى غير محدد')}
+                                                ${step.isSafetyOfficer ? ' <i class="fas fa-shield-alt mr-1 text-orange-500"></i>' : ''}
                                             </span>
-                                        `).join("")}
+                                        `).join('')}
                                     </div>
                                 </div>
-                            `:""}
+                            ` : ''}
                         </div>
-                    `}).join("")||'<p class="text-gray-500 text-center py-4">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0643\u0648\u0646\u0629</p>'}
+                    `;
+                }).join('');
+
+            return `
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">مسارات الاعتماد المكونة</h3>
+                            <p class="text-sm text-gray-600 mt-1">عرض جميع مسارات الاعتماد المعرفة في النظام</p>
+                        </div>
+                        <a href="javascript:void(0)" onclick="if(typeof AppUI !== 'undefined' && typeof Settings !== 'undefined') { AppUI.switchModule('settings'); setTimeout(() => { const settingsTab = document.querySelector('[data-tab=\"approval-circuits\"]'); if(settingsTab) settingsTab.click(); }, 300); }" class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
+                            <i class="fas fa-cog ml-2"></i>
+                            إدارة المسارات
+                        </a>
+                    </div>
+                    <div class="space-y-3">
+                        ${circuitsList || '<p class="text-gray-500 text-center py-4">لا توجد مسارات اعتماد مكونة</p>'}
                     </div>
                 </div>
-            `}catch(a){return Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0645\u062F\u064A\u0631 \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F:",a),`
+            `;
+        } catch (error) {
+            Utils.safeError('خطأ في عرض مدير مسارات الاعتماد:', error);
+            return `
                 <div class="text-center py-8">
                     <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                         <i class="fas fa-exclamation-triangle text-yellow-600 text-2xl mb-2"></i>
-                        <p class="text-yellow-800 text-sm">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0631 \u0645\u0633\u0627\u0631\u0627\u062A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F.</p>
+                        <p class="text-yellow-800 text-sm">حدث خطأ أثناء تحميل مدير مسارات الاعتماد.</p>
                     </div>
                 </div>
-            `}}};typeof window<"u"&&(window.ApprovalCircuits=ApprovalCircuits);
+            `;
+        }
+    }
+};
+
+// Export to global window (for script tag loading)
+if (typeof window !== 'undefined') {
+    window.ApprovalCircuits = ApprovalCircuits;
+}
+

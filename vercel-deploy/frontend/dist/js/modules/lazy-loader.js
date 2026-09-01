@@ -1,1 +1,284 @@
-const LazyLoader={loadedModules:new Map,loadingPromises:new Map,moduleMap:{auth:{name:"Auth",required:!0,priority:1},dashboard:{name:"Dashboard",required:!0,priority:2},users:{name:"Users",required:!1,priority:3},incidents:{name:"Incidents",required:!1,priority:3},nearmiss:{name:"NearMiss",required:!1,priority:3},ptw:{name:"PTW",required:!1,priority:3},training:{name:"Training",required:!1,priority:3},clinic:{name:"Clinic",required:!1,priority:3},"fire-equipment":{name:"FireEquipment",required:!1,priority:3},"periodic-inspections":{name:"PeriodicInspections",required:!1,priority:3},ppe:{name:"PPE",required:!1,priority:3},violations:{name:"Violations",required:!1,priority:3},contractors:{name:"Contractors",required:!1,priority:3},employees:{name:"Employees",required:!1,priority:3},"behavior-monitoring":{name:"BehaviorMonitoring",required:!1,priority:3},"chemical-safety":{name:"ChemicalSafety",required:!1,priority:3},"daily-observations":{name:"DailyObservations",required:!1,priority:3},iso:{name:"ISO",required:!1,priority:3},emergency:{name:"Emergency",required:!1,priority:3},"risk-assessment":{name:"RiskAssessment",required:!1,priority:3},"sop-jha":{name:"SOPJHA",required:!1,priority:3},"legal-documents":{name:"LegalDocuments",required:!1,priority:3},sustainability:{name:"Sustainability",required:!1,priority:3},"safety-budget":{name:"SafetyBudget",required:!1,priority:3},"safety-performance-kpis":{name:"SafetyPerformanceKPIs",required:!1,priority:3},"safety-health-management":{name:"SafetyHealthManagement",required:!1,priority:3},"action-tracking":{name:"ActionTrackingRegister",required:!1,priority:3},"ai-assistant":{name:"AIAssistant",required:!1,priority:3},settings:{name:"Settings",required:!1,priority:3},"user-tasks":{name:"UserTasks",required:!1,priority:3},"forms-hub":{name:"FormsHub",required:!1,priority:3}},async init(){return AppState?.debugMode&&Utils?.safeLog("\u{1F680} \u0628\u062F\u0621 \u062A\u0647\u064A\u0626\u0629 \u0646\u0638\u0627\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A..."),"import"in window?(await this.loadCoreModules(),this.setupNavigationListeners(),AppState?.debugMode&&Utils?.safeLog("\u2705 \u062A\u0645 \u062A\u0647\u064A\u0626\u0629 \u0646\u0638\u0627\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A"),!0):(window.location.protocol!=="file:"&&window.location.protocol!=="null"&&AppState?.debugMode&&Utils?.safeLog("\u2139\uFE0F \u0627\u0644\u0645\u062A\u0635\u0641\u062D \u0644\u0627 \u064A\u062F\u0639\u0645 Dynamic Import\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0644\u064A\u062F\u064A (\u0647\u0630\u0627 \u0637\u0628\u064A\u0639\u064A \u0641\u064A \u0628\u0639\u0636 \u0627\u0644\u0645\u062A\u0635\u0641\u062D\u0627\u062A \u0627\u0644\u0642\u062F\u064A\u0645\u0629)"),!1)},async loadCoreModules(){AppState?.debugMode&&Utils?.safeLog("\u{1F4E6} \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629...");const e=Object.entries(this.moduleMap).filter(([i,s])=>s.required).sort((i,s)=>i[1].priority-s[1].priority);for(const[i,s]of e)await this.loadModule(i);AppState?.debugMode&&Utils?.safeLog("\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A \u0627\u0644\u0623\u0633\u0627\u0633\u064A\u0629")},async loadModule(e){if(this.loadedModules.has(e))return AppState?.debugMode&&Utils?.safeLog(`\u2713 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${e} \u0645\u062D\u0645\u0644 \u0628\u0627\u0644\u0641\u0639\u0644`),this.loadedModules.get(e);if(this.loadingPromises.has(e))return AppState?.debugMode&&Utils?.safeLog(`\u23F3 \u0627\u0646\u062A\u0638\u0627\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${e}...`),await this.loadingPromises.get(e);const i=this.moduleMap[e];if(!i)return Utils?.safeError(`\u274C \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${e} \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0627\u0644\u062E\u0631\u064A\u0637\u0629`),null;AppState?.debugMode&&Utils?.safeLog(`\u{1F4E5} \u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${i.name}...`);const s=this.loadModuleFromWindow(i.name);this.loadingPromises.set(e,s);try{const t=await s;return this.loadedModules.set(e,t),this.loadingPromises.delete(e),AppState?.debugMode&&Utils?.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${i.name}`),t}catch(t){return Utils?.safeError(`\u274C \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644 ${i.name}:`,t),this.loadingPromises.delete(e),null}},async loadModuleFromWindow(e){return new Promise((i,s)=>{(()=>{window[e]?i(window[e]):setTimeout(()=>{window[e]?i(window[e]):s(new Error(`Module ${e} not found`))},500)})()})},setupNavigationListeners(){document.addEventListener("click",e=>{const i=e.target.closest(".nav-item");if(i){const s=i.dataset.section;if(s&&this.moduleMap[s]){if(!(typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess(s):(AppState?.currentUser?.role||"").toLowerCase()==="admin"))return;this.loadModule(s).catch(r=>{Utils?.safeError(`\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 ${s}:`,r)})}}}),window.addEventListener("hashchange",()=>{const e=window.location.hash.slice(1);if(e&&this.moduleMap[e]){if(!(typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess(e):(AppState?.currentUser?.role||"").toLowerCase()==="admin")){typeof Notification<"u"&&typeof Notification.error=="function"?Notification.error("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645"):alert("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645"),typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"&&Permissions.hasAccess("dashboard")?(window.location.hash="dashboard",typeof UI<"u"&&typeof UI.showSection=="function"&&UI.showSection("dashboard")):window.location.hash="";return}this.loadModule(e).catch(s=>{Utils?.safeError(`\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0645\u0648\u062F\u064A\u0648\u0644 ${e}:`,s)})}})},async preloadModules(e){AppState?.debugMode&&Utils?.safeLog("\u{1F4E6} \u062A\u062D\u0645\u064A\u0644 \u0645\u0633\u0628\u0642 \u0644\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A:",e);const i=e.map(s=>this.loadModule(s).catch(t=>(Utils?.safeWarn(`\u062A\u062D\u0630\u064A\u0631: \u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u0628\u0642 \u0644\u0640 ${s}:`,t),null)));await Promise.all(i),AppState?.debugMode&&Utils?.safeLog("\u2705 \u062A\u0645 \u0627\u0644\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0633\u0628\u0642 \u0644\u0644\u0645\u0648\u062F\u064A\u0648\u0644\u0627\u062A")},getModule(e){return this.loadedModules.get(e)},isLoaded(e){return this.loadedModules.has(e)},getStats(){const e=Object.keys(this.moduleMap).length,i=this.loadedModules.size,s=this.loadingPromises.size;return{total:e,loaded:i,loading:s,percentage:Math.round(i/e*100)}}};typeof window<"u"&&(window.LazyLoader=LazyLoader);
+/**
+ * Lazy Loader System
+ * نظام تحميل ديناميكي للموديولات لتحسين أداء التطبيق
+ * 
+ * المزايا:
+ * - تحميل الموديولات فقط عند الحاجة إليها
+ * - تقليل وقت التحميل الأولي بشكل كبير
+ * - تخزين الموديولات المحملة في الذاكرة المؤقتة
+ * - شاشة تحميل تفاعلية مع شريط تقدم
+ */
+
+const LazyLoader = {
+    // تخزين الموديولات المحملة
+    loadedModules: new Map(),
+    
+    // تخزين الوعود (promises) للموديولات قيد التحميل
+    loadingPromises: new Map(),
+    
+    // خريطة الموديولات وأسمائها في الملف
+    moduleMap: {
+        // الموديولات الأساسية (يتم تحميلها مباشرة)
+        'auth': { name: 'Auth', required: true, priority: 1 },
+        'dashboard': { name: 'Dashboard', required: true, priority: 2 },
+        
+        // الموديولات الثانوية (يتم تحميلها عند الحاجة)
+        'users': { name: 'Users', required: false, priority: 3 },
+        'incidents': { name: 'Incidents', required: false, priority: 3 },
+        'nearmiss': { name: 'NearMiss', required: false, priority: 3 },
+        'ptw': { name: 'PTW', required: false, priority: 3 },
+        'training': { name: 'Training', required: false, priority: 3 },
+        'clinic': { name: 'Clinic', required: false, priority: 3 },
+        'fire-equipment': { name: 'FireEquipment', required: false, priority: 3 },
+        'periodic-inspections': { name: 'PeriodicInspections', required: false, priority: 3 },
+        'ppe': { name: 'PPE', required: false, priority: 3 },
+        'violations': { name: 'Violations', required: false, priority: 3 },
+        'contractors': { name: 'Contractors', required: false, priority: 3 },
+        'employees': { name: 'Employees', required: false, priority: 3 },
+        'behavior-monitoring': { name: 'BehaviorMonitoring', required: false, priority: 3 },
+        'chemical-safety': { name: 'ChemicalSafety', required: false, priority: 3 },
+        'daily-observations': { name: 'DailyObservations', required: false, priority: 3 },
+        'iso': { name: 'ISO', required: false, priority: 3 },
+        'emergency': { name: 'Emergency', required: false, priority: 3 },
+        'risk-assessment': { name: 'RiskAssessment', required: false, priority: 3 },
+        'sop-jha': { name: 'SOPJHA', required: false, priority: 3 },
+        'legal-documents': { name: 'LegalDocuments', required: false, priority: 3 },
+        'sustainability': { name: 'Sustainability', required: false, priority: 3 },
+        'safety-budget': { name: 'SafetyBudget', required: false, priority: 3 },
+        'safety-performance-kpis': { name: 'SafetyPerformanceKPIs', required: false, priority: 3 },
+        'safety-health-management': { name: 'SafetyHealthManagement', required: false, priority: 3 },
+        'action-tracking': { name: 'ActionTrackingRegister', required: false, priority: 3 },
+        'ai-assistant': { name: 'AIAssistant', required: false, priority: 3 },
+        'settings': { name: 'Settings', required: false, priority: 3 },
+        'user-tasks': { name: 'UserTasks', required: false, priority: 3 },
+        'forms-hub': { name: 'FormsHub', required: false, priority: 3 }
+    },
+
+    /**
+     * تهيئة النظام
+     */
+    async init() {
+        if (AppState?.debugMode) Utils?.safeLog('🚀 بدء تهيئة نظام التحميل الديناميكي...');
+        
+        // التحقق من الدعم للموديولات
+        if (!('import' in window)) {
+            // هذا تحذير معلوماتي فقط - التطبيق سيعمل بشكل طبيعي مع التحميل التقليدي
+            if (window.location.protocol !== 'file:' && window.location.protocol !== 'null') {
+                if (AppState?.debugMode) Utils?.safeLog('ℹ️ المتصفح لا يدعم Dynamic Import، سيتم استخدام التحميل التقليدي (هذا طبيعي في بعض المتصفحات القديمة)');
+            }
+            return false;
+        }
+        
+        // تحميل الموديولات الأساسية
+        await this.loadCoreModules();
+        
+        // إضافة مستمعات الأحداث لتحميل الموديولات عند الحاجة
+        this.setupNavigationListeners();
+        
+        if (AppState?.debugMode) Utils?.safeLog('✅ تم تهيئة نظام التحميل الديناميكي');
+        return true;
+    },
+
+    /**
+     * تحميل الموديولات الأساسية
+     */
+    async loadCoreModules() {
+        if (AppState?.debugMode) Utils?.safeLog('📦 تحميل الموديولات الأساسية...');
+        
+        const coreModules = Object.entries(this.moduleMap)
+            .filter(([_, config]) => config.required)
+            .sort((a, b) => a[1].priority - b[1].priority);
+        
+        for (const [key, config] of coreModules) {
+            await this.loadModule(key);
+        }
+        
+        if (AppState?.debugMode) Utils?.safeLog('✅ تم تحميل الموديولات الأساسية');
+    },
+
+    /**
+     * تحميل موديول معين
+     */
+    async loadModule(moduleKey) {
+        // التحقق من أن الموديول محمل بالفعل
+        if (this.loadedModules.has(moduleKey)) {
+            if (AppState?.debugMode) Utils?.safeLog(`✓ الموديول ${moduleKey} محمل بالفعل`);
+            return this.loadedModules.get(moduleKey);
+        }
+
+        // التحقق من أن الموديول قيد التحميل
+        if (this.loadingPromises.has(moduleKey)) {
+            if (AppState?.debugMode) Utils?.safeLog(`⏳ انتظار تحميل الموديول ${moduleKey}...`);
+            return await this.loadingPromises.get(moduleKey);
+        }
+
+        const config = this.moduleMap[moduleKey];
+        if (!config) {
+            Utils?.safeError(`❌ الموديول ${moduleKey} غير موجود في الخريطة`);
+            return null;
+        }
+
+        if (AppState?.debugMode) Utils?.safeLog(`📥 جاري تحميل الموديول ${config.name}...`);
+
+        // إنشاء promise للتحميل
+        const loadingPromise = this.loadModuleFromWindow(config.name);
+        this.loadingPromises.set(moduleKey, loadingPromise);
+
+        try {
+            const module = await loadingPromise;
+            this.loadedModules.set(moduleKey, module);
+            this.loadingPromises.delete(moduleKey);
+            if (AppState?.debugMode) Utils?.safeLog(`✅ تم تحميل الموديول ${config.name}`);
+            return module;
+        } catch (error) {
+            Utils?.safeError(`❌ فشل تحميل الموديول ${config.name}:`, error);
+            this.loadingPromises.delete(moduleKey);
+            return null;
+        }
+    },
+
+    /**
+     * تحميل الموديول من window (للاستخدام المؤقت حتى يتم تقسيم الملفات)
+     */
+    async loadModuleFromWindow(moduleName) {
+        return new Promise((resolve, reject) => {
+            // في الوقت الحالي، الموديولات محملة في window
+            // هذه دالة مؤقتة، سيتم استبدالها بـ dynamic import لاحقاً
+            
+            const checkModule = () => {
+                if (window[moduleName]) {
+                    resolve(window[moduleName]);
+                } else {
+                    // انتظر قليلاً وحاول مرة أخرى
+                    setTimeout(() => {
+                        if (window[moduleName]) {
+                            resolve(window[moduleName]);
+                        } else {
+                            reject(new Error(`Module ${moduleName} not found`));
+                        }
+                    }, 500);
+                }
+            };
+
+            checkModule();
+        });
+    },
+
+    /**
+     * إعداد مستمعات التنقل لتحميل الموديولات عند الحاجة
+     */
+    setupNavigationListeners() {
+        // الاستماع لأحداث النقر على القائمة
+        // ⚠️ مهم: التحقق من الصلاحيات قبل تحميل الموديول لمنع الوصول غير المصرح به
+        document.addEventListener('click', (e) => {
+            const navItem = e.target.closest('.nav-item');
+            if (navItem) {
+                const section = navItem.dataset.section;
+                if (section && this.moduleMap[section]) {
+                    // التحقق من الصلاحيات قبل تحميل الموديول
+                    // التحقق من الصلاحيات (fail-closed إذا Permissions غير متاح)
+                    const canAccess = (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function')
+                        ? Permissions.hasAccess(section)
+                        : ((AppState?.currentUser?.role || '').toLowerCase() === 'admin');
+                    if (!canAccess) {
+                        // إذا لم يكن لديه صلاحية، نمنع تحميل الموديول
+                        // (showSection في app-ui.js سيتعامل مع عرض رسالة الخطأ)
+                        return;
+                    }
+                    // إذا كان لديه صلاحية، نحمّل الموديول بشكل غير متزامن
+                    this.loadModule(section).catch(err => {
+                        Utils?.safeError(`فشل تحميل موديول ${section}:`, err);
+                    });
+                }
+            }
+        });
+
+        // الاستماع لتغييرات الـ hash للتنقل المباشر
+        // ⚠️ مهم: التحقق من الصلاحيات قبل تحميل الموديول لمنع الوصول غير المصرح به
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash.slice(1);
+            if (hash && this.moduleMap[hash]) {
+                // التحقق من الصلاحيات قبل تحميل الموديول
+                // التحقق من الصلاحيات (fail-closed إذا Permissions غير متاح)
+                const canAccess = (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function')
+                    ? Permissions.hasAccess(hash)
+                    : ((AppState?.currentUser?.role || '').toLowerCase() === 'admin');
+                if (!canAccess) {
+                        // إذا لم يكن لديه صلاحية، نعرض رسالة خطأ ونعيده للـ dashboard
+                        if (typeof Notification !== 'undefined' && typeof Notification.error === 'function') {
+                            Notification.error('ليس لديك صلاحية للوصول إلى هذا القسم');
+                        } else {
+                            console.error('⚠️ ليس لديك صلاحية للوصول إلى:', hash);
+                            alert('ليس لديك صلاحية للوصول إلى هذا القسم');
+                        }
+                        // إعادة التوجيه للـ dashboard إذا كان لديه صلاحية، وإلا إزالة الـ hash
+                        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('dashboard')) {
+                            window.location.hash = 'dashboard';
+                            if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
+                                UI.showSection('dashboard');
+                            }
+                        } else {
+                            window.location.hash = '';
+                        }
+                        return;
+                }
+                // إذا كان لديه صلاحية، نحمّل الموديول
+                this.loadModule(hash).catch(err => {
+                    Utils?.safeError(`فشل تحميل موديول ${hash}:`, err);
+                });
+            }
+        });
+    },
+
+    /**
+     * تحميل مسبق للموديولات (في الخلفية)
+     */
+    async preloadModules(moduleKeys) {
+        if (AppState?.debugMode) Utils?.safeLog('📦 تحميل مسبق للموديولات:', moduleKeys);
+        
+        const promises = moduleKeys.map(key => 
+            this.loadModule(key).catch(err => {
+                Utils?.safeWarn(`تحذير: فشل التحميل المسبق لـ ${key}:`, err);
+                return null;
+            })
+        );
+        
+        await Promise.all(promises);
+        if (AppState?.debugMode) Utils?.safeLog('✅ تم التحميل المسبق للموديولات');
+    },
+
+    /**
+     * الحصول على موديول محمل
+     */
+    getModule(moduleKey) {
+        return this.loadedModules.get(moduleKey);
+    },
+
+    /**
+     * التحقق من تحميل موديول
+     */
+    isLoaded(moduleKey) {
+        return this.loadedModules.has(moduleKey);
+    },
+
+    /**
+     * إحصائيات التحميل
+     */
+    getStats() {
+        const totalModules = Object.keys(this.moduleMap).length;
+        const loadedCount = this.loadedModules.size;
+        const loadingCount = this.loadingPromises.size;
+        
+        return {
+            total: totalModules,
+            loaded: loadedCount,
+            loading: loadingCount,
+            percentage: Math.round((loadedCount / totalModules) * 100)
+        };
+    }
+};
+
+// تصدير للاستخدام العام
+if (typeof window !== 'undefined') {
+    window.LazyLoader = LazyLoader;
+}
