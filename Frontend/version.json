@@ -1,15 +1,13 @@
 {
-  "version": "1.0.1591",
+  "version": "1.0.1593",
   "highlights": {
     "ar": [
-      "صور الملاحظات تظهر في تقرير PowerPoint بعد إصلاح جلب مرفقات Drive.",
-      "تصدير PPTX يعرض الصورة المرفقة بدل رسالة «لا توجد صورة».",
-      "وكيل الصور يستخدم خادم SQL ويجلب الملف كصورة مضمّنة."
+      "إعادة تحميل صفحة النظام تبقى داخل النظام ولا تفتح بوابة النماذج.",
+      "هاش الملاحظات اليومية لم يعد يُحوَّل خطأً إلى النموذج العام."
     ],
     "en": [
-      "Observation photos now appear in the PowerPoint export after Drive attachment fetch was fixed.",
-      "PPTX export shows the attached image instead of the missing-photo placeholder.",
-      "Image proxy uses the SQL server and embeds the file as a data URI."
+      "Refreshing the main app stays in the system and no longer opens the public forms hub.",
+      "The daily-observations hash no longer redirects to the public observation form."
     ]
   }
 }

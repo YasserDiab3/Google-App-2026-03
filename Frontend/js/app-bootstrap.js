@@ -23,32 +23,36 @@
     // 🚀 توجيه تلقائي فوري للمسارات العامة إذا تم فتحها من index.html (تجاوز تسجيل الدخول تماماً)
     (function redirectPublicRoutesFromIndex() {
         try {
-            const hash = (window.location.hash || '').toLowerCase();
-            const search = (window.location.search || '').toLowerCase();
-            if (hash.includes('forms-hub') || hash === '#forms' || search.includes('page=forms-hub')) {
-                window.location.replace('/forms-hub');
-                return;
-            }
-            if (hash.includes('gate') || hash.includes('visitor') || search.includes('page=gate')) {
-                window.location.replace('/gate-visitor-entry');
-                return;
-            }
-            if (hash.includes('observation') || search.includes('page=observation')) {
-                window.location.replace('/observation');
-                return;
-            }
-            if (hash.includes('near-miss') || search.includes('page=near-miss')) {
-                window.location.replace('/near-miss');
-                return;
-            }
-            if (hash.includes('fire-inspection') || search.includes('page=fire-inspection')) {
-                window.location.replace('/fire-inspection');
-                return;
-            }
-            if (hash.includes('daily-safety') || search.includes('page=daily-safety')) {
-                window.location.replace('/daily-safety');
-                return;
-            }
+            let hasSession = false;
+            try {
+                hasSession = !!(sessionStorage.getItem('hse_current_session')
+                    || sessionStorage.getItem('hse_server_session_token')
+                    || localStorage.getItem('hse_remember_user')
+                    || localStorage.getItem('hse_server_session_token'));
+            } catch (_) {}
+            if (hasSession) return;
+
+            const hash = (window.location.hash || '').replace(/^#/, '').toLowerCase().split('?')[0].split('&')[0];
+            let page = '';
+            try { page = String(new URLSearchParams(window.location.search).get('page') || '').toLowerCase(); } catch (_) {}
+            const map = {
+                'forms-hub': '/forms-hub',
+                'forms': '/forms-hub',
+                'gate': '/gate-visitor-entry',
+                'gate-visitor-entry': '/gate-visitor-entry',
+                'visitors': '/gate-visitor-entry',
+                'visitor': '/gate-visitor-entry',
+                'observation': '/observation',
+                'public-observation': '/observation',
+                'obs': '/observation',
+                'near-miss': '/near-miss',
+                'fire-inspection': '/fire-inspection',
+                'fire': '/fire-inspection',
+                'daily-safety': '/daily-safety',
+                'patrol': '/daily-safety'
+            };
+            const dest = map[hash] || map[page];
+            if (dest) window.location.replace(dest);
         } catch (_) {}
     })();
 

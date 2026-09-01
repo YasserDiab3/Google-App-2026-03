@@ -116,32 +116,36 @@
         <script>
             (function() {
                 try {
-                    var hash = (window.location.hash || '').toLowerCase();
-                    var search = (window.location.search || '').toLowerCase();
-                    if (hash.includes('forms-hub') || hash === '#forms' || search.includes('page=forms-hub')) {
-                        window.location.replace('/forms-hub');
-                        return;
-                    }
-                    if (hash.includes('gate') || hash.includes('visitor') || search.includes('page=gate')) {
-                        window.location.replace('/gate-visitor-entry');
-                        return;
-                    }
-                    if (hash.includes('observation') || search.includes('page=observation')) {
-                        window.location.replace('/observation');
-                        return;
-                    }
-                    if (hash.includes('near-miss') || search.includes('page=near-miss')) {
-                        window.location.replace('/near-miss');
-                        return;
-                    }
-                    if (hash.includes('fire-inspection') || search.includes('page=fire-inspection')) {
-                        window.location.replace('/fire-inspection');
-                        return;
-                    }
-                    if (hash.includes('daily-safety') || search.includes('page=daily-safety')) {
-                        window.location.replace('/daily-safety');
-                        return;
-                    }
+                    var hasSession = false;
+                    try {
+                        hasSession = !!(sessionStorage.getItem('hse_current_session')
+                            || sessionStorage.getItem('hse_server_session_token')
+                            || localStorage.getItem('hse_remember_user')
+                            || localStorage.getItem('hse_server_session_token'));
+                    } catch (_) {}
+                    if (hasSession) return;
+
+                    var hash = (window.location.hash || '').replace(/^#/, '').toLowerCase().split('?')[0].split('&')[0];
+                    var page = '';
+                    try { page = String(new URLSearchParams(window.location.search).get('page') || '').toLowerCase(); } catch (_) {}
+                    var map = {
+                        'forms-hub': '/forms-hub',
+                        'forms': '/forms-hub',
+                        'gate': '/gate-visitor-entry',
+                        'gate-visitor-entry': '/gate-visitor-entry',
+                        'visitors': '/gate-visitor-entry',
+                        'visitor': '/gate-visitor-entry',
+                        'observation': '/observation',
+                        'public-observation': '/observation',
+                        'obs': '/observation',
+                        'near-miss': '/near-miss',
+                        'fire-inspection': '/fire-inspection',
+                        'fire': '/fire-inspection',
+                        'daily-safety': '/daily-safety',
+                        'patrol': '/daily-safety'
+                    };
+                    var dest = map[hash] || map[page];
+                    if (dest) window.location.replace(dest);
                 } catch(e) {}
             })();
         </script>
@@ -4843,7 +4847,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1591-20260901" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1593-20260901" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -4905,12 +4909,12 @@
         <script src="js/modules/modules/investigation-rca.js" defer></script>
         <script src="js/modules/modules/incidents.js?v=20260719-incident-forms-v1" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1591-20260901" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1593-20260901" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
         <script src="js/modules/modules/settings.js?v=20260426-2" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1591-20260901" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1593-20260901" defer></script>
         <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1531-20260831" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
         <script src="js/modules/modules/ppe.js?v=20260723-ppe-identity-v2" defer></script>
@@ -5070,7 +5074,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1591-20260901";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1593-20260901";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +
