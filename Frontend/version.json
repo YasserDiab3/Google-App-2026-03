@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1609",
+  "version": "1.0.1611",
   "highlights": {
     "ar": [
-      "مربعات التحديد في سجل الملاحظات تعمل على الصفوف وليس الرأس فقط.",
-      "يمكن تحديد الملاحظات المفتوحة وقيد التنفيذ وإغلاقها جماعياً.",
-      "الملاحظات المغلقة بلا مربع تحديد حتى لا يُختار سجل منتهٍ."
+      "منع تكرار تسجيل المخالفة عند الضغط المتكرر أو تطابق نفس الشخص والتاريخ والوقت.",
+      "رسالة واضحة إذا كانت المخالفة مسجّلة مسبقاً أو معلّقة في دائرة الاعتماد.",
+      "دائرة الاعتماد أوضح: طلباتك أولاً، مع الوقت والمكان وشارة «دورك الآن»."
     ],
     "en": [
-      "Observation list checkboxes now work on the rows, not only in the header.",
-      "Open and in-progress observations can be selected and closed in bulk.",
-      "Closed observations have no checkbox so finished records are not selected."
+      "Block duplicate violation saves on repeated clicks or the same person, date, and time.",
+      "A clear message appears if the violation is already saved or waiting in the approval circle.",
+      "The approval circle now lists your turn first, with time, place, and a Your turn badge."
     ]
   }
 }

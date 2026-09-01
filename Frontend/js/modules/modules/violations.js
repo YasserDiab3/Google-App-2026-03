@@ -210,6 +210,14 @@ const Violations = {
         const p2 = this._normKeyStr(existing.personType) || 'employee';
         if (pt !== p2) return false;
         if (pt === 'contractor') {
+            const id1 = this._normKeyStr(draft.contractorId);
+            const id2 = this._normKeyStr(existing.contractorId);
+            if (id1 && id2 && id1 === id2) {
+                const w1 = this._normKeyStr(draft.contractorWorker);
+                const w2 = this._normKeyStr(existing.contractorWorker);
+                if (!w1 && !w2) return true;
+                return !w1 || !w2 || w1 === w2;
+            }
             const n1 = this._normKeyStr(draft.contractorName);
             const n2 = this._normKeyStr(existing.contractorName);
             if (!n1 || !n2 || n1 !== n2) return false;
@@ -220,7 +228,10 @@ const Violations = {
         }
         const c1 = this._normKeyStr(draft.employeeCode || draft.employeeNumber);
         const c2 = this._normKeyStr(existing.employeeCode || existing.employeeNumber);
-        return !!c1 && c1 === c2;
+        if (c1 && c2) return c1 === c2;
+        const n1 = this._normKeyStr(draft.employeeName);
+        const n2 = this._normKeyStr(existing.employeeName);
+        return !!n1 && n1 === n2;
     },
 
     getViolationYearMonthKey(violationDate) {
@@ -230,6 +241,8 @@ const Violations = {
     },
 
     _recentViolationDupKeys: [],
+    _violationSubmitLock: false,
+    _violationInflightDupKey: '',
 
     _violationDateKey(v) {
         const raw = v && v.violationDate;
@@ -287,7 +300,7 @@ const Violations = {
         } else if (!this._sameViolationTextField(draft.violationPlace, existing.violationPlace)) {
             return false;
         }
-        return this._sameViolationTextField(draft.violationDetails, existing.violationDetails);
+        return true;
     },
 
     _buildViolationDupKey(v) {
@@ -346,6 +359,9 @@ const Violations = {
         if (!Array.isArray(this._recentViolationDupKeys)) this._recentViolationDupKeys = [];
         this._recentViolationDupKeys = this._recentViolationDupKeys.filter((x) => x && now - x.at < 10 * 60 * 1000);
         const key = this._buildViolationDupKey(draft);
+        if (key && this._violationInflightDupKey && key === this._violationInflightDupKey) {
+            return { source: 'inflight' };
+        }
         if (key && this._recentViolationDupKeys.some((x) => x.key === key)) {
             return { source: 'recent' };
         }
@@ -664,6 +680,12 @@ const Violations = {
                 return blob.includes(q);
             });
         }
+        list.sort((a, b) => {
+            const mineA = this._isCurrentViolationApprover(a) ? 0 : 1;
+            const mineB = this._isCurrentViolationApprover(b) ? 0 : 1;
+            if (mineA !== mineB) return mineA - mineB;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
         return list;
     },
 
@@ -702,6 +724,9 @@ const Violations = {
             .vap-search i{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;}
             .vap-card{background:#fff;border:1px solid #e8edf4;border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 8px 18px rgba(15,23,42,.05);}
             .vap-card.is-mine{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+            .vap-mine-flag{display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;border:1px solid #fcd34d;border-radius:999px;padding:4px 10px;font-size:.75rem;font-weight:800;margin-bottom:8px;}
+            .vap-summary{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:.88rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+            .vap-summary[hidden]{display:none;}
             .vap-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
             .vap-person{font-weight:800;font-size:.98rem;color:#0f172a;}
             .vap-meta{font-size:.78rem;color:#64748b;margin-top:4px;line-height:1.5;}
@@ -843,6 +868,18 @@ const Violations = {
 
         const filtersEl = modal.querySelector('#vap-filters');
         if (filtersEl) filtersEl.innerHTML = this._renderViolationApprovalFilterBar(state);
+
+        const mineSummary = modal.querySelector('#vap-mine-summary');
+        if (mineSummary) {
+            const mineN = (state.requests || []).filter((r) => this._isCurrentViolationApprover(r)).length;
+            if (mineN > 0 && (state.filter === 'pending' || state.filter === 'all')) {
+                mineSummary.hidden = false;
+                mineSummary.innerHTML = `<i class="fas fa-bell"></i> لديك ${mineN} طلب بانتظار اعتمادك — ظاهرة أولاً في القائمة`;
+            } else {
+                mineSummary.hidden = true;
+                mineSummary.textContent = '';
+            }
+        }
 
         const searchEl = modal.querySelector('#vap-search-input');
         if (searchEl && searchEl.value !== (state.query || '')) {
@@ -1119,6 +1156,7 @@ const Violations = {
                                 <input type="search" id="vap-search-input" placeholder="${t('module.violations.approvals.search', 'بحث بالاسم أو النوع أو رقم الطلب…')}" autocomplete="off">
                             </div>
                         </div>
+                        <div id="vap-mine-summary" class="vap-summary" hidden></div>
                         <div id="viol-approval-requests-list">
                             ${this._buildViolationApprovalsRequestsHtml(state)}
                         </div>
@@ -1199,17 +1237,20 @@ const Violations = {
 
             return `
                 <article class="vap-card${isMine ? ' is-mine' : ''}" data-request-id="${Utils.escapeHTML(String(r.id))}">
+                    ${isMine ? `<div class="vap-mine-flag"><i class="fas fa-user-check"></i> ${t('module.violations.approvals.yourTurn', 'دورك الآن — اعتمد أو ارفض')}</div>` : ''}
                     <div class="vap-card-top">
                         <div>
                             <div class="vap-person">${Utils.escapeHTML(personName)} — ${Utils.escapeHTML(vd.violationType || '—')}</div>
                             <div class="vap-meta">${t('module.violations.approvals.requestNo', 'رقم الطلب')}: ${Utils.escapeHTML(String(r.id))} · ${t('module.violations.approvals.createdAt', 'أُنشئ')}: ${dateStr} · ${t('module.violations.approvals.createdBy', 'بواسطة')}: ${Utils.escapeHTML(r.createdByName || r.createdBy || '—')}</div>
                         </div>
-                        <span class="vap-badge ${badgeClass}">${badgeLabel}${isMine ? ' · ' + t('module.violations.approvals.yourTurn', 'دورك الآن') : ''}</span>
+                        <span class="vap-badge ${badgeClass}">${badgeLabel}</span>
                     </div>
                     <div class="vap-grid">
                         <div><strong>${t('module.violations.approvals.site', 'الموقع')}:</strong> ${Utils.escapeHTML(vd.violationLocation || '—')}</div>
-                        <div><strong>${t('module.violations.approvals.severity', 'الشدة')}:</strong> ${Utils.escapeHTML(vd.severity || '—')}</div>
+                        <div><strong>${t('module.violations.approvals.place', 'المكان')}:</strong> ${Utils.escapeHTML(vd.violationPlace || '—')}</div>
                         <div><strong>${t('module.violations.approvals.date', 'التاريخ')}:</strong> ${vd.violationDate ? new Date(vd.violationDate).toLocaleDateString('ar-EG-u-nu-latn') : '—'}</div>
+                        <div><strong>${t('module.violations.approvals.time', 'الوقت')}:</strong> ${Utils.escapeHTML(vd.violationTime || '—')}</div>
+                        <div><strong>${t('module.violations.approvals.severity', 'الشدة')}:</strong> ${Utils.escapeHTML(vd.severity || '—')}</div>
                         <div><strong>${t('module.violations.approvals.fine', 'الغرامة')}:</strong> ${vd.fineAmount ? Number(vd.fineAmount).toLocaleString('en-US') + ' ج.م' : '—'}</div>
                     </div>
                     ${detailsShort ? `<div style="font-size:.82rem;color:#475569;margin-bottom:10px;line-height:1.5;"><strong>${t('module.violations.approvals.details', 'التفاصيل')}:</strong> ${Utils.escapeHTML(detailsShort)}</div>` : ''}
@@ -5756,17 +5797,23 @@ const Violations = {
                 e.stopImmediatePropagation();
             }
 
-            if (submitInFlight || form.dataset.submitting === '1') {
+            if (submitInFlight || this._violationSubmitLock || form.dataset.submitting === '1') {
+                if (typeof Notification !== 'undefined' && Notification.warning) {
+                    Notification.warning(this._t('module.violations.duplicate.click', 'جاري التسجيل الآن. لا تضغط مرة أخرى.'));
+                }
                 if (AppState.debugMode) Utils.safeLog('⚠️ النموذج قيد المعالجة...');
                 return;
             }
 
             submitInFlight = true;
+            this._violationSubmitLock = true;
             form.dataset.submitting = '1';
             const btn = getLiveSubmitBtn();
             const originalText = btn ? btn.innerHTML : '';
             const restoreSubmitBtn = () => {
                 submitInFlight = false;
+                this._violationSubmitLock = false;
+                this._violationInflightDupKey = '';
                 try { form.dataset.submitting = ''; } catch (_e) { /* ignore */ }
                 const live = getLiveSubmitBtn();
                 if (live) {
@@ -5951,8 +5998,12 @@ const Violations = {
                     status: status,
                     photo: photo,
                     createdAt: violationData?.createdAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
+                    updatedAt: new Date().toISOString(),
+                    violationDateKey: '',
+                    violationTimeKey: ''
                 };
+                formData.violationDateKey = this._violationDateKey(formData);
+                formData.violationTimeKey = this._violationTimeKey(formData);
 
                 const seqDraft = {
                     personType,
@@ -5975,11 +6026,16 @@ const Violations = {
                     const title = this._t('module.violations.duplicate.title', 'تم تسجيل هذه المخالفة مسبقاً');
                     const text = dupHit.source === 'pending'
                         ? this._t('module.violations.duplicate.pending', 'طلب مماثل معلّق في دائرة الاعتماد. لن يُعاد الإرسال.')
-                        : this._t('module.violations.duplicate.text', 'نفس الموظف أو المقاول ونفس التاريخ والوقت ونوع المخالفة والبيانات موجودة بالفعل. لن يُعاد التسجيل.');
+                        : (dupHit.source === 'inflight'
+                            ? this._t('module.violations.duplicate.click', 'جاري التسجيل الآن. لا تضغط مرة أخرى.')
+                            : this._t('module.violations.duplicate.text', 'نفس الموظف أو المقاول ونفس التاريخ والوقت ونوع المخالفة موجودة بالفعل. لن يُعاد التسجيل.'));
                     showFormBanner('warning', title, text);
+                    if (typeof Notification !== 'undefined' && Notification.warning) Notification.warning(title);
                     restoreSubmitBtn();
                     return;
                 }
+
+                this._violationInflightDupKey = this._buildViolationDupKey(formData);
 
                 // ✅ دائرة اعتماد المخالفات: إذا فُعِّلت ولم يكن المستخدم مديراً، أرسل طلب اعتماد بدل الحفظ المباشر
                 try {
@@ -6023,6 +6079,8 @@ const Violations = {
                         const approvalResult = await this.submitViolationForApproval(safeFormData, { isEdit, originalId: violationData?.id });
                         if (approvalResult && approvalResult.success) {
                             this._rememberViolationDupKey(formData);
+                            this._violationInflightDupKey = '';
+                            this._violationSubmitLock = false;
                             this._invalidateViolationApprovalRequestsCache();
                             modal.remove();
                             Notification.success(approvalResult.message || 'تم إرسال المخالفة لدائرة الاعتماد بنجاح. ستظهر بعد اعتمادها.');
@@ -6031,6 +6089,17 @@ const Violations = {
                                 document.dispatchEvent(new CustomEvent('violation-approval-request-created', { detail: approvalResult.data || {} }));
                             } catch (e) { /* ignore */ }
                             return; // ⚠️ نخرج هنا — لا نكمل مسار الحفظ المباشر
+                        } else if (approvalResult && approvalResult.duplicate) {
+                            restoreSubmitBtn();
+                            showFormBanner(
+                                'warning',
+                                this._t('module.violations.duplicate.title', 'تم تسجيل هذه المخالفة مسبقاً'),
+                                approvalResult.message || this._t('module.violations.duplicate.pending', 'طلب مماثل معلّق في دائرة الاعتماد. لن يُعاد الإرسال.')
+                            );
+                            if (typeof Notification !== 'undefined' && Notification.warning) {
+                                Notification.warning(this._t('module.violations.duplicate.title', 'تم تسجيل هذه المخالفة مسبقاً'));
+                            }
+                            return;
                         } else {
                             restoreSubmitBtn();
                             // ✅ تنبيه أعلى النموذج (يبقي النموذج مفتوحاً ليُعيد المستخدم المحاولة)
@@ -6069,6 +6138,8 @@ const Violations = {
                 }
 
                 this._rememberViolationDupKey(formData);
+                this._violationInflightDupKey = '';
+                this._violationSubmitLock = false;
 
                 // حفظ محلياً
                 if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
@@ -6164,7 +6235,7 @@ const Violations = {
                                     data: payload
                                 });
                             }
-                            if (saveRes && saveRes.success === true) {
+                            if (saveRes && (saveRes.success === true || saveRes.duplicate === true)) {
                                 try { localStorage.setItem('violations_last_sync', String(Date.now())); } catch (eLs) { /* ignore */ }
                                 if (AppState.debugMode) Utils.safeLog('✅ حفظ المخالفة في الخادم بنجاح');
                             } else {

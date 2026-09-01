@@ -104,6 +104,66 @@ function persistClosedObservation(db, obs, actorName) {
     return { ...obs, ...updates, timeLog };
 }
 
+function normViolStr(v) {
+    return String(v == null ? '' : v).trim().toLowerCase()
+        .replace(/[\u064B-\u065F\u0670]/g, '')
+        .replace(/[أإآ]/g, 'ا')
+        .replace(/ة/g, 'ه')
+        .replace(/[ى]/g, 'ي')
+        .replace(/\s+/g, ' ');
+}
+
+function violationDateKey(v) {
+    if (v && v.violationDateKey) return String(v.violationDateKey).slice(0, 10);
+    const raw = String((v && v.violationDate) || '').trim();
+    const m = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    return m ? m[1] : '';
+}
+
+function violationTimeKey(v) {
+    if (v && v.violationTimeKey) return String(v.violationTimeKey);
+    const t = String((v && v.violationTime) || '').trim();
+    const m = t.match(/(\d{1,2}):(\d{2})/);
+    if (m) return String(Number(m[1])).padStart(2, '0') + ':' + m[2];
+    return '';
+}
+
+function violationPersonKey(v) {
+    const pt = normViolStr(v && v.personType) || 'employee';
+    if (pt === 'contractor') {
+        return 'c|' + normViolStr(v.contractorName) + '|' + normViolStr(v.contractorWorker);
+    }
+    return 'e|' + (normViolStr((v && (v.employeeCode || v.employeeNumber)) || '') || normViolStr(v && v.employeeName));
+}
+
+function violationDupFingerprint(v) {
+    if (!v) return '';
+    return [
+        violationPersonKey(v),
+        violationDateKey(v),
+        violationTimeKey(v),
+        normViolStr((v.violationTypeId || v.violationType) || '')
+    ].join('||');
+}
+
+function parseViolationDataField(raw) {
+    if (!raw) return {};
+    if (typeof raw === 'object') return raw;
+    try { return JSON.parse(raw); } catch (_) { return {}; }
+}
+
+function findDuplicateViolationInDb(db, draft, excludeId) {
+    const fp = violationDupFingerprint(draft);
+    if (!fp || !violationDateKey(draft) || !violationTimeKey(draft)) return null;
+    const rows = db.readSheet('Violations') || [];
+    const skip = String(excludeId || '').trim();
+    return rows.find((r) => {
+        if (!r) return false;
+        if (skip && String(r.id) === skip) return false;
+        return violationDupFingerprint(r) === fp;
+    }) || null;
+}
+
 function cairoNowParts() {
     const tz = 'Africa/Cairo';
     const now = new Date();
@@ -782,6 +842,36 @@ const moduleHandlers = {
     // ==========================================
     // 6. Violations & Violation Approvals
     // ==========================================
+    'addViolation': function(payload, postData, action, actorUserData) {
+        const gate = checkAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+        const data = (payload && typeof payload === 'object' && payload.updateData)
+            ? payload.updateData
+            : (payload || postData?.data || postData || {});
+        if (!data || typeof data !== 'object') {
+            return { success: false, message: 'بيانات المخالفة غير صالحة' };
+        }
+        const db = getDatabase();
+        const excludeId = String(data.id || '').trim();
+        const dup = findDuplicateViolationInDb(db, data, excludeId);
+        if (dup) {
+            return {
+                success: false,
+                duplicate: true,
+                message: 'تم تسجيل هذه المخالفة مسبقاً لنفس الشخص والتاريخ والوقت.',
+                data: { id: dup.id, isoCode: dup.isoCode }
+            };
+        }
+        if (!data.id) data.id = generateId('VIOLATION');
+        const existing = db.findRow('Violations', { id: String(data.id) });
+        if (existing) {
+            db.updateRow('Violations', 'id', String(data.id), data);
+        } else {
+            db.insertRow('Violations', data);
+        }
+        return { success: true, message: 'تم تسجيل المخالفة', data };
+    },
+
     'getViolationApprovalSettings': function(payload, postData, action) {
         const db = getDatabase();
         const records = db.readSheet('ViolationApprovalSettings');
@@ -834,8 +924,34 @@ const moduleHandlers = {
     },
 
     'addViolationApprovalRequest': function(payload, postData, action, actorUserData) {
-        const db = getDatabase();
         const violationData = payload?.violationData || payload || {};
+        const db = getDatabase();
+        const dupSaved = findDuplicateViolationInDb(db, violationData, violationData.id);
+        if (dupSaved) {
+            return {
+                success: false,
+                duplicate: true,
+                message: 'تم تسجيل هذه المخالفة مسبقاً لنفس الشخص والتاريخ والوقت.',
+                data: { id: dupSaved.id, isoCode: dupSaved.isoCode }
+            };
+        }
+        const pendingRows = db.readSheet('ViolationApprovalRequests') || [];
+        const fp = violationDupFingerprint(violationData);
+        if (fp && violationDateKey(violationData) && violationTimeKey(violationData)) {
+            const pendingDup = pendingRows.find((r) => {
+                if (!r || String(r.status || '').toLowerCase() !== 'pending') return false;
+                const other = parseViolationDataField(r.violationData);
+                return violationDupFingerprint(other) === fp;
+            });
+            if (pendingDup) {
+                return {
+                    success: false,
+                    duplicate: true,
+                    message: 'طلب مماثل معلّق في دائرة الاعتماد. لن يُعاد الإرسال.',
+                    data: { id: pendingDup.id }
+                };
+            }
+        }
         const requestId = generateId('VAR');
 
         let approvers = Array.isArray(payload?.approvers) ? payload.approvers : [];
