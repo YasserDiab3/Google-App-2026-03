@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1612',
+    appVersion: '1.0.1614',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5251,6 +5251,8 @@ const Utils = {
         if (/^FILE_[A-Za-z0-9_]+/.test(raw)) {
             return raw.split(/[?#\s]/)[0];
         }
+        const blobFile = raw.match(/\/(FILE_[A-Za-z0-9_]+)(?:\.[a-z0-9]+)?(?:[?#]|$)/i);
+        if (blobFile) return blobFile[1];
         if (/^https?:\/\//i.test(raw)) {
             return this.extractDriveFileId(raw);
         }
@@ -5294,13 +5296,19 @@ const Utils = {
 
     /**
      * URL لطلب getProfileImage (صورة من Drive كـ JSON يحوي dataUri) — يتجاوز حظر hotlinking لـ الخادم في وسم img.
+     * extra.inline = تضمين البايتات (PPT / تصدير). extra.url = جلب رابط عام مسموح عبر الخادم.
      */
-    buildGetProfileImageProxyUrl(fileId) {
+    buildGetProfileImageProxyUrl(fileId, extra) {
         const id = String(fileId || '').trim();
-        if (!id) return '';
+        const extraUrl = extra && extra.url ? String(extra.url).trim() : '';
+        if (!id && !extraUrl) return '';
         const scriptUrl = this.getEffectiveImageApiUrl();
         if (!scriptUrl) return '';
-        return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + 'action=getProfileImage&id=' + encodeURIComponent(id);
+        let q = 'action=getProfileImage';
+        if (id) q += '&id=' + encodeURIComponent(id);
+        if (extraUrl) q += '&url=' + encodeURIComponent(extraUrl);
+        if (extra && extra.inline) q += '&inline=1';
+        return scriptUrl + (scriptUrl.indexOf('?') !== -1 ? '&' : '?') + q;
     },
 
     _driveImageMemoryCache: new Map(),
@@ -5370,13 +5378,44 @@ const Utils = {
         });
     },
 
+    _isInlineImageDataUri(value) {
+        return !!(value && String(value).startsWith('data:image/'));
+    },
+
+    /**
+     * جلب رابط صورة عام عبر الخادم كـ dataUri (يتجاوز CORS عند التصدير إلى PPT).
+     */
+    async fetchPublicImageAsDataUri(imageUrl) {
+        const src = String(imageUrl || '').trim();
+        if (!src || !/^https?:\/\//i.test(src)) return null;
+        const cacheKey = 'url:' + src;
+        if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(cacheKey)) {
+            const cached = this._driveImageMemoryCache.get(cacheKey);
+            if (this._isInlineImageDataUri(cached)) return cached;
+        }
+        const url = this.buildGetProfileImageProxyUrl('', { url: src, inline: true });
+        if (!url) return null;
+        try {
+            const res = await fetch(url, { method: 'GET', credentials: 'omit' });
+            const data = await res.json();
+            if (data && data.success && this._isInlineImageDataUri(data.dataUri)) {
+                const uri = String(data.dataUri);
+                this._cacheDriveImageSuccess(cacheKey, uri);
+                return uri;
+            }
+        } catch (e) { /* ignore */ }
+        return null;
+    },
+
     /**
      * جلب صورة عبر getProfileImage (dataUri أو رابط عام بعد التحقق) — دون وضع رابط الوكيل في img.src.
+     * options.requireDataUri: للتصدير (PPT) — لا تُرجع رابط https.
      */
     async fetchDriveImageDataUri(fileId, options) {
         const id = String(fileId || '').trim();
         if (!id) return null;
         const force = !!(options && options.force);
+        const requireDataUri = !!(options && options.requireDataUri);
         if (!force && this._isDriveImageFetchBlocked(id)) return null;
         if (force) {
             if (this._driveImageFailCache) this._driveImageFailCache.delete(id);
@@ -5385,17 +5424,22 @@ const Utils = {
 
         if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(id)) {
             const cached = this._driveImageMemoryCache.get(id);
-            if (!force || (cached && String(cached).startsWith('data:'))) return cached || null;
+            if (this._isInlineImageDataUri(cached)) return cached;
+            if (!requireDataUri && (!force || cached)) return cached || null;
         }
         try {
             const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + id);
-            if (cached) {
+            if (this._isInlineImageDataUri(cached)) {
+                this._cacheDriveImageSuccess(id, cached);
+                return cached;
+            }
+            if (cached && !requireDataUri) {
                 this._cacheDriveImageSuccess(id, cached);
                 return cached;
             }
         } catch (e) { /* ignore */ }
 
-        const url = this.buildGetProfileImageProxyUrl(id);
+        const url = this.buildGetProfileImageProxyUrl(id, requireDataUri ? { inline: true } : undefined);
         if (!url) {
             this._markDriveImageFetchFailed(id);
             return null;
@@ -5413,14 +5457,24 @@ const Utils = {
                 }
             }
 
-            if (data && data.success && data.dataUri) {
+            if (data && data.success && this._isInlineImageDataUri(data.dataUri)) {
                 const uri = String(data.dataUri);
                 this._cacheDriveImageSuccess(id, uri);
                 return uri;
             }
 
             if (data && data.success && data.redirectUrl) {
-                const probed = await this._probeExternalImageUrl(String(data.redirectUrl));
+                const redirect = String(data.redirectUrl);
+                if (requireDataUri) {
+                    const inlined = await this.fetchPublicImageAsDataUri(redirect);
+                    if (inlined) {
+                        this._cacheDriveImageSuccess(id, inlined);
+                        return inlined;
+                    }
+                    this._markDriveImageFetchFailed(id);
+                    return null;
+                }
+                const probed = await this._probeExternalImageUrl(redirect);
                 if (probed) {
                     if (this._driveImageMemoryCache) this._driveImageMemoryCache.set(id, probed);
                     return probed;

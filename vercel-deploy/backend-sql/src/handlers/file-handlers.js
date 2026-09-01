@@ -45,6 +45,67 @@ function looksLikeImageBuffer(buf) {
     return '';
 }
 
+const MAX_INLINE_IMAGE_BYTES = 8 * 1024 * 1024;
+
+function isAllowedInlineImageUrl(url) {
+    try {
+        const u = new URL(String(url || '').trim());
+        if (u.protocol !== 'https:') return false;
+        const h = u.hostname.toLowerCase();
+        return (
+            h.endsWith('.vercel-storage.com') ||
+            h === 'blob.vercel-storage.com' ||
+            h.endsWith('.googleusercontent.com') ||
+            h === 'lh3.googleusercontent.com' ||
+            h === 'drive.google.com' ||
+            h === 'docs.google.com' ||
+            h.endsWith('.google.com')
+        );
+    } catch (_) {
+        return false;
+    }
+}
+
+function wantsInlineDataUri(query) {
+    const raw = query && (query.inline ?? query.dataUri ?? query.requireDataUri);
+    if (raw === true || raw === 1) return true;
+    const s = String(raw || '').trim().toLowerCase();
+    return s === '1' || s === 'true' || s === 'yes';
+}
+
+function dataUriFromBuffer(buffer, mimeType, fileName, source) {
+    if (!buffer || !buffer.length) return null;
+    const detected = looksLikeImageBuffer(buffer);
+    const mime = detected || (String(mimeType || '').toLowerCase().startsWith('image/') ? mimeType : 'image/jpeg');
+    return {
+        success: true,
+        dataUri: `data:${mime};base64,${buffer.toString('base64')}`,
+        fileName: fileName || 'image',
+        source: source || 'buffer'
+    };
+}
+
+async function fetchAllowedImageAsDataUri(url) {
+    const src = String(url || '').trim();
+    if (!isAllowedInlineImageUrl(src)) return null;
+    try {
+        const res = await fetch(src, {
+            redirect: 'follow',
+            headers: { 'User-Agent': 'Mozilla/5.0 HSE-PPT-Image' }
+        });
+        if (!res.ok) return null;
+        const buf = Buffer.from(await res.arrayBuffer());
+        if (!buf.length || buf.length > MAX_INLINE_IMAGE_BYTES) return null;
+        const detected = looksLikeImageBuffer(buf);
+        const headerMime = String(res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        const mime = detected || (headerMime.startsWith('image/') ? headerMime : '');
+        if (!mime) return null;
+        return `data:${mime};base64,${buf.toString('base64')}`;
+    } catch (_) {
+        return null;
+    }
+}
+
 async function fetchDriveFileDataUri(fileId) {
     const id = String(fileId || '').trim();
     if (!id || !/^[a-zA-Z0-9_-]{20,}$/.test(id) || id.startsWith('FILE_') || id.startsWith('ATT-')) {
@@ -162,37 +223,74 @@ async function uploadMultipleFiles(payload) {
     return { success: ok > 0, results, uploaded: ok, total: files.length };
 }
 
+async function respondStoredImage({ buffer, mimeType, fileName, publicUrl, source, inline }) {
+    if (inline) {
+        const fromBuf = dataUriFromBuffer(buffer, mimeType, fileName, source + '-inline');
+        if (fromBuf) return fromBuf;
+        if (publicUrl) {
+            const dataUri = await fetchAllowedImageAsDataUri(publicUrl);
+            if (dataUri) {
+                return { success: true, dataUri, fileName: fileName || 'image', source: source + '-fetch' };
+            }
+        }
+    }
+    if (publicUrl) {
+        return {
+            success: true,
+            redirectUrl: publicUrl,
+            fileName: fileName || 'image',
+            source: source || 'url'
+        };
+    }
+    return dataUriFromBuffer(buffer, mimeType, fileName, source);
+}
+
 async function getProfileImage(query) {
     const id = String(query?.id || query?.fileId || '').trim();
     const userId = String(query?.userId || query?.ownerUserId || '').trim();
+    const rawUrl = String(query?.url || query?.src || '').trim();
+    const inline = wantsInlineDataUri(query);
 
-    if (!id && !userId) {
+    if (!id && !userId && !rawUrl) {
         return { success: false, message: 'معرف الملف مطلوب' };
+    }
+
+    if (rawUrl) {
+        const dataUri = await fetchAllowedImageAsDataUri(rawUrl);
+        if (dataUri) {
+            return { success: true, dataUri, source: 'url-inline' };
+        }
+        if (!id && !userId) {
+            return { success: false, message: 'تعذر جلب الصورة من الرابط' };
+        }
     }
 
     if (userId) {
         try {
             const profileMeta = await attachmentStore.loadProfilePhotoMeta(userId);
             if (profileMeta) {
-                if (profileMeta.publicUrl) {
-                    return {
-                        success: true,
-                        redirectUrl: profileMeta.publicUrl,
-                        fileName: profileMeta.fileName || 'profile',
-                        source: 'profile-meta-url'
-                    };
-                }
                 if (profileMeta.photo) {
                     const loaded = await attachmentStore.loadAttachment(profileMeta.photo);
-                    if (loaded && loaded.buffer) {
-                        const mime = loaded.mimeType || 'image/jpeg';
-                        return {
-                            success: true,
-                            dataUri: `data:${mime};base64,${loaded.buffer.toString('base64')}`,
-                            fileName: loaded.fileName,
-                            source: 'profile-meta-file'
-                        };
+                    if (loaded) {
+                        const answered = await respondStoredImage({
+                            buffer: loaded.buffer,
+                            mimeType: loaded.mimeType,
+                            fileName: loaded.fileName || profileMeta.fileName || 'profile',
+                            publicUrl: loaded.publicUrl || profileMeta.publicUrl,
+                            source: 'profile-meta-file',
+                            inline
+                        });
+                        if (answered) return answered;
                     }
+                }
+                if (profileMeta.publicUrl) {
+                    const answered = await respondStoredImage({
+                        publicUrl: profileMeta.publicUrl,
+                        fileName: profileMeta.fileName || 'profile',
+                        source: 'profile-meta-url',
+                        inline
+                    });
+                    if (answered) return answered;
                 }
             }
         } catch (_) { /* continue */ }
@@ -200,30 +298,22 @@ async function getProfileImage(query) {
 
     if (id && id.startsWith('PROFILE_')) {
         const uid = id.slice('PROFILE_'.length);
-        return getProfileImage({ userId: uid });
+        return getProfileImage({ userId: uid, inline: inline ? '1' : '' });
     }
 
     if (id && attachmentStore.isPersistentEnabled()) {
         try {
             const loaded = await attachmentStore.loadAttachment(id);
             if (loaded) {
-                if (loaded.publicUrl) {
-                    return {
-                        success: true,
-                        redirectUrl: loaded.publicUrl,
-                        fileName: loaded.fileName,
-                        source: 'blob-url'
-                    };
-                }
-                if (loaded.buffer && loaded.buffer.length) {
-                    const mime = loaded.mimeType || 'image/jpeg';
-                    return {
-                        success: true,
-                        dataUri: `data:${mime};base64,${loaded.buffer.toString('base64')}`,
-                        fileName: loaded.fileName,
-                        source: 'persistent-buffer'
-                    };
-                }
+                const answered = await respondStoredImage({
+                    buffer: loaded.buffer,
+                    mimeType: loaded.mimeType,
+                    fileName: loaded.fileName,
+                    publicUrl: loaded.publicUrl,
+                    source: loaded.buffer ? 'persistent-buffer' : 'blob-url',
+                    inline
+                });
+                if (answered) return answered;
             }
         } catch (_) { /* SQL fallback */ }
     }
@@ -234,22 +324,27 @@ async function getProfileImage(query) {
     if (id) {
         const row = db.get(`SELECT * FROM "FileAttachments" WHERE "id" = ?`, [id]);
         if (row) {
-            if (row.publicUrl) {
-                return {
-                    success: true,
-                    redirectUrl: row.publicUrl,
-                    fileName: row.fileName,
-                    source: 'sql-url'
-                };
-            }
             if (row.dataBase64) {
                 const mime = row.mimeType || 'image/jpeg';
-                return {
-                    success: true,
-                    dataUri: `data:${mime};base64,${row.dataBase64}`,
+                const buf = Buffer.from(String(row.dataBase64).replace(/^data:[^;]+;base64,/, ''), 'base64');
+                const answered = await respondStoredImage({
+                    buffer: buf,
+                    mimeType: mime,
                     fileName: row.fileName,
-                    source: 'sql-base64'
-                };
+                    publicUrl: row.publicUrl,
+                    source: 'sql-base64',
+                    inline
+                });
+                if (answered) return answered;
+            }
+            if (row.publicUrl) {
+                const answered = await respondStoredImage({
+                    publicUrl: row.publicUrl,
+                    fileName: row.fileName,
+                    source: 'sql-url',
+                    inline
+                });
+                if (answered) return answered;
             }
         }
     }

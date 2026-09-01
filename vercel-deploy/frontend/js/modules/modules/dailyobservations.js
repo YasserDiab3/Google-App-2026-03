@@ -625,11 +625,12 @@ const DailyObservations = {
     },
 
     /** ✅ الحصول على بيانات الملاحظة */
-    async _getObservationData(observationId) {
+    async _getObservationData(observationId, options) {
         try {
+            const timeoutMs = Number(options && options.timeoutMs) > 0 ? Number(options.timeoutMs) : 30000;
             const result = await GoogleIntegration.sendRequest({
                 action: 'getObservation',
-                data: { observationId: observationId }
+                data: { observationId: observationId, __timeoutMs: timeoutMs }
             });
             return result?.success ? result.data : null;
         } catch (error) {
@@ -668,6 +669,8 @@ const DailyObservations = {
             const raw = String(value || '').trim();
             if (!raw) return '';
             if (/^FILE_/i.test(raw)) return raw.split(/[?#\s]/)[0];
+            const blobFile = raw.match(/\/(FILE_[A-Za-z0-9_]+)(?:\.[a-z0-9]+)?(?:[?#]|$)/i);
+            if (blobFile) return blobFile[1];
             if (typeof Utils !== 'undefined') {
                 if (typeof Utils.extractImageProxyId === 'function') {
                     const proxy = Utils.extractImageProxyId(raw) || '';
@@ -700,17 +703,22 @@ const DailyObservations = {
     async hydrateObservationBatchForExport(rows) {
         const list = Array.isArray(rows) ? rows : [];
         const out = [];
-        const chunkSize = 4;
+        const chunkSize = 3;
         for (let i = 0; i < list.length; i += chunkSize) {
             const chunk = list.slice(i, i + chunkSize);
             const fetched = await Promise.all(chunk.map(async (obs) => {
                 const normalized = this.normalizeRecord(obs);
                 const id = normalized.id || obs?.id;
+                if (this.observationHasRealImages(normalized)) return normalized;
                 if (!id || typeof this._getObservationData !== 'function') return normalized;
                 try {
-                    const full = await this._getObservationData(id);
+                    const full = await this._getObservationData(id, { timeoutMs: 30000 });
                     if (!full) return normalized;
-                    return this.normalizeRecord(full);
+                    const rec = this.normalizeRecord(full);
+                    if (!this.observationHasRealImages(rec) && this.observationHasRealImages(normalized)) {
+                        return normalized;
+                    }
+                    return rec;
                 } catch (_e) {
                     return normalized;
                 }
@@ -9247,16 +9255,77 @@ const DailyObservations = {
                 if (!img || !img.data) return null;
                 return { data: String(img.data) };
             };
+            const isLikelyGoogleDriveId = (value) => {
+                const s = String(value || '').trim();
+                if (!s) return false;
+                if (/^FILE_/i.test(s) || /^ATT-/i.test(s) || /^PROFILE_/i.test(s)) return false;
+                return /^[a-zA-Z0-9_-]{25,}$/.test(s);
+            };
+            const compressPptxDataUri = (dataUrl) => new Promise((resolve) => {
+                const src = String(dataUrl || '');
+                if (!src.startsWith('data:image/')) {
+                    resolve(src || null);
+                    return;
+                }
+                try {
+                    const img = new Image();
+                    const timer = setTimeout(() => resolve(src), 4000);
+                    img.onload = () => {
+                        clearTimeout(timer);
+                        try {
+                            const canvas = document.createElement('canvas');
+                            const maxW = 900;
+                            let w = img.naturalWidth || 800;
+                            let h = img.naturalHeight || 600;
+                            if (w > maxW) {
+                                h = Math.round((h * maxW) / w);
+                                w = maxW;
+                            }
+                            canvas.width = w;
+                            canvas.height = h;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, w, h);
+                            resolve(canvas.toDataURL('image/jpeg', 0.82) || src);
+                        } catch (_e) {
+                            resolve(src);
+                        }
+                    };
+                    img.onerror = () => { clearTimeout(timer); resolve(src); };
+                    img.src = src;
+                } catch (_e) {
+                    resolve(src);
+                }
+            });
+            const finishPptxImage = async (dataUrl, cacheKey) => {
+                const compressed = await compressPptxDataUri(dataUrl);
+                if (!compressed || !String(compressed).startsWith('data:image/')) return null;
+                const resObj = { data: String(compressed) };
+                if (cacheKey) imageCache.set(cacheKey, resObj);
+                return clonePptxImage(resObj);
+            };
+            const mapWithConcurrency = async (items, limit, mapper) => {
+                const results = new Array(items.length);
+                let next = 0;
+                const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+                    while (next < items.length) {
+                        const idx = next++;
+                        results[idx] = await mapper(items[idx], idx);
+                    }
+                });
+                await Promise.all(workers);
+                return results;
+            };
             // مساعد استخراج وتحميل الصور وتضمينها كـ Base64 مدمج في ملف PPTX — كاش بالمعرف الفريد فقط
             const formatPptxImage = async (input) => {
-                if (!input || input.__listOnly) return null;
+                if (!input) return null;
+                if (typeof input === 'object' && input.__listOnly && !input.fileId && !input.url && !input.data) return null;
                 let url = '';
                 let fileId = '';
                 if (typeof input === 'object') {
                     if (input.data && typeof input.data === 'string' && input.data.trim()) {
                         const dataVal = input.data.trim();
                         if (dataVal.startsWith('data:') || dataVal.startsWith('/9j/') || dataVal.startsWith('iVBORw')) {
-                            return { data: dataVal.startsWith('data:') ? dataVal : ('data:image/jpeg;base64,' + dataVal) };
+                            return finishPptxImage(dataVal.startsWith('data:') ? dataVal : ('data:image/jpeg;base64,' + dataVal));
                         }
                     }
                     url = this.getObservationAttachmentSrc(input);
@@ -9274,7 +9343,7 @@ const DailyObservations = {
                 }
 
                 if (url.startsWith('data:image/') || url.startsWith('data:')) {
-                    return { data: url };
+                    return finishPptxImage(url);
                 }
 
                 if (/^FILE_/i.test(url)) fileId = url.split(/[?#\s]/)[0];
@@ -9283,23 +9352,32 @@ const DailyObservations = {
 
                 if (fileId && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
                     try {
-                        const uri = await Utils.fetchDriveImageDataUri(fileId, { force: true });
+                        const uri = await Utils.fetchDriveImageDataUri(fileId, { force: true, requireDataUri: true });
                         if (uri && String(uri).startsWith('data:image/')) {
-                            const resObj = { data: String(uri) };
-                            imageCache.set(cacheKey, resObj);
-                            return clonePptxImage(resObj);
+                            return finishPptxImage(String(uri), cacheKey);
                         }
+                        if (uri && /^https?:\/\//i.test(String(uri)) && typeof Utils.fetchPublicImageAsDataUri === 'function') {
+                            const inlined = await Utils.fetchPublicImageAsDataUri(String(uri));
+                            if (inlined) return finishPptxImage(inlined, cacheKey);
+                        }
+                    } catch (_e) { /* fallback below */ }
+                }
+
+                if ((url.startsWith('http://') || url.startsWith('https://')) && typeof Utils !== 'undefined' && typeof Utils.fetchPublicImageAsDataUri === 'function') {
+                    try {
+                        const inlined = await Utils.fetchPublicImageAsDataUri(url);
+                        if (inlined) return finishPptxImage(inlined, cacheKey);
                     } catch (_e) { /* fallback below */ }
                 }
 
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
-                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) ||
-                                   (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
-                const extractedDriveId = driveMatch ? driveMatch[1] : (fileId || '');
+                                   url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+                let extractedDriveId = driveMatch ? driveMatch[1] : '';
+                if (!extractedDriveId && isLikelyGoogleDriveId(fileId)) extractedDriveId = fileId;
+                if (extractedDriveId && !isLikelyGoogleDriveId(extractedDriveId)) extractedDriveId = '';
 
-                // تجميع روابط الصور المباشرة المخففة والمحسنة للحجم والسرعة
                 const candidates = [];
                 if (extractedDriveId) {
                     candidates.push(`https://lh3.googleusercontent.com/d/${extractedDriveId}=w800`);
@@ -9310,13 +9388,13 @@ const DailyObservations = {
                     candidates.push(url);
                 }
 
-                // 1. محاولة سريعة عبر Image + Canvas (سريعة جداً وبضغط خفيف لتسريع إنشاء ملف PPTX)
+                // Canvas على روابط خارجية يفشل غالباً بسبب CORS — مهلة أطول كاحتياط أخير فقط
                 for (const cand of candidates) {
                     try {
                         const dataUrl = await new Promise((resolve) => {
                             const img = new Image();
                             img.crossOrigin = 'anonymous';
-                            const timer = setTimeout(() => resolve(null), 1500);
+                            const timer = setTimeout(() => resolve(null), 8000);
                             img.onload = () => {
                                 clearTimeout(timer);
                                 try {
@@ -9341,18 +9419,15 @@ const DailyObservations = {
                             img.src = cand;
                         });
                         if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                            const resObj = { data: String(dataUrl) };
-                            if (cacheKey) imageCache.set(cacheKey, resObj);
-                            return clonePptxImage(resObj);
+                            return finishPptxImage(String(dataUrl), cacheKey);
                         }
                     } catch (e) {}
                 }
 
-                // 2. محاولة جلب مباشرة كـ Blob بمهلة سريعة جداً (1.5 ثانية كحد أقصى)
                 for (const cand of candidates) {
                     try {
                         const controller = new AbortController();
-                        const timer = setTimeout(() => controller.abort(), 1500);
+                        const timer = setTimeout(() => controller.abort(), 8000);
                         const res = await fetch(cand, { mode: 'cors', signal: controller.signal });
                         clearTimeout(timer);
                         if (res.ok) {
@@ -9365,16 +9440,13 @@ const DailyObservations = {
                                 });
                                 if (dataUrl && (String(dataUrl).startsWith('data:image/') || String(dataUrl).startsWith('data:application/octet-stream'))) {
                                     const cleanDataUrl = String(dataUrl).replace('data:application/octet-stream', 'data:image/jpeg');
-                                    const resObj = { data: String(cleanDataUrl) };
-                                    if (cacheKey) imageCache.set(cacheKey, resObj);
-                                    return clonePptxImage(resObj);
+                                    return finishPptxImage(cleanDataUrl, cacheKey);
                                 }
                             }
                         }
                     } catch (e) {}
                 }
 
-                // 3. محاولة سريعة عبر OAuth Token إذا كان مسجلاً بالـ Google API
                 if (extractedDriveId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
                         const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
@@ -9382,7 +9454,7 @@ const DailyObservations = {
                                       AppState.googleAccessToken;
                         if (token) {
                             const controller = new AbortController();
-                            const timer = setTimeout(() => controller.abort(), 1800);
+                            const timer = setTimeout(() => controller.abort(), 8000);
                             const res = await fetch(`https://www.googleapis.com/drive/v3/files/${extractedDriveId}?alt=media`, {
                                 headers: { Authorization: `Bearer ${token}` },
                                 signal: controller.signal
@@ -9396,9 +9468,7 @@ const DailyObservations = {
                                     reader.readAsDataURL(blob);
                                 });
                                 if (dataUrl && String(dataUrl).startsWith('data:image/')) {
-                                    const resObj = { data: String(dataUrl) };
-                                    if (cacheKey) imageCache.set(cacheKey, resObj);
-                                    return clonePptxImage(resObj);
+                                    return finishPptxImage(String(dataUrl), cacheKey);
                                 }
                             }
                         }
@@ -9411,7 +9481,8 @@ const DailyObservations = {
             const getObservationPrimaryImageUrl = (obs) => {
                 if (!obs) return '';
                 if (Array.isArray(obs.attachments) && obs.attachments.length > 0) {
-                    const imageAtt = obs.attachments.find((a) => this.isObservationPhotoAttachment(a)) || null;
+                    const imageAtt = obs.attachments.find((a) => this.isObservationPhotoAttachment(a))
+                        || obs.attachments.find((a) => a && !a.__listOnly) || null;
                     if (imageAtt) return imageAtt;
                 }
                 if (Array.isArray(obs.afterExecutionImages) && obs.afterExecutionImages.length > 0) {
@@ -9426,11 +9497,11 @@ const DailyObservations = {
             // جلب صور كل ملاحظة مربوطة بمعرّفها — لا فهرس المصفوفة حتى لا تختلط الصور
             const [logoImgObj, obsImageEntries] = await Promise.all([
                 formatPptxImage(logoUrl),
-                Promise.all(exportBatch.map(async (obs, index) => {
+                mapWithConcurrency(exportBatch, 3, async (obs, index) => {
                     const key = observationImageKey(obs, index);
                     const img = await formatPptxImage(getObservationPrimaryImageUrl(obs));
                     return [key, clonePptxImage(img)];
-                }))
+                })
             ]);
             const obsImagesByKey = Object.create(null);
             obsImageEntries.forEach(([key, img]) => {
@@ -9805,8 +9876,14 @@ const DailyObservations = {
                         obsSlide.addText(isEnglish ? 'Photo attached in system' : 'صورة الملاحظة مرفقة بالنظام', { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fontSize: 13, color: '64748B', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial' });
                     }
                 } else {
+                    const hadPhoto = this.observationHasRealImages(obs) || Number(obs.attachmentCount) > 0;
                     obsSlide.addShape(pptx.ShapeType.roundRect, { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fill: { color: 'F8FAFC' }, line: { color: 'E2E8F0', width: 1 }, rectRadius: 0.1 });
-                    obsSlide.addText(isEnglish ? 'No image attached for this observation' : 'لا توجد صورة مرفقة لهذه الملاحظة', { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial' });
+                    obsSlide.addText(
+                        hadPhoto
+                            ? (isEnglish ? 'Could not embed the attached photo' : 'تعذر تضمين الصورة المرفقة')
+                            : (isEnglish ? 'No image attached for this observation' : 'لا توجد صورة مرفقة لهذه الملاحظة'),
+                        { x: 0.8, y: 1.6, w: 5.3, h: 4.5, fontSize: 13, color: '94A3B8', align: 'center', valign: 'middle', rtl: !isEnglish, fontFace: 'Arial' }
+                    );
                 }
 
                 // تذييل الشريحة السفلي
@@ -11527,7 +11604,7 @@ const DailyObservations = {
             }
         }
 
-        if (/^FILE_/i.test(data) || /drive\.google|googleusercontent|\/file\/d\/|[?&]id=/i.test(data)) {
+        if (/^FILE_/i.test(data) || /drive\.google|googleusercontent|vercel-storage|\/file\/d\/|[?&]id=/i.test(data)) {
             return 'image/jpeg';
         }
 

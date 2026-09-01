@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1612",
+  "version": "1.0.1614",
   "highlights": {
     "ar": [
-      "كروت مؤشرات الملاحظات اليومية أصبحت قابلة للنقر لتصفية السجل فوراً.",
-      "الفلاتر ديناميكية: الخيارات والأعداد تتضيّق حسب اختيارك.",
-      "شريط يوضح النتائج النشطة مع إمكانية إزالة أي فلتر بنقرة."
+      "تصدير تقرير الملاحظات PPT أصبح يضمّن صورة الملاحظة داخل الشريحة.",
+      "جلب الصورة يتم عبر الخادم لتفادي فشل العرض بسبب قيود المتصفح.",
+      "إن تعذر التضمين تظهر رسالة واضحة بدل «لا توجد صورة»."
     ],
     "en": [
-      "Daily observation KPI cards are clickable and filter the registry immediately.",
-      "Filters are dynamic: options and counts shrink with each selection.",
-      "An active-filter bar shows results and lets you clear any filter in one tap."
+      "Daily observation PPT export now embeds the observation photo in the slide.",
+      "Photos are fetched through the server so browser CORS no longer blanks the image.",
+      "If embedding fails, the slide shows a clear message instead of “no photo attached”."
     ]
   }
 }
