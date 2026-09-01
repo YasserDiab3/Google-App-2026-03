@@ -58,5 +58,10 @@ if ! (cd vercel-deploy/frontend && npm run build 2>/dev/null); then
 fi
 git add -f dist/ vercel-deploy/dist/ Frontend/dist/ vercel-deploy/frontend/dist/ 2>/dev/null || true
 
+# git add -f يتجاوز .gitignore ويعيد إدخال WAL/SHM — هذا سبب فشل Vercel وعناوين النشر المضلّلة
+git diff --cached --name-only | grep -E '\.(db-wal|db-shm)$' | while IFS= read -r f; do
+  git reset HEAD -- "$f" >/dev/null 2>&1 || true
+done
+
 echo "✅ [pre-commit] تم رفع الإصدار وبناء dist/ و vercel-deploy/dist/ وضمّهما للـ commit."
 exit 0

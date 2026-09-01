@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1600",
+  "version": "1.0.1607",
   "highlights": {
     "ar": [
-      "إلغاء تحديثات رُفعت بالخطأ على هذا المستودع.",
-      "إرجاع دائرة اعتماد المخالفات ومنع التكرار وإغلاق الملاحظات من القائمة.",
-      "هذه الميزات تخص مستودع ICAPP فقط وليست جزءاً من هذا التطبيق."
+      "إغلاق الملاحظة من سجل الملاحظات مباشرة، مع تحديد جماعي للسلامة والمدير.",
+      "إعادة منع تكرار تسجيل المخالفة عند الضغط المتكرر.",
+      "إعادة دائرة اعتماد المخالفات بعد تراجع رُفع بالخطأ."
     ],
     "en": [
-      "Roll back updates that were pushed to this repository by mistake.",
-      "Restore the previous state for violation approval, duplicate checks, and list close.",
-      "Those features belong on ICAPP only and are not part of this app."
+      "Close observations from the registry list, including bulk close for safety and managers.",
+      "Restore the guard that blocks duplicate violation submissions.",
+      "Restore the violation approval circle after a mistaken rollback."
     ]
   }
 }
