@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1603",
+  "version": "1.0.1605",
   "highlights": {
     "ar": [
-      "منع تسجيل المخالفة أكثر من مرة عند الضغط المتكرر على زر التسجيل.",
-      "إن وُجدت مخالفة بنفس الموظف أو المقاول ونفس التاريخ والوقت والبيانات تظهر رسالة أنها مسجّلة مسبقاً.",
-      "طلب مماثل معلّق في دائرة الاعتماد لا يُرسل مرة أخرى."
+      "إغلاق الملاحظة من سجل الملاحظات مباشرة دون فتح التفاصيل لكل سجل.",
+      "تحديد عدة ملاحظات وإغلاقها معاً من شريط «إغلاق المحدد».",
+      "زر الإغلاق للسلامة والمدير فقط، مع تأكيد قبل التنفيذ."
     ],
     "en": [
-      "Recording a violation no longer repeats when the save button is clicked more than once.",
-      "If the same employee or contractor, date, time, and details already exist, a message says it is already recorded.",
-      "A matching pending approval request is not sent again."
+      "Close an observation from the registry list without opening details for each record.",
+      "Select several observations and close them together from the Close selected bar.",
+      "The close action is for safety and managers only, with a confirmation before it runs."
     ]
   }
 }
