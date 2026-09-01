@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1599",
+  "version": "1.0.1601",
   "highlights": {
     "ar": [
-      "صورة الملاحظة تظهر داخل نموذج التفاصيل في موديول الملاحظات.",
-      "تصدير PPT يضع لكل ملاحظة صورتها فقط دون تكرار صورة على ملاحظات أخرى.",
-      "مطابقة أدق بين الصورة ومعرّف الملاحظة عند العرض والتصدير."
+      "دائرة اعتماد المخالفات أصبحت صندوق وارد أوضح: الطلبات أولاً والإعدادات في تبويب منفصل.",
+      "مسار الاعتماد يظهر خطوة بخطوة، والمعتمد الحالي يعتمد أو يرفض من نفس الشاشة.",
+      "رفض الطلب يتم داخل النافذة بسبب مكتوب، مع بحث وعداد للمعلّق والمعتمد والمرفوض."
     ],
     "en": [
-      "The observation photo now appears inside the details view in Daily Observations.",
-      "PPT export places each observation’s own photo and no longer repeats one image across notes.",
-      "Stricter matching between the photo and the observation ID in both view and export."
+      "The violations approval circle is now a clearer inbox: requests first, settings in a separate tab.",
+      "The approval path shows step by step, and the current approver can approve or reject in place.",
+      "Rejection uses an in-window reason form, with search and counts for pending, approved, and rejected."
     ]
   }
 }
