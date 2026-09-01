@@ -23,19 +23,9 @@
     // 🚀 توجيه تلقائي فوري للمسارات العامة إذا تم فتحها من index.html (تجاوز تسجيل الدخول تماماً)
     (function redirectPublicRoutesFromIndex() {
         try {
-            let hasSession = false;
-            try {
-                hasSession = !!(sessionStorage.getItem('hse_current_session')
-                    || sessionStorage.getItem('hse_server_session_token')
-                    || localStorage.getItem('hse_remember_user')
-                    || localStorage.getItem('hse_server_session_token'));
-            } catch (_) {}
-            if (hasSession) return;
-
-            const hash = (window.location.hash || '').replace(/^#/, '').toLowerCase().split('?')[0].split('&')[0];
-            let page = '';
-            try { page = String(new URLSearchParams(window.location.search).get('page') || '').toLowerCase(); } catch (_) {}
-            const map = {
+            const params = new URLSearchParams(window.location.search || '');
+            const page = String(params.get('page') || '').trim().toLowerCase();
+            const publicPages = {
                 'forms-hub': '/forms-hub',
                 'forms': '/forms-hub',
                 'gate': '/gate-visitor-entry',
@@ -47,12 +37,12 @@
                 'obs': '/observation',
                 'near-miss': '/near-miss',
                 'fire-inspection': '/fire-inspection',
-                'fire': '/fire-inspection',
                 'daily-safety': '/daily-safety',
                 'patrol': '/daily-safety'
             };
-            const dest = map[hash] || map[page];
-            if (dest) window.location.replace(dest);
+            if (publicPages[page]) {
+                window.location.replace(publicPages[page]);
+            }
         } catch (_) {}
     })();
 

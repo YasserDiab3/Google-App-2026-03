@@ -1,13 +1,17 @@
 {
-  "version": "1.0.1595",
+  "version": "1.0.1597",
   "highlights": {
     "ar": [
-      "إصلاح فشل النشر على Vercel: تصغير دالة api/exec تحت حد 250MB.",
-      "النظام يبقى عند إعادة التحميل ولا يفتح بوابة النماذج بالخطأ."
+      "تحديث الصفحة داخل النظام يبقى في النظام ولا يفتح بوابة النماذج العامة.",
+      "المسارات القصيرة للنماذج تعمل من البوابة مع رجوع صحيح إلى /forms-hub.",
+      "ترجمة عربية وإنجليزية لقسم البوابة وجميع النماذج الميدانية.",
+      "تحميل مواقع الحادث الوشيك من الخادم بدقة دون طلب خاطئ."
     ],
     "en": [
-      "Fix Vercel deploy failure: shrink the api/exec function below the 250MB limit.",
-      "Refreshing the main app stays in the system and no longer opens the forms hub."
+      "Refreshing inside the app stays in the system and no longer opens the public forms portal.",
+      "Short form URLs work from the hub, with a correct back link to /forms-hub.",
+      "Arabic and English translations for the in-app hub section and all field forms.",
+      "Near-miss site lists load from the server with the correct public config action."
     ]
   }
 }

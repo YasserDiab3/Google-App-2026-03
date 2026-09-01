@@ -6631,6 +6631,13 @@ window.UI = {
         const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
         let basePath = window.location.pathname.replace(/\/index\.html$/i, '').replace(/\/$/, '');
         const hubUrl = `${origin}${basePath}/forms-hub`;
+        const t = (k, f) => {
+            if (window.AppI18n && typeof window.AppI18n.t === 'function') {
+                return window.AppI18n.t(k, null, f || k);
+            }
+            return f || k;
+        };
+        const copiedMsg = t('formsHub.copied', 'تم نسخ الرابط بنجاح');
 
         container.innerHTML = `
             <div class="content-header" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; padding: 24px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);">
@@ -6640,13 +6647,13 @@ window.UI = {
                             <i class="fas fa-mobile-screen-button"></i>
                         </div>
                         <div>
-                            <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">بوابة النماذج الميدانية الموحدة (HSE Field Forms Hub)</h1>
-                            <p style="font-size: 13px; color: #94a3b8; margin: 0;">تثبيت واستخدام موحد لكافة النماذج الميدانية على الهواتف الذكية بدون تسجيل دخول</p>
+                            <h1 style="font-size: 20px; font-weight: 800; margin: 0 0 4px 0; color: #ffffff;">${t('formsHub.sectionTitle', 'بوابة النماذج الميدانية الموحدة')}</h1>
+                            <p style="font-size: 13px; color: #94a3b8; margin: 0;">${t('formsHub.sectionSubtitle', 'تثبيت واستخدام موحد لكافة النماذج الميدانية على الهواتف الذكية بدون تسجيل دخول')}</p>
                         </div>
                     </div>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('forms-hub', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
-                            <i class="fas fa-arrow-up-right-from-square"></i> فتح البوابة في نافذة كاملة
+                        <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('/forms-hub', '_blank')" style="background: #2563eb; padding: 10px 20px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-arrow-up-right-from-square"></i> ${t('formsHub.openFull', 'فتح البوابة في نافذة كاملة')}
                         </button>
                     </div>
                 </div>
@@ -6661,16 +6668,16 @@ window.UI = {
                                 <i class="fas fa-clipboard-user"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">المرور اليومي لمسؤولي السلامة</h3>
-                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">18 بنداً وقراءة الطلمبات</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${t('formsHub.c1Title', 'المرور اليومي لمسؤولي السلامة')}</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${t('formsHub.c1Badge', '18 بنداً وقراءة الطلمبات')}</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            جولة التفتيش الميدانية الشاملة لمسؤولي ومشرفي السلامة ومطابقة معايير السلامة في كافة العنابر والمخازن.
+                            ${t('formsHub.c1Desc', 'جولة التفتيش الميدانية الشاملة لمسؤولي ومشرفي السلامة ومطابقة معايير السلامة في كافة العنابر والمخازن.')}
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('daily-safety', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
-                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج المرور اليومي
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('/daily-safety', '_blank')" style="width: 100%; justify-content: center; background: #059669;">
+                        <i class="fas fa-external-link-alt ml-2"></i> ${t('formsHub.c1Btn', 'فتح نموذج المرور اليومي')}
                     </button>
                 </div>
 
@@ -6682,16 +6689,16 @@ window.UI = {
                                 <i class="fas fa-clipboard-check"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل الملاحظات اليومية</h3>
-                                <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 6px; font-weight: 700;">يومي وسريع</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${t('formsHub.c2Title', 'تسجيل الملاحظات اليومية')}</h3>
+                                <span style="font-size: 11px; background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${t('formsHub.c2Badge', 'يومي وسريع')}</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            رصد وتوثيق السلوكيات والظروف غير الآمنة والإجراءات الفورية بالصور والتصنيفات الدقيقة.
+                            ${t('formsHub.c2Desc', 'رصد وتوثيق السلوكيات والظروف غير الآمنة والإجراءات الفورية بالصور والتصنيفات الدقيقة.')}
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('observation', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
-                        <i class="fas fa-external-link-alt ml-2"></i> فتح النموذج المباشر
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('/observation', '_blank')" style="width: 100%; justify-content: center; background: #2563eb;">
+                        <i class="fas fa-external-link-alt ml-2"></i> ${t('formsHub.c2Btn', 'فتح النموذج المباشر')}
                     </button>
                 </div>
 
@@ -6703,16 +6710,16 @@ window.UI = {
                                 <i class="fas fa-triangle-exclamation"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">تسجيل حادث وشيك (Near Miss)</h3>
-                                <span style="font-size: 11px; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فوري وعالي الأهمية</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${t('formsHub.c3Title', 'تسجيل حادث وشيك (Near Miss)')}</h3>
+                                <span style="font-size: 11px; background: #fee2e2; color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${t('formsHub.c3Badge', 'فوري وعالي الأهمية')}</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            الإبلاغ الفوري عن الوقائع التي كادت تؤدي إلى حوادث أو إصابات لمنع تكرارها.
+                            ${t('formsHub.c3Desc', 'الإبلاغ الفوري عن الوقائع التي كادت تؤدي إلى حوادث أو إصابات لمنع تكرارها.')}
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('near-miss', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
-                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج الحادث الوشيك
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('/near-miss', '_blank')" style="width: 100%; justify-content: center; background: #d97706;">
+                        <i class="fas fa-external-link-alt ml-2"></i> ${t('formsHub.c3Btn', 'فتح نموذج الحادث الوشيك')}
                     </button>
                 </div>
 
@@ -6724,16 +6731,16 @@ window.UI = {
                                 <i class="fas fa-fire-extinguisher"></i>
                             </div>
                             <div>
-                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">فحص طفايات ومعدات الحريق</h3>
-                                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">فحص دوري شهري</span>
+                                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin: 0;">${t('formsHub.c4Title', 'فحص طفايات ومعدات الحريق')}</h3>
+                                <span style="font-size: 11px; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 6px; font-weight: 700;">${t('formsHub.c4Badge', 'فحص دوري شهري')}</span>
                             </div>
                         </div>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 16px;">
-                            الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق والإنذار.
+                            ${t('formsHub.c4Desc', 'الفحص الميداني الشهري لجاهزية معدات وأجهزة مكافحة الحريق والإنذار.')}
                         </p>
                     </div>
-                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('fire-inspection', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
-                        <i class="fas fa-external-link-alt ml-2"></i> فتح نموذج فحص الحريق
+                    <button class="btn-primary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.exportPublicConfigToLocalStorage)DailyObservations.exportPublicConfigToLocalStorage(); window.open('/fire-inspection', '_blank')" style="width: 100%; justify-content: center; background: #dc2626;">
+                        <i class="fas fa-external-link-alt ml-2"></i> ${t('formsHub.c4Btn', 'فتح نموذج فحص الحريق')}
                     </button>
                 </div>
             </div>
@@ -6742,13 +6749,13 @@ window.UI = {
             <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
                 <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
                     <div>
-                        <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">رمز QR ورابط البوابة الموحدة لمشاركته مع العاملين</h2>
-                        <p style="font-size: 13px; color: #64748b; margin: 0;">امسح الكود بكاميرا الموبايل لفتح وتثبيت البوابة الموحدة مباشرة دون تسجيل دخول</p>
+                        <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">${t('formsHub.qrTitle', 'رمز QR ورابط البوابة الموحدة لمشاركته مع العاملين')}</h2>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;">${t('formsHub.qrDesc', 'امسح الكود بكاميرا الموبايل لفتح وتثبيت البوابة الموحدة مباشرة دون تسجيل دخول')}</p>
                     </div>
                     <div style="display: flex; gap: 8px;">
                         <input type="text" id="dashboard-hub-url-input" readonly value="${hubUrl}" style="padding: 8px 14px; border-radius: 8px; border: 1.5px solid #cbd5e1; direction: ltr; font-size: 13px; min-width: 260px;">
-                        <button class="btn-secondary" onclick="navigator.clipboard.writeText ? navigator.clipboard.writeText('${hubUrl}') : prompt('انسخ الرابط:', '${hubUrl}'); if(typeof Notification!=='undefined'&&Notification.success)Notification.success('تم نسخ الرابط بنجاح')">
-                            <i class="fas fa-copy ml-1"></i> نسخ
+                        <button class="btn-secondary" onclick="navigator.clipboard.writeText ? navigator.clipboard.writeText('${hubUrl}') : prompt('${t('formsHub.copy', 'نسخ')}:', '${hubUrl}'); if(typeof Notification!=='undefined'&&Notification.success)Notification.success('${copiedMsg}')">
+                            <i class="fas fa-copy ml-1"></i> ${t('formsHub.copy', 'نسخ')}
                         </button>
                     </div>
                 </div>
@@ -6759,13 +6766,13 @@ window.UI = {
                     </div>
                     <div style="max-width: 360px;">
                         <h4 style="font-size: 15px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">
-                            <i class="fas fa-qrcode text-blue-600 ml-1"></i> مسح وتثبيت البوابة على الهاتف
+                            <i class="fas fa-qrcode text-blue-600 ml-1"></i> ${t('formsHub.qrHelpTitle', 'مسح وتثبيت البوابة على الهاتف')}
                         </h4>
                         <p style="font-size: 12.5px; color: #475569; line-height: 1.6; margin-bottom: 12px;">
-                            يتيح هذا الرمز الوصول لكافة النماذج الميدانية في صفحة واحدة، وتثبيتها كتطبيق سريع (PWA) على الهواتف دون الحاجة لأي تسجيل دخول.
+                            ${t('formsHub.qrHelp', 'يتيح هذا الرمز الوصول لكافة النماذج الميدانية في صفحة واحدة، وتثبيتها كتطبيق سريع على الهواتف دون الحاجة لأي تسجيل دخول.')}
                         </p>
                         <button class="btn-secondary" onclick="if(typeof DailyObservations!=='undefined'&&DailyObservations.openPublicQrModal)DailyObservations.openPublicQrModal()" style="font-size: 12px;">
-                            <i class="fas fa-expand ml-1"></i> تخصيص الرمز وطباعته
+                            <i class="fas fa-expand ml-1"></i> ${t('formsHub.qrExpand', 'تخصيص الرمز وطباعته')}
                         </button>
                     </div>
                 </div>
@@ -10247,6 +10254,7 @@ window.UI = {
                 'nav.behavior': 'مراقبة التصرفات',
                 'nav.chemical': 'المواد الكيميائية',
                 'nav.observations': 'الملاحظات اليومية',
+                'nav.formsHub': 'بوابة النماذج',
                 'nav.iso': 'نظام ISO',
                 'nav.emergency': 'تنبيهات الطوارئ',
                 'nav.risk': 'تقييم المخاطر',
@@ -10353,6 +10361,7 @@ window.UI = {
                 'nav.behavior': 'Behavior Monitoring',
                 'nav.chemical': 'Chemical Safety',
                 'nav.observations': 'Daily Observations',
+                'nav.formsHub': 'Forms Portal',
                 'nav.iso': 'ISO System',
                 'nav.emergency': 'Emergency Alerts',
                 'nav.risk': 'Risk Assessment',

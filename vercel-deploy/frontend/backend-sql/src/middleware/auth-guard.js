@@ -31,6 +31,7 @@ const PUBLIC_EXEMPT_ACTIONS = new Set([
     'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig',
     'submitPublicFireInspection', 'getPublicFireInspectionConfig',
     'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',
+    'getPublicVisitorConfig', 'getFormsHubConfig',
     'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut',
     'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows',
     'getSecurityOfficersList',
