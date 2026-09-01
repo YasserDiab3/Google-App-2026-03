@@ -1,17 +1,15 @@
 {
-  "version": "1.0.1581",
+  "version": "1.0.1583",
   "highlights": {
     "ar": [
-      "رادار تصاريح العمل السارية يظهر الموقع والنوع والوقت من السجل والميدان.",
-      "تصحيح إجمالي التصاريح: العدّ من السجل كامل دون إسقاط صفوف.",
-      "تحسين عرض بوابة النماذج ورادار التصاريح على الموبايل.",
-      "بيانات النموذج تُفك من JSON: فريق العمل والاعتمادات ومهمات الوقاية."
+      "حفظ التصريح يكتب سجل PTWRegistry بحقول الجدول الصحيحة فقط.",
+      "إزالة تكرار دوال رادار التصاريح في النسخة المضمّنة.",
+      "سكربت مزامنة تصاريح الميدان مع السجل."
     ],
     "en": [
-      "Live PTW radar shows site, type, and times from registry and field permits.",
-      "Permit totals count the full registry without dropping unmatched rows.",
-      "Forms hub and PTW radar layout improved for mobile.",
-      "Permit form JSON fields restored: team, approvals, and PPE."
+      "Saving a permit writes mapped PTWRegistry columns only.",
+      "Remove duplicate live-PTW helpers in the nested backend copy.",
+      "Script to sync field permits with the registry."
     ]
   }
 }

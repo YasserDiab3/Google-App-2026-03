@@ -5,6 +5,7 @@
 
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
+const { permitToRegistry, pickKnown } = require('../db/ptw-registry-map');
 const { checkAuthenticatedActor, checkAdminActor } = require('../middleware/auth-guard');
 const {
     buildFormattedSites,
@@ -14,81 +15,6 @@ const {
 
 function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-}
-
-function cairoNowParts() {
-    const tz = 'Africa/Cairo';
-    const now = new Date();
-    const todayStr = new Intl.DateTimeFormat('en-CA', {
-        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit'
-    }).format(now);
-    const timeStr = new Intl.DateTimeFormat('en-GB', {
-        timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false
-    }).format(now);
-    const [hh, mm] = String(timeStr).split(':').map((n) => parseInt(n, 10) || 0);
-    return { now, todayStr, currentTimeTotalMinutes: (hh * 60) + mm };
-}
-
-function formatPtwTimeString(val) {
-    if (val == null || val === '') return '08:00';
-    if (val instanceof Date && !Number.isNaN(val.getTime())) {
-        const h = val.getHours();
-        const m = val.getMinutes();
-        return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
-    }
-    const str = String(val).trim();
-    const iso = str.match(/T(\d{2}):(\d{2})/);
-    if (iso) return `${iso[1]}:${iso[2]}`;
-    const match = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?/);
-    if (match) {
-        const h = parseInt(match[1], 10);
-        const m = parseInt(match[2], 10);
-        return `${h < 10 ? '0' : ''}${h}:${m < 10 ? '0' : ''}${m}`;
-    }
-    return str || '08:00';
-}
-
-function cleanPtwLocationName(rawLoc, rawSubLoc, site) {
-    const combined = `${rawLoc || ''} ${rawSubLoc || ''}`.trim();
-    if (!combined) return site;
-    const cleaned = combined
-        .replace(/ICAPP[-_ ]*1/gi, '')
-        .replace(/ICAPP[-_ ]*2/gi, '')
-        .replace(/1[-_ ]*ICAPP/gi, '')
-        .replace(/2[-_ ]*ICAPP/gi, '')
-        .replace(/WH[-_ ]*/gi, '')
-        .replace(/[-_\|:\/]+/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    return cleaned ? `${site} - ${cleaned}` : site;
-}
-
-function classifyPtwSite(rawLoc, rawSubLoc) {
-    const combinedLoc = `${rawLoc || ''} ${rawSubLoc || ''}`.toUpperCase();
-    if (combinedLoc.includes('ICAPP-2') || combinedLoc.includes('مصنع 2') || combinedLoc.includes('مصنع2')) {
-        return 'ICAPP-2';
-    }
-    if (combinedLoc.includes('WH') || combinedLoc.includes('مخازن') || combinedLoc.includes('مخزن')) {
-        return 'WH';
-    }
-    return 'ICAPP-1';
-}
-
-function upsertSheetRow(db, sheetName, data, idFields = ['id', 'permitId']) {
-    for (const field of idFields) {
-        const key = String(data[field] || '').trim();
-        if (!key) continue;
-        try {
-            const existing = db.findRow(sheetName, { [field]: key });
-            if (existing && (existing.id || existing.permitId)) {
-                const rowId = existing.id || key;
-                db.updateRow(sheetName, 'id', rowId, { ...existing, ...data, id: rowId });
-                return rowId;
-            }
-        } catch (_e) { /* عمود غير موجود في الجدول */ }
-    }
-    db.insertRow(sheetName, data);
-    return data.id;
 }
 
 function cairoNowParts() {
@@ -269,8 +195,14 @@ const moduleHandlers = {
         data.updatedAt = new Date().toISOString();
 
         const db = getDatabase();
-        upsertSheetRow(db, 'PTWRegistry', data, ['id', 'permitId']);
-        upsertSheetRow(db, 'PTW', data, ['id']);
+        const existingReg = db.findRow('PTWRegistry', { permitId: data.id })
+            || db.findRow('PTWRegistry', { permitId: data.permitId })
+            || db.findRow('PTWRegistry', { id: data.id });
+        const registryRow = permitToRegistry(data, existingReg || {});
+        if (!registryRow.id) registryRow.id = existingReg?.id || generateId('REG');
+        registryRow.permitId = data.id;
+        upsertSheetRow(db, 'PTWRegistry', pickKnown('PTWRegistry', registryRow), ['permitId', 'id']);
+        upsertSheetRow(db, 'PTW', pickKnown('PTW', data), ['id']);
 
         return {
             success: true,

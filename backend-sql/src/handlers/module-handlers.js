@@ -5,6 +5,7 @@
 
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
+const { permitToRegistry, pickKnown } = require('../db/ptw-registry-map');
 const { checkAuthenticatedActor, checkAdminActor } = require('../middleware/auth-guard');
 const {
     buildFormattedSites,
@@ -194,8 +195,14 @@ const moduleHandlers = {
         data.updatedAt = new Date().toISOString();
 
         const db = getDatabase();
-        upsertSheetRow(db, 'PTWRegistry', data, ['id', 'permitId']);
-        upsertSheetRow(db, 'PTW', data, ['id']);
+        const existingReg = db.findRow('PTWRegistry', { permitId: data.id })
+            || db.findRow('PTWRegistry', { permitId: data.permitId })
+            || db.findRow('PTWRegistry', { id: data.id });
+        const registryRow = permitToRegistry(data, existingReg || {});
+        if (!registryRow.id) registryRow.id = existingReg?.id || generateId('REG');
+        registryRow.permitId = data.id;
+        upsertSheetRow(db, 'PTWRegistry', pickKnown('PTWRegistry', registryRow), ['permitId', 'id']);
+        upsertSheetRow(db, 'PTW', pickKnown('PTW', data), ['id']);
 
         return {
             success: true,
