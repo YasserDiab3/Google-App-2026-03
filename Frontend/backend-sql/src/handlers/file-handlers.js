@@ -76,7 +76,9 @@ function wantsInlineDataUri(query) {
 function dataUriFromBuffer(buffer, mimeType, fileName, source) {
     if (!buffer || !buffer.length) return null;
     const detected = looksLikeImageBuffer(buffer);
-    const mime = detected || (String(mimeType || '').toLowerCase().startsWith('image/') ? mimeType : 'image/jpeg');
+    const given = String(mimeType || '').toLowerCase();
+    const mime = detected || (given.startsWith('image/') ? given.split(';')[0].trim() : '');
+    if (!mime) return null;
     return {
         success: true,
         dataUri: `data:${mime};base64,${buffer.toString('base64')}`,

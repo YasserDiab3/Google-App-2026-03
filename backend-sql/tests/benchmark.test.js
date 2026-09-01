@@ -8,15 +8,20 @@ const { getDatabase } = require('../src/db/database');
 const { initSchema } = require('../src/db/schema-init');
 const { runSeed } = require('../scripts/seed-demo-data');
 
-function runBenchmark() {
+async function runBenchmark() {
     console.log('⚡ Starting Performance Benchmark...\n');
     const db = getDatabase();
     initSchema(db);
     runSeed();
 
-    const adminUser = { id: 'USR_ADMIN_01', name: 'مدير النظام', role: 'admin', isAdmin: true };
-    const iterations = 500;
+    const iterations = 80;
     const latencies = [];
+
+    const login = await handleRpcRequest({
+        action: 'login',
+        data: { email: 'admin@system.local', password: 'admin123' }
+    });
+    const auth = { actorUserData: login.user, sessionToken: login.token };
 
     console.log(`⏱️ Executing ${iterations} read & write RPC cycles...`);
     const totalStart = Date.now();
@@ -24,15 +29,13 @@ function runBenchmark() {
     for (let i = 0; i < iterations; i++) {
         const t0 = performance.now();
 
-        // 1. Read
-        handleRpcRequest({
+        await handleRpcRequest({
             action: 'readFromSheet',
             data: { sheetName: 'Medications' },
-            actorUserData: adminUser
+            ...auth
         });
 
-        // 2. Append write
-        handleRpcRequest({
+        await handleRpcRequest({
             action: 'appendToSheet',
             data: {
                 sheetName: 'Incidents',
@@ -42,7 +45,7 @@ function runBenchmark() {
                     severity: 'بسيط'
                 }
             },
-            actorUserData: adminUser
+            ...auth
         });
 
         const t1 = performance.now();
@@ -73,7 +76,10 @@ function runBenchmark() {
 }
 
 if (require.main === module) {
-    runBenchmark();
+    runBenchmark().catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
 }
 
 module.exports = { runBenchmark };

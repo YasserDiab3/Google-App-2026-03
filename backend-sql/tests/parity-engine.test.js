@@ -4,30 +4,15 @@
 'use strict';
 
 const assert = require('assert');
-const { handleRpcRequest } = require('../src/rpc-router');
 const { getDatabase } = require('../src/db/database');
 const { initSchema } = require('../src/db/schema-init');
 const { runSeed } = require('../scripts/seed-demo-data');
+const { rpc, createTestRunner } = require('./_rpc');
 
-let passedTests = 0;
-let totalTests = 0;
-
-function test(name, fn) {
-    totalTests++;
-    try {
-        fn();
-        console.log(`  ✓ PASS: ${name}`);
-        passedTests++;
-    } catch (err) {
-        console.error(`  ❌ FAIL: ${name}`);
-        console.error(`     Error: ${err.message}`);
-    }
-}
-
-function runParityTests() {
+async function runParityTests() {
     console.log('🧪 Starting Parity Engine Tests...\n');
+    const { test, summary } = createTestRunner();
 
-    // Reset database with fresh seeds
     const db = getDatabase();
     initSchema(db);
     runSeed();
@@ -35,10 +20,13 @@ function runParityTests() {
     const adminUser = { id: 'USR_ADMIN_01', name: 'مدير النظام', role: 'admin', isAdmin: true };
     const normalUser = { id: 'USR_DOC_01', name: 'طبيب العيادة', role: 'doctor' };
 
+    let adminAuth = { actorUserData: adminUser, sessionToken: '' };
+    let doctorAuth = { actorUserData: normalUser, sessionToken: '' };
+
     console.log('\n--- 1. Authentication Parity ---');
 
-    test('login with valid credentials returns user payload & session token', () => {
-        const res = handleRpcRequest({
+    await test('login with valid credentials returns user payload & session token', async () => {
+        const res = await rpc({
             action: 'login',
             data: { email: 'admin@system.local', password: 'admin123' }
         });
@@ -46,10 +34,11 @@ function runParityTests() {
         assert.ok(res.user);
         assert.strictEqual(res.user.email, 'admin@system.local');
         assert.ok(res.token);
+        adminAuth = { actorUserData: res.user, sessionToken: res.token };
     });
 
-    test('login with invalid password returns structured failure', () => {
-        const res = handleRpcRequest({
+    await test('login with invalid password returns structured failure', async () => {
+        const res = await rpc({
             action: 'login',
             data: { email: 'admin@system.local', password: 'wrongpassword' }
         });
@@ -57,8 +46,8 @@ function runParityTests() {
         assert.strictEqual(res.errorCode, 'INVALID_CREDENTIALS');
     });
 
-    test('login with non-existent email returns structured failure', () => {
-        const res = handleRpcRequest({
+    await test('login with non-existent email returns structured failure', async () => {
+        const res = await rpc({
             action: 'login',
             data: { email: 'nonexistent@domain.com', password: 'pass' }
         });
@@ -68,11 +57,11 @@ function runParityTests() {
 
     console.log('\n--- 2. Generic Sheet CRUD Parity ---');
 
-    test('readFromSheet returns all rows with metadata', () => {
-        const res = handleRpcRequest({
+    await test('readFromSheet returns all rows with metadata', async () => {
+        const res = await rpc({
             action: 'readFromSheet',
             data: { sheetName: 'Medications' },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
         assert.strictEqual(res.sheetName, 'Medications');
@@ -80,11 +69,11 @@ function runParityTests() {
         assert.ok(res.data.length >= 3);
     });
 
-    test('batchReadSheets returns dictionary of requested sheets', () => {
-        const res = handleRpcRequest({
+    await test('batchReadSheets returns dictionary of requested sheets', async () => {
+        const res = await rpc({
             action: 'batchReadSheets',
             data: { sheetNames: ['Medications', 'Employees', 'Incidents'] },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
         assert.ok(res.data.Medications);
@@ -92,9 +81,9 @@ function runParityTests() {
         assert.ok(res.data.Incidents);
     });
 
-    test('appendToSheet adds new row successfully', () => {
+    await test('appendToSheet adds new row successfully', async () => {
         const testId = `INC_TEST_${Date.now()}`;
-        const res = handleRpcRequest({
+        const res = await rpc({
             action: 'appendToSheet',
             data: {
                 sheetName: 'Incidents',
@@ -105,37 +94,36 @@ function runParityTests() {
                     status: 'قيد المراجعة'
                 }
             },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
 
-        // Verify row exists
-        const check = handleRpcRequest({
+        const check = await rpc({
             action: 'readFromSheet',
             data: { sheetName: 'Incidents' },
-            actorUserData: adminUser
+            ...adminAuth
         });
         const found = check.data.find(r => r.id === testId);
         assert.ok(found);
         assert.strictEqual(found.title, 'حادث اختباري للتحقق');
     });
 
-    test('updateRow updates specific record fields', () => {
-        const res = handleRpcRequest({
+    await test('updateRow updates specific record fields', async () => {
+        const res = await rpc({
             action: 'updateRow',
             data: {
                 sheetName: 'Medications',
                 id: 'MED_01',
                 data: { notes: 'تم التحديث بواسطة اختبار Parity' }
             },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
 
-        const check = handleRpcRequest({
+        const check = await rpc({
             action: 'readFromSheet',
             data: { sheetName: 'Medications' },
-            actorUserData: adminUser
+            ...adminAuth
         });
         const med = check.data.find(m => m.id === 'MED_01');
         assert.strictEqual(med.notes, 'تم التحديث بواسطة اختبار Parity');
@@ -143,17 +131,23 @@ function runParityTests() {
 
     console.log('\n--- 3. Module Operations Parity ---');
 
-    test('saveClinicVisit records visit and updates medication stock', () => {
-        // Read initial stock of MED_01
-        const initial = handleRpcRequest({
+    await test('saveClinicVisit records visit and updates medication stock', async () => {
+        const docLogin = await rpc({
+            action: 'login',
+            data: { email: 'doctor@system.local', password: 'doctor123' }
+        });
+        assert.strictEqual(docLogin.success, true);
+        doctorAuth = { actorUserData: docLogin.user, sessionToken: docLogin.token };
+
+        const initial = await rpc({
             action: 'readFromSheet',
             data: { sheetName: 'Medications' },
-            actorUserData: adminUser
+            ...adminAuth
         });
         const medBefore = initial.data.find(m => m.id === 'MED_01');
         const qtyBefore = parseInt(medBefore.remainingQuantity, 10);
 
-        const visitRes = handleRpcRequest({
+        const visitRes = await rpc({
             action: 'saveClinicVisit',
             data: {
                 personType: 'employee',
@@ -163,37 +157,36 @@ function runParityTests() {
                 medicationsDispensed: medBefore.name,
                 medicationsDispensedQty: '5'
             },
-            actorUserData: normalUser
+            ...doctorAuth
         });
         assert.strictEqual(visitRes.success, true);
         assert.ok(visitRes.id);
 
-        // Verify stock reduced by 5
-        const after = handleRpcRequest({
+        const after = await rpc({
             action: 'readFromSheet',
             data: { sheetName: 'Medications' },
-            actorUserData: adminUser
+            ...adminAuth
         });
         const medAfter = after.data.find(m => m.id === 'MED_01');
         assert.strictEqual(parseInt(medAfter.remainingQuantity, 10), qtyBefore - 5);
     });
 
-    test('savePTW records permit in PTWRegistry', () => {
-        const res = handleRpcRequest({
+    await test('savePTW records permit in PTWRegistry', async () => {
+        const res = await rpc({
             action: 'savePTW',
             data: {
                 workType: 'أعمال ساخنة ولحام',
                 location: 'الورشة المركزية',
                 status: 'معتمد'
             },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
         assert.ok(res.id);
     });
 
-    test('getPublicLivePTWSummary returns activeList radar contract', () => {
-        const saveRes = handleRpcRequest({
+    await test('getPublicLivePTWSummary returns activeList radar contract', async () => {
+        const saveRes = await rpc({
             action: 'savePTW',
             data: {
                 id: 'PTW_RADAR_TEST',
@@ -205,11 +198,11 @@ function runParityTests() {
                 timeTo: '17:00',
                 requestingParty: 'الصيانة'
             },
-            actorUserData: adminUser
+            ...adminAuth
         });
         assert.strictEqual(saveRes.success, true);
 
-        const res = handleRpcRequest({ action: 'getPublicLivePTWSummary' });
+        const res = await rpc({ action: 'getPublicLivePTWSummary' });
         assert.strictEqual(res.success, true);
         assert.ok(Array.isArray(res.activeList), 'activeList missing');
         assert.ok(res.todayDate);
@@ -221,39 +214,39 @@ function runParityTests() {
         assert.ok(row.timeFrom);
     });
 
-    test('saveNearMiss records near miss incident', () => {
-        const res = handleRpcRequest({
+    await test('saveNearMiss records near miss incident', async () => {
+        const res = await rpc({
             action: 'saveNearMiss',
             data: {
                 observerName: 'مراقب السلامة',
                 location: 'صالة التغليف',
                 description: 'كابل مكشوف تم تداركه قبل التعثر'
-            }
+            },
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
         assert.ok(res.id);
     });
 
-    test('getAllApprovedContractors returns list of approved contractors', () => {
-        const res = handleRpcRequest({
-            action: 'getAllApprovedContractors'
+    await test('getAllApprovedContractors returns list of approved contractors', async () => {
+        const res = await rpc({
+            action: 'getAllApprovedContractors',
+            ...adminAuth
         });
         assert.strictEqual(res.success, true);
-        assert.ok(Array.isArray(res.contractors));
-        assert.ok(res.contractors.length > 0);
+        const list = res.contractors || res.data || [];
+        assert.ok(Array.isArray(list));
+        assert.ok(list.length > 0);
     });
 
-    console.log(`\n====================================================`);
-    console.log(`Parity Tests Summary: ${passedTests}/${totalTests} Passed (${((passedTests/totalTests)*100).toFixed(1)}%)`);
-    console.log(`====================================================\n`);
-
-    if (passedTests !== totalTests) {
-        process.exit(1);
-    }
+    summary('Parity Tests');
 }
 
 if (require.main === module) {
-    runParityTests();
+    runParityTests().catch((err) => {
+        console.error(err.message || err);
+        process.exit(1);
+    });
 }
 
 module.exports = { runParityTests };

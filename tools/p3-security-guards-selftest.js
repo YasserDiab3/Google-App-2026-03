@@ -51,7 +51,11 @@ const users = read('Frontend/js/modules/modules/users.js');
 assert(users.includes('data-copy=') || users.includes("data-copy=\"password\""), 'users: لا password في onclick');
 assert(!users.includes("writeText('${creds.password}')"), 'users: لا حقن كلمة مرور في onclick');
 
-const code = read('Backend/Code.gs');
+const GAS_ROOT = fs.existsSync(path.join(ROOT, 'Backend', 'Code.gs'))
+  ? 'Backend'
+  : 'archive/legacy-gas/Backend';
+
+const code = read(path.join(GAS_ROOT, 'Code.gs'));
 assert(code.includes('SESSION_ACTOR_REQUIRED') || code.includes('needsSessionForWrite'), 'GAS: P2 session write gate');
 assert(!/'getAllClinicVisitDeletionRequests'\s*,/.test(code.split('const readOnlyActions')[1].split('];')[0]), 'GAS: deletion requests ليست readOnly');
 assert(!/'ensureContractorEvaluationApprovalRequestsSheet'\s*,/.test(code.split('const readOnlyActions')[1].split('];')[0]), 'GAS: ensure مقاولين ليست readOnly');
@@ -67,15 +71,15 @@ assert(!sessionExemptBlock.includes("'mfaClearUser'") && !sessionExemptBlock.inc
 assert(!sessionExemptBlock.includes("'fixClinicSheetHeaders'"), 'GAS: fixClinicSheetHeaders ليست session-exempt');
 assert(!/action === 'mfaClearUser'[\s\S]{0,80}emergencyClearUserMfa/.test(code), 'GAS: لا مسار mfaClearUser مبكر بدون مصادقة');
 
-const clinicGs = read('Backend/Clinic.gs');
+const clinicGs = read(path.join(GAS_ROOT, 'Clinic.gs'));
 const deleteFn = clinicGs.split('function deleteClinicVisit')[1] || '';
 assert(deleteFn.includes('ClinicContractorVisits'), 'GAS: deleteClinicVisit يغطي ClinicContractorVisits');
 
-const handlers = read('Backend/ActionHandlers.gs');
+const handlers = read(path.join(GAS_ROOT, 'ActionHandlers.gs'));
 assert(/'addClinicStaff'[\s\S]{0,200}actionRequireAdmin_/.test(handlers), 'GAS: addClinicStaff يتطلب admin');
 assert(/'fixClinicSheetHeaders'[\s\S]{0,200}actionRequireAdmin_/.test(handlers), 'GAS: fixClinicSheetHeaders يتطلب admin');
 
-const utils = read('Backend/Utils.gs');
+const utils = read(path.join(GAS_ROOT, 'Utils.gs'));
 assert(utils.includes('requireAuthenticatedActor_') && /checkSheetDirectWriteAccess_[\s\S]*?requireAuthenticatedActor_/.test(utils), 'GAS: P0.1 write actor gate');
 
 if (failed) {

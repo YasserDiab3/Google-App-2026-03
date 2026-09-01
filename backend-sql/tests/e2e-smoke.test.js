@@ -9,14 +9,15 @@ const app = require('../src/index');
 const TEST_PORT = 3999;
 let server = null;
 
-async function sendRpc(action, data = {}, actorUserData = null) {
+async function sendRpc(action, data = {}, actorUserData = null, sessionToken = '') {
     const res = await fetch(`http://127.0.0.1:${TEST_PORT}/exec`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
             action,
             data,
-            actorUserData
+            actorUserData,
+            sessionToken
         })
     });
     return await res.json();
@@ -40,12 +41,13 @@ async function runE2eSmoke() {
         const loginRes = await sendRpc('login', { email: 'admin@system.local', password: 'admin123' });
         assert.strictEqual(loginRes.success, true);
         const adminUser = loginRes.user;
+        const adminToken = loginRes.token || loginRes.sessionToken;
         console.log('  ✓ Admin logged in over HTTP');
 
         // 3. Batch Read
         const batchRes = await sendRpc('batchReadSheets', {
             sheetNames: ['Users', 'Medications', 'Employees', 'ApprovedContractors']
-        }, adminUser);
+        }, adminUser, adminToken);
         assert.strictEqual(batchRes.success, true);
         assert.ok(batchRes.data.Medications.length > 0);
         console.log(`  ✓ Batch read fetched ${Object.keys(batchRes.data).length} sheets`);
@@ -59,7 +61,7 @@ async function runE2eSmoke() {
             reason: 'كشف روتيني',
             medicationsDispensed: med.name,
             medicationsDispensedQty: '1'
-        }, adminUser);
+        }, adminUser, adminToken);
         assert.strictEqual(clinicRes.success, true);
         console.log('  ✓ Clinic visit created and medication deducted');
 
@@ -68,7 +70,7 @@ async function runE2eSmoke() {
             workType: 'صيانة مرتفعات',
             location: 'المبنى الإداري',
             status: 'قيد الاعتماد'
-        }, adminUser);
+        }, adminUser, adminToken);
         assert.strictEqual(ptwRes.success, true);
         console.log('  ✓ PTW permit created successfully');
 

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1614",
+  "version": "1.0.1616",
   "highlights": {
     "ar": [
-      "تصدير تقرير الملاحظات PPT أصبح يضمّن صورة الملاحظة داخل الشريحة.",
-      "جلب الصورة يتم عبر الخادم لتفادي فشل العرض بسبب قيود المتصفح.",
-      "إن تعذر التضمين تظهر رسالة واضحة بدل «لا توجد صورة»."
+      "تصدير PPT يضمّن صورة الملاحظة عبر الخادم بدل مربع فارغ.",
+      "مزامنة معدات الوقاية مع نسخة النشر.",
+      "اختبارات النظام أصبحت تنتظر الجلسة ولا تُعلّق بعد النجاح."
     ],
     "en": [
-      "Daily observation PPT export now embeds the observation photo in the slide.",
-      "Photos are fetched through the server so browser CORS no longer blanks the image.",
-      "If embedding fails, the slide shows a clear message instead of “no photo attached”."
+      "PPT export embeds observation photos through the server instead of a blank box.",
+      "PPE module is synced to the published frontend copy.",
+      "Backend tests now await the session and exit cleanly after success."
     ]
   }
 }

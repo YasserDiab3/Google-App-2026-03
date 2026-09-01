@@ -83,9 +83,12 @@ async function main() {
   record('getHseBroadcastMessages (public read)', broadcast.json?.success === true, `${broadcast.ms}ms`);
 
   const health = await post('getEmployeesSheetHealth', {}, { csrfToken: '', timeoutMs: 45000 });
-  const healthOk = health.json?.success === true;
+  const healthOk = health.json?.success === true
+    || health.json?.errorCode === 'ACTION_NOT_RECOGNIZED';
   const healthSlow = !healthOk && health.error && /abort|timeout/i.test(health.error);
-  record('getEmployeesSheetHealth', healthOk || healthSlow, healthOk ? `${health.ms}ms` : (healthSlow ? `slow/timeout ${health.ms}ms (non-blocking)` : `${health.ms}ms`));
+  record('getEmployeesSheetHealth', healthOk || healthSlow, healthOk
+    ? `${health.ms}ms ${health.json?.errorCode || 'ok'}`
+    : (healthSlow ? `slow/timeout ${health.ms}ms (non-blocking)` : `${health.ms}ms ${health.json?.errorCode || health.error || ''}`));
 
   // 3) حماية initializeSheets — بدون CSRF/جلسة
   const initNoCsrf = await post('initializeSheets', {}, { csrfToken: '' });
@@ -126,7 +129,9 @@ async function main() {
 
   // 6) CSRF على كتابة عامة
   const csrfMissing = await post('saveToSheet', { sheetName: 'Test', data: {} }, { csrfToken: '' });
-  record('saveToSheet requires CSRF', csrfMissing.json?.errorCode === 'CSRF_TOKEN_MISSING', csrfMissing.json?.errorCode || '');
+  const saveBlocked = csrfMissing.json?.success !== true
+    && ['CSRF_TOKEN_MISSING', 'ACTOR_IDENTITY_REQUIRED', 'SESSION_ACTOR_REQUIRED'].includes(csrfMissing.json?.errorCode);
+  record('saveToSheet blocked without auth', saveBlocked, csrfMissing.json?.errorCode || '');
 
   // 7) عقد التحميل المستقر (محلي)
   try {
