@@ -400,40 +400,6 @@ const DailyObservations = {
             Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
     },
 
-    canCloseObservationFromList(obs) {
-        if (!obs) return false;
-        const status = String(obs.status || '').trim();
-        if (status === 'مغلق' || status === 'closed') return false;
-        const stage = String(obs.workflowStage || '').trim();
-        if (stage !== 'in_progress' && stage !== 'pending_department') return false;
-        const u = AppState.currentUser;
-        if (!u) return false;
-        if (this._isAdminRole(u) || this._isSafetyOfficerRole(u)) return true;
-        if (typeof Permissions !== 'undefined' && Permissions.hasDetailedPermission) {
-            if (Permissions.hasDetailedPermission('daily-observations', 'observations-specialist-review')) return true;
-            if (Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve')) return true;
-        }
-        return false;
-    },
-
-    _buildObservationWorkflowActor() {
-        const u = AppState.currentUser || {};
-        const actor = {
-            name: (u.name || '').trim() || 'مستخدم',
-            email: (u.email || '').trim(),
-            role: u.role || '',
-            department: (u.department || '').trim(),
-            dailyObservationsPermissions: {}
-        };
-        if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
-            try {
-                const eff = Permissions.getEffectivePermissions(u) || {};
-                actor.dailyObservationsPermissions = eff['daily-observationsPermissions'] || {};
-            } catch (_e) { /* ignore */ }
-        }
-        return actor;
-    },
-
     /** ✅ مدير السلامة - للصلاحيات العامة */
     _isSafetyManager() {
         const user = AppState.currentUser;
@@ -1091,253 +1057,6 @@ const DailyObservations = {
         return this.canViewAllObservationsWorkflow() || this.isSystemManager();
     },
 
-    isObservationClosed(obs) {
-        if (!obs) return false;
-        const stage = String(obs.workflowStage || '').trim().toLowerCase();
-        if (stage === 'closed') return true;
-        return this.normalizeStatus(obs.status) === 'مغلق';
-    },
-
-    canCloseObservationQuick(obs) {
-        return this.canCloseObservationFromList(obs);
-    },
-
-    _ensureObsSelectedSet() {
-        if (!(this._obsSelectedIds instanceof Set)) this._obsSelectedIds = new Set();
-        return this._obsSelectedIds;
-    },
-
-    _markObservationClosedLocal(observationId) {
-        const list = AppState.appData.dailyObservations || [];
-        const idx = list.findIndex((o) => o && o.id === observationId);
-        if (idx === -1) return;
-        list[idx].status = 'مغلق';
-        list[idx].workflowStage = 'closed';
-        list[idx].updatedAt = new Date().toISOString();
-        try {
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
-        } catch (_e) { /* ignore */ }
-    },
-
-    async applyObservationClosedStatus(observationId, opts = {}) {
-        const silent = opts.silent === true;
-        try {
-            const result = await GoogleIntegration.callBackend('updateObservationStatus', {
-                observationId,
-                statusData: {
-                    status: 'مغلق',
-                    updatedBy: AppState.currentUser?.name || 'System'
-                }
-            });
-            if (result && result.success) {
-                this._markObservationClosedLocal(observationId);
-                if (!silent) {
-                    this.closeObservationDetailModalIfOpen(observationId);
-                    Notification.success(this._t('module.dailyobs.close.oneDone', 'تم إغلاق الملاحظة'));
-                    try { this.loadObservationsList(this.currentFilter?.filter || null); } catch (_e) { /* ignore */ }
-                    try { this.renderStatsCards(); } catch (_e) { /* ignore */ }
-                }
-                return { success: true };
-            }
-            return { success: false, message: (result && result.message) || 'فشل إغلاق الملاحظة' };
-        } catch (error) {
-            return { success: false, message: (error && error.message) ? error.message : String(error) };
-        }
-    },
-
-    async closeObservationQuick(observationId, opts = {}) {
-        const silent = opts.silent === true;
-        this._obsCloseInFlight = this._obsCloseInFlight || {};
-        if (this._obsCloseInFlight[observationId]) {
-            return { success: false, skipped: true };
-        }
-        this._obsCloseInFlight[observationId] = true;
-        try {
-            const raw = (AppState.appData.dailyObservations || []).find((o) => o && o.id === observationId);
-            if (!raw) return { success: false, message: 'الملاحظة غير موجودة' };
-            const obs = this.normalizeRecord(raw);
-            if (this.isObservationClosed(obs)) return { success: true, skipped: true };
-            if (!this.canCloseObservationQuick(obs)) {
-                return { success: false, message: this._t('module.dailyobs.close.noPermission', 'لا صلاحية لإغلاق هذه الملاحظة') };
-            }
-            const stage = String(obs.workflowStage || '').trim();
-            const useWorkflow = stage === 'in_progress' || stage === 'pending_department';
-            if (useWorkflow) {
-                const res = await this.runWorkflowTransition(observationId, 'close_observation', {
-                    silent: silent
-                });
-                if (res && res.success) {
-                    this._markObservationClosedLocal(observationId);
-                    return { success: true };
-                }
-                return { success: false, message: (res && res.message) || 'فشل إغلاق الملاحظة' };
-            }
-            return { success: false, message: 'لا يمكن الإغلاق في هذه المرحلة' };
-        } finally {
-            delete this._obsCloseInFlight[observationId];
-        }
-    },
-
-    _updateObsBulkCloseBar() {
-        const selected = this._ensureObsSelectedSet();
-        const countEl = document.getElementById('obs-bulk-close-count');
-        const btn = document.getElementById('obs-bulk-close-btn');
-        const n = selected.size;
-        if (countEl) {
-            countEl.textContent = n
-                ? this._tf('module.dailyobs.close.selectedCount', { n }, `${n} محددة`)
-                : this._t('module.dailyobs.close.noneSelected', 'لم يُحدد شيء');
-        }
-        if (btn) {
-            btn.disabled = n === 0 || this._obsBulkClosing === true;
-            if (!this._obsBulkArmed) {
-                btn.textContent = this._t('module.dailyobs.close.selected', 'إغلاق المحدد');
-            }
-        }
-        document.querySelectorAll('.obs-row-select').forEach((cb) => {
-            const id = cb.getAttribute('data-oid');
-            cb.checked = !!(id && selected.has(id));
-        });
-        const all = document.getElementById('obs-select-all-closable');
-        if (all) {
-            const boxes = Array.from(document.querySelectorAll('.obs-row-select:not(:disabled)'));
-            all.checked = boxes.length > 0 && boxes.every((cb) => cb.checked);
-        }
-    },
-
-    async closeSelectedObservations() {
-        const selected = Array.from(this._ensureObsSelectedSet());
-        if (!selected.length) {
-            Notification.warning(this._t('module.dailyobs.close.none', 'اختر ملاحظة واحدة على الأقل'));
-            return;
-        }
-        if (this._obsBulkClosing) return;
-        if (!window.confirm(this._tf('module.dailyobs.close.confirmN', { n: selected.length }, `إغلاق ${selected.length} ملاحظة محددة؟`))) {
-            return;
-        }
-        this._obsBulkClosing = true;
-        this._updateObsBulkCloseBar();
-        Notification.info(this._t('module.dailyobs.close.working', 'جاري إغلاق الملاحظات المحددة...'));
-        let ok = 0;
-        let skipped = 0;
-        let fail = 0;
-        try {
-            const actor = this._buildObservationWorkflowActor();
-            const batch = await GoogleIntegration.callBackend('closeObservations', {
-                observationIds: selected,
-                actor,
-                __timeoutMs: 120000
-            });
-            if (batch && batch.success && batch.data) {
-                const closed = Array.isArray(batch.data.closed) ? batch.data.closed : [];
-                const skipList = Array.isArray(batch.data.skipped) ? batch.data.skipped : [];
-                const failList = Array.isArray(batch.data.failed) ? batch.data.failed : [];
-                closed.forEach((row) => this._markObservationClosedLocal(row.id || row));
-                ok = closed.length;
-                const leftover = skipList.map((row) => row && (row.id || row)).filter(Boolean);
-                for (let i = 0; i < leftover.length; i++) {
-                    const r = await this.closeObservationQuick(leftover[i], { silent: true });
-                    if (r && r.skipped) skipped += 1;
-                    else if (r && r.success) ok += 1;
-                    else fail += 1;
-                }
-                fail += failList.length;
-            } else {
-                const queue = selected.slice();
-                const runOne = async (id) => {
-                    const r = await this.closeObservationQuick(id, { silent: true });
-                    if (r && r.skipped) skipped += 1;
-                    else if (r && r.success) ok += 1;
-                    else fail += 1;
-                };
-                const workers = [runOne, runOne].map(async (fn) => {
-                    while (queue.length) {
-                        const id = queue.shift();
-                        if (id) await fn(id);
-                    }
-                });
-                await Promise.all(workers);
-            }
-        } catch (_e) {
-            const queue = selected.slice();
-            while (queue.length) {
-                const id = queue.shift();
-                const r = await this.closeObservationQuick(id, { silent: true });
-                if (r && r.skipped) skipped += 1;
-                else if (r && r.success) ok += 1;
-                else fail += 1;
-            }
-        }
-        this._ensureObsSelectedSet().clear();
-        this._obsBulkClosing = false;
-        try { this.loadObservationsList(this.currentFilter?.filter || null); } catch (_e) { /* ignore */ }
-        try { this.renderStatsCards(); } catch (_e) { /* ignore */ }
-        if (fail) {
-            Notification.warning(this._tf('module.dailyobs.close.partial', { ok, fail }, `أُغلق ${ok}، تعذّر ${fail}` + (skipped ? `، تخطّي ${skipped}` : '')));
-        } else {
-            Notification.success(this._tf('module.dailyobs.close.done', { n: ok }, `تم إغلاق ${ok} ملاحظة`));
-        }
-    },
-
-    _bindObservationListCloseActions(container) {
-        if (!container || container.dataset.obsCloseBound === '1') return;
-        container.dataset.obsCloseBound = '1';
-        container.addEventListener('click', (e) => {
-            const bulkBtn = e.target.closest && e.target.closest('#obs-bulk-close-btn');
-            if (bulkBtn) {
-                e.preventDefault();
-                void this.closeSelectedObservations();
-                return;
-            }
-            const closeBtn = e.target.closest && e.target.closest('.obs-quick-close-btn');
-            if (closeBtn) {
-                e.preventDefault();
-                e.stopPropagation();
-                const oid = closeBtn.getAttribute('data-oid');
-                if (!oid || closeBtn.disabled) return;
-                const raw = (AppState.appData.dailyObservations || []).find((o) => o && String(o.id) === String(oid));
-                const code = raw ? (raw.isoCode || oid) : oid;
-                if (!window.confirm('إغلاق الملاحظة ' + code + '؟')) return;
-                closeBtn.disabled = true;
-                closeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                void this.closeObservationQuick(oid, { silent: false }).then((r) => {
-                    if (!(r && r.success)) {
-                        closeBtn.disabled = false;
-                        closeBtn.innerHTML = '<i class="fas fa-flag-checkered"></i>';
-                        Notification.error((r && r.message) || this._t('module.dailyobs.close.failed', 'فشل إغلاق الملاحظة'));
-                    }
-                });
-                return;
-            }
-        });
-        container.addEventListener('change', (e) => {
-            const t = e.target;
-            if (!t) return;
-            if (t.id === 'obs-select-all-closable') {
-                const set = this._ensureObsSelectedSet();
-                document.querySelectorAll('.obs-row-select:not(:disabled)').forEach((cb) => {
-                    const id = cb.getAttribute('data-oid');
-                    if (!id) return;
-                    cb.checked = t.checked;
-                    if (t.checked) set.add(id);
-                    else set.delete(id);
-                });
-                this._obsBulkArmed = false;
-                this._updateObsBulkCloseBar();
-                return;
-            }
-            if (t.classList && t.classList.contains('obs-row-select')) {
-                const id = t.getAttribute('data-oid');
-                if (!id) return;
-                const set = this._ensureObsSelectedSet();
-                if (t.checked) set.add(id);
-                else set.delete(id);
-                this._obsBulkArmed = false;
-                this._updateObsBulkCloseBar();
-            }
-        });
-    },
-
     /**
      * ✅ التحقق من صلاحية تعديل الحقول في نموذج التفاصيل
      * مسموح لـ: مدير السلامة، أخصائي السلامة، إدارة السلامة
@@ -1581,7 +1300,8 @@ const DailyObservations = {
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_reject" style="background: #7f1d1d; color: white; border: none;"><i class="fas fa-ban ml-1"></i>رفض إداري</button>`);
         }
         if ((stage === 'in_progress' || stage === 'pending_department')) {
-            if (adm || canActAsSafetyManager || canActAsSpecialist) {
+            const deptUser = this.isUserInResponsibleDepartment(obs);
+            if (adm || canActAsSafetyManager || canActAsSpecialist || deptUser) {
                 btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>إغلاق الملاحظة</button>`);
             }
         }
@@ -1739,11 +1459,6 @@ const DailyObservations = {
             action === 'specialist_forward' || action === 'manager_approve'
                 ? this.readAssignFieldsFromDetailModal(observationId)
                 : {};
-        if (action === 'close_observation') {
-            const raw = (AppState.appData.dailyObservations || []).find((o) => String(o.id) === String(observationId));
-            const code = raw ? (raw.isoCode || raw.id) : observationId;
-            if (!window.confirm('إغلاق الملاحظة ' + code + '؟')) return;
-        }
         await this.runWorkflowTransition(observationId, action, {
             comments: needsReason ? '' : comments,
             rejectionReason: needsReason ? rejectionReason : '',
@@ -1776,12 +1491,24 @@ const DailyObservations = {
     },
 
     async runWorkflowTransition(observationId, action, extra = {}) {
-        const actor = this._buildObservationWorkflowActor();
-        if (!extra.silent) {
-            this.closeObservationDetailModalIfOpen(observationId);
-            if (typeof Notification !== 'undefined' && Notification.info) {
-                Notification.info('جاري تنفيذ طلب سير الملاحظة...');
-            }
+        const u = AppState.currentUser || {};
+        const actor = {
+            name: (u.name || '').trim() || 'مستخدم',
+            email: (u.email || '').trim(),
+            role: u.role || '',
+            department: (u.department || '').trim(),
+            dailyObservationsPermissions: {}
+        };
+        if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+            try {
+                const eff = Permissions.getEffectivePermissions(u) || {};
+                actor.dailyObservationsPermissions = eff['daily-observationsPermissions'] || {};
+            } catch (e) { /* ignore */ }
+        }
+        // إغلاق النافذة فوراً وإشعار المستخدم دون انتظار الخادم (تجنّب شاشة التحميل الطويلة ومهلة 12 ثانية الافتراضية)
+        this.closeObservationDetailModalIfOpen(observationId);
+        if (typeof Notification !== 'undefined' && Notification.info) {
+            Notification.info('جاري تنفيذ طلب سير الملاحظة...');
         }
         try {
             const res = await GoogleIntegration.callBackend('transitionObservationWorkflow', {
@@ -1800,37 +1527,27 @@ const DailyObservations = {
                 const okMsg = res.message || 'تم التحديث';
                 const idx = AppState.appData.dailyObservations.findIndex((o) => o.id === observationId);
                 if (idx !== -1 && res.data) {
-                    AppState.appData.dailyObservations[idx] = this.slimObservationForList(this.normalizeRecord(res.data));
-                } else if (idx !== -1) {
-                    AppState.appData.dailyObservations[idx] = {
-                        ...AppState.appData.dailyObservations[idx],
-                        status: action === 'close_observation' ? 'مغلق' : AppState.appData.dailyObservations[idx].status,
-                        workflowStage: action === 'close_observation' ? 'closed' : AppState.appData.dailyObservations[idx].workflowStage
-                    };
+                    AppState.appData.dailyObservations[idx] = this.normalizeRecord(res.data);
                 }
                 try {
                     if (typeof window.DataManager !== 'undefined' && window.DataManager.save) window.DataManager.save();
                 } catch (e) { /* ignore */ }
                 this.pushObservationInAppNotification('سير الملاحظات', res.message || 'تم تحديث الملاحظة', observationId);
-                if (!extra.silent) {
-                    await this.yieldToMain();
-                    try {
-                        this.loadObservationsList(this.currentFilter?.filter || null);
-                    } catch (e) {
-                        Utils.safeWarn('loadObservationsList بعد سير الملاحظة', e);
-                    }
-                    await this.yieldToMain();
-                    Notification.success(okMsg);
+                await this.yieldToMain();
+                try {
+                    this.loadObservationsList(this.currentFilter?.filter || null);
+                } catch (e) {
+                    Utils.safeWarn('loadObservationsList بعد سير الملاحظة', e);
                 }
-                return res;
+                await this.yieldToMain();
+                Notification.success(okMsg);
+            } else {
+                const errMsg = res?.message || 'فشل التحديث';
+                Notification.error(errMsg);
             }
-            const errMsg = res?.message || 'فشل التحديث';
-            if (!extra.silent) Notification.error(errMsg);
-            return res;
         } catch (err) {
             const errMsg = (err && err.message) ? err.message : String(err);
-            if (!extra.silent) Notification.error(errMsg);
-            return { success: false, message: errMsg };
+            Notification.error(errMsg);
         }
     },
 
@@ -2147,7 +1864,6 @@ const DailyObservations = {
     _dailyObsBackendFetchOk: false,
     _obsListPage: 1,
     _obsListRetryCount: 0,
-    _obsSelectedCloseIds: null,
 
     slimObservationForList(row) {
         if (!row || typeof row !== 'object') return row;
@@ -2831,16 +2547,8 @@ const DailyObservations = {
     },
 
     _renderObservationTableRow(obs, tbl) {
-        const oid = Utils.escapeHTML(String(obs.id || ''));
-        const canClose = this.canCloseObservationQuick(obs);
-        const closed = this.isObservationClosed(obs);
-        const selected = this._ensureObsSelectedSet().has(String(obs.id || ''));
-        const closeTitle = Utils.escapeHTML(tbl && tbl.closeObs ? tbl.closeObs : 'إغلاق الملاحظة');
         return `
-            <tr data-oid="${oid}" class="${closed ? 'obs-row-closed' : ''}">
-                <td style="width:36px;text-align:center;">
-                    <input type="checkbox" class="obs-row-select" data-oid="${oid}" ${canClose ? '' : 'disabled'} ${selected && canClose ? 'checked' : ''} title="${Utils.escapeHTML(tbl && tbl.select ? tbl.select : 'تحديد')}">
-                </td>
+            <tr>
                 <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
                 <td>
                     <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
@@ -2853,24 +2561,15 @@ const DailyObservations = {
                     <span class="badge badge-${this.getRiskBadgeClass(obs.riskLevel)}">${Utils.escapeHTML(obs.riskLevel || '-')}</span>
                 </td>
                 <td>
-                    <span class="badge badge-${this.getStatusBadgeClass(obs.status)}">${Utils.escapeHTML(obs.status || '-')}</span>
-                </td>
-                <td>
                     <div>${Utils.escapeHTML(obs.observerName || '-')}</div>
                     ${(obs.submittedBy === 'نموذج عام (Public Form)' || String(obs.remarks || '').includes('نموذج عام')) ? `<span class="badge" style="background:#f3e8ff;color:#7e22ce;font-size:0.7rem;padding:2px 6px;border-radius:4px;font-weight:700;">نموذج عام</span>` : ''}
                 </td>
                 <td>${this.formatResponsibleTableCell(obs)}</td>
                 <td>${Number(obs.attachmentCount) > 0 || (obs.attachments && obs.attachments.length > 0) ? `<i class="fas fa-paperclip text-blue-500" title="${Utils.escapeHTML(this._tf('module.dailyobs.registry.attachments.count', { n: Number(obs.attachmentCount) || obs.attachments.length }, `${Number(obs.attachmentCount) || obs.attachments.length} ملف`))}"></i>` : '-'}</td>
                 <td>
-                    <div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap;">
-                        <button type="button" onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl ? tbl.view : 'عرض')}">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        ${canClose ? `
-                        <button type="button" class="btn-icon obs-quick-close-btn" data-oid="${oid}" title="${closeTitle}" style="color:#4f46e5;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;padding:6px 8px;">
-                            <i class="fas fa-flag-checkered"></i>
-                        </button>` : ''}
-                    </div>
+                    <button onclick="DailyObservations.viewObservation('${obs.id}')" class="btn-icon btn-icon-primary" title="${Utils.escapeHTML(tbl ? tbl.view : 'عرض')}">
+                        <i class="fas fa-eye"></i>
+                    </button>
                 </td>
             </tr>`;
     },
@@ -8267,9 +7966,7 @@ const DailyObservations = {
             attachments: this._t('module.dailyobs.registry.table.attachments', 'المرفقات'),
             actions: this._t('module.dailyobs.registry.table.actions', 'الإجراءات'),
             emptySearch: this._t('module.dailyobs.registry.emptySearch', 'لا توجد نتائج للبحث'),
-            view: this._t('module.dailyobs.common.view', 'عرض'),
-            closeObs: this._t('module.dailyobs.close.quick', 'إغلاق الملاحظة'),
-            select: this._t('module.dailyobs.close.select', 'تحديد')
+            view: this._t('module.dailyobs.common.view', 'عرض')
         };
 
         const renderRow = (obs) => this._renderObservationTableRow(obs, tbl);
@@ -8307,7 +8004,7 @@ const DailyObservations = {
         const remaining = Math.max(0, filteredObservations.length - visible.length);
         const rowsHtml = visible.length === 0
             ? `<tr>
-                    <td colspan="12" style="text-align: center; padding: 40px;">
+                    <td colspan="11" style="text-align: center; padding: 40px;">
                         <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
                         <p class="text-gray-500">${Utils.escapeHTML(tbl.emptySearch)}</p>
                     </td>
@@ -8323,17 +8020,10 @@ const DailyObservations = {
             : '';
 
         container.innerHTML = `
-            <div id="obs-bulk-close-bar" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:10px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;">
-                <span id="obs-bulk-close-count" style="font-weight:700;color:#3730a3;">${Utils.escapeHTML(this._t('module.dailyobs.close.noneSelected', 'لم يُحدد شيء'))}</span>
-                <button type="button" id="obs-bulk-close-btn" class="btn-primary btn-sm" disabled style="background:#4f46e5;border:none;">
-                    <i class="fas fa-flag-checkered ml-1"></i>${Utils.escapeHTML(this._t('module.dailyobs.close.selected', 'إغلاق المحدد'))}
-                </button>
-            </div>
             <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
                 <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
                     <thead>
                         <tr>
-                            <th style="width:36px;text-align:center;"><input type="checkbox" id="obs-select-all-closable" title="${Utils.escapeHTML(tbl.select)}"></th>
                             <th>${Utils.escapeHTML(tbl.code)}</th>
                             <th>${Utils.escapeHTML(tbl.location)}</th>
                             <th>${Utils.escapeHTML(tbl.datetime)}</th>
@@ -8354,12 +8044,6 @@ const DailyObservations = {
             </div>
             ${moreHtml}
         `;
-
-        this._bindObservationListCloseActions(container);
-        this._updateObsBulkCloseBar();
-        const canUseCloseBar = this._isAdminRole(AppState.currentUser) || this.hasSpecialistWorkflowPermission() || this.hasManagerWorkflowPermission();
-        const bulkBar = document.getElementById('obs-bulk-close-bar');
-        if (bulkBar && !canUseCloseBar) bulkBar.style.display = 'none';
 
         const moreBtn = document.getElementById('obs-load-more-btn');
         if (moreBtn) {
@@ -12609,10 +12293,6 @@ const DailyObservations = {
                     <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="margin: 0 5px;">
                         <i class="fas fa-times ml-2"></i>إغلاق
                     </button>
-                    ${this.canCloseObservationQuick(observation) ? `
-                    <button type="button" class="btn-primary obs-detail-quick-close" data-oid="${Utils.escapeHTML(String(observation.id || ''))}" style="margin: 0 5px; background:#4f46e5; border:none;">
-                        <i class="fas fa-flag-checkered ml-2"></i>${Utils.escapeHTML(this._t('module.dailyobs.close.quick', 'إغلاق الملاحظة'))}
-                    </button>` : ''}
                     ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('daily-observations') : ''}
                     <button type="button" onclick="DailyObservations.shareViaWhatsApp('${observation.id}');" class="btn-secondary" style="margin: 0 5px; background: #22c55e; color: #ffffff; border-color: #16a34a;">
                         <i class="fab fa-whatsapp ml-2"></i>مشاركة واتساب
@@ -12637,21 +12317,7 @@ const DailyObservations = {
                 modal.remove();
             }
         });
-        const detailCloseBtn = modal.querySelector('.obs-detail-quick-close');
-        if (detailCloseBtn) {
-            detailCloseBtn.addEventListener('click', () => {
-                if (detailCloseBtn.disabled) return;
-                detailCloseBtn.disabled = true;
-                const oid = detailCloseBtn.getAttribute('data-oid');
-                void this.closeObservationQuick(oid, { silent: false }).then((r) => {
-                    if (!(r && r.success)) {
-                        detailCloseBtn.disabled = false;
-                        Notification.error((r && r.message) || this._t('module.dailyobs.close.failed', 'فشل إغلاق الملاحظة'));
-                    }
-                });
-            });
-        }
-
+        
         return modal;
     },
 
@@ -12782,20 +12448,8 @@ const DailyObservations = {
                 }
 
                 Notification.success('تم تحديث الحالة بنجاح');
-                if (newStatus === 'مغلق' && index !== -1) {
-                    AppState.appData.dailyObservations[index].workflowStage = 'closed';
-                }
-                const modal = document.querySelector('.modal-overlay[data-observation-id="' + observationId + '"]');
-                if (modal) {
-                    const select = modal.querySelector('#observation-status-select');
-                    if (select) select.value = newStatus;
-                    modal.querySelectorAll('.badge').forEach((el) => {
-                        if (el.closest('.modal-body') && /مفتوح|جاري|مغلق/.test(el.textContent || '')) {
-                            el.className = 'badge badge-' + this.getStatusBadgeClass(newStatus);
-                            el.textContent = newStatus;
-                        }
-                    });
-                }
+                // إعادة فتح النافذة لإظهار التحديثات
+                await this.viewObservation(observationId);
             } else {
                 const errMsg = result.message || 'حدث خطأ';
                 if (!this.showObservationDetailInlineAlert(observationId, 'error', errMsg)) {

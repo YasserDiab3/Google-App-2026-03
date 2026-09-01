@@ -6,7 +6,7 @@
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
 const { permitToRegistry, pickKnown } = require('../db/ptw-registry-map');
-const { checkAuthenticatedActor, checkAdminActor, isAdminUser } = require('../middleware/auth-guard');
+const { checkAuthenticatedActor, checkAdminActor } = require('../middleware/auth-guard');
 const {
     buildFormattedSites,
     buildPublicFormSafetyMembers,
@@ -15,89 +15,6 @@ const {
 
 function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-}
-
-function parseJsonObject(raw) {
-    if (!raw) return {};
-    if (typeof raw === 'object' && !Array.isArray(raw)) return raw;
-    if (typeof raw === 'string') {
-        try {
-            const parsed = JSON.parse(raw);
-            return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : {};
-        } catch (_) {
-            return {};
-        }
-    }
-    return {};
-}
-
-function parseJsonArray(raw) {
-    if (Array.isArray(raw)) return raw.slice();
-    if (typeof raw === 'string' && raw.trim()) {
-        try {
-            const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (_) {
-            return [];
-        }
-    }
-    return [];
-}
-
-function actorCanCloseObservation(actorUserData, payloadActor) {
-    const user = actorUserData && typeof actorUserData === 'object' ? actorUserData : {};
-    const actor = payloadActor && typeof payloadActor === 'object' ? payloadActor : {};
-    const role = String(actor.role || user.role || '').trim();
-    const roleLow = role.toLowerCase();
-    const admin = isAdminUser(user) || roleLow === 'admin' || roleLow === 'administrator'
-        || roleLow === 'system_admin' || role === 'مدير النظام' || role === 'مدير';
-    const specialistRole = roleLow === 'safety_officer' || role === 'مسئول السلامة' || role === 'مسؤول السلامة';
-    const perms = (actor.dailyObservationsPermissions && typeof actor.dailyObservationsPermissions === 'object')
-        ? actor.dailyObservationsPermissions
-        : {};
-    const userPerms = parseJsonObject(user.permissions);
-    const detailed = userPerms['daily-observationsPermissions'] || userPerms['daily-observations'] || {};
-    const hasSpecialist = admin || specialistRole
-        || perms['observations-specialist-review'] === true
-        || detailed['observations-specialist-review'] === true;
-    const hasManager = admin
-        || perms['observations-manager-approve'] === true
-        || detailed['observations-manager-approve'] === true;
-    return !!(hasSpecialist || hasManager);
-}
-
-function observationStageAllowsClose(obs) {
-    const stage = String(obs?.workflowStage || '').trim() || 'pending_specialist';
-    return stage === 'in_progress' || stage === 'pending_department';
-}
-
-function findDailyObservationRow(db, observationId) {
-    const id = String(observationId || '').trim();
-    if (!id) return null;
-    return db.findRow('DailyObservations', { id })
-        || db.findRow('DailyObservations', { isoCode: id });
-}
-
-function persistClosedObservation(db, obs, actorName) {
-    const nowIso = new Date().toISOString();
-    const timeLog = parseJsonArray(obs.timeLog);
-    timeLog.push({
-        action: 'closed',
-        user: actorName || 'System',
-        timestamp: nowIso,
-        roleLabel: 'إدارة السلامة',
-        actionDetail: 'إغلاق الملاحظة بعد التنفيذ',
-        note: 'إدارة السلامة: إغلاق الملاحظة بعد التنفيذ'
-    });
-    const updates = {
-        workflowStage: 'closed',
-        status: 'مغلق',
-        timeLog: JSON.stringify(timeLog),
-        updatedAt: nowIso
-    };
-    const rowId = String(obs.id || '').trim();
-    db.updateRow('DailyObservations', 'id', rowId, updates);
-    return { ...obs, ...updates, timeLog };
 }
 
 function cairoNowParts() {
@@ -405,105 +322,6 @@ const moduleHandlers = {
             return { success: false, message: 'الملاحظة غير موجودة' };
         }
         return { success: true, data: row };
-    },
-
-    'updateObservationStatus': function(payload, postData, action, actorUserData) {
-        const gate = checkAuthenticatedActor(actorUserData, action);
-        if (!gate.ok) return gate;
-
-        const observationId = payload?.observationId || payload?.id
-            || postData?.data?.observationId || postData?.observationId;
-        const statusData = payload?.statusData || payload?.data || {};
-        const newStatus = String(statusData.status || payload?.status || '').trim();
-        if (!observationId) return { success: false, message: 'معرف الملاحظة مطلوب' };
-        if (!newStatus) return { success: false, message: 'الحالة مطلوبة' };
-
-        const db = getDatabase();
-        const obs = findDailyObservationRow(db, observationId);
-        if (!obs) return { success: false, message: 'الملاحظة غير موجودة' };
-
-        const nowIso = new Date().toISOString();
-        const timeLog = parseJsonArray(obs.timeLog);
-        timeLog.push({
-            action: 'status_changed',
-            user: statusData.updatedBy || actorUserData?.name || 'System',
-            timestamp: nowIso,
-            roleLabel: 'تحديث الحالة',
-            actionDetail: 'الحالة: ' + newStatus,
-            note: 'تحديث الحالة التشغيلية إلى ' + newStatus
-        });
-        const updates = {
-            status: newStatus,
-            timeLog: JSON.stringify(timeLog),
-            updatedAt: nowIso
-        };
-        if (newStatus === 'مغلق') updates.workflowStage = 'closed';
-        db.updateRow('DailyObservations', 'id', String(obs.id), updates);
-        return { success: true, message: 'تم تحديث الحالة', data: { ...obs, ...updates, timeLog } };
-    },
-
-    'transitionObservationWorkflow': function(payload, postData, action, actorUserData) {
-        const gate = checkAuthenticatedActor(actorUserData, action);
-        if (!gate.ok) return gate;
-
-        const data = payload || postData?.data || {};
-        const wfAction = String(data.action || '').trim();
-        const observationId = data.observationId || data.id;
-        if (!observationId) return { success: false, message: 'معرف الملاحظة غير محدد' };
-        if (wfAction !== 'close_observation') {
-            return { success: false, message: 'إجراء سير الملاحظة غير مدعوم على الخادم الحالي: ' + wfAction };
-        }
-        if (!actorCanCloseObservation(actorUserData, data.actor)) {
-            return { success: false, message: 'لا صلاحية لإغلاق الملاحظة' };
-        }
-
-        const db = getDatabase();
-        const obs = findDailyObservationRow(db, observationId);
-        if (!obs) return { success: false, message: 'الملاحظة غير موجودة' };
-        if (!observationStageAllowsClose(obs)) {
-            return { success: false, message: 'لا يمكن الإغلاق في هذه المرحلة' };
-        }
-        const actorName = String((data.actor && data.actor.name) || actorUserData?.name || 'System');
-        const updated = persistClosedObservation(db, obs, actorName);
-        return { success: true, message: 'تم إغلاق الملاحظة', data: updated };
-    },
-
-    'closeObservations': function(payload, postData, action, actorUserData) {
-        const gate = checkAuthenticatedActor(actorUserData, action);
-        if (!gate.ok) return gate;
-
-        const data = payload || postData?.data || {};
-        if (!actorCanCloseObservation(actorUserData, data.actor)) {
-            return { success: false, message: 'لا صلاحية لإغلاق الملاحظة' };
-        }
-        const rawIds = Array.isArray(data.observationIds) ? data.observationIds
-            : (Array.isArray(data.ids) ? data.ids : []);
-        const ids = [...new Set(rawIds.map((id) => String(id || '').trim()).filter(Boolean))].slice(0, 80);
-        if (!ids.length) return { success: false, message: 'لم يتم تحديد ملاحظات' };
-
-        const db = getDatabase();
-        const actorName = String((data.actor && data.actor.name) || actorUserData?.name || 'System');
-        const closed = [];
-        const skipped = [];
-        const failed = [];
-        ids.forEach((id) => {
-            const obs = findDailyObservationRow(db, id);
-            if (!obs) {
-                failed.push({ id, reason: 'غير موجودة' });
-                return;
-            }
-            if (!observationStageAllowsClose(obs) || String(obs.status || '') === 'مغلق') {
-                skipped.push({ id: obs.id, isoCode: obs.isoCode, reason: 'غير قابلة للإغلاق' });
-                return;
-            }
-            persistClosedObservation(db, obs, actorName);
-            closed.push({ id: obs.id, isoCode: obs.isoCode || obs.id });
-        });
-        return {
-            success: true,
-            message: closed.length ? ('تم إغلاق ' + closed.length + ' ملاحظة') : 'لم يُغلق أي سجل',
-            data: { closed, skipped, failed }
-        };
     },
 
     'addObservationUpdate': function(payload, postData, action, actorUserData) {
