@@ -34,6 +34,44 @@ function cleanBase64(input) {
     return String(input || '').replace(/^data:[^;]+;base64,/, '');
 }
 
+function looksLikeImageBuffer(buf) {
+    if (!buf || buf.length < 24) return false;
+    const b0 = buf[0];
+    const b1 = buf[1];
+    if (b0 === 0xff && b1 === 0xd8) return 'image/jpeg';
+    if (b0 === 0x89 && b1 === 0x50) return 'image/png';
+    if (b0 === 0x47 && b1 === 0x49) return 'image/gif';
+    if (buf.slice(8, 12).toString('ascii') === 'WEBP') return 'image/webp';
+    return '';
+}
+
+async function fetchDriveFileDataUri(fileId) {
+    const id = String(fileId || '').trim();
+    if (!id || !/^[a-zA-Z0-9_-]{20,}$/.test(id) || id.startsWith('FILE_') || id.startsWith('ATT-')) {
+        return null;
+    }
+    const candidates = [
+        `https://lh3.googleusercontent.com/d/${id}=w1400`,
+        `https://drive.google.com/thumbnail?id=${encodeURIComponent(id)}&sz=w1400`,
+        `https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}&confirm=t`,
+        `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`
+    ];
+    for (const url of candidates) {
+        try {
+            const res = await fetch(url, {
+                redirect: 'follow',
+                headers: { 'User-Agent': 'Mozilla/5.0 HSE-PPT-Image' }
+            });
+            if (!res.ok) continue;
+            const buf = Buffer.from(await res.arrayBuffer());
+            const mime = looksLikeImageBuffer(buf);
+            if (!mime) continue;
+            return `data:${mime};base64,${buf.toString('base64')}`;
+        } catch (_) { /* try next */ }
+    }
+    return null;
+}
+
 async function uploadFileToDrive(payload) {
     if (payload?.files && Array.isArray(payload.files)) {
         return uploadMultipleFiles(payload);
@@ -216,7 +254,15 @@ async function getProfileImage(query) {
         }
     }
 
-    if (id && /^[a-zA-Z0-9_-]{20,}$/.test(id)) {
+    if (id && /^[a-zA-Z0-9_-]{20,}$/.test(id) && !id.startsWith('FILE_') && !id.startsWith('ATT-')) {
+        const dataUri = await fetchDriveFileDataUri(id);
+        if (dataUri) {
+            return {
+                success: true,
+                dataUri,
+                source: 'drive-fetch'
+            };
+        }
         return {
             success: true,
             redirectUrl: `https://drive.google.com/uc?export=view&id=${encodeURIComponent(id)}`,

@@ -1,301 +1,38 @@
-/**
- * Dashboard Module - موديول لوحة التحكم
- * تم استخراجه من app-modules.js لتحسين الأداء
- */
-
-// ===== Dashboard Module =====
-const Dashboard = {
-    contractorReportCache: new Map(),
-    contractorReportRequests: new Map(),
-    CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS: 50,
-    t(key, fallback) {
-        const i18nCore = (window.AppI18n && typeof window.AppI18n.t === 'function')
-            ? window.AppI18n
-            : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
-        if (i18nCore) {
-            return i18nCore.t(key, null, fallback || key);
-        }
-        return fallback || key;
-    },
-
-    /** صلاحية عرض جزء من لوحة التحكم مرتبط بمفتاح موديول في MODULE_PERMISSIONS_CONFIG */
-    dashboardCan(moduleKey) {
-        if (!moduleKey) return false;
-        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function') {
-            if (Permissions.isCurrentUserEffectiveAdmin()) return true;
-        }
-        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
-            return Permissions.hasAccess(moduleKey);
-        }
-        return false;
-    },
-
-    _dashboardReportStatIdsForTotal() {
-        return ['incidents', 'nearmiss', 'periodic-inspections', 'training', 'violations', 'contractors', 'ptw', 'iso', 'electricity-consumption', 'water-consumption', 'gas-consumption'];
-    },
-
-    anyReportsStatisticVisibleForDashboard() {
-        return this._dashboardReportStatIdsForTotal().some((statId) => {
-            const mod = this.getModuleNameFromStatId(statId);
-            return mod && this.dashboardCan(mod);
-        });
-    },
-
-    reportsStatisticsMetricVisible(statId) {
-        if (statId === 'total-reports') return this.anyReportsStatisticVisibleForDashboard();
-        const mod = this.getModuleNameFromStatId(statId);
-        if (!mod) return false;
-        return this.dashboardCan(mod);
-    },
-
-    _setDashboardElVisibility(el, allowed) {
-        if (!el) return;
-        if (allowed) {
-            el.removeAttribute('hidden');
-            el.style.removeProperty('display');
-        } else {
-            el.setAttribute('hidden', '');
-            try {
-                el.style.setProperty('display', 'none', 'important');
-            } catch (e) {
-                el.style.display = 'none';
-            }
-        }
-        el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
-    },
-
-    applyDashboardLayoutPermissions() {
-        const root = document.getElementById('dashboard-section');
-        if (!root) return;
-        root.querySelectorAll('[data-dash-scope]').forEach((el) => {
-            const raw = el.getAttribute('data-dash-scope') || '';
-            const keys = raw.split(',').map((s) => s.trim()).filter(Boolean);
-            // بدون مفاتيح صريحة: لا تعرض (لا افتراضي بعرض كل شيء)
-            const allowed = keys.length > 0 && keys.some((k) => this.dashboardCan(k));
-            this._setDashboardElVisibility(el, allowed);
-        });
-        root.querySelectorAll('.reports-statistics-section .metric-card-frame[data-stat-id]').forEach((card) => {
-            const statId = card.getAttribute('data-stat-id');
-            const allowed = statId ? this.reportsStatisticsMetricVisible(statId) : false;
-            this._setDashboardElVisibility(card, allowed);
-        });
-    },
-
-    normalizePTWStatus(status) {
-        if (window.PTW && typeof window.PTW.normalizePermitStatus === 'function') {
-            return window.PTW.normalizePermitStatus(status);
-        }
-        const t = String(status || '').trim();
-        if (!t) return 'مغلق';
-        if (t === 'closed' || t === 'Closed' || t === 'CLOSED' || t === 'مغلقة' || t === 'اكتمل') return 'مغلق';
-        return t;
-    },
-
-    isPTWClosedStatus(status) {
-        if (window.PTW && typeof window.PTW.isPermitClosedStatus === 'function') {
-            return window.PTW.isPermitClosedStatus(status);
-        }
-        const t = this.normalizePTWStatus(status);
-        return t === 'مغلق' || t === 'مرفوض' || t === 'اكتمل العمل بشكل آمن' || t === 'إغلاق جبري' || t === 'لم يكتمل العمل';
-    },
-
-    getUnifiedPTWDataset(data) {
-        const mapRegistryRows = (rows) => (rows || []).map((r) => ({
-            id: r?.permitId || r?.id,
-            ...r,
-            status: this.normalizePTWStatus(r?.status),
-            isFromRegistry: true
-        }));
-
-        if (window.PTW && typeof window.PTW.getRegistrySanitizedDataset === 'function') {
-            const registryRows = window.PTW.getRegistrySanitizedDataset();
-            if (registryRows.length > 0) {
-                return mapRegistryRows(registryRows);
-            }
-        }
-
-        if (window.PTW && typeof window.PTW.initRegistry === 'function') {
-            try { window.PTW.initRegistry(true); } catch (_) {}
-        }
-        if (window.PTW && typeof window.PTW.getPermitMetricsDataset === 'function') {
-            window.PTW._metricsDatasetCache = null;
-            const dataset = window.PTW.getPermitMetricsDataset();
-            const source = Array.isArray(dataset?.source) ? dataset.source : [];
-            if (source.length > 0) {
-                return source.map((p) => ({ ...p, status: this.normalizePTWStatus(p?.status) }));
-            }
-        }
-
-        const list = Array.isArray(AppState?.appData?.ptw) && AppState.appData.ptw.length > 0
-            ? AppState.appData.ptw
-            : (Array.isArray(data?.ptw) ? data.ptw : []);
-        const registryRaw = Array.isArray(AppState?.appData?.ptwRegistry) && AppState.appData.ptwRegistry.length > 0
-            ? AppState.appData.ptwRegistry
-            : (Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : []);
-        const registry = mapRegistryRows(registryRaw);
-
-        const mergedMap = new Map();
-        list.forEach((p) => {
-            if (!p || (!p.id && !p.permitId && !p.paperPermitNumber)) return;
-            const key = String(p.id || p.permitId || p.paperPermitNumber);
-            mergedMap.set(key, { ...p, status: this.normalizePTWStatus(p.status) });
-        });
-        registry.forEach((r) => {
-            if (!r || (!r.id && !r.permitId && !r.paperPermitNumber)) return;
-            const key = String(r.id || r.permitId || r.paperPermitNumber);
-            mergedMap.set(key, r);
-        });
-        return registry.length > 0 ? registry : Array.from(mergedMap.values());
-    },
-
-    /**
-     * تحميل لوحة التحكم
-     * يُنتظر تحميل كارت التقارير والجلب المجمع أولاً حتى تُحدَّث كروت التصاريح وغيرها بأرقام فعلية دون وميض خاطئ.
-     */
-    async load() {
-        this.setupReportsStatisticsCardsClickHandlers();
-
-        // ✅ عرض البيانات المتوفرة محلياً فوراً (من AppState/localStorage) بدون انتظار الخادم
-        try {
-            this.updateKPIs();
-            this.updateStats();
-            this.updateReportsStatistics();
-        } catch (_) { /* تجاهل — البيانات قد تكون غير مكتملة بعد */ }
-
-        try {
-            await this.loadReportsWidget();
-        } catch (e) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحميل كارت التقارير:', e);
-            try {
-                this.updateKPIs();
-                this.updateStats();
-            } catch (_) { /* ignore */ }
-        }
-        this.loadRecentActivities();
-        this.loadUserTasksWidget();
-        this.loadEmployeeReportWidget();
-        try {
-            this.loadCharts();
-        } catch (chartErr) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ تعذر تحميل رسوم لوحة التحكم:', chartErr);
-        }
-        this.applyDashboardLayoutPermissions();
-        if (this.dashboardCan('safety-calendar')
-            && typeof SafetyCalendar !== 'undefined'
-            && typeof SafetyCalendar.ensureFullCalendarLoaded === 'function') {
-            void SafetyCalendar.ensureFullCalendarLoaded().catch(() => {});
-        }
-        const loadScWidget = () => {
-            try {
-                if (typeof SafetyCalendar !== 'undefined' && typeof SafetyCalendar.loadDashboardWidget === 'function') {
-                    const p = SafetyCalendar.loadDashboardWidget();
-                    if (p && typeof p.catch === 'function') p.catch(() => {});
-                }
-            } catch (_scErr) { /* لا يؤثر على لوحة التحكم */ }
-        };
-        setTimeout(loadScWidget, 0);
-        // بيانات المياه/الكهرباء/الغاز تُقرأ من أوراق منفصلة؛ بدء التحميل مبكراً يحدّ من بطء كروت الاستهلاك في لوحة التحكم
-        if (this.dashboardCan('sustainability') && typeof Sustainability !== 'undefined' && typeof Sustainability.loadResourceConsumptionFromSheets === 'function') {
-            void Sustainability.loadResourceConsumptionFromSheets().catch(() => {});
-        }
-        const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
-            ? window.AppI18n
-            : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
-        if (i18nCore) {
-            i18nCore.applyI18n(document);
-            i18nCore.applyLiteralTranslations(document);
-        }
-    },
-
-    getContractorReportDataSignature() {
-        const data = AppState.appData || {};
-        const keys = [
-            'approvedContractors',
-            'violations',
-            'incidents',
-            'clinicVisits',
-            'clinicContractorVisits',
-            'contractorEvaluations',
-            'training',
-            'contractorTrainings',
-            'ptw',
-            'ptwRegistry',
-            'injuries'
-        ];
-        return keys.map((key) => `${key}:${Array.isArray(data[key]) ? data[key].length : 0}`).join('|');
-    },
-
-    getContractorReportCacheKey(reportContractor, contractorLookupKey, searchTerm) {
-        const normalize = (value) => {
-            if (typeof Utils !== 'undefined' && typeof Utils.normalizeContractorIdentityValue === 'function') {
-                return Utils.normalizeContractorIdentityValue(value);
-            }
-            return String(value || '').trim().toLowerCase();
-        };
-
-        const parts = [
-            contractorLookupKey,
-            reportContractor?.code,
-            reportContractor?.isoCode,
-            reportContractor?.contractorId,
-            reportContractor?.id,
-            reportContractor?.companyName,
-            reportContractor?.name,
-            searchTerm
-        ].map(normalize).filter(Boolean);
-
-        return parts.join('|');
-    },
-
-    renderContractorReportLoading(reportContractor, contractorCodeVal) {
-        const reportContainer = document.getElementById('contractor-report-data');
-        const contentContainer = document.getElementById('contractor-report-content');
-        const exportBtnEl = document.getElementById('export-contractor-report-btn');
-        const employeeContent = document.getElementById('employee-report-content');
-
-        if (employeeContent) employeeContent.classList.add('hidden');
-        if (!reportContainer || !contentContainer) return;
-
-        const contractorName = String(reportContractor?.companyName || reportContractor?.name || '').trim();
-        const approvalDateStr = reportContractor?.approvalDate ? Utils.formatDate(reportContractor.approvalDate) : '';
-        const expiryDateStr = reportContractor?.expiryDate ? Utils.formatDate(reportContractor.expiryDate) : '';
-        const skeletonCard = (background, border) => `
-            <div class="dashboard-stat-card" style="background: ${background}; border: 1px solid ${border}; border-radius: 12px; padding: 1rem; min-height: 128px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);">
+const Dashboard={contractorReportCache:new Map,contractorReportRequests:new Map,CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS:50,t(t,e){const r=window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n:window.I18n&&typeof window.I18n.t=="function"?window.I18n:null;return r?r.t(t,null,e||t):e||t},dashboardCan(t){return t?typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin()?!0:typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess(t):!1:!1},_dashboardReportStatIdsForTotal(){return["incidents","nearmiss","periodic-inspections","training","violations","contractors","ptw","iso","electricity-consumption","water-consumption","gas-consumption"]},anyReportsStatisticVisibleForDashboard(){return this._dashboardReportStatIdsForTotal().some(t=>{const e=this.getModuleNameFromStatId(t);return e&&this.dashboardCan(e)})},reportsStatisticsMetricVisible(t){if(t==="total-reports")return this.anyReportsStatisticVisibleForDashboard();const e=this.getModuleNameFromStatId(t);return e?this.dashboardCan(e):!1},_setDashboardElVisibility(t,e){if(t){if(e)t.removeAttribute("hidden"),t.style.removeProperty("display");else{t.setAttribute("hidden","");try{t.style.setProperty("display","none","important")}catch{t.style.display="none"}}t.setAttribute("aria-hidden",e?"false":"true")}},applyDashboardLayoutPermissions(){const t=document.getElementById("dashboard-section");t&&(t.querySelectorAll("[data-dash-scope]").forEach(e=>{const a=(e.getAttribute("data-dash-scope")||"").split(",").map(i=>i.trim()).filter(Boolean),s=a.length>0&&a.some(i=>this.dashboardCan(i));this._setDashboardElVisibility(e,s)}),t.querySelectorAll(".reports-statistics-section .metric-card-frame[data-stat-id]").forEach(e=>{const r=e.getAttribute("data-stat-id"),a=r?this.reportsStatisticsMetricVisible(r):!1;this._setDashboardElVisibility(e,a)}))},normalizePTWStatus(t){if(window.PTW&&typeof window.PTW.normalizePermitStatus=="function")return window.PTW.normalizePermitStatus(t);const e=String(t||"").trim();return!e||e==="closed"||e==="Closed"||e==="CLOSED"||e==="\u0645\u063A\u0644\u0642\u0629"||e==="\u0627\u0643\u062A\u0645\u0644"?"\u0645\u063A\u0644\u0642":e},isPTWClosedStatus(t){if(window.PTW&&typeof window.PTW.isPermitClosedStatus=="function")return window.PTW.isPermitClosedStatus(t);const e=this.normalizePTWStatus(t);return e==="\u0645\u063A\u0644\u0642"||e==="\u0645\u0631\u0641\u0648\u0636"||e==="\u0627\u0643\u062A\u0645\u0644 \u0627\u0644\u0639\u0645\u0644 \u0628\u0634\u0643\u0644 \u0622\u0645\u0646"||e==="\u0625\u063A\u0644\u0627\u0642 \u062C\u0628\u0631\u064A"||e==="\u0644\u0645 \u064A\u0643\u062A\u0645\u0644 \u0627\u0644\u0639\u0645\u0644"},getUnifiedPTWDataset(t){const e=n=>(n||[]).map(o=>({id:o?.permitId||o?.id,...o,status:this.normalizePTWStatus(o?.status),isFromRegistry:!0}));if(window.PTW&&typeof window.PTW.getRegistrySanitizedDataset=="function"){const n=window.PTW.getRegistrySanitizedDataset();if(n.length>0)return e(n)}if(window.PTW&&typeof window.PTW.initRegistry=="function")try{window.PTW.initRegistry(!0)}catch{}if(window.PTW&&typeof window.PTW.getPermitMetricsDataset=="function"){window.PTW._metricsDatasetCache=null;const n=window.PTW.getPermitMetricsDataset(),o=Array.isArray(n?.source)?n.source:[];if(o.length>0)return o.map(f=>({...f,status:this.normalizePTWStatus(f?.status)}))}const r=Array.isArray(AppState?.appData?.ptw)&&AppState.appData.ptw.length>0?AppState.appData.ptw:Array.isArray(t?.ptw)?t.ptw:[],a=Array.isArray(AppState?.appData?.ptwRegistry)&&AppState.appData.ptwRegistry.length>0?AppState.appData.ptwRegistry:Array.isArray(t?.ptwRegistry)?t.ptwRegistry:[],s=e(a),i=new Map;return r.forEach(n=>{if(!n||!n.id&&!n.permitId&&!n.paperPermitNumber)return;const o=String(n.id||n.permitId||n.paperPermitNumber);i.set(o,{...n,status:this.normalizePTWStatus(n.status)})}),s.forEach(n=>{if(!n||!n.id&&!n.permitId&&!n.paperPermitNumber)return;const o=String(n.id||n.permitId||n.paperPermitNumber);i.set(o,n)}),s.length>0?s:Array.from(i.values())},async load(){this.setupReportsStatisticsCardsClickHandlers();try{this.updateKPIs(),this.updateStats(),this.updateReportsStatistics()}catch{}try{await this.loadReportsWidget()}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0643\u0627\u0631\u062A \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631:",r);try{this.updateKPIs(),this.updateStats()}catch{}}this.loadRecentActivities(),this.loadUserTasksWidget(),this.loadEmployeeReportWidget();try{this.loadCharts()}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0631\u0633\u0648\u0645 \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645:",r)}this.applyDashboardLayoutPermissions(),this.dashboardCan("safety-calendar")&&typeof SafetyCalendar<"u"&&typeof SafetyCalendar.ensureFullCalendarLoaded=="function"&&SafetyCalendar.ensureFullCalendarLoaded().catch(()=>{}),setTimeout(()=>{try{if(typeof SafetyCalendar<"u"&&typeof SafetyCalendar.loadDashboardWidget=="function"){const r=SafetyCalendar.loadDashboardWidget();r&&typeof r.catch=="function"&&r.catch(()=>{})}}catch{}},0),this.dashboardCan("sustainability")&&typeof Sustainability<"u"&&typeof Sustainability.loadResourceConsumptionFromSheets=="function"&&Sustainability.loadResourceConsumptionFromSheets().catch(()=>{});const e=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;e&&(e.applyI18n(document),e.applyLiteralTranslations(document))},getContractorReportDataSignature(){const t=AppState.appData||{};return["approvedContractors","violations","incidents","clinicVisits","clinicContractorVisits","contractorEvaluations","training","contractorTrainings","ptw","ptwRegistry","injuries"].map(r=>`${r}:${Array.isArray(t[r])?t[r].length:0}`).join("|")},getContractorReportCacheKey(t,e,r){const a=i=>typeof Utils<"u"&&typeof Utils.normalizeContractorIdentityValue=="function"?Utils.normalizeContractorIdentityValue(i):String(i||"").trim().toLowerCase();return[e,t?.code,t?.isoCode,t?.contractorId,t?.id,t?.companyName,t?.name,r].map(a).filter(Boolean).join("|")},renderContractorReportLoading(t,e){const r=document.getElementById("contractor-report-data"),a=document.getElementById("contractor-report-content"),s=document.getElementById("export-contractor-report-btn"),i=document.getElementById("employee-report-content");if(i&&i.classList.add("hidden"),!r||!a)return;const n=String(t?.companyName||t?.name||"").trim(),o=t?.approvalDate?Utils.formatDate(t.approvalDate):"",f=t?.expiryDate?Utils.formatDate(t.expiryDate):"",p=(l,m)=>`
+            <div class="dashboard-stat-card" style="background: ${l}; border: 1px solid ${m}; border-radius: 12px; padding: 1rem; min-height: 128px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);">
                 <div style="height: 28px; width: 64px; margin: 0 auto 0.75rem; border-radius: 999px; background: rgba(255,255,255,0.8); animation: contractorReportPulse 1.1s ease-in-out infinite;"></div>
                 <div style="height: 14px; width: 110px; margin: 0 auto; border-radius: 999px; background: rgba(255,255,255,0.75); animation: contractorReportPulse 1.1s ease-in-out infinite;"></div>
             </div>
-        `;
-
-        reportContainer.innerHTML = `
+        `;r.innerHTML=`
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">
                             <i class="fas fa-hard-hat ml-2"></i>
-                            ${Utils.escapeHTML(contractorName || 'مقاول')}
+                            ${Utils.escapeHTML(n||"\u0645\u0642\u0627\u0648\u0644")}
                         </h3>
                         <p class="text-gray-600">
                             <i class="fas fa-barcode ml-2"></i>
-                            كود المقاول: <strong>${Utils.escapeHTML(String(contractorCodeVal || ''))}</strong>
+                            \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644: <strong>${Utils.escapeHTML(String(e||""))}</strong>
                         </p>
-                        ${reportContractor?.entityType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>نوع الكيان: ${Utils.escapeHTML(reportContractor.entityType)}</p>` : ''}
-                        ${reportContractor?.serviceType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>نوع الخدمة: ${Utils.escapeHTML(reportContractor.serviceType)}</p>` : ''}
-                        ${approvalDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>تاريخ الاعتماد: ${approvalDateStr}</p>` : ''}
-                        ${expiryDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>تاريخ الانتهاء: ${expiryDateStr}</p>` : ''}
+                        ${t?.entityType?`<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u0643\u064A\u0627\u0646: ${Utils.escapeHTML(t.entityType)}</p>`:""}
+                        ${t?.serviceType?`<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u062E\u062F\u0645\u0629: ${Utils.escapeHTML(t.serviceType)}</p>`:""}
+                        ${o?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F: ${o}</p>`:""}
+                        ${f?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${f}</p>`:""}
                     </div>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                ${skeletonCard('linear-gradient(145deg, #ccfbf1 0%, #99f6e4 100%)', '#2dd4bf')}
-                ${skeletonCard('linear-gradient(145deg, #ffedd5 0%, #fed7aa 100%)', '#fb923c')}
-                ${skeletonCard('linear-gradient(145deg, #fee2e2 0%, #fecaca 100%)', '#f87171')}
-                ${skeletonCard('linear-gradient(145deg, #dbeafe 0%, #bfdbfe 100%)', '#60a5fa')}
-                ${skeletonCard('linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%)', '#34d399')}
-                ${skeletonCard('linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%)', '#f472b6')}
-                ${skeletonCard('linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%)', '#818cf8')}
+                ${p("linear-gradient(145deg, #ccfbf1 0%, #99f6e4 100%)","#2dd4bf")}
+                ${p("linear-gradient(145deg, #ffedd5 0%, #fed7aa 100%)","#fb923c")}
+                ${p("linear-gradient(145deg, #fee2e2 0%, #fecaca 100%)","#f87171")}
+                ${p("linear-gradient(145deg, #dbeafe 0%, #bfdbfe 100%)","#60a5fa")}
+                ${p("linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%)","#34d399")}
+                ${p("linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%)","#f472b6")}
+                ${p("linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%)","#818cf8")}
             </div>
             <div class="rounded-lg border border-dashed border-gray-200 bg-white/80 p-6 text-center text-sm text-gray-500">
-                جاري تجهيز بيانات المقاول من السجلات المرتبطة...
+                \u062C\u0627\u0631\u064A \u062A\u062C\u0647\u064A\u0632 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0645\u0646 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629...
             </div>
             <style>
                 @keyframes contractorReportPulse {
@@ -303,395 +40,189 @@ const Dashboard = {
                     50% { opacity: 1; }
                 }
             </style>
-        `;
-
-        contentContainer.classList.remove('hidden');
-        if (exportBtnEl) exportBtnEl.disabled = true;
-    },
-
-    renderContractorReportFromData(report) {
-        const reportContainer = document.getElementById('contractor-report-data');
-        const contentContainer = document.getElementById('contractor-report-content');
-        const exportBtnEl = document.getElementById('export-contractor-report-btn');
-        const employeeContent = document.getElementById('employee-report-content');
-        if (employeeContent) employeeContent.classList.add('hidden');
-        if (!reportContainer || !contentContainer || !report) return;
-
-        const contractor = report.contractor || {};
-        const contractorName = String(report.contractorName || contractor.companyName || contractor.name || '').trim();
-        const contractorCodeVal = report.contractorCode || contractor.code || contractor.isoCode || contractor.contractorId || contractor.id || '';
-        const violations = Array.isArray(report.violations) ? report.violations : [];
-        const incidents = Array.isArray(report.incidents) ? report.incidents : [];
-        const training = Array.isArray(report.training) ? report.training : [];
-        const clinicVisits = Array.isArray(report.clinicVisits) ? report.clinicVisits : [];
-        const contractorEvaluations = Array.isArray(report.contractorEvaluations) ? report.contractorEvaluations : [];
-        const ptwContractor = Array.isArray(report.ptwContractor) ? report.ptwContractor : [];
-        const ptwOpen = typeof report.ptwOpen === 'number' ? report.ptwOpen : 0;
-        const ptwClosed = typeof report.ptwClosed === 'number' ? report.ptwClosed : 0;
-        const injuriesContractor = Array.isArray(report.injuriesContractor) ? report.injuriesContractor : [];
-        const approvalDateStr = contractor.approvalDate ? Utils.formatDate(contractor.approvalDate) : '';
-        const expiryDateStr = contractor.expiryDate ? Utils.formatDate(contractor.expiryDate) : '';
-
-        reportContainer.innerHTML = `
+        `,a.classList.remove("hidden"),s&&(s.disabled=!0)},renderContractorReportFromData(t){const e=document.getElementById("contractor-report-data"),r=document.getElementById("contractor-report-content"),a=document.getElementById("export-contractor-report-btn"),s=document.getElementById("employee-report-content");if(s&&s.classList.add("hidden"),!e||!r||!t)return;const i=t.contractor||{},n=String(t.contractorName||i.companyName||i.name||"").trim(),o=t.contractorCode||i.code||i.isoCode||i.contractorId||i.id||"",f=Array.isArray(t.violations)?t.violations:[],p=Array.isArray(t.incidents)?t.incidents:[],l=Array.isArray(t.training)?t.training:[],m=Array.isArray(t.clinicVisits)?t.clinicVisits:[],g=Array.isArray(t.contractorEvaluations)?t.contractorEvaluations:[],b=Array.isArray(t.ptwContractor)?t.ptwContractor:[],C=typeof t.ptwOpen=="number"?t.ptwOpen:0,y=typeof t.ptwClosed=="number"?t.ptwClosed:0,x=Array.isArray(t.injuriesContractor)?t.injuriesContractor:[],A=i.approvalDate?Utils.formatDate(i.approvalDate):"",T=i.expiryDate?Utils.formatDate(i.expiryDate):"";e.innerHTML=`
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">
                             <i class="fas fa-hard-hat ml-2"></i>
-                            ${Utils.escapeHTML(contractorName || 'مقاول')}
+                            ${Utils.escapeHTML(n||"\u0645\u0642\u0627\u0648\u0644")}
                         </h3>
                         <p class="text-gray-600">
                             <i class="fas fa-barcode ml-2"></i>
-                            كود المقاول: <strong>${Utils.escapeHTML(String(contractorCodeVal))}</strong>
+                            \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644: <strong>${Utils.escapeHTML(String(o))}</strong>
                         </p>
-                        ${contractor.entityType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>نوع الكيان: ${Utils.escapeHTML(contractor.entityType)}</p>` : ''}
-                        ${contractor.serviceType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>نوع الخدمة: ${Utils.escapeHTML(contractor.serviceType)}</p>` : ''}
-                        ${approvalDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>تاريخ الاعتماد: ${approvalDateStr}</p>` : ''}
-                        ${expiryDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>تاريخ الانتهاء: ${expiryDateStr}</p>` : ''}
+                        ${i.entityType?`<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u0643\u064A\u0627\u0646: ${Utils.escapeHTML(i.entityType)}</p>`:""}
+                        ${i.serviceType?`<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u062E\u062F\u0645\u0629: ${Utils.escapeHTML(i.serviceType)}</p>`:""}
+                        ${A?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F: ${A}</p>`:""}
+                        ${T?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${T}</p>`:""}
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #ccfbf1 0%, #99f6e4 100%); border: 1px solid #2dd4bf; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(13, 148, 136, 0.15);">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0d9488; margin-bottom: 0.25rem;">${ptwOpen}</div>
-                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">مفتوح</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0f766e; margin-bottom: 0.25rem;">${ptwClosed}</div>
-                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">مغلق</div>
-                    <div style="font-size: 1.125rem; font-weight: 700; color: #134e4a; border-top: 1px solid #2dd4bf; padding-top: 0.5rem; margin-top: 0.5rem;">${ptwContractor.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #134e4a;">التصاريح (الإجمالي)</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #0d9488; margin-bottom: 0.25rem;">${C}</div>
+                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">\u0645\u0641\u062A\u0648\u062D</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #0f766e; margin-bottom: 0.25rem;">${y}</div>
+                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">\u0645\u063A\u0644\u0642</div>
+                    <div style="font-size: 1.125rem; font-weight: 700; color: #134e4a; border-top: 1px solid #2dd4bf; padding-top: 0.5rem; margin-top: 0.5rem;">${b.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #134e4a;">\u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D (\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A)</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #ffedd5 0%, #fed7aa 100%); border: 1px solid #fb923c; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.15);">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #ea580c; margin-bottom: 0.25rem;">${incidents.length}</div>
-                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">حوادث</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #c2410c; margin-bottom: 0.25rem;">${injuriesContractor.length}</div>
-                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">إصابات</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9a3412;">الحوادث والإصابات</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ea580c; margin-bottom: 0.25rem;">${p.length}</div>
+                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">\u062D\u0648\u0627\u062F\u062B</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #c2410c; margin-bottom: 0.25rem;">${x.length}</div>
+                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">\u0625\u0635\u0627\u0628\u0627\u062A</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9a3412;">\u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0648\u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${violations.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">المخالفات</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${f.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #34d399; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${training.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #065f46;">برامج التدريب</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${l.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #065f46;">\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f472b6; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(219, 39, 119, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #db2777; margin-bottom: 0.25rem;">${clinicVisits.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9d174d;">التردد على العيادة</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #db2777; margin-bottom: 0.25rem;">${m.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9d174d;">\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%); border: 1px solid #818cf8; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.25rem;">${contractorEvaluations.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #3730a3;">التقييمات</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.25rem;">${g.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #3730a3;">\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${violations.length > 0 ? `
+                ${f.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>المخالفات (${violations.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (${f.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${violations.slice(0, 5).map(v => `
+                                ${f.slice(0,5).map(v=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(v.violationType || '')}</span>
-                                            <span class="badge badge-${v.severity === 'عالية' ? 'danger' : 'warning'}">${v.severity || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(v.violationType||"")}</span>
+                                            <span class="badge badge-${v.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":"warning"}">${v.severity||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((v.actionTaken || '').substring(0, 100))}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${v.violationDate ? Utils.formatDate(v.violationDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((v.actionTaken||"").substring(0,100))}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${v.violationDate?Utils.formatDate(v.violationDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${violations.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${violations.length - 5} مخالفات أخرى...</p>` : ''}
+                                `).join("")}
+                                ${f.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${f.length-5} \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${incidents.length > 0 ? `
+                ${p.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-exclamation-triangle ml-2"></i>الحوادث (${incidents.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-exclamation-triangle ml-2"></i>\u0627\u0644\u062D\u0648\u0627\u062F\u062B (${p.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${incidents.slice(0, 5).map(i => `
+                                ${p.slice(0,5).map(v=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(String(i.title || i.description || '').substring(0, 60))}</span>
-                                            <span class="badge badge-warning">${i.severity || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(String(v.title||v.description||"").substring(0,60))}</span>
+                                            <span class="badge badge-warning">${v.severity||""}</span>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-2">${i.date ? Utils.formatDate(i.date) : ''}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${v.date?Utils.formatDate(v.date):""}</p>
                                     </div>
-                                `).join('')}
-                                ${incidents.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${incidents.length - 5} حادث آخر...</p>` : ''}
+                                `).join("")}
+                                ${p.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${p.length-5} \u062D\u0627\u062F\u062B \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${training.length > 0 ? `
+                ${l.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>برامج التدريب (${training.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (${l.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${training.slice(0, 5).map(t => `
+                                ${l.slice(0,5).map(v=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(t.name || '')}</span>
-                                            <span class="badge badge-success">${t.status || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(v.name||"")}</span>
+                                            <span class="badge badge-success">${v.status||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">المدرب: ${Utils.escapeHTML(t.trainer || '')}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${t.startDate ? Utils.formatDate(t.startDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0645\u062F\u0631\u0628: ${Utils.escapeHTML(v.trainer||"")}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${v.startDate?Utils.formatDate(v.startDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${training.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${training.length - 5} برنامج آخر...</p>` : ''}
+                                `).join("")}
+                                ${l.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${l.length-5} \u0628\u0631\u0646\u0627\u0645\u062C \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${clinicVisits.length > 0 ? `
+                ${m.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>التردد على العيادة (${clinicVisits.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629 (${m.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${clinicVisits.slice(0, 5).map(c => `
+                                ${m.slice(0,5).map(v=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
-                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(c) || '—')}</span>
-                                            <span class="text-xs text-gray-500">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(v)||"\u2014")}</span>
+                                            <span class="text-xs text-gray-500">${v.visitDate?Utils.formatDate(v.visitDate):""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-700">السبب: ${Utils.escapeHTML(c.reason || 'زيارة عادية')}</p>
-                                        ${c.diagnosis ? `<p class="text-sm text-gray-600">التشخيص: ${Utils.escapeHTML(c.diagnosis)}</p>` : ''}
-                                        ${c.treatment ? `<p class="text-sm text-gray-600">العلاج: ${Utils.escapeHTML(c.treatment)}</p>` : ''}
+                                        <p class="text-sm text-gray-700">\u0627\u0644\u0633\u0628\u0628: ${Utils.escapeHTML(v.reason||"\u0632\u064A\u0627\u0631\u0629 \u0639\u0627\u062F\u064A\u0629")}</p>
+                                        ${v.diagnosis?`<p class="text-sm text-gray-600">\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ${Utils.escapeHTML(v.diagnosis)}</p>`:""}
+                                        ${v.treatment?`<p class="text-sm text-gray-600">\u0627\u0644\u0639\u0644\u0627\u062C: ${Utils.escapeHTML(v.treatment)}</p>`:""}
                                     </div>
-                                `).join('')}
-                                ${clinicVisits.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${clinicVisits.length - 5} زيارة أخرى...</p>` : ''}
+                                `).join("")}
+                                ${m.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${m.length-5} \u0632\u064A\u0627\u0631\u0629 \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${contractorEvaluations.length > 0 ? `
+                ${g.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>التقييمات (${contractorEvaluations.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A (${g.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${contractorEvaluations.slice(0, 5).map(e => `
+                                ${g.slice(0,5).map(v=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(e.projectName || 'تقييم')}</span>
-                                            <span class="badge badge-info">${e.finalScore != null ? e.finalScore : ''} ${e.finalRating || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(v.projectName||"\u062A\u0642\u064A\u064A\u0645")}</span>
+                                            <span class="badge badge-info">${v.finalScore!=null?v.finalScore:""} ${v.finalRating||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">المقيّم: ${Utils.escapeHTML(e.evaluatorName || '')}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${e.evaluationDate ? Utils.formatDate(e.evaluationDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0645\u0642\u064A\u0651\u0645: ${Utils.escapeHTML(v.evaluatorName||"")}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${v.evaluationDate?Utils.formatDate(v.evaluationDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${contractorEvaluations.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${contractorEvaluations.length - 5} تقييم آخر...</p>` : ''}
+                                `).join("")}
+                                ${g.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${g.length-5} \u062A\u0642\u064A\u064A\u0645 \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
             </div>
-        `;
-
-        contentContainer.classList.remove('hidden');
-        if (exportBtnEl) exportBtnEl.disabled = false;
-        window.currentContractorReport = report;
-    },
-
-    /**
-     * تحميل قسم التقارير في Dashboard - تصميم محسّن وتحديثات غير متزحمة
-     */
-    /**
-     * جلب أوراق إحصائيات التقارير (مخالفات، تدريب، مهمات، سلوكيات، إجازات، حوادث/سجل، تصاريح العمل)
-     * دون انتظار فتح الموديول — نفس فكرة كارت العيادة عبر readFromSheet / batchReadSheets.
-     */
-    async prefetchReportStatsSheetsForDashboard(opts = {}) {
-        const forceRefresh = opts && opts.forceRefresh === true;
-        try {
-            if (!AppState || !AppState.appData) return;
-            if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.batchReadFromSheets !== 'function') return;
-            if (typeof GoogleIntegration._isBackendRpcConfigured !== 'function' || !GoogleIntegration._isBackendRpcConfigured()) return;
-
-            // كاش 5 دقائق للزيارات المتكررة — لكن أول فتح لكل جلسة يجلب دائماً بغض النظر عن الكاش
-            const CACHE_MS = 5 * 60 * 1000;
-            const now = Date.now();
-            const alreadyFetchedThisSession = this._reportStatsSheetsFetchedInSession === true;
-            if (!forceRefresh && alreadyFetchedThisSession && typeof this._reportStatsSheetsFetchedAt === 'number' && (now - this._reportStatsSheetsFetchedAt) < CACHE_MS) {
-                return;
-            }
-
-            const tuples = [];
-            if (this.dashboardCan('violations')) {
-                tuples.push(['Violations', 'violations']);
-                // ✅ تحميل طلبات الاعتماد لكي تظهر إشعارات الاعتماد/الرفض في جرس الإشعارات
-                tuples.push(['ViolationApprovalRequests', 'violationApprovalRequests']);
-            }
-            if (this.dashboardCan('training')) tuples.push(['Training', 'training']);
-            if (this.dashboardCan('ppe')) tuples.push(['PPE', 'ppe']);
-            if (this.dashboardCan('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
-            if (this.dashboardCan('clinic')) {
-                tuples.push(['SickLeave', 'sickLeave']);
-                tuples.push(['Medications', 'medications']);
-                tuples.push(['ClinicInventory', 'clinicInventory']);
-            }
-            if (this.dashboardCan('incidents')) {
-                tuples.push(['Incidents', 'incidents']);
-                tuples.push(['IncidentsRegistry', 'incidentsRegistry']);
-            }
-            if (this.dashboardCan('ptw')) {
-                tuples.push(['PTW', 'ptw']);
-                tuples.push(['PTWRegistry', 'ptwRegistry']);
-            }
-            if (this.dashboardCan('employees')) {
-                tuples.push(['Employees', 'employees']);
-                tuples.push(['ExternalWorkforceMonthly', 'externalWorkforceMonthly']);
-                tuples.push(['ApprovedContractors', 'approvedContractors']);
-            }
-
-            const sheetNames = [];
-            tuples.forEach(([sheet]) => {
-                if (!sheetNames.includes(sheet)) sheetNames.push(sheet);
-            });
-
-            if (sheetNames.length === 0) {
-                this._reportStatsSheetsFetchedAt = now;
-                return;
-            }
-
-            const res = await GoogleIntegration.batchReadFromSheets(sheetNames, { timeout: 45000, batchSize: 12 });
-            const map = res && res.data && typeof res.data === 'object' ? res.data : {};
-
-            tuples.forEach(([sheet, appKey]) => {
-                const rows = map[sheet];
-                if (Array.isArray(rows)) {
-                    AppState.appData[appKey] = rows;
-                }
-            });
-
-            this._reportStatsSheetsFetchedAt = now;
-            this._reportStatsSheetsFetchedInSession = true; // علامة أول جلب ناجح في الجلسة
-
-            // ✅ تحديث الكروت فوراً بعد وصول البيانات من الخادم
-            try {
-                this.updateStats();
-                this.updateReportsStatistics();
-            } catch (_) { /* تجاهل */ }
-
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                try {
-                    window.DataManager.save();
-                } catch (e) { /* ignore */ }
-            }
-        } catch (e) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                Utils.safeWarn('⚠️ تعذر جلب أوراق إحصائيات لوحة التحكم:', e);
-            }
-        }
-    },
-
-    async loadReportsWidget(forceOrOpts) {
-        const forceRefresh = forceOrOpts === true || (forceOrOpts && forceOrOpts.forceRefresh === true);
-        const container = document.getElementById('dashboard-reports-widget');
-        if (!container) {
-            try {
-                await Promise.allSettled([
-                    this.prefetchClinicVisitsForDashboard({ forceRefresh }),
-                    this.prefetchReportStatsSheetsForDashboard({ forceRefresh })
-                ]);
-                this.updateKPIs();
-                this.updateStats();
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ جلب بيانات لوحة التحكم بدون حاوية التقارير:', e);
-            }
-            return;
-        }
-
-        // Stale-While-Revalidate: render immediately from cache then update from server
-        const _self = this;
-        const _renderWidgetFromData = async (snapshot) => {
-            try {
-                const stats = await _self.calculateStatsAsync(snapshot || AppState.appData || {});
-                const expiringMeds = _self.dashboardCan('clinic')
-                    ? await _self.getExpiringMedicationsAsync(snapshot || {})
-                    : [];
-                if (!document.contains(container)) return;
-                container.innerHTML = _self.renderReportsWidget(stats, expiringMeds);
-                _self.animateStatCards(container);
-                _self.setupReportsWidgetEvents(container);
-                _self.applyDashboardLayoutPermissions();
-                try {
-                    _self.updateKPIs();
-                    _self.updateStats();
-                    _self.updateReportsStatistics();
-                } catch (_) {}
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard render error:', e);
-            }
-        };
-
-        try {
-            // ✅ أولوية: بدء جلب سجل التردد الكامل (موظفين + مقاولين) فوراً — قبل عرض الكاش
-            const clinicVisitsPrefetch = this.prefetchClinicVisitsForDashboard({ forceRefresh });
-
-            if (typeof Clinic !== 'undefined' && typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded === 'function') {
-                void Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
-            }
-
-            // 1 - render immediately from local cache (no server wait)
-            await _renderWidgetFromData(AppState.appData || {});
-
-            // 2 - fetch fresh data from server in background (non-blocking)
-            this.prefetchReportStatsSheetsForDashboard({ forceRefresh })
-                .then(() => _renderWidgetFromData(AppState.appData))
-                .catch(e => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard prefetch failed:', e);
-                });
-
-            // 3 - تحديث الكارت عند اكتمال جلب سجل التردد (نفس الوعد — لا طلب شبكي مكرر)
-            clinicVisitsPrefetch
-                .then(() => _renderWidgetFromData(AppState.appData))
-                .catch(e => {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('dashboard clinic visits prefetch failed:', e);
-                });
-
-        } catch (error) {
-            Utils.safeError('dashboard load error:', error);
-            container.innerHTML = `
+        `,r.classList.remove("hidden"),a&&(a.disabled=!1),window.currentContractorReport=t},async prefetchReportStatsSheetsForDashboard(t={}){const e=t&&t.forceRefresh===!0;try{if(!AppState||!AppState.appData||typeof GoogleIntegration>"u"||typeof GoogleIntegration.batchReadFromSheets!="function"||typeof GoogleIntegration._isBackendRpcConfigured!="function"||!GoogleIntegration._isBackendRpcConfigured())return;const r=300*1e3,a=Date.now(),s=this._reportStatsSheetsFetchedInSession===!0;if(!e&&s&&typeof this._reportStatsSheetsFetchedAt=="number"&&a-this._reportStatsSheetsFetchedAt<r)return;const i=[];this.dashboardCan("violations")&&(i.push(["Violations","violations"]),i.push(["ViolationApprovalRequests","violationApprovalRequests"])),this.dashboardCan("training")&&i.push(["Training","training"]),this.dashboardCan("ppe")&&i.push(["PPE","ppe"]),this.dashboardCan("behavior-monitoring")&&i.push(["BehaviorMonitoring","behaviorMonitoring"]),this.dashboardCan("clinic")&&(i.push(["SickLeave","sickLeave"]),i.push(["Medications","medications"]),i.push(["ClinicInventory","clinicInventory"])),this.dashboardCan("incidents")&&(i.push(["Incidents","incidents"]),i.push(["IncidentsRegistry","incidentsRegistry"])),this.dashboardCan("ptw")&&(i.push(["PTW","ptw"]),i.push(["PTWRegistry","ptwRegistry"])),this.dashboardCan("employees")&&(i.push(["Employees","employees"]),i.push(["ExternalWorkforceMonthly","externalWorkforceMonthly"]),i.push(["ApprovedContractors","approvedContractors"]));const n=[];if(i.forEach(([p])=>{n.includes(p)||n.push(p)}),n.length===0){this._reportStatsSheetsFetchedAt=a;return}const o=await GoogleIntegration.batchReadFromSheets(n,{timeout:45e3,batchSize:12}),f=o&&o.data&&typeof o.data=="object"?o.data:{};i.forEach(([p,l])=>{const m=f[p];Array.isArray(m)&&(AppState.appData[l]=m)}),this._reportStatsSheetsFetchedAt=a,this._reportStatsSheetsFetchedInSession=!0;try{this.updateStats(),this.updateReportsStatistics()}catch{}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062C\u0644\u0628 \u0623\u0648\u0631\u0627\u0642 \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645:",r)}},async loadReportsWidget(t){const e=t===!0||t&&t.forceRefresh===!0,r=document.getElementById("dashboard-reports-widget");if(!r){try{await Promise.allSettled([this.prefetchClinicVisitsForDashboard({forceRefresh:e}),this.prefetchReportStatsSheetsForDashboard({forceRefresh:e})]),this.updateKPIs(),this.updateStats()}catch(i){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062C\u0644\u0628 \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645 \u0628\u062F\u0648\u0646 \u062D\u0627\u0648\u064A\u0629 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631:",i)}return}const a=this,s=async i=>{try{const n=await a.calculateStatsAsync(i||AppState.appData||{}),o=a.dashboardCan("clinic")?await a.getExpiringMedicationsAsync(i||{}):[];if(!document.contains(r))return;r.innerHTML=a.renderReportsWidget(n,o),a.animateStatCards(r),a.setupReportsWidgetEvents(r),a.applyDashboardLayoutPermissions();try{a.updateKPIs(),a.updateStats(),a.updateReportsStatistics()}catch{}}catch(n){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("dashboard render error:",n)}};try{const i=this.prefetchClinicVisitsForDashboard({forceRefresh:e});typeof Clinic<"u"&&typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded=="function"&&Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(()=>{}),await s(AppState.appData||{}),this.prefetchReportStatsSheetsForDashboard({forceRefresh:e}).then(()=>s(AppState.appData)).catch(n=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("dashboard prefetch failed:",n)}),i.then(()=>s(AppState.appData)).catch(n=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("dashboard clinic visits prefetch failed:",n)})}catch(i){Utils.safeError("dashboard load error:",i),r.innerHTML=`
                 <div class="content-card">
                     <div class="card-body">
                         <div class="empty-state">
                             <i class="fas fa-exclamation-triangle text-4xl text-gray-300 mb-4"></i>
-                            <p class="text-gray-500">حدث خطأ أثناء تحميل البيانات</p>
+                            <p class="text-gray-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
                             <button onclick="Dashboard.loadReportsWidget(true)" class="btn-primary mt-4">
-                                <i class="fas fa-redo ml-2"></i>إعادة المحاولة
+                                <i class="fas fa-redo ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
                             </button>
                         </div>
                     </div>
                 </div>
-            `;
-            try {
-                this.updateKPIs();
-                this.updateStats();
-            } catch (_) {}
-        }
-    },
-
-    /**
-     * عرض حالة التحميل (Skeleton Loader)
-     */
-    renderReportsWidgetSkeleton() {
-        return `
+            `;try{this.updateKPIs(),this.updateStats()}catch{}}},renderReportsWidgetSkeleton(){return`
             <div class="content-card">
                 <div class="card-header">
                     <div class="flex items-center justify-between">
@@ -706,13 +237,13 @@ const Dashboard = {
                 </div>
                 <div class="card-body">
                     <div class="stats-cards-grid mb-6">
-                        ${Array.from({ length: 5 }).map(() => `
+                        ${Array.from({length:5}).map(()=>`
                             <div class="stat-card" style="opacity: 0.7;">
                                 <div class="skeleton-icon" style="width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 0.75rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite;"></div>
                                 <div class="skeleton-text" style="width: 60px; height: 32px; border-radius: 4px; margin: 0 auto 0.5rem; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite;"></div>
                                 <div class="skeleton-text" style="width: 100px; height: 16px; border-radius: 4px; margin: 0 auto; background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite;"></div>
                             </div>
-                        `).join('')}
+                        `).join("")}
                     </div>
                 </div>
             </div>
@@ -722,255 +253,37 @@ const Dashboard = {
                     100% { background-position: 200% 0; }
                 }
             </style>
-        `;
-    },
-
-    /**
-     * هل السجل يمثل زيارة مقاول/خارجي (وليس موظفاً فقط) — لاكتشاف دمج getAllClinicVisits في clinicVisits
-     */
-    _isClinicContractorLikeVisit(v) {
-        if (!v || typeof v !== 'object') return false;
-        const t = String(v.personType || '').toLowerCase();
-        if (t === 'contractor' || t === 'external') return true;
-        if (String(v.contractorName || '').trim()) return true;
-        if (String(v.externalName || '').trim()) return true;
-        if (String(v.contractorWorkerName || '').trim()) return true;
-        return false;
-    },
-
-    /**
-     * إجمالي التردد على العيادة (موظفين + مقاولين).
-     * - بعد getAllClinicVisits: كل السجلات في clinicVisits فقط؛ لا نجمع clinicContractorVisits لتفادي العد المزدوج.
-     * - عند التحميل المنفصل من الشيتين: نجمع الطولين دون دمج بالمعرف (تصادم ids بين الشيتين كان يسبب نقصاً في العد).
-     */
-    getClinicVisitsTotalCount(data) {
-        if (!data || typeof data !== 'object') return 0;
-        const main = Array.isArray(data.clinicVisits) ? data.clinicVisits : [];
-        const extra = Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : [];
-        const legacy = Array.isArray(data.Clinic) ? data.Clinic : [];
-
-        const mergedFromServer =
-            typeof Clinic !== 'undefined' &&
-            Clinic._visitsBackendFetchOk === true &&
-            main.length > 0;
-        if (mergedFromServer) {
-            return main.length;
-        }
-
-        const hasContractorRowsInMain = main.some((v) => this._isClinicContractorLikeVisit(v));
-        if (main.length > 0 && hasContractorRowsInMain) {
-            return main.length;
-        }
-
-        let total = main.length + extra.length;
-        if (total === 0 && legacy.length > 0) {
-            total = legacy.length;
-        }
-        return total;
-    },
-
-    /**
-     * تحميل السجل الكامل لسجل التردد (موظفين + مقاولين) بأولوية في الخلفية — دون فتح مديول العيادة.
-     * يُحدّث عدّاد كارت لوحة التحكم عبر loadReportsWidget بعد اكتمال الجلب.
-     * - يُرجع Promise واحداً مُ dedupe لمنع طلبات/تحديثات واجهة مكررة.
-     * - يحترم الكاش عبر Clinic.shouldFetchClinicVisitsFromBackend (10 دقائق) إلا عند forceRefresh.
-     */
-    prefetchClinicVisitsForDashboard(opts = {}) {
-        const forceRefresh = opts && opts.forceRefresh === true;
-
-        if (!AppState || !AppState.appData) return Promise.resolve();
-        if (typeof this.dashboardCan === 'function' && !this.dashboardCan('clinic')) return Promise.resolve();
-        if (typeof GoogleIntegration === 'undefined' || typeof GoogleIntegration.sendRequest !== 'function') return Promise.resolve();
-        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && !GoogleIntegration._isBackendRpcConfigured()) return Promise.resolve();
-        if (typeof Clinic === 'undefined' || typeof Clinic.loadVisitsDataFromBackend !== 'function') return Promise.resolve();
-
-        if (forceRefresh) {
-            this._clinicVisitsPrefetchedInSession = false;
-            this._clinicVisitsPrefetchPromise = null;
-            // لا تُصفَّر Clinic._clinicVisitsLoadPromise أثناء الجلب — يمنع طلبين متوازيين
-            Clinic._visitsBackendFetchOk = false;
-        }
-
-        if (!forceRefresh && this._clinicVisitsPrefetchedInSession === true) {
-            return Promise.resolve();
-        }
-
-        if (!forceRefresh
-            && typeof Clinic.shouldFetchClinicVisitsFromBackend === 'function'
-            && !Clinic.shouldFetchClinicVisitsFromBackend({ forceRefresh })) {
-            this._clinicVisitsPrefetchedInSession = true;
-            return Promise.resolve();
-        }
-
-        if (this._clinicVisitsPrefetchPromise) {
-            return this._clinicVisitsPrefetchPromise;
-        }
-
-        this._clinicVisitsPrefetchPromise = Clinic.loadVisitsDataFromBackend({ forceRefresh })
-            .then(() => {
-                this._clinicVisitsPrefetchedInSession = true;
-                if (typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded === 'function') {
-                    void Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(() => { });
-                }
-            })
-            .catch((e) => {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('⚠️ تعذر تحميل سجل التردد الكامل للوحة التحكم:', e);
-                }
-            })
-            .finally(() => {
-                this._clinicVisitsPrefetchPromise = null;
-            });
-
-        return this._clinicVisitsPrefetchPromise;
-    },
-
-    /**
-     * حساب الإحصائيات بشكل غير متزحم
-     */
-    async calculateStatsAsync(data) {
-        return new Promise((resolve) => {
-            // استخدام requestIdleCallback أو setTimeout للتحميل غير المتزحم
-            const calculate = () => {
-                const incidentsRecords = this._getDashboardIncidentsRecords(data);
-                const incidentsCount = incidentsRecords.length;
-
-                resolve({
-                    incidents: incidentsCount,
-                    training: (data.training || []).length,
-                    ptw: (data.ptw || []).length,
-                    violations: (data.violations || []).length,
-                    sickLeave: (data.sickLeave || []).length,
-                    ppe: (data.ppe || []).length,
-                    behaviorMonitoring: (data.behaviorMonitoring || []).length,
-                    clinicVisits: this.getClinicVisitsTotalCount(data)
-                });
-            };
-
-            if (window.requestIdleCallback) {
-                window.requestIdleCallback(calculate, { timeout: 500 });
-            } else {
-                setTimeout(calculate, 50);
-            }
-        });
-    },
-
-    /**
-     * الحصول على الأدوية المنتهية الصلاحية بشكل غير متزحم
-     */
-    async getExpiringMedicationsAsync(data) {
-        return new Promise((resolve) => {
-            const process = () => {
-                const clinicMedications = data.clinicMedications || data.clinicInventory || [];
-                const today = new Date();
-                const expiringMedications = clinicMedications
-                    .filter((med) => {
-                        if (!med || !med.expiryDate) return false;
-                        const expiry = new Date(med.expiryDate);
-                        if (Number.isNaN(expiry.getTime())) return false;
-                        const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-                        
-                        // ✅ مهم: عرض الأدوية قريبة الانتهاء فقط إذا كان هناك رصيد متبقي
-                        // يجب أن يتطابق مع منطق جدول الأدوية في العيادة
-                        const remainingQuantity = parseFloat(med.remainingQuantity ?? med.quantityAdded ?? med.quantity ?? 0);
-                        const hasStock = remainingQuantity > 0;
-                        
-                        return diffDays >= 0 && diffDays <= 30 && hasStock;
-                    })
-                    .sort((a, b) => {
-                        const aDate = new Date(a.expiryDate || 0);
-                        const bDate = new Date(b.expiryDate || 0);
-                        return aDate - bDate;
-                    });
-                resolve(expiringMedications);
-            };
-
-            if (window.requestIdleCallback) {
-                window.requestIdleCallback(process, { timeout: 500 });
-            } else {
-                setTimeout(process, 50);
-            }
-        });
-    },
-
-    /**
-     * عرض كارت التقارير مع البيانات
-     */
-    renderReportsWidget(stats, expiringMedications) {
-        const today = new Date();
-
-        const statCardSpecs = [
-            { id: 'violations', key: 'violations', labelKey: 'dash.violations', labelFb: 'المخالفات', icon: 'fa-ban', color: 'yellow', module: 'violations' },
-            { id: 'sickLeave', key: 'sickLeave', labelKey: 'dash.sickLeaves', labelFb: 'الإجازات المرضية', icon: 'fa-calendar-times', color: 'blue', module: 'clinic' },
-            { id: 'training', key: 'training', labelKey: 'dash.trainingPrograms', labelFb: 'برامج التدريب', icon: 'fa-graduation-cap', color: 'green', module: 'training' },
-            { id: 'ppe', key: 'ppe', labelKey: 'dash.ppeEquipment', labelFb: 'مهمات الوقاية', icon: 'fa-hard-hat', color: 'orange', module: 'ppe' },
-            { id: 'behaviorMonitoring', key: 'behaviorMonitoring', labelKey: 'dash.behaviorMonitoring', labelFb: 'مراقبة السلوكيات', icon: 'fa-user-check', color: 'purple', module: 'behavior-monitoring' },
-            { id: 'clinicVisits', key: 'clinicVisits', labelKey: 'dash.clinicVisits', labelFb: 'التردد على العيادة', icon: 'fa-hospital', color: 'pink', module: 'clinic' },
-            { id: 'incidents', key: 'incidents', labelKey: 'dash.incidents', labelFb: 'الحوادث', icon: 'fa-exclamation-triangle', color: 'red', module: 'incidents' }
-        ];
-
-        let delay = 0;
-        const statCardsHtml = statCardSpecs
-            .filter((spec) => this.dashboardCan(spec.module))
-            .map((spec) => {
-                const val = typeof stats[spec.key] === 'number' ? stats[spec.key] : 0;
-                const card = this.renderStatCard(spec.id, val, this.t(spec.labelKey, spec.labelFb), spec.icon, spec.color, delay);
-                delay += 100;
-                return card;
-            })
-            .join('');
-
-        const exportIncidents = this.dashboardCan('incidents');
-        const exportTraining = this.dashboardCan('training');
-        const exportFull = typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
-            ? Permissions.isCurrentUserEffectiveAdmin()
-            : false;
-
-        const exportButtonsHtml = [
-            exportIncidents ? `
+        `},_isClinicContractorLikeVisit(t){if(!t||typeof t!="object")return!1;const e=String(t.personType||"").toLowerCase();return!!(e==="contractor"||e==="external"||String(t.contractorName||"").trim()||String(t.externalName||"").trim()||String(t.contractorWorkerName||"").trim())},getClinicVisitsTotalCount(t){if(!t||typeof t!="object")return 0;const e=Array.isArray(t.clinicVisits)?t.clinicVisits:[],r=Array.isArray(t.clinicContractorVisits)?t.clinicContractorVisits:[],a=Array.isArray(t.Clinic)?t.Clinic:[];if(typeof Clinic<"u"&&Clinic._visitsBackendFetchOk===!0&&e.length>0)return e.length;const i=e.some(o=>this._isClinicContractorLikeVisit(o));if(e.length>0&&i)return e.length;let n=e.length+r.length;return n===0&&a.length>0&&(n=a.length),n},prefetchClinicVisitsForDashboard(t={}){const e=t&&t.forceRefresh===!0;return!AppState||!AppState.appData||typeof this.dashboardCan=="function"&&!this.dashboardCan("clinic")||typeof GoogleIntegration>"u"||typeof GoogleIntegration.sendRequest!="function"||typeof GoogleIntegration._isBackendRpcConfigured=="function"&&!GoogleIntegration._isBackendRpcConfigured()||typeof Clinic>"u"||typeof Clinic.loadVisitsDataFromBackend!="function"||(e&&(this._clinicVisitsPrefetchedInSession=!1,this._clinicVisitsPrefetchPromise=null,Clinic._visitsBackendFetchOk=!1),!e&&this._clinicVisitsPrefetchedInSession===!0)?Promise.resolve():!e&&typeof Clinic.shouldFetchClinicVisitsFromBackend=="function"&&!Clinic.shouldFetchClinicVisitsFromBackend({forceRefresh:e})?(this._clinicVisitsPrefetchedInSession=!0,Promise.resolve()):this._clinicVisitsPrefetchPromise?this._clinicVisitsPrefetchPromise:(this._clinicVisitsPrefetchPromise=Clinic.loadVisitsDataFromBackend({forceRefresh:e}).then(()=>{this._clinicVisitsPrefetchedInSession=!0,typeof Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded=="function"&&Clinic.prefetchClinicTimeOffApprovalsForAdminIfNeeded().catch(()=>{})}).catch(r=>{typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u062A\u0631\u062F\u062F \u0627\u0644\u0643\u0627\u0645\u0644 \u0644\u0644\u0648\u062D\u0629 \u0627\u0644\u062A\u062D\u0643\u0645:",r)}).finally(()=>{this._clinicVisitsPrefetchPromise=null}),this._clinicVisitsPrefetchPromise)},async calculateStatsAsync(t){return new Promise(e=>{const r=()=>{const s=this._getDashboardIncidentsRecords(t).length;e({incidents:s,training:(t.training||[]).length,ptw:(t.ptw||[]).length,violations:(t.violations||[]).length,sickLeave:(t.sickLeave||[]).length,ppe:(t.ppe||[]).length,behaviorMonitoring:(t.behaviorMonitoring||[]).length,clinicVisits:this.getClinicVisitsTotalCount(t)})};window.requestIdleCallback?window.requestIdleCallback(r,{timeout:500}):setTimeout(r,50)})},async getExpiringMedicationsAsync(t){return new Promise(e=>{const r=()=>{const a=t.clinicMedications||t.clinicInventory||[],s=new Date,i=a.filter(n=>{if(!n||!n.expiryDate)return!1;const o=new Date(n.expiryDate);if(Number.isNaN(o.getTime()))return!1;const f=Math.ceil((o-s)/(1e3*60*60*24)),l=parseFloat(n.remainingQuantity??n.quantityAdded??n.quantity??0)>0;return f>=0&&f<=30&&l}).sort((n,o)=>{const f=new Date(n.expiryDate||0),p=new Date(o.expiryDate||0);return f-p});e(i)};window.requestIdleCallback?window.requestIdleCallback(r,{timeout:500}):setTimeout(r,50)})},renderReportsWidget(t,e){const r=new Date,a=[{id:"violations",key:"violations",labelKey:"dash.violations",labelFb:"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A",icon:"fa-ban",color:"yellow",module:"violations"},{id:"sickLeave",key:"sickLeave",labelKey:"dash.sickLeaves",labelFb:"\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0631\u0636\u064A\u0629",icon:"fa-calendar-times",color:"blue",module:"clinic"},{id:"training",key:"training",labelKey:"dash.trainingPrograms",labelFb:"\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628",icon:"fa-graduation-cap",color:"green",module:"training"},{id:"ppe",key:"ppe",labelKey:"dash.ppeEquipment",labelFb:"\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629",icon:"fa-hard-hat",color:"orange",module:"ppe"},{id:"behaviorMonitoring",key:"behaviorMonitoring",labelKey:"dash.behaviorMonitoring",labelFb:"\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A",icon:"fa-user-check",color:"purple",module:"behavior-monitoring"},{id:"clinicVisits",key:"clinicVisits",labelKey:"dash.clinicVisits",labelFb:"\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",icon:"fa-hospital",color:"pink",module:"clinic"},{id:"incidents",key:"incidents",labelKey:"dash.incidents",labelFb:"\u0627\u0644\u062D\u0648\u0627\u062F\u062B",icon:"fa-exclamation-triangle",color:"red",module:"incidents"}];let s=0;const i=a.filter(g=>this.dashboardCan(g.module)).map(g=>{const b=typeof t[g.key]=="number"?t[g.key]:0,C=this.renderStatCard(g.id,b,this.t(g.labelKey,g.labelFb),g.icon,g.color,s);return s+=100,C}).join(""),n=this.dashboardCan("incidents"),o=this.dashboardCan("training"),f=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"?Permissions.isCurrentUserEffectiveAdmin():!1,p=[n?`
                             <button class="report-export-btn report-export-btn-incidents" data-report-type="incidents">
                                 <div class="btn-content">
                                     <div class="btn-icon-wrapper">
                                         <i class="fas fa-file-pdf"></i>
                                     </div>
-                                    <span class="btn-label">${this.t('dash.incidentsReport', 'تقرير الحوادث')}</span>
+                                    <span class="btn-label">${this.t("dash.incidentsReport","\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062D\u0648\u0627\u062F\u062B")}</span>
                                 </div>
-                                <span class="btn-description">${this.t('dash.incidentsReportDesc', 'تصدير تقرير شامل عن الحوادث')}</span>
-                            </button>` : '',
-            exportTraining ? `
+                                <span class="btn-description">${this.t("dash.incidentsReportDesc","\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 \u0639\u0646 \u0627\u0644\u062D\u0648\u0627\u062F\u062B")}</span>
+                            </button>`:"",o?`
                             <button class="report-export-btn report-export-btn-training" data-report-type="training">
                                 <div class="btn-content">
                                     <div class="btn-icon-wrapper">
                                         <i class="fas fa-file-pdf"></i>
                                     </div>
-                                    <span class="btn-label">${this.t('dash.trainingReport', 'تقرير التدريب')}</span>
+                                    <span class="btn-label">${this.t("dash.trainingReport","\u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u062A\u062F\u0631\u064A\u0628")}</span>
                                 </div>
-                                <span class="btn-description">${this.t('dash.trainingReportDesc', 'تصدير تقرير عن برامج التدريب')}</span>
-                            </button>` : '',
-            exportFull ? `
+                                <span class="btn-description">${this.t("dash.trainingReportDesc","\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0639\u0646 \u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628")}</span>
+                            </button>`:"",f?`
                             <button class="report-export-btn report-export-btn-full" data-report-type="full">
                                 <div class="btn-content">
                                     <div class="btn-icon-wrapper">
                                         <i class="fas fa-file-pdf"></i>
                                     </div>
-                                    <span class="btn-label">${this.t('dash.fullReport', 'تقرير شامل')}</span>
+                                    <span class="btn-label">${this.t("dash.fullReport","\u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644")}</span>
                                 </div>
-                                <span class="btn-description">${this.t('dash.fullReportDesc', 'تصدير تقرير شامل لجميع البيانات')}</span>
-                            </button>` : ''
-        ].join('');
-
-        const statsSectionInner = statCardsHtml.trim()
-            ? `<div class="stats-cards-grid" id="reports-stats-grid">${statCardsHtml}</div>`
-            : `<p class="text-gray-500 text-sm px-2">${this.t('dash.noStatsForPermissions', 'لا توجد إحصائيات سريعة مطابقة لصلاحياتك الحالية.')}</p>`;
-
-        const medicationsHtml = this.dashboardCan('clinic')
-            ? this.renderMedicationsAlerts(expiringMedications, today)
-            : '';
-
-        return `
+                                <span class="btn-description">${this.t("dash.fullReportDesc","\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 \u0644\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}</span>
+                            </button>`:""].join(""),l=i.trim()?`<div class="stats-cards-grid" id="reports-stats-grid">${i}</div>`:`<p class="text-gray-500 text-sm px-2">${this.t("dash.noStatsForPermissions","\u0644\u0627 \u062A\u0648\u062C\u062F \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0635\u0644\u0627\u062D\u064A\u0627\u062A\u0643 \u0627\u0644\u062D\u0627\u0644\u064A\u0629.")}</p>`,m=this.dashboardCan("clinic")?this.renderMedicationsAlerts(e,r):"";return`
             <div class="reports-widget-card">
                 
-                <!-- الهيدر -->
+                <!-- \u0627\u0644\u0647\u064A\u062F\u0631 -->
                 <div class="card-header reports-widget-header">
                     <div class="header-content-wrapper">
                         <div class="header-title-section">
@@ -978,106 +291,56 @@ const Dashboard = {
                                 <i class="fas fa-chart-line"></i>
                             </div>
                             <div class="title-text">
-                                <h2>${this.t('dash.reportsStatistics', 'التقارير والإحصائيات')}</h2>
-                                <p>${this.t('dash.reportsStatisticsSubtitle', 'نظرة شاملة على جميع البيانات والإحصائيات في النظام')}</p>
+                                <h2>${this.t("dash.reportsStatistics","\u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A")}</h2>
+                                <p>${this.t("dash.reportsStatisticsSubtitle","\u0646\u0638\u0631\u0629 \u0634\u0627\u0645\u0644\u0629 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0641\u064A \u0627\u0644\u0646\u0638\u0627\u0645")}</p>
                             </div>
                         </div>
                         <div class="header-actions">
-                            <button class="btn-icon reports-refresh-btn" id="refresh-reports-btn" title="تحديث البيانات">
+                            <button class="btn-icon reports-refresh-btn" id="refresh-reports-btn" title="\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
                         </div>
                     </div>
                 </div>
                 
-                <!-- المحتوى الرئيسي -->
+                <!-- \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0631\u0626\u064A\u0633\u064A -->
                 <div class="card-body">
-                    <!-- قسم كروت الإحصائيات -->
+                    <!-- \u0642\u0633\u0645 \u0643\u0631\u0648\u062A \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A -->
                     <div class="stats-section">
                         <div class="section-header-row">
                             <h3>
                                 <i class="fas fa-chart-pie"></i>
-                                <span>${this.t('dash.quickStats', 'الإحصائيات السريعة')}</span>
+                                <span>${this.t("dash.quickStats","\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629")}</span>
                             </h3>
                         </div>
-                        ${statsSectionInner}
+                        ${l}
                     </div>
                     
-                    <!-- تنبيهات الأدوية -->
-                    ${medicationsHtml}
+                    <!-- \u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0627\u0644\u0623\u062F\u0648\u064A\u0629 -->
+                    ${m}
                 </div>
             </div>
 
-        `;
-    },
-
-    /**
-     * تحويل معرف الكارت إلى اسم الموديول
-     */
-    getModuleNameFromStatId(statId) {
-        const statToModuleMap = {
-            'violations': 'violations',
-            'contractors': 'contractors',
-            'sickLeave': 'clinic',
-            'training': 'training',
-            'ppe': 'ppe',
-            'behaviorMonitoring': 'behavior-monitoring',
-            'clinicVisits': 'clinic',
-            'incidents': 'incidents',
-            'nearmiss': 'nearmiss',
-            'periodic-inspections': 'periodic-inspections',
-            'ptw': 'ptw',
-            'iso': 'iso',
-            'electricity-consumption': 'sustainability',
-            'water-consumption': 'sustainability',
-            'gas-consumption': 'sustainability',
-            // ✅ كروت إصابات العيادة (موظفين + مقاولين) — يفتح العيادة
-            'clinic-injuries-employee': 'clinic',
-            'clinic-injuries-contractor': 'clinic'
-        };
-        return statToModuleMap[statId] || null;
-    },
-
-    /**
-     * عرض كارت إحصائية واحد - تصميم محسّن ومتطور
-     */
-    renderStatCard(id, value, label, icon, color, delay) {
-        // استخدام formatNumber لضمان عرض الأرقام بالإنجليزية
-        const formattedValue = typeof value === 'number' ? this.formatNumber(value) : value;
-
-        return `
-            <div class="enhanced-stat-card stat-card-${color}" 
-                 data-stat-id="${id}" 
-                 data-stat-value="${value}"
+        `},getModuleNameFromStatId(t){return{violations:"violations",contractors:"contractors",sickLeave:"clinic",training:"training",ppe:"ppe",behaviorMonitoring:"behavior-monitoring",clinicVisits:"clinic",incidents:"incidents",nearmiss:"nearmiss","periodic-inspections":"periodic-inspections",ptw:"ptw",iso:"iso","electricity-consumption":"sustainability","water-consumption":"sustainability","gas-consumption":"sustainability","clinic-injuries-employee":"clinic","clinic-injuries-contractor":"clinic"}[t]||null},renderStatCard(t,e,r,a,s,i){const n=typeof e=="number"?this.formatNumber(e):e;return`
+            <div class="enhanced-stat-card stat-card-${s}" 
+                 data-stat-id="${t}" 
+                 data-stat-value="${e}"
                  data-clickable="true"
-                 style="animation-delay: ${delay}ms; cursor: pointer;">
+                 style="animation-delay: ${i}ms; cursor: pointer;">
                 
                 <div class="stat-card-icon">
-                    <i class="fas ${icon}"></i>
+                    <i class="fas ${a}"></i>
                 </div>
                 
                 <div class="stat-card-value">
-                    <span class="stat-value-number english-number" dir="ltr" style="direction: ltr; text-align: left; font-variant-numeric: tabular-nums;">${formattedValue}</span>
+                    <span class="stat-value-number english-number" dir="ltr" style="direction: ltr; text-align: left; font-variant-numeric: tabular-nums;">${n}</span>
                 </div>
                 
                 <div class="stat-card-label">
-                    ${label}
+                    ${r}
                 </div>
             </div>
-        `;
-    },
-
-    /**
-     * عرض تنبيهات الأدوية
-     */
-    /**
-     * عرض تنبيهات صلاحية الأدوية بتصميم عصري ومنسق
-     */
-    renderMedicationsAlerts(expiringMedications, today) {
-        const hasAlerts = expiringMedications && expiringMedications.length > 0;
-        
-        if (!hasAlerts) {
-            return `
+        `},renderMedicationsAlerts(t,e){if(!(t&&t.length>0))return`
                 <div class="medications-alerts-section" style="border-top: 1px dashed var(--border-color); padding-top: 1.75rem; margin-top: 2rem;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
                         <div style="display: flex; align-items: center; gap: 0.75rem;">
@@ -1086,10 +349,10 @@ const Dashboard = {
                             </div>
                             <div>
                                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">
-                                    ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
+                                    ${this.t("dash.medicationsExpiryAlerts","\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0623\u062F\u0648\u064A\u0629")}
                                 </h3>
                                 <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary);">
-                                    مراقبة الأدوية القريبة من الانتهاء في العيادة
+                                    \u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0623\u062F\u0648\u064A\u0629 \u0627\u0644\u0642\u0631\u064A\u0628\u0629 \u0645\u0646 \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 \u0641\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629
                                 </p>
                             </div>
                         </div>
@@ -1100,29 +363,17 @@ const Dashboard = {
                         </div>
                         <div>
                             <div style="font-size: 0.95rem; font-weight: 700; color: #047857; margin-bottom: 0.2rem;">
-                                المخزون الدوائي آمن بالكامل
+                                \u0627\u0644\u0645\u062E\u0632\u0648\u0646 \u0627\u0644\u062F\u0648\u0627\u0626\u064A \u0622\u0645\u0646 \u0628\u0627\u0644\u0643\u0627\u0645\u0644
                             </div>
                             <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
-                                ${this.t('dash.noExpiringMedications30Days', 'لا توجد أدوية منتهية أو قريبة الانتهاء خلال 30 يوماً.')}
+                                ${this.t("dash.noExpiringMedications30Days","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u062F\u0648\u064A\u0629 \u0645\u0646\u062A\u0647\u064A\u0629 \u0623\u0648 \u0642\u0631\u064A\u0628\u0629 \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 \u062E\u0644\u0627\u0644 30 \u064A\u0648\u0645\u0627\u064B.")}
                             </div>
                         </div>
                     </div>
                 </div>
-            `;
-        }
-
-        const expiredCount = expiringMedications.filter(m => {
-            const exp = m.expiryDate ? new Date(m.expiryDate) : null;
-            return exp && exp < today;
-        }).length;
-
-        const headerBadgeBg = expiredCount > 0
-            ? 'linear-gradient(135deg, #ef4444, #dc2626)'
-            : 'linear-gradient(135deg, #f59e0b, #d97706)';
-
-        return `
+            `;const s=t.filter(i=>{const n=i.expiryDate?new Date(i.expiryDate):null;return n&&n<e}).length>0?"linear-gradient(135deg, #ef4444, #dc2626)":"linear-gradient(135deg, #f59e0b, #d97706)";return`
             <div class="medications-alerts-section" style="border-top: 1px dashed var(--border-color); padding-top: 1.75rem; margin-top: 2rem;">
-                <!-- الهيدر -->
+                <!-- \u0627\u0644\u0647\u064A\u062F\u0631 -->
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
                     <div style="display: flex; align-items: center; gap: 0.85rem;">
                         <div style="width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(99, 102, 241, 0.15)); display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 14px rgba(124, 58, 237, 0.18); border: 1px solid rgba(124, 58, 237, 0.25);">
@@ -1130,422 +381,74 @@ const Dashboard = {
                         </div>
                         <div>
                             <h3 style="margin: 0; font-size: 1.15rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.01em;">
-                                ${this.t('dash.medicationsExpiryAlerts', 'تنبيهات صلاحية الأدوية')}
+                                ${this.t("dash.medicationsExpiryAlerts","\u062A\u0646\u0628\u064A\u0647\u0627\u062A \u0635\u0644\u0627\u062D\u064A\u0629 \u0627\u0644\u0623\u062F\u0648\u064A\u0629")}
                             </h3>
                             <p style="margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary);">
-                                الأدوية الواجب متابعتها أو تجديدها في العيادة
+                                \u0627\u0644\u0623\u062F\u0648\u064A\u0629 \u0627\u0644\u0648\u0627\u062C\u0628 \u0645\u062A\u0627\u0628\u0639\u062A\u0647\u0627 \u0623\u0648 \u062A\u062C\u062F\u064A\u062F\u0647\u0627 \u0641\u064A \u0627\u0644\u0639\u064A\u0627\u062F\u0629
                             </p>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="padding: 0.45rem 0.9rem; border-radius: 20px; font-weight: 700; font-size: 0.82rem; background: ${headerBadgeBg}; color: #ffffff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); display: flex; align-items: center; gap: 0.4rem;">
+                        <span style="padding: 0.45rem 0.9rem; border-radius: 20px; font-weight: 700; font-size: 0.82rem; background: ${s}; color: #ffffff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); display: flex; align-items: center; gap: 0.4rem;">
                             <i class="fas fa-exclamation-circle" style="font-size: 0.85rem;"></i>
-                            <span>${expiringMedications.length} تنبيه</span>
+                            <span>${t.length} \u062A\u0646\u0628\u064A\u0647</span>
                         </span>
                     </div>
                 </div>
 
-                <!-- قائمة الأدوية -->
+                <!-- \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u062F\u0648\u064A\u0629 -->
                 <div class="medications-list" style="display: flex; flex-direction: column; gap: 0.85rem;">
-                    ${expiringMedications.slice(0, 5).map((med, index) => {
-                        const expiry = med.expiryDate ? new Date(med.expiryDate) : null;
-                        const diff = expiry ? Math.ceil((expiry - today) / (1000 * 60 * 60 * 24)) : null;
-                        
-                        let urgencyConfig = {
-                            borderStrip: 'linear-gradient(180deg, #6b7280, #4b5563)',
-                            bgTint: 'var(--card-bg)',
-                            badgeBg: 'linear-gradient(135deg, rgba(107, 114, 128, 0.12), rgba(75, 85, 99, 0.12))',
-                            badgeColor: '#4b5563',
-                            badgeBorder: 'rgba(107, 114, 128, 0.25)',
-                            icon: 'fa-calendar-times',
-                            statusText: 'تاريخ غير محدد'
-                        };
-
-                        if (diff !== null) {
-                            if (diff < 0) {
-                                urgencyConfig = {
-                                    borderStrip: 'linear-gradient(180deg, #ef4444, #b91c1c)',
-                                    bgTint: 'rgba(239, 68, 68, 0.03)',
-                                    badgeBg: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                                    badgeColor: '#ffffff',
-                                    badgeBorder: 'transparent',
-                                    icon: 'fa-exclamation-triangle',
-                                    statusText: 'منتهية الصلاحية'
-                                };
-                            } else if (diff === 0) {
-                                urgencyConfig = {
-                                    borderStrip: 'linear-gradient(180deg, #f97316, #c2410c)',
-                                    bgTint: 'rgba(249, 115, 22, 0.04)',
-                                    badgeBg: 'linear-gradient(135deg, #ea580c, #c2410c)',
-                                    badgeColor: '#ffffff',
-                                    badgeBorder: 'transparent',
-                                    icon: 'fa-bell',
-                                    statusText: 'تنتهي اليوم!'
-                                };
-                            } else if (diff <= 7) {
-                                urgencyConfig = {
-                                    borderStrip: 'linear-gradient(180deg, #f59e0b, #d97706)',
-                                    bgTint: 'rgba(245, 158, 11, 0.03)',
-                                    badgeBg: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))',
-                                    badgeColor: '#b45309',
-                                    badgeBorder: 'rgba(245, 158, 11, 0.35)',
-                                    icon: 'fa-clock',
-                                    statusText: `ينتهي خلال ${diff} أيام`
-                                };
-                            } else {
-                                urgencyConfig = {
-                                    borderStrip: 'linear-gradient(180deg, #eab308, #ca8a04)',
-                                    bgTint: 'rgba(234, 179, 8, 0.02)',
-                                    badgeBg: 'linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(202, 138, 4, 0.12))',
-                                    badgeColor: '#a16207',
-                                    badgeBorder: 'rgba(234, 179, 8, 0.3)',
-                                    icon: 'fa-hourglass-half',
-                                    statusText: `يتبقى ${diff} يوم`
-                                };
-                            }
-                        }
-
-                        const remainingQty = med.remainingQuantity ?? med.quantityAdded ?? med.quantity;
-                        const qtyText = (remainingQty !== undefined && remainingQty !== null && remainingQty !== '')
-                            ? `${remainingQty} ${med.unit || 'وحدة'}`
-                            : null;
-
-                        return `
-                            <div class="medication-alert-item" style="opacity: 0; transform: translateY(10px); animation: slideInUp 0.35s ease ${index * 60}ms forwards; background: ${urgencyConfig.bgTint}; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+                    ${t.slice(0,5).map((i,n)=>{const o=i.expiryDate?new Date(i.expiryDate):null,f=o?Math.ceil((o-e)/(1e3*60*60*24)):null;let p={borderStrip:"linear-gradient(180deg, #6b7280, #4b5563)",bgTint:"var(--card-bg)",badgeBg:"linear-gradient(135deg, rgba(107, 114, 128, 0.12), rgba(75, 85, 99, 0.12))",badgeColor:"#4b5563",badgeBorder:"rgba(107, 114, 128, 0.25)",icon:"fa-calendar-times",statusText:"\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"};f!==null&&(f<0?p={borderStrip:"linear-gradient(180deg, #ef4444, #b91c1c)",bgTint:"rgba(239, 68, 68, 0.03)",badgeBg:"linear-gradient(135deg, #ef4444, #dc2626)",badgeColor:"#ffffff",badgeBorder:"transparent",icon:"fa-exclamation-triangle",statusText:"\u0645\u0646\u062A\u0647\u064A\u0629 \u0627\u0644\u0635\u0644\u0627\u062D\u064A\u0629"}:f===0?p={borderStrip:"linear-gradient(180deg, #f97316, #c2410c)",bgTint:"rgba(249, 115, 22, 0.04)",badgeBg:"linear-gradient(135deg, #ea580c, #c2410c)",badgeColor:"#ffffff",badgeBorder:"transparent",icon:"fa-bell",statusText:"\u062A\u0646\u062A\u0647\u064A \u0627\u0644\u064A\u0648\u0645!"}:f<=7?p={borderStrip:"linear-gradient(180deg, #f59e0b, #d97706)",bgTint:"rgba(245, 158, 11, 0.03)",badgeBg:"linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.15))",badgeColor:"#b45309",badgeBorder:"rgba(245, 158, 11, 0.35)",icon:"fa-clock",statusText:`\u064A\u0646\u062A\u0647\u064A \u062E\u0644\u0627\u0644 ${f} \u0623\u064A\u0627\u0645`}:p={borderStrip:"linear-gradient(180deg, #eab308, #ca8a04)",bgTint:"rgba(234, 179, 8, 0.02)",badgeBg:"linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(202, 138, 4, 0.12))",badgeColor:"#a16207",badgeBorder:"rgba(234, 179, 8, 0.3)",icon:"fa-hourglass-half",statusText:`\u064A\u062A\u0628\u0642\u0649 ${f} \u064A\u0648\u0645`});const l=i.remainingQuantity??i.quantityAdded??i.quantity,m=l!=null&&l!==""?`${l} ${i.unit||"\u0648\u062D\u062F\u0629"}`:null;return`
+                            <div class="medication-alert-item" style="opacity: 0; transform: translateY(10px); animation: slideInUp 0.35s ease ${n*60}ms forwards; background: ${p.bgTint}; border: 1px solid var(--border-color); border-radius: 14px; padding: 1.1rem 1.25rem; display: flex; align-items: center; justify-content: space-between; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
                                 
-                                <!-- شريط المؤشر اللوني الجانبي -->
-                                <div style="position: absolute; top: 0; right: 0; bottom: 0; width: 5px; background: ${urgencyConfig.borderStrip}; border-radius: 0 14px 14px 0;"></div>
+                                <!-- \u0634\u0631\u064A\u0637 \u0627\u0644\u0645\u0624\u0634\u0631 \u0627\u0644\u0644\u0648\u0646\u064A \u0627\u0644\u062C\u0627\u0646\u0628\u064A -->
+                                <div style="position: absolute; top: 0; right: 0; bottom: 0; width: 5px; background: ${p.borderStrip}; border-radius: 0 14px 14px 0;"></div>
                                 
                                 <div style="flex: 1; min-width: 0; padding-right: 0.6rem;">
                                     <div style="font-size: 0.98rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem; line-height: 1.35; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                                        <span>${Utils.escapeHTML(med.name || '')}</span>
-                                        ${med.batchNumber ? `<span style="font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 6px; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color);">تشغيلة #${Utils.escapeHTML(med.batchNumber)}</span>` : ''}
+                                        <span>${Utils.escapeHTML(i.name||"")}</span>
+                                        ${i.batchNumber?`<span style="font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.45rem; border-radius: 6px; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color);">\u062A\u0634\u063A\u064A\u0644\u0629 #${Utils.escapeHTML(i.batchNumber)}</span>`:""}
                                     </div>
                                     <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap;">
                                         <span style="display: flex; align-items: center; gap: 0.4rem;">
                                             <i class="far fa-calendar-alt" style="color: #64748b; font-size: 0.85rem;"></i>
-                                            <strong style="font-weight: 600;">تاريخ الانتهاء:</strong> ${med.expiryDate ? Utils.formatDate(med.expiryDate) : 'غير محدد'}
+                                            <strong style="font-weight: 600;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621:</strong> ${i.expiryDate?Utils.formatDate(i.expiryDate):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}
                                         </span>
-                                        ${qtyText ? `
+                                        ${m?`
                                         <span style="display: flex; align-items: center; gap: 0.4rem; color: #475569;">
                                             <i class="fas fa-boxes" style="color: #64748b; font-size: 0.82rem;"></i>
-                                            <strong style="font-weight: 600;">المتبقي:</strong> ${Utils.escapeHTML(qtyText)}
-                                        </span>` : ''}
+                                            <strong style="font-weight: 600;">\u0627\u0644\u0645\u062A\u0628\u0642\u064A:</strong> ${Utils.escapeHTML(m)}
+                                        </span>`:""}
                                     </div>
                                 </div>
                                 <div style="margin-right: 0.75rem; flex-shrink: 0;">
-                                    <span style="font-weight: 700; padding: 0.55rem 0.95rem; border-radius: 10px; font-size: 0.82rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.45rem; background: ${urgencyConfig.badgeBg}; color: ${urgencyConfig.badgeColor}; border: 1px solid ${urgencyConfig.badgeBorder}; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
-                                        <i class="fas ${urgencyConfig.icon}" style="font-size: 0.85rem;"></i>
-                                        <span>${urgencyConfig.statusText}</span>
+                                    <span style="font-weight: 700; padding: 0.55rem 0.95rem; border-radius: 10px; font-size: 0.82rem; white-space: nowrap; display: inline-flex; align-items: center; gap: 0.45rem; background: ${p.badgeBg}; color: ${p.badgeColor}; border: 1px solid ${p.badgeBorder}; box-shadow: 0 2px 6px rgba(0,0,0,0.04);">
+                                        <i class="fas ${p.icon}" style="font-size: 0.85rem;"></i>
+                                        <span>${p.statusText}</span>
                                     </span>
                                 </div>
                             </div>
-                        `;
-                    }).join('')}
+                        `}).join("")}
 
-                    ${expiringMedications.length > 5 ? `
+                    ${t.length>5?`
                     <div style="text-align: center; margin-top: 0.5rem;">
                         <span style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: var(--bg-hover); color: var(--text-secondary); border: 1px solid var(--border-color);">
                             <i class="fas fa-info-circle" style="color: #6366f1;"></i>
-                            يوجد ${expiringMedications.length - 5} أدوية أخرى قريبة الانتهاء بحاجة إلى متابعة
+                            \u064A\u0648\u062C\u062F ${t.length-5} \u0623\u062F\u0648\u064A\u0629 \u0623\u062E\u0631\u0649 \u0642\u0631\u064A\u0628\u0629 \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621 \u0628\u062D\u0627\u062C\u0629 \u0625\u0644\u0649 \u0645\u062A\u0627\u0628\u0639\u0629
                         </span>
-                    </div>` : ''}
+                    </div>`:""}
                 </div>
             </div>
-        `;
-    },
-
-    /**
-     * إضافة animations للكروت
-     */
-    animateStatCards(container) {
-        // البحث عن جميع أنواع الكروت (القديمة والجديدة)
-        const oldCards = container.querySelectorAll('.reports-stat-card');
-        const enhancedCards = container.querySelectorAll('.enhanced-stat-card');
-        const cards = [...oldCards, ...enhancedCards];
-        const self = this; // حفظ المرجع للكائن Dashboard
-
-        cards.forEach((card, index) => {
-            // إزالة أي event listeners سابقة لتجنب التكرار
-            // استخدام dataset لتجنب إعادة إنشاء العناصر
-            if (card.dataset.animated === 'true') {
-                return; // تم إعداد هذا الكارت بالفعل
-            }
-            card.dataset.animated = 'true';
-
-            // إضافة تأثير hover مع تحسين الأداء ومنع الاهتزاز
-            let hoverTimeout = null;
-
-            // CSS يتعامل مع hover effects تلقائياً، لكن نضيف event listeners للكروت المحسّنة
-            // لضمان عمل جميع التأثيرات بشكل صحيح
-            if (card.classList.contains('enhanced-stat-card')) {
-                // الكروت المحسّنة تستخدم CSS للـ hover effects
-                // فقط نضيف animation للقيم
-            } else {
-                // للكروت القديمة، نضيف hover effects يدوياً
-                card.addEventListener('mouseenter', function () {
-                    if (hoverTimeout) {
-                        cancelAnimationFrame(hoverTimeout);
-                    }
-                    hoverTimeout = requestAnimationFrame(() => {
-                        this.style.transform = 'translateY(-8px) scale(1.02)';
-                        this.style.boxShadow = '0 12px 24px rgba(0,0,0,0.15)';
-                        this.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease';
-
-                        const topBar = this.querySelector('.stat-card-top-bar');
-                        if (topBar) {
-                            topBar.style.height = '6px';
-                            topBar.style.transition = 'height 0.3s ease';
-                        }
-
-                        const icon = this.querySelector('.stat-card-icon');
-                        if (icon) {
-                            icon.style.transform = 'scale(1.1) rotate(5deg)';
-                            icon.style.transition = 'transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
-                        }
-                    });
-                }, { passive: true });
-
-                card.addEventListener('mouseleave', function () {
-                    if (hoverTimeout) {
-                        cancelAnimationFrame(hoverTimeout);
-                    }
-                    hoverTimeout = requestAnimationFrame(() => {
-                        this.style.transform = '';
-                        this.style.boxShadow = '';
-
-                        const topBar = this.querySelector('.stat-card-top-bar');
-                        if (topBar) {
-                            topBar.style.height = '';
-                        }
-
-                        const icon = this.querySelector('.stat-card-icon');
-                        if (icon) {
-                            icon.style.transform = '';
-                        }
-                    });
-                }, { passive: true });
-            }
-
-            // Animation للقيم (Count Up)
-            const valueElement = card.querySelector('.stat-value-number');
-            if (valueElement) {
-                const targetValue = parseInt(card.dataset.statValue) || 0;
-                self.animateValue(valueElement, 0, targetValue, 1000 + (index * 100));
-            }
-        });
-
-        // إعداد معالجات النقر للكروت بعد إعداد الـ animations
-        // (سيتم استدعاؤها مرة أخرى من setupReportsWidgetEvents، لكن هذا يضمن أنها تعمل)
-        this.setupStatCardsClickHandlers(container);
-    },
-
-    /**
-     * Animation للقيم (Count Up Effect)
-     */
-    animateValue(element, start, end, duration) {
-        let startTimestamp = null;
-        const step = (timestamp) => {
-            if (!startTimestamp) startTimestamp = timestamp;
-            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            const current = Math.floor(progress * (end - start) + start);
-            element.textContent = current.toLocaleString('en-US');
-            if (progress < 1) {
-                window.requestAnimationFrame(step);
-            }
-        };
-        window.requestAnimationFrame(step);
-    },
-
-    /**
-     * إعداد مستمعي الأحداث
-     */
-    setupReportsWidgetEvents(container) {
-        // زر التحديث
-        const refreshBtn = container.querySelector('#refresh-reports-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', async () => {
-                const icon = refreshBtn.querySelector('i');
-                if (icon) {
-                    icon.style.transform = 'rotate(360deg)';
-                    setTimeout(() => {
-                        icon.style.transform = 'rotate(0deg)';
-                    }, 500);
-                }
-                await this.loadReportsWidget({ forceRefresh: true });
-            });
-        }
-
-        // أزرار التصدير
-        const exportBtns = container.querySelectorAll('.report-export-btn');
-        exportBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const reportType = btn.dataset.reportType;
-                if (typeof Reports !== 'undefined' && Reports.generateAndExport) {
-                    Reports.generateAndExport(reportType);
-                } else {
-                    Notification.warning('نظام التقارير غير متاح حالياً');
-                }
-            });
-
-            // تأثير hover
-            btn.addEventListener('mouseenter', function () {
-                this.style.transform = 'translateY(-2px)';
-                this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-            });
-            btn.addEventListener('mouseleave', function () {
-                this.style.transform = 'translateY(0)';
-                this.style.boxShadow = '';
-            });
-        });
-
-        // إضافة معالجات النقر على كروت الإحصائيات
-        this.setupStatCardsClickHandlers(container);
-    },
-
-    /**
-     * إعداد معالجات النقر على كروت التقارير والإحصائيات (Reports & Statistics)
-     */
-    setupReportsStatisticsCardsClickHandlers() {
-        const reportsStatisticsSection = document.querySelector('.reports-statistics-section');
-        if (!reportsStatisticsSection) return;
-
-        const metricCards = reportsStatisticsSection.querySelectorAll('.metric-card-frame[data-clickable="true"]');
-        
-        metricCards.forEach(card => {
-            // تجنب إضافة معالج النقر أكثر من مرة
-            if (card.dataset.clickHandlerAdded === 'true') {
-                return;
-            }
-            card.dataset.clickHandlerAdded = 'true';
-
-            card.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const statId = card.getAttribute('data-stat-id');
-                if (!statId) return;
-
-                // الحصول على اسم الموديول من معرف الكارت
-                const moduleName = this.getModuleNameFromStatId(statId);
-                if (!moduleName) {
-                    console.warn('لم يتم العثور على موديول للكارت:', statId);
-                    return;
-                }
-
-                // التحقق من الصلاحيات (fail-closed إذا Permissions غير متاح)
-                const canAccess = (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function')
-                    ? Permissions.hasAccess(moduleName)
-                    : ((AppState?.currentUser?.role || '').toLowerCase() === 'admin');
-
-                if (!canAccess) {
-                    // المستخدم ليس لديه صلاحية للوصول إلى هذا الموديول
-                    if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                        Notification.warning('ليس لديك صلاحية للوصول إلى هذا القسم');
-                    } else {
-                        alert('ليس لديك صلاحية للوصول إلى هذا القسم');
-                    }
-                    return;
-                }
-
-                // التنقل إلى الموديول المطلوب
-                if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
-                    UI.showSection(moduleName);
-                } else if (typeof window !== 'undefined' && window.location) {
-                    window.location.hash = moduleName;
-                } else {
-                    console.warn('لا يمكن التنقل إلى الموديول:', moduleName);
-                }
-            });
-        });
-    },
-
-    /**
-     * إعداد معالجات النقر على كروت الإحصائيات
-     */
-    setupStatCardsClickHandlers(container) {
-        const statCards = container.querySelectorAll('.enhanced-stat-card[data-clickable="true"]');
-        
-        statCards.forEach(card => {
-            // تجنب إضافة معالج النقر أكثر من مرة
-            if (card.dataset.clickHandlerAdded === 'true') {
-                return;
-            }
-            card.dataset.clickHandlerAdded = 'true';
-
-            card.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const statId = card.getAttribute('data-stat-id');
-                if (!statId) return;
-
-                // الحصول على اسم الموديول من معرف الكارت
-                const moduleName = this.getModuleNameFromStatId(statId);
-                if (!moduleName) {
-                    console.warn('لم يتم العثور على موديول للكارت:', statId);
-                    return;
-                }
-
-                // التحقق من الصلاحيات (fail-closed إذا Permissions غير متاح)
-                const canAccess = (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function')
-                    ? Permissions.hasAccess(moduleName)
-                    : ((AppState?.currentUser?.role || '').toLowerCase() === 'admin');
-
-                if (!canAccess) {
-                    // المستخدم ليس لديه صلاحية للوصول إلى هذا الموديول
-                    if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                        Notification.warning('ليس لديك صلاحية للوصول إلى هذا القسم');
-                    } else {
-                        alert('ليس لديك صلاحية للوصول إلى هذا القسم');
-                    }
-                    return;
-                }
-
-                // التنقل إلى الموديول المطلوب
-                if (typeof UI !== 'undefined' && typeof UI.showSection === 'function') {
-                    UI.showSection(moduleName);
-                } else if (typeof window !== 'undefined' && window.location) {
-                    window.location.hash = moduleName;
-                } else {
-                    console.warn('لا يمكن التنقل إلى الموديول:', moduleName);
-                }
-            });
-        });
-    },
-
-    /**
-     * تحميل قسم تقرير الموظف
-     */
-    loadEmployeeReportWidget() {
-        const container = document.getElementById('employee-report-widget');
-        if (!container) return;
-
-        const canEmp = this.dashboardCan('employees');
-        const canCon = this.dashboardCan('contractors');
-        if (!canEmp && !canCon) {
-            container.innerHTML = '';
-            container.hidden = true;
-            return;
-        }
-        container.hidden = false;
-
-        const headerTitle = (canEmp && canCon)
-            ? this.t('dash.queryComprehensiveReport', 'الاستعلام - تقرير شامل (موظف / مقاول)')
-            : canEmp
-                ? this.t('dash.queryEmployeeReport', 'الاستعلام - تقرير موظف')
-                : this.t('dash.queryContractorReport', 'الاستعلام - تقرير مقاول');
-
-        const employeeBlock = canEmp ? `
+        `},animateStatCards(t){const e=t.querySelectorAll(".reports-stat-card"),r=t.querySelectorAll(".enhanced-stat-card"),a=[...e,...r],s=this;a.forEach((i,n)=>{if(i.dataset.animated==="true")return;i.dataset.animated="true";let o=null;i.classList.contains("enhanced-stat-card")||(i.addEventListener("mouseenter",function(){o&&cancelAnimationFrame(o),o=requestAnimationFrame(()=>{this.style.transform="translateY(-8px) scale(1.02)",this.style.boxShadow="0 12px 24px rgba(0,0,0,0.15)",this.style.transition="transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease";const p=this.querySelector(".stat-card-top-bar");p&&(p.style.height="6px",p.style.transition="height 0.3s ease");const l=this.querySelector(".stat-card-icon");l&&(l.style.transform="scale(1.1) rotate(5deg)",l.style.transition="transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)")})},{passive:!0}),i.addEventListener("mouseleave",function(){o&&cancelAnimationFrame(o),o=requestAnimationFrame(()=>{this.style.transform="",this.style.boxShadow="";const p=this.querySelector(".stat-card-top-bar");p&&(p.style.height="");const l=this.querySelector(".stat-card-icon");l&&(l.style.transform="")})},{passive:!0}));const f=i.querySelector(".stat-value-number");if(f){const p=parseInt(i.dataset.statValue)||0;s.animateValue(f,0,p,1e3+n*100)}}),this.setupStatCardsClickHandlers(t)},animateValue(t,e,r,a){let s=null;const i=n=>{s||(s=n);const o=Math.min((n-s)/a,1),f=Math.floor(o*(r-e)+e);t.textContent=f.toLocaleString("en-US"),o<1&&window.requestAnimationFrame(i)};window.requestAnimationFrame(i)},setupReportsWidgetEvents(t){const e=t.querySelector("#refresh-reports-btn");e&&e.addEventListener("click",async()=>{const a=e.querySelector("i");a&&(a.style.transform="rotate(360deg)",setTimeout(()=>{a.style.transform="rotate(0deg)"},500)),await this.loadReportsWidget({forceRefresh:!0})}),t.querySelectorAll(".report-export-btn").forEach(a=>{a.addEventListener("click",()=>{const s=a.dataset.reportType;typeof Reports<"u"&&Reports.generateAndExport?Reports.generateAndExport(s):Notification.warning("\u0646\u0638\u0627\u0645 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B")}),a.addEventListener("mouseenter",function(){this.style.transform="translateY(-2px)",this.style.boxShadow="0 4px 12px rgba(0,0,0,0.1)"}),a.addEventListener("mouseleave",function(){this.style.transform="translateY(0)",this.style.boxShadow=""})}),this.setupStatCardsClickHandlers(t)},setupReportsStatisticsCardsClickHandlers(){const t=document.querySelector(".reports-statistics-section");if(!t)return;t.querySelectorAll('.metric-card-frame[data-clickable="true"]').forEach(r=>{r.dataset.clickHandlerAdded!=="true"&&(r.dataset.clickHandlerAdded="true",r.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const s=r.getAttribute("data-stat-id");if(!s)return;const i=this.getModuleNameFromStatId(s);if(!i)return;if(!(typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess(i):(AppState?.currentUser?.role||"").toLowerCase()==="admin")){typeof Notification<"u"&&typeof Notification.warning=="function"?Notification.warning("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645"):alert("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645");return}typeof UI<"u"&&typeof UI.showSection=="function"?UI.showSection(i):typeof window<"u"&&window.location&&(window.location.hash=i)}))})},setupStatCardsClickHandlers(t){t.querySelectorAll('.enhanced-stat-card[data-clickable="true"]').forEach(r=>{r.dataset.clickHandlerAdded!=="true"&&(r.dataset.clickHandlerAdded="true",r.addEventListener("click",a=>{a.preventDefault(),a.stopPropagation();const s=r.getAttribute("data-stat-id");if(!s)return;const i=this.getModuleNameFromStatId(s);if(!i)return;if(!(typeof Permissions<"u"&&typeof Permissions.hasAccess=="function"?Permissions.hasAccess(i):(AppState?.currentUser?.role||"").toLowerCase()==="admin")){typeof Notification<"u"&&typeof Notification.warning=="function"?Notification.warning("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645"):alert("\u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0644\u0648\u0635\u0648\u0644 \u0625\u0644\u0649 \u0647\u0630\u0627 \u0627\u0644\u0642\u0633\u0645");return}typeof UI<"u"&&typeof UI.showSection=="function"?UI.showSection(i):typeof window<"u"&&window.location&&(window.location.hash=i)}))})},loadEmployeeReportWidget(){const t=document.getElementById("employee-report-widget");if(!t)return;const e=this.dashboardCan("employees"),r=this.dashboardCan("contractors");if(!e&&!r){t.innerHTML="",t.hidden=!0;return}t.hidden=!1;const a=e&&r?this.t("dash.queryComprehensiveReport","\u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 - \u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 (\u0645\u0648\u0638\u0641 / \u0645\u0642\u0627\u0648\u0644)"):e?this.t("dash.queryEmployeeReport","\u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 - \u062A\u0642\u0631\u064A\u0631 \u0645\u0648\u0638\u0641"):this.t("dash.queryContractorReport","\u0627\u0644\u0627\u0633\u062A\u0639\u0644\u0627\u0645 - \u062A\u0642\u0631\u064A\u0631 \u0645\u0642\u0627\u0648\u0644"),s=e?`
                         <div class="dashboard-query-block dashboard-query-employee" style="flex: 0 0 auto; min-width: 260px; display: flex; align-items: flex-end; gap: 0.75rem; padding: 1.25rem 1.5rem; border-radius: 12px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #93c5fd; box-shadow: 0 1px 3px rgba(59, 130, 246, 0.12);">
                             <div style="flex: 1; min-width: 0;">
                                 <label class="block text-sm font-semibold mb-2" style="color: #1e40af;">
                                     <i class="fas fa-id-card ml-2"></i>
-                                    الكود الوظيفي
+                                    \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A
                                 </label>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <input type="text" id="employee-code-search" class="form-input"
-                                        placeholder="أدخل الكود الوظيفي"
+                                        placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"
                                         style="width: 130px; min-width: 100px; padding: 0.625rem 0.75rem; border-radius: 8px; font-size: 0.95rem; text-align: center; border: 1px solid #93c5fd;">
                                     <button id="search-employee-btn" class="btn-primary" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; background: #2563eb;">
                                         <i class="fas fa-search"></i>
@@ -1554,21 +457,19 @@ const Dashboard = {
                             </div>
                             <div style="flex-shrink: 0;">
                                 <button id="export-employee-report-btn" class="btn-success" disabled style="height: 44px; padding: 0 1rem; display: flex; align-items: center; gap: 0.25rem; border-radius: 8px; background: #059669;">
-                                    <i class="fas fa-download ml-2"></i>تحميل PDF
+                                    <i class="fas fa-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 PDF
                                 </button>
                             </div>
-                        </div>` : '';
-
-        const contractorBlock = canCon ? `
+                        </div>`:"",i=r?`
                         <div class="dashboard-query-block dashboard-query-contractor" style="flex: 0 0 auto; min-width: 260px; display: flex; align-items: flex-end; gap: 0.75rem; padding: 1.25rem 1.5rem; border-radius: 12px; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fcd34d; box-shadow: 0 1px 3px rgba(245, 158, 11, 0.12);">
                             <div style="flex: 1; min-width: 0;">
                                 <label class="block text-sm font-semibold mb-2" style="color: #b45309;">
                                     <i class="fas fa-barcode ml-2"></i>
-                                    كود المقاول / اسم الشركة
+                                    \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 / \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629
                                 </label>
                                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                                     <input type="text" id="contractor-code-search" class="form-input"
-                                        placeholder="أدخل كود المقاول أو اسم الشركة"
+                                        placeholder="\u0623\u062F\u062E\u0644 \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629"
                                         style="width: 190px; min-width: 140px; padding: 0.625rem 0.75rem; border-radius: 8px; font-size: 0.95rem; border: 1px solid #fcd34d;">
                                     <button id="search-contractor-btn" class="btn-primary" style="width: 44px; height: 44px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 8px; flex-shrink: 0; background: #d97706;">
                                         <i class="fas fa-search"></i>
@@ -1577,23 +478,21 @@ const Dashboard = {
                             </div>
                             <div style="flex-shrink: 0;">
                                 <button id="export-contractor-report-btn" class="btn-success" disabled style="height: 44px; padding: 0 1rem; display: flex; align-items: center; gap: 0.25rem; border-radius: 8px; background: #059669;">
-                                    <i class="fas fa-download ml-2"></i>تحميل PDF
+                                    <i class="fas fa-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 PDF
                                 </button>
                             </div>
-                        </div>` : '';
-
-        container.innerHTML = `
+                        </div>`:"";if(t.innerHTML=`
             <div class="content-card">
                 <div class="card-header">
                     <h2 class="card-title">
                         <i class="fas fa-user-search ml-2"></i>
-                        ${headerTitle}
+                        ${a}
                     </h2>
                 </div>
                 <div class="card-body">
                     <div class="mb-4" style="display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1.25rem 3rem;">
-                        ${employeeBlock}
-                        ${contractorBlock}
+                        ${s}
+                        ${i}
                     </div>
                     <div id="employee-report-content" class="hidden">
                         <div id="employee-report-data"></div>
@@ -1603,699 +502,195 @@ const Dashboard = {
                     </div>
                 </div>
             </div>
-        `;
-
-        if (canEmp) {
-            const searchBtn = document.getElementById('search-employee-btn');
-            const exportBtn = document.getElementById('export-employee-report-btn');
-            const searchInput = document.getElementById('employee-code-search');
-
-            if (searchBtn) {
-                searchBtn.addEventListener('click', async () => {
-                    const code = searchInput?.value.trim();
-                    if (code) {
-                        await this.generateEmployeeReport(code);
-                    } else {
-                        Notification.warning('يرجى إدخال الكود الوظيفي');
-                    }
-                });
-            }
-
-            if (searchInput) {
-                searchInput.addEventListener('keypress', async (e) => {
-                    if (e.key === 'Enter') {
-                        const code = searchInput.value.trim();
-                        if (code) {
-                            await this.generateEmployeeReport(code);
-                        }
-                    }
-                });
-            }
-
-            if (exportBtn) {
-                exportBtn.addEventListener('click', () => {
-                    const code = searchInput?.value.trim();
-                    if (code) {
-                        this.exportEmployeeReportPDF(code);
-                    }
-                });
-            }
-        }
-
-        if (canCon) {
-            const contractorSearchBtn = document.getElementById('search-contractor-btn');
-            const contractorExportBtn = document.getElementById('export-contractor-report-btn');
-            const contractorSearchInput = document.getElementById('contractor-code-search');
-
-            if (contractorSearchBtn) {
-                contractorSearchBtn.addEventListener('click', async () => {
-                    const code = contractorSearchInput?.value.trim();
-                    if (code) {
-                        await this.generateContractorReport(code);
-                    } else {
-                        Notification.warning('يرجى إدخال كود المقاول أو اسم الشركة');
-                    }
-                });
-            }
-
-            if (contractorSearchInput) {
-                contractorSearchInput.addEventListener('keypress', async (e) => {
-                    if (e.key === 'Enter') {
-                        const code = contractorSearchInput.value.trim();
-                        if (code) {
-                            await this.generateContractorReport(code);
-                        }
-                    }
-                });
-            }
-
-            if (contractorExportBtn) {
-                contractorExportBtn.addEventListener('click', () => {
-                    const code = contractorSearchInput?.value.trim();
-                    if (code) {
-                        this.exportContractorReportPDF(code);
-                    }
-                });
-            }
-        }
-    },
-
-    /**
-     * ضمان تحميل بيانات التقرير الشامل من الموديولات (إن لم تكن محمّلة) لظهور الأعداد في الكروت بدقة
-     */
-    async ensureEmployeeReportData() {
-        if (!AppState.appData) AppState.appData = {};
-        const ad = AppState.appData;
-        const sheetToKey = {
-            'Violations': 'violations',
-            'Training': 'training',
-            'TrainingAttendance': 'trainingAttendance',
-            'ClinicVisits': 'clinicVisits',
-            'PPE': 'ppe',
-            'BehaviorMonitoring': 'behaviorMonitoring',
-            'Incidents': 'incidents',
-            'SickLeave': 'sickLeave'
-        };
-        const toLoad = [];
-        for (const [sheetName, key] of Object.entries(sheetToKey)) {
-            const current = ad[key];
-            if (!Array.isArray(current) || current.length === 0) toLoad.push({ sheetName, key });
-        }
-        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
-        try {
-            for (const { sheetName, key } of toLoad) {
-                try {
-                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) continue;
-                    const data = await GoogleIntegration.readFromSheets(sheetName);
-                    if (Array.isArray(data)) {
-                        AppState.appData[key] = data;
-                        if (Utils.safeLog) Utils.safeLog(`✅ تقرير الموظف: تم تحميل ${sheetName} (${data.length} سجل)`);
-                    }
-                } catch (err) {
-                    if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير الموظف: فشل تحميل ${sheetName}:`, err?.message || err);
-                }
-            }
-            if ((!ad.training || ad.training.length === 0) && typeof GoogleIntegration !== 'undefined' && (GoogleIntegration.sendToAppsScript || GoogleIntegration.sendRequest)) {
-                try {
-                    const send = GoogleIntegration.sendToAppsScript || ((opts) => GoogleIntegration.sendRequest && GoogleIntegration.sendRequest({ action: opts.action || opts.method, data: opts.data || {} }));
-                    const trainingRes = await (GoogleIntegration.sendToAppsScript ? GoogleIntegration.sendToAppsScript('getAllTrainings', {}) : Promise.resolve(GoogleIntegration.sendRequest({ action: 'getAllTrainings', data: {} })));
-                    const trainingData = (trainingRes && (trainingRes.data || trainingRes.value)) && (Array.isArray(trainingRes.data) ? trainingRes.data : Array.isArray(trainingRes.value) ? trainingRes.value : Array.isArray((trainingRes.value || {}).data) ? (trainingRes.value || {}).data : null);
-                    if (Array.isArray(trainingData) && trainingData.length > 0) {
-                        AppState.appData.training = trainingData;
-                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل التدريب عبر getAllTrainings');
-                    }
-                } catch (e) {
-                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllTrainings:', e?.message || e);
-                }
-            }
-            if ((!ad.trainingAttendance || ad.trainingAttendance.length === 0) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                try {
-                    const attRes = await GoogleIntegration.sendRequest({ action: 'getAllTrainingAttendance', data: {} });
-                    const attData = (attRes && attRes.value && Array.isArray(attRes.value.data) && attRes.value.data) ? attRes.value.data
-                        : (attRes && Array.isArray(attRes.data) ? attRes.data : (Array.isArray(attRes && attRes.value) ? attRes.value : null));
-                    if (Array.isArray(attData)) {
-                        AppState.appData.trainingAttendance = attData;
-                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل سجل الحضور عبر getAllTrainingAttendance');
-                    }
-                } catch (e) {
-                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllTrainingAttendance:', e?.message || e);
-                }
-            }
-            if (sheetToKey.PPE && (!ad.ppe || ad.ppe.length === 0) && typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
-                try {
-                    const ppeResult = await GoogleIntegration.sendToAppsScript('getAllPPE', {});
-                    if (ppeResult && ppeResult.success && Array.isArray(ppeResult.data)) {
-                        AppState.appData.ppe = ppeResult.data;
-                        if (Utils.safeLog) Utils.safeLog('✅ تقرير الموظف: تم تحميل PPE عبر getAllPPE');
-                    }
-                } catch (e) {
-                    if (Utils.safeWarn) Utils.safeWarn('⚠️ تقرير الموظف: فشل getAllPPE:', e?.message || e);
-                }
-            }
-        } finally {
-            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
-        }
-    },
-
-    async ensureContractorReportData() {
-        if (!AppState.appData) AppState.appData = {};
-        const ad = AppState.appData;
-        const sheetToKey = {
-            'Violations': 'violations',
-            'Incidents': 'incidents',
-            'SickLeave': 'sickLeave',
-            'ClinicVisits': 'clinicVisits',
-            'ClinicContractorVisits': 'clinicContractorVisits',
-            'ContractorEvaluations': 'contractorEvaluations',
-            'Training': 'training',
-            'ContractorTrainings': 'contractorTrainings',
-            'PTW': 'ptw',
-            'PTWRegistry': 'ptwRegistry',
-            'Injuries': 'injuries',
-            'ClinicContractorInjuries': 'clinicContractorInjuries'
-        };
-        const toLoad = [];
-        for (const [sheetName, key] of Object.entries(sheetToKey)) {
-            const current = ad[key];
-            if (!Array.isArray(current) || current.length === 0) toLoad.push({ sheetName, key });
-        }
-        if (!toLoad.length) return;
-        if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
-        try {
-            for (const { sheetName, key } of toLoad) {
-                try {
-                    if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) continue;
-                    const sheetData = await GoogleIntegration.readFromSheets(sheetName);
-                    if (Array.isArray(sheetData)) {
-                        AppState.appData[key] = sheetData;
-                        if (Utils.safeLog) Utils.safeLog(`✅ تقرير المقاول: تم تحميل ${sheetName} (${sheetData.length} سجل)`);
-                    }
-                } catch (err) {
-                    if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير المقاول: فشل تحميل ${sheetName}:`, err?.message || err);
-                }
-            }
-        } finally {
-            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
-        }
-    },
-
-    /**
-     * توليد تقرير شامل للموظف
-     */
-    async generateEmployeeReport(employeeCode) {
-        if (!AppState.appData) AppState.appData = {};
-        const data = AppState.appData;
-        const employees = Array.isArray(data.employees) ? data.employees : (Array.isArray(data.Employees) ? data.Employees : []);
-        let employee = null;
-        const searchCodeNorm = String(employeeCode || '').trim();
-
-        const codeMatches = (emp, code) => {
-            if (!code) return false;
-            const c = String(code).trim();
-            if (!c) return false;
-            const a = String(emp.employeeNumber ?? '').trim();
-            const b = String(emp.sapId ?? '').trim();
-            const d = String(emp.employeeCode ?? '').trim();
-            const e = String(emp.id ?? '').trim();
-            const f = String(emp.code ?? '').trim();
-            if (a === c || b === c || d === c || e === c || f === c) return true;
-            if (a.toLowerCase() === c.toLowerCase() || b.toLowerCase() === c.toLowerCase()) return true;
-            const numC = Number(c);
-            if (!isNaN(numC) && isFinite(numC)) {
-                if (Number(a) === numC || Number(b) === numC || Number(d) === numC || Number(e) === numC || Number(f) === numC) return true;
-                if (String(Number(a)) === c || String(Number(b)) === c || a === String(numC) || b === String(numC)) return true;
-            }
-            return false;
-        };
-
-        // استعلام بالكود الوظيفي فقط: مطابقة دقيقة دون استخدام includes أو البحث بالاسم
-        // (لتجنب ظهور بيانات موظف خاطئ عند تشابه جزئي في الكود أو الاسم)
-        employee = employees.find(emp => codeMatches(emp, employeeCode));
-
-        if (!employee) {
-            Notification.error('لم يتم العثور على الموظف بهذا الكود');
-            const contentContainer = document.getElementById('employee-report-content');
-            if (contentContainer) contentContainer.classList.add('hidden');
-            return;
-        }
-
-        // ✅ إصلاح: جمع جميع المعرفات الممكنة للموظف
-        const normalizeValue = (val) => {
-            if (!val) return null;
-            const str = String(val).trim();
-            return str ? str.toLowerCase() : null;
-        };
-
-        const employeeIdentifiers = new Set();
-        [
-            employee.id,
-            employee.employeeNumber,
-            employee.sapId,
-            employee.employeeCode,
-            employee.code,
-            employee.cardId,
-            employee.nationalId
-        ].forEach(id => {
-            if (id == null || id === '') return;
-            const str = String(id).trim();
-            if (!str) return;
-            const normalized = normalizeValue(id);
-            if (normalized) employeeIdentifiers.add(normalized);
-            employeeIdentifiers.add(str);
-            const num = Number(id);
-            if (!isNaN(num) && isFinite(num)) employeeIdentifiers.add(String(num));
-        });
-        // إضافة كود البحث المُدخل لضمان ربط السجلات التي تحمل نفس الكود (مثل 0123 و 123)
-        if (searchCodeNorm) {
-            employeeIdentifiers.add(searchCodeNorm);
-            employeeIdentifiers.add(searchCodeNorm.toLowerCase());
-            const numSearch = Number(searchCodeNorm);
-            if (!isNaN(numSearch) && isFinite(numSearch)) employeeIdentifiers.add(String(numSearch));
-        }
-
-        const matchesEmployeeIdentifier = (record) => {
-            if (!record) return false;
-            const recordIdentifiers = [
-                record.employeeCode,
-                record.employeeNumber,
-                record.employeeId,
-                record.id,
-                record.code,
-                record.sapId,
-                record.cardId,
-                record.nationalId,
-                record.participantCode
-            ];
-            return recordIdentifiers.some(recordId => {
-                if (recordId == null || recordId === '') return false;
-                const original = String(recordId).trim();
-                if (!original) return false;
-                const normalized = normalizeValue(recordId);
-                if (employeeIdentifiers.has(normalized) || employeeIdentifiers.has(original)) return true;
-                const num = Number(recordId);
-                if (!isNaN(num) && isFinite(num) && employeeIdentifiers.has(String(num))) return true;
-                return false;
-            });
-        };
-
-        const singleCodeMatchesEmployee = (code) => {
-            if (code == null || code === '') return false;
-            const s = String(code).trim();
-            if (!s) return false;
-            if (employeeIdentifiers.has(s) || employeeIdentifiers.has(normalizeValue(s))) return true;
-            const n = Number(code);
-            return !isNaN(n) && isFinite(n) && employeeIdentifiers.has(String(n));
-        };
-
-        // ضمان تحميل بيانات الموديولات قبل الفلترة لظهور الأعداد في الكروت بدقة
-        await this.ensureEmployeeReportData();
-        const dataForReport = AppState.appData || {};
-
-        const getReportArray = (key, altKey) => {
-            const arr = dataForReport[key] || dataForReport[altKey] || [];
-            return Array.isArray(arr) ? arr : [];
-        };
-
-        // عرض السجلات المرتبطة بالموظف بالكود/المعرف فقط (بدون مطابقة بالاسم لتجنب بيانات خاطئة)
-        const violations = getReportArray('violations').filter(v => {
-            if (v.personType === 'contractor' || v.contractorName) return false;
-            return matchesEmployeeIdentifier(v);
-        });
-
-        const sickLeave = getReportArray('sickLeave').filter(s => {
-            if (s.personType === 'contractor' || s.contractorName) return false;
-            return matchesEmployeeIdentifier(s);
-        });
-
-        const trainingList = getReportArray('training').concat(getReportArray('trainingRecords'));
-        const trainingAttendanceList = getReportArray('trainingAttendance');
-        const trainingFromAttendance = trainingAttendanceList.filter(att => matchesEmployeeIdentifier(att));
-        const sessionHasEmployee = (t) => {
-            if (!t || typeof t !== 'object') return false;
-            const recAsRecord = { ...t, code: t.code || t.participantCode, employeeCode: t.employeeCode || t.participantCode, employeeNumber: t.employeeNumber || t.participantCode };
-            if ((t.employeeCode != null && t.employeeCode !== '') || (t.employeeNumber != null && t.employeeNumber !== '') || (t.employeeId != null && t.employeeId !== '') || (t.participantCode != null && t.participantCode !== '')) {
-                if (matchesEmployeeIdentifier(recAsRecord)) return true;
-            }
-            let participants = t.participants;
-            if (typeof participants === 'string') {
-                try {
-                    const parsed = JSON.parse(participants);
-                    participants = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.participants) ? parsed.participants : []);
-                } catch (_) {
-                    participants = [];
-                }
-            }
-            if (participants && Array.isArray(participants)) {
-                return participants.some(p => {
-                    if (!p || typeof p !== 'object') return false;
-                    if (p.personType === 'contractor' || p.type === 'contractor' || p.contractorName) return false;
-                    return matchesEmployeeIdentifier(p);
-                });
-            }
-            return false;
-        };
-        const trainingFromSessions = trainingList.filter(sessionHasEmployee);
-        const training = [
-            ...trainingFromSessions,
-            ...trainingFromAttendance.map(att => ({
-                id: att.id,
-                name: att.topic || att.trainingType || 'تدريب',
-                trainer: att.trainer || '',
-                startDate: att.date || att.attendanceDate || att.createdAt,
-                status: 'مكتمل'
-            }))
-        ];
-
-        const ppe = getReportArray('ppe').filter(p => matchesEmployeeIdentifier(p));
-
-        const behaviorMonitoring = getReportArray('behaviorMonitoring').filter(b => matchesEmployeeIdentifier(b));
-
-        const clinicVisits = getReportArray('clinicVisits', 'Clinic').filter(c => {
-            if (c.personType === 'contractor' || c.contractorName) return false;
-            return matchesEmployeeIdentifier(c);
-        });
-
-        const incidents = getReportArray('incidents').filter(i => {
-            if (i.personType === 'contractor' || i.contractorName) return false;
-            if (matchesEmployeeIdentifier(i)) return true;
-            if (i.affectedCode && singleCodeMatchesEmployee(i.affectedCode)) return true;
-            if (i.entries && Array.isArray(i.entries)) {
-                if (i.entries.some(e => matchesEmployeeIdentifier(e) || singleCodeMatchesEmployee(e?.affectedCode || e?.employeeCode))) return true;
-            }
-            return false;
-        });
-
-        const reportContainer = document.getElementById('employee-report-data');
-        const contentContainer = document.getElementById('employee-report-content');
-        const exportBtn = document.getElementById('export-employee-report-btn');
-        const contractorContent = document.getElementById('contractor-report-content');
-        if (contractorContent) contractorContent.classList.add('hidden');
-        if (contentContainer) contentContainer.classList.add('hidden');
-        if (!reportContainer) {
-            Notification.error('عنصر عرض تقرير الموظف غير متوفر');
-            return;
-        }
-
-        reportContainer.innerHTML = `
+        `,e){const n=document.getElementById("search-employee-btn"),o=document.getElementById("export-employee-report-btn"),f=document.getElementById("employee-code-search");n&&n.addEventListener("click",async()=>{const p=f?.value.trim();p?await this.generateEmployeeReport(p):Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A")}),f&&f.addEventListener("keypress",async p=>{if(p.key==="Enter"){const l=f.value.trim();l&&await this.generateEmployeeReport(l)}}),o&&o.addEventListener("click",()=>{const p=f?.value.trim();p&&this.exportEmployeeReportPDF(p)})}if(r){const n=document.getElementById("search-contractor-btn"),o=document.getElementById("export-contractor-report-btn"),f=document.getElementById("contractor-code-search");n&&n.addEventListener("click",async()=>{const p=f?.value.trim();p?await this.generateContractorReport(p):Notification.warning("\u064A\u0631\u062C\u0649 \u0625\u062F\u062E\u0627\u0644 \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629")}),f&&f.addEventListener("keypress",async p=>{if(p.key==="Enter"){const l=f.value.trim();l&&await this.generateContractorReport(l)}}),o&&o.addEventListener("click",()=>{const p=f?.value.trim();p&&this.exportContractorReportPDF(p)})}},async ensureEmployeeReportData(){AppState.appData||(AppState.appData={});const t=AppState.appData,e={Violations:"violations",Training:"training",TrainingAttendance:"trainingAttendance",ClinicVisits:"clinicVisits",PPE:"ppe",BehaviorMonitoring:"behaviorMonitoring",Incidents:"incidents",SickLeave:"sickLeave"},r=[];for(const[a,s]of Object.entries(e)){const i=t[s];(!Array.isArray(i)||i.length===0)&&r.push({sheetName:a,key:s})}typeof Loading<"u"&&Loading.show&&Loading.show();try{for(const{sheetName:a,key:s}of r)try{if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)continue;const i=await GoogleIntegration.readFromSheets(a);Array.isArray(i)&&(AppState.appData[s]=i,Utils.safeLog&&Utils.safeLog(`\u2705 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${a} (${i.length} \u0633\u062C\u0644)`))}catch(i){Utils.safeWarn&&Utils.safeWarn(`\u26A0\uFE0F \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${a}:`,i?.message||i)}if((!t.training||t.training.length===0)&&typeof GoogleIntegration<"u"&&(GoogleIntegration.sendToAppsScript||GoogleIntegration.sendRequest))try{const a=GoogleIntegration.sendToAppsScript||(n=>GoogleIntegration.sendRequest&&GoogleIntegration.sendRequest({action:n.action||n.method,data:n.data||{}})),s=await(GoogleIntegration.sendToAppsScript?GoogleIntegration.sendToAppsScript("getAllTrainings",{}):Promise.resolve(GoogleIntegration.sendRequest({action:"getAllTrainings",data:{}}))),i=s&&(s.data||s.value)&&(Array.isArray(s.data)?s.data:Array.isArray(s.value)?s.value:Array.isArray((s.value||{}).data)?(s.value||{}).data:null);Array.isArray(i)&&i.length>0&&(AppState.appData.training=i,Utils.safeLog&&Utils.safeLog("\u2705 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u062F\u0631\u064A\u0628 \u0639\u0628\u0631 getAllTrainings"))}catch(a){Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u0641\u0634\u0644 getAllTrainings:",a?.message||a)}if((!t.trainingAttendance||t.trainingAttendance.length===0)&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest)try{const a=await GoogleIntegration.sendRequest({action:"getAllTrainingAttendance",data:{}}),s=a&&a.value&&Array.isArray(a.value.data)&&a.value.data?a.value.data:a&&Array.isArray(a.data)?a.data:Array.isArray(a&&a.value)?a.value:null;Array.isArray(s)&&(AppState.appData.trainingAttendance=s,Utils.safeLog&&Utils.safeLog("\u2705 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u062D\u0636\u0648\u0631 \u0639\u0628\u0631 getAllTrainingAttendance"))}catch(a){Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u0641\u0634\u0644 getAllTrainingAttendance:",a?.message||a)}if(e.PPE&&(!t.ppe||t.ppe.length===0)&&typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)try{const a=await GoogleIntegration.sendToAppsScript("getAllPPE",{});a&&a.success&&Array.isArray(a.data)&&(AppState.appData.ppe=a.data,Utils.safeLog&&Utils.safeLog("\u2705 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 PPE \u0639\u0628\u0631 getAllPPE"))}catch(a){Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641: \u0641\u0634\u0644 getAllPPE:",a?.message||a)}}finally{typeof Loading<"u"&&Loading.hide&&Loading.hide()}},async ensureContractorReportData(){AppState.appData||(AppState.appData={});const t=AppState.appData,e={Violations:"violations",Incidents:"incidents",SickLeave:"sickLeave",ClinicVisits:"clinicVisits",ClinicContractorVisits:"clinicContractorVisits",ContractorEvaluations:"contractorEvaluations",Training:"training",ContractorTrainings:"contractorTrainings",PTW:"ptw",PTWRegistry:"ptwRegistry",Injuries:"injuries",ClinicContractorInjuries:"clinicContractorInjuries"},r=[];for(const[a,s]of Object.entries(e)){const i=t[s];(!Array.isArray(i)||i.length===0)&&r.push({sheetName:a,key:s})}if(r.length){typeof Loading<"u"&&Loading.show&&Loading.show();try{for(const{sheetName:a,key:s}of r)try{if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets)continue;const i=await GoogleIntegration.readFromSheets(a);Array.isArray(i)&&(AppState.appData[s]=i,Utils.safeLog&&Utils.safeLog(`\u2705 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644: \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${a} (${i.length} \u0633\u062C\u0644)`))}catch(i){Utils.safeWarn&&Utils.safeWarn(`\u26A0\uFE0F \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644: \u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 ${a}:`,i?.message||i)}}finally{typeof Loading<"u"&&Loading.hide&&Loading.hide()}}},async generateEmployeeReport(t){AppState.appData||(AppState.appData={});const e=AppState.appData,r=Array.isArray(e.employees)?e.employees:Array.isArray(e.Employees)?e.Employees:[];let a=null;const s=String(t||"").trim(),i=(d,h)=>{if(!h)return!1;const $=String(h).trim();if(!$)return!1;const w=String(d.employeeNumber??"").trim(),k=String(d.sapId??"").trim(),M=String(d.employeeCode??"").trim(),R=String(d.id??"").trim(),W=String(d.code??"").trim();if(w===$||k===$||M===$||R===$||W===$||w.toLowerCase()===$.toLowerCase()||k.toLowerCase()===$.toLowerCase())return!0;const _=Number($);return!!(!isNaN(_)&&isFinite(_)&&(Number(w)===_||Number(k)===_||Number(M)===_||Number(R)===_||Number(W)===_||String(Number(w))===$||String(Number(k))===$||w===String(_)||k===String(_)))};if(a=r.find(d=>i(d,t)),!a){Notification.error("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062F");const d=document.getElementById("employee-report-content");d&&d.classList.add("hidden");return}const n=d=>{if(!d)return null;const h=String(d).trim();return h?h.toLowerCase():null},o=new Set;if([a.id,a.employeeNumber,a.sapId,a.employeeCode,a.code,a.cardId,a.nationalId].forEach(d=>{if(d==null||d==="")return;const h=String(d).trim();if(!h)return;const $=n(d);$&&o.add($),o.add(h);const w=Number(d);!isNaN(w)&&isFinite(w)&&o.add(String(w))}),s){o.add(s),o.add(s.toLowerCase());const d=Number(s);!isNaN(d)&&isFinite(d)&&o.add(String(d))}const f=d=>d?[d.employeeCode,d.employeeNumber,d.employeeId,d.id,d.code,d.sapId,d.cardId,d.nationalId,d.participantCode].some($=>{if($==null||$==="")return!1;const w=String($).trim();if(!w)return!1;const k=n($);if(o.has(k)||o.has(w))return!0;const M=Number($);return!!(!isNaN(M)&&isFinite(M)&&o.has(String(M)))}):!1,p=d=>{if(d==null||d==="")return!1;const h=String(d).trim();if(!h)return!1;if(o.has(h)||o.has(n(h)))return!0;const $=Number(d);return!isNaN($)&&isFinite($)&&o.has(String($))};await this.ensureEmployeeReportData();const l=AppState.appData||{},m=(d,h)=>{const $=l[d]||l[h]||[];return Array.isArray($)?$:[]},g=m("violations").filter(d=>d.personType==="contractor"||d.contractorName?!1:f(d)),b=m("sickLeave").filter(d=>d.personType==="contractor"||d.contractorName?!1:f(d)),C=m("training").concat(m("trainingRecords")),x=m("trainingAttendance").filter(d=>f(d)),A=d=>{if(!d||typeof d!="object")return!1;const h={...d,code:d.code||d.participantCode,employeeCode:d.employeeCode||d.participantCode,employeeNumber:d.employeeNumber||d.participantCode};if((d.employeeCode!=null&&d.employeeCode!==""||d.employeeNumber!=null&&d.employeeNumber!==""||d.employeeId!=null&&d.employeeId!==""||d.participantCode!=null&&d.participantCode!=="")&&f(h))return!0;let $=d.participants;if(typeof $=="string")try{const w=JSON.parse($);$=Array.isArray(w)?w:w&&Array.isArray(w.participants)?w.participants:[]}catch{$=[]}return $&&Array.isArray($)?$.some(w=>!w||typeof w!="object"||w.personType==="contractor"||w.type==="contractor"||w.contractorName?!1:f(w)):!1},v=[...C.filter(A),...x.map(d=>({id:d.id,name:d.topic||d.trainingType||"\u062A\u062F\u0631\u064A\u0628",trainer:d.trainer||"",startDate:d.date||d.attendanceDate||d.createdAt,status:"\u0645\u0643\u062A\u0645\u0644"}))],I=m("ppe").filter(d=>f(d)),N=m("behaviorMonitoring").filter(d=>f(d)),L=m("clinicVisits","Clinic").filter(d=>d.personType==="contractor"||d.contractorName?!1:f(d)),u=m("incidents").filter(d=>d.personType==="contractor"||d.contractorName?!1:!!(f(d)||d.affectedCode&&p(d.affectedCode)||d.entries&&Array.isArray(d.entries)&&d.entries.some(h=>f(h)||p(h?.affectedCode||h?.employeeCode)))),S=document.getElementById("employee-report-data"),U=document.getElementById("employee-report-content"),P=document.getElementById("export-employee-report-btn"),E=document.getElementById("contractor-report-content");if(E&&E.classList.add("hidden"),U&&U.classList.add("hidden"),!S){Notification.error("\u0639\u0646\u0635\u0631 \u0639\u0631\u0636 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641 \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631");return}S.innerHTML=`
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">
                             <i class="fas fa-user ml-2"></i>
-                            ${Utils.escapeHTML(employee.name || '')}
+                            ${Utils.escapeHTML(a.name||"")}
                         </h3>
                         <p class="text-gray-600">
                             <i class="fas fa-id-card ml-2"></i>
-                            الكود الوظيفي: <strong>${Utils.escapeHTML(employee.employeeNumber || employee.sapId || employee.employeeCode || employeeCode)}</strong>
+                            \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A: <strong>${Utils.escapeHTML(a.employeeNumber||a.sapId||a.employeeCode||t)}</strong>
                         </p>
-                        ${employee.department ? `<p class="text-gray-600 mt-1"><i class="fas fa-building ml-2"></i>القسم: ${Utils.escapeHTML(employee.department)}</p>` : ''}
-                        ${employee.position ? `<p class="text-gray-600 mt-1"><i class="fas fa-briefcase ml-2"></i>المنصب: ${Utils.escapeHTML(employee.position)}</p>` : ''}
+                        ${a.department?`<p class="text-gray-600 mt-1"><i class="fas fa-building ml-2"></i>\u0627\u0644\u0642\u0633\u0645: ${Utils.escapeHTML(a.department)}</p>`:""}
+                        ${a.position?`<p class="text-gray-600 mt-1"><i class="fas fa-briefcase ml-2"></i>\u0627\u0644\u0645\u0646\u0635\u0628: ${Utils.escapeHTML(a.position)}</p>`:""}
                     </div>
-                    ${employee.photo ? (() => {
-                        const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                            ? Utils.resolveDriveAwareImgDisplay(employee.photo)
-                            : { canonical: String(employee.photo), displaySrc: String(employee.photo), needsProxy: false, proxyFileId: '' };
-                        const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
-                        return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة الموظف"${pa} class="dash-emp-photo w-24 h-24 rounded-full object-cover border-2 border-blue-500">`;
-                    })() : ''}
+                    ${a.photo?(()=>{const d=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(a.photo):{canonical:String(a.photo),displaySrc:String(a.photo),needsProxy:!1,proxyFileId:""},h=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(d):"";return`<img src="${Utils.escapeHTML(d.displaySrc)}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u0648\u0638\u0641"${h} class="dash-emp-photo w-24 h-24 rounded-full object-cover border-2 border-blue-500">`})():""}
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-red-600 mb-2">${violations.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">المخالفات</div>
+                    <div class="text-3xl font-bold text-red-600 mb-2">${g.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div>
                 </div>
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-blue-600 mb-2">${sickLeave.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الإجازات المرضية</div>
+                    <div class="text-3xl font-bold text-blue-600 mb-2">${b.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0631\u0636\u064A\u0629</div>
                 </div>
                 <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-green-600 mb-2">${training.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">برامج التدريب</div>
+                    <div class="text-3xl font-bold text-green-600 mb-2">${v.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628</div>
                 </div>
                 <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-yellow-600 mb-2">${ppe.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">مهمات الوقاية</div>
+                    <div class="text-3xl font-bold text-yellow-600 mb-2">${I.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629</div>
                 </div>
                 <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-purple-600 mb-2">${behaviorMonitoring.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">مراقبة السلوكيات</div>
+                    <div class="text-3xl font-bold text-purple-600 mb-2">${N.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A</div>
                 </div>
                 <div class="bg-pink-50 border border-pink-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-pink-600 mb-2">${clinicVisits.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">التردد على العيادة</div>
+                    <div class="text-3xl font-bold text-pink-600 mb-2">${L.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629</div>
                 </div>
                 <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-                    <div class="text-3xl font-bold text-orange-600 mb-2">${incidents.length}</div>
-                    <div class="text-sm text-gray-700 font-semibold">الحوادث</div>
+                    <div class="text-3xl font-bold text-orange-600 mb-2">${u.length}</div>
+                    <div class="text-sm text-gray-700 font-semibold">\u0627\u0644\u062D\u0648\u0627\u062F\u062B</div>
                 </div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${violations.length > 0 ? `
+                ${g.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>المخالفات (${violations.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (${g.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${violations.slice(0, 5).map(v => `
+                                ${g.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(v.violationType || '')}</span>
-                                            <span class="badge badge-${v.severity === 'عالية' ? 'danger' : 'warning'}">${v.severity || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(d.violationType||"")}</span>
+                                            <span class="badge badge-${d.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":"warning"}">${d.severity||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((v.actionTaken || '').substring(0, 100))}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${v.violationDate ? Utils.formatDate(v.violationDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((d.actionTaken||"").substring(0,100))}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${d.violationDate?Utils.formatDate(d.violationDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${violations.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${violations.length - 5} مخالفات أخرى...</p>` : ''}
+                                `).join("")}
+                                ${g.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${g.length-5} \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
                 
-                ${sickLeave.length > 0 ? `
+                ${b.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-calendar-times ml-2"></i>الإجازات المرضية (${sickLeave.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-calendar-times ml-2"></i>\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0631\u0636\u064A\u0629 (${b.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${sickLeave.slice(0, 5).map(s => `
+                                ${b.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">من ${s.startDate ? Utils.formatDate(s.startDate) : ''} إلى ${s.endDate ? Utils.formatDate(s.endDate) : ''}</span>
+                                            <span class="font-semibold">\u0645\u0646 ${d.startDate?Utils.formatDate(d.startDate):""} \u0625\u0644\u0649 ${d.endDate?Utils.formatDate(d.endDate):""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML(s.reason || '')}</p>
-                                        ${s.medicalNotes ? `<p class="text-xs text-gray-500 mt-2">${Utils.escapeHTML(s.medicalNotes)}</p>` : ''}
+                                        <p class="text-sm text-gray-600">${Utils.escapeHTML(d.reason||"")}</p>
+                                        ${d.medicalNotes?`<p class="text-xs text-gray-500 mt-2">${Utils.escapeHTML(d.medicalNotes)}</p>`:""}
                                     </div>
-                                `).join('')}
-                                ${sickLeave.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${sickLeave.length - 5} إجازة أخرى...</p>` : ''}
+                                `).join("")}
+                                ${b.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${b.length-5} \u0625\u062C\u0627\u0632\u0629 \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
                 
-                ${training.length > 0 ? `
+                ${v.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>برامج التدريب (${training.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (${v.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${training.slice(0, 5).map(t => `
+                                ${v.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(t.name || '')}</span>
-                                            <span class="badge badge-${t.status === 'مكتمل' ? 'success' : 'warning'}">${t.status || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(d.name||"")}</span>
+                                            <span class="badge badge-${d.status==="\u0645\u0643\u062A\u0645\u0644"?"success":"warning"}">${d.status||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">المدرب: ${Utils.escapeHTML(t.trainer || '')}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${t.startDate ? Utils.formatDate(t.startDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0645\u062F\u0631\u0628: ${Utils.escapeHTML(d.trainer||"")}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${d.startDate?Utils.formatDate(d.startDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${training.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${training.length - 5} برنامج آخر...</p>` : ''}
+                                `).join("")}
+                                ${v.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${v.length-5} \u0628\u0631\u0646\u0627\u0645\u062C \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
                 
-                ${ppe.length > 0 ? `
+                ${I.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-hard-hat ml-2"></i>مهمات الوقاية (${ppe.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-hard-hat ml-2"></i>\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 (${I.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${ppe.slice(0, 5).map(p => `
+                                ${I.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(p.equipmentType || '')}</span>
-                                            <span class="badge badge-success">${p.receiptNumber || p.id}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(d.equipmentType||"")}</span>
+                                            <span class="badge badge-success">${d.receiptNumber||d.id}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">الكمية: ${p.quantity || 0}</p>
-                                        <p class="text-xs text-gray-500 mt-2">تاريخ الاستلام: ${p.receiptDate ? Utils.formatDate(p.receiptDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0643\u0645\u064A\u0629: ${d.quantity||0}</p>
+                                        <p class="text-xs text-gray-500 mt-2">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645: ${d.receiptDate?Utils.formatDate(d.receiptDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${ppe.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${ppe.length - 5} استلام آخر...</p>` : ''}
+                                `).join("")}
+                                ${I.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${I.length-5} \u0627\u0633\u062A\u0644\u0627\u0645 \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
                 
-                ${behaviorMonitoring.length > 0 ? `
+                ${N.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-user-check ml-2"></i>مراقبة السلوكيات (${behaviorMonitoring.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-user-check ml-2"></i>\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A (${N.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${behaviorMonitoring.slice(0, 5).map(b => `
+                                ${N.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(b.behaviorType || '')}</span>
-                                            <span class="badge badge-${b.rating >= 4 ? 'success' : b.rating >= 3 ? 'warning' : 'danger'}">${b.rating || 0}/5</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(d.behaviorType||"")}</span>
+                                            <span class="badge badge-${d.rating>=4?"success":d.rating>=3?"warning":"danger"}">${d.rating||0}/5</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((b.description || '').substring(0, 100))}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${b.date ? Utils.formatDate(b.date) : ''}</p>
+                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((d.description||"").substring(0,100))}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${d.date?Utils.formatDate(d.date):""}</p>
                                     </div>
-                                `).join('')}
-                                ${behaviorMonitoring.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${behaviorMonitoring.length - 5} تسجيل آخر...</p>` : ''}
+                                `).join("")}
+                                ${N.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${N.length-5} \u062A\u0633\u062C\u064A\u0644 \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
                 
-                ${clinicVisits.length > 0 ? `
+                ${L.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>التردد على العيادة (${clinicVisits.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629 (${L.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${clinicVisits.slice(0, 5).map(c => `
+                                ${L.slice(0,5).map(d=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(c.reason || 'زيارة عادية')}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(d.reason||"\u0632\u064A\u0627\u0631\u0629 \u0639\u0627\u062F\u064A\u0629")}</span>
                                         </div>
-                                        ${c.diagnosis ? `<p class="text-sm text-gray-600">التشخيص: ${Utils.escapeHTML(c.diagnosis)}</p>` : ''}
-                                        ${c.treatment ? `<p class="text-sm text-gray-600">العلاج: ${Utils.escapeHTML(c.treatment)}</p>` : ''}
-                                        <p class="text-xs text-gray-500 mt-2">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</p>
+                                        ${d.diagnosis?`<p class="text-sm text-gray-600">\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ${Utils.escapeHTML(d.diagnosis)}</p>`:""}
+                                        ${d.treatment?`<p class="text-sm text-gray-600">\u0627\u0644\u0639\u0644\u0627\u062C: ${Utils.escapeHTML(d.treatment)}</p>`:""}
+                                        <p class="text-xs text-gray-500 mt-2">${d.visitDate?Utils.formatDate(d.visitDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${clinicVisits.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${clinicVisits.length - 5} زيارة أخرى...</p>` : ''}
+                                `).join("")}
+                                ${L.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${L.length-5} \u0632\u064A\u0627\u0631\u0629 \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
             </div>
-        `;
-
-        contentContainer.classList.remove('hidden');
-        if (exportBtn) exportBtn.disabled = false;
-
-        if (typeof Utils.hydrateDriveProxyImages === 'function') {
-            Utils.hydrateDriveProxyImages(reportContainer, {
-                onFetchFail: (img) => {
-                    try {
-                        const ph = document.createElement('div');
-                        ph.className = 'w-24 h-24 rounded-full bg-gray-200 border-2 border-blue-500 flex items-center justify-center';
-                        ph.innerHTML = '<i class="fas fa-user text-gray-500 text-2xl"></i>';
-                        img.replaceWith(ph);
-                    } catch (e) { /* ignore */ }
-                }
-            });
-        }
-
-        // ✅ إصلاح: استخدام المعرف الأساسي للموظف (وليس مصطلح البحث)
-        const primaryEmployeeCode = employee.employeeNumber || employee.sapId || employee.id || employee.employeeCode || employeeCode;
-
-        // حفظ بيانات التقرير للتصدير
-        window.currentEmployeeReport = {
-            employee,
-            employeeCode: primaryEmployeeCode, // ✅ استخدام المعرف الفعلي للموظف
-            employeeIdentifiers: Array.from(employeeIdentifiers), // ✅ حفظ جميع المعرفات للتحقق
-            violations,
-            sickLeave,
-            training,
-            ppe,
-            behaviorMonitoring,
-            clinicVisits,
-            incidents
-        };
-    },
-
-    employeeReportMatchesSearchCode(report, searchCode) {
-        if (!report || searchCode == null || searchCode === '') return false;
-        const code = String(searchCode).trim();
-        if (!code) return false;
-        if (String(report.employeeCode || '').trim() === code) return true;
-        if (Array.isArray(report.employeeIdentifiers)) {
-            const codeLower = code.toLowerCase();
-            if (report.employeeIdentifiers.includes(code) || report.employeeIdentifiers.includes(codeLower)) return true;
-            const num = Number(code);
-            if (!isNaN(num) && isFinite(num) && report.employeeIdentifiers.includes(String(num))) return true;
-        }
-        return false;
-    },
-
-    _AR_PDF_TEXT_STYLE_: "font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",
-
-    async _loadReportPdfLib_(src, checkFn) {
-        if (checkFn()) return true;
-        return new Promise((resolve) => {
-            const existing = document.querySelector(`script[src="${src}"]`);
-            if (existing) {
-                const done = () => resolve(!!checkFn());
-                existing.addEventListener('load', done, { once: true });
-                setTimeout(done, 4000);
-            return;
-        }
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            script.onload = () => resolve(!!checkFn());
-            script.onerror = () => resolve(false);
-            document.head.appendChild(script);
-        });
-    },
-
-    async _ensureReportPdfLibs_() {
-        const html2canvasOk = await this._loadReportPdfLib_(
-            'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
-            () => typeof html2canvas !== 'undefined'
-        );
-        const jsPdfOk = await this._loadReportPdfLib_(
-            'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
-            () => typeof window.jspdf !== 'undefined'
-        );
-        return html2canvasOk && jsPdfOk;
-    },
-
-    _stripScriptsFromHtml_(htmlContent) {
-        return String(htmlContent || '').replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-    },
-
-    async _preloadCairoFontForPdf_() {
-        if (!document.getElementById('dash-cairo-font-link')) {
-            const link = document.createElement('link');
-            link.id = 'dash-cairo-font-link';
-            link.rel = 'stylesheet';
-            link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap';
-            document.head.appendChild(link);
-        }
-        try {
-            if (document.fonts && typeof document.fonts.load === 'function') {
-                await document.fonts.load('400 14px Cairo');
-                await document.fonts.load('700 20px Cairo');
-                await document.fonts.ready;
-            }
-        } catch (_e) { /* ignore */ }
-    },
-
-    _prepareArabicPdfHtml_(htmlContent) {
-        const arabicFix = `
+        `,U.classList.remove("hidden"),P&&(P.disabled=!1),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(S,{onFetchFail:d=>{try{const h=document.createElement("div");h.className="w-24 h-24 rounded-full bg-gray-200 border-2 border-blue-500 flex items-center justify-center",h.innerHTML='<i class="fas fa-user text-gray-500 text-2xl"></i>',d.replaceWith(h)}catch{}}});const H=a.employeeNumber||a.sapId||a.id||a.employeeCode||t;window.currentEmployeeReport={employee:a,employeeCode:H,employeeIdentifiers:Array.from(o),violations:g,sickLeave:b,training:v,ppe:I,behaviorMonitoring:N,clinicVisits:L,incidents:u}},employeeReportMatchesSearchCode(t,e){if(!t||e==null||e==="")return!1;const r=String(e).trim();if(!r)return!1;if(String(t.employeeCode||"").trim()===r)return!0;if(Array.isArray(t.employeeIdentifiers)){const a=r.toLowerCase();if(t.employeeIdentifiers.includes(r)||t.employeeIdentifiers.includes(a))return!0;const s=Number(r);if(!isNaN(s)&&isFinite(s)&&t.employeeIdentifiers.includes(String(s)))return!0}return!1},_AR_PDF_TEXT_STYLE_:"font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",async _loadReportPdfLib_(t,e){return e()?!0:new Promise(r=>{const a=document.querySelector(`script[src="${t}"]`);if(a){const i=()=>r(!!e());a.addEventListener("load",i,{once:!0}),setTimeout(i,4e3);return}const s=document.createElement("script");s.src=t,s.async=!0,s.onload=()=>r(!!e()),s.onerror=()=>r(!1),document.head.appendChild(s)})},async _ensureReportPdfLibs_(){const t=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof html2canvas<"u"),e=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");return t&&e},_stripScriptsFromHtml_(t){return String(t||"").replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,"")},async _preloadCairoFontForPdf_(){if(!document.getElementById("dash-cairo-font-link")){const t=document.createElement("link");t.id="dash-cairo-font-link",t.rel="stylesheet",t.href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap",document.head.appendChild(t)}try{document.fonts&&typeof document.fonts.load=="function"&&(await document.fonts.load("400 14px Cairo"),await document.fonts.load("700 20px Cairo"),await document.fonts.ready)}catch{}},_prepareArabicPdfHtml_(t){const e=`
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -2334,2567 +729,463 @@ const Dashboard = {
         gap: 14px !important;
     }
     table, thead, tbody, tr, th, td { direction: rtl !important; }
-</style>`;
-        const cleaned = this._stripScriptsFromHtml_(htmlContent);
-        if (!cleaned) return arabicFix;
-        if (cleaned.includes('</head>')) {
-            return cleaned.replace('</head>', `${arabicFix}</head>`);
-        }
-        return `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${arabicFix}</head><body>${cleaned}</body></html>`;
-    },
-
-    async _waitArabicPdfFontsReady_(doc) {
-        if (!doc || !doc.fonts || typeof doc.fonts.load !== 'function') return;
-        try {
-            await Promise.all([
-                doc.fonts.load('400 12px Cairo'),
-                doc.fonts.load('600 14px Cairo'),
-                doc.fonts.load('700 18px Cairo'),
-                doc.fonts.load('800 24px Cairo')
-            ]);
-            await doc.fonts.ready;
-        } catch (_e) { /* ignore */ }
-    },
-
-    async _captureHtmlToCanvas_(root, opts = {}) {
-        const scale = this._getAdaptivePdfCanvasScale_(root, opts.scale || 2.5);
-        const baseOpts = {
-            scale,
-            backgroundColor: '#ffffff',
-            logging: false,
-            windowWidth: Math.max(root.scrollWidth, 900),
-            windowHeight: Math.max(root.scrollHeight, 1),
-            scrollX: 0,
-            scrollY: 0
-        };
-        const attempts = [
-            { ...baseOpts, useCORS: true, allowTaint: false },
-            { ...baseOpts, useCORS: true, allowTaint: true },
-            { ...baseOpts, useCORS: false, allowTaint: true }
-        ];
-        let lastError = null;
-        for (let i = 0; i < attempts.length; i++) {
-            try {
-                const canvas = await html2canvas(root, attempts[i]);
-                if (canvas && canvas.width > 0 && canvas.height > 0) return canvas;
-            } catch (err) {
-                lastError = err;
-            }
-        }
-        if (lastError) throw lastError;
-        return null;
-    },
-
-    async _downloadHtmlReportAsPdf(htmlContent, fileName = 'report.pdf') {
-        const libsReady = await this._ensureReportPdfLibs_();
-        if (!libsReady || typeof html2canvas === 'undefined' || !window.jspdf) return false;
-
-        await this._preloadCairoFontForPdf_();
-        const preparedHtml = this._prepareArabicPdfHtml_(htmlContent);
-        const pdfFileName = String(fileName || 'report.pdf').toLowerCase().endsWith('.pdf')
-            ? String(fileName)
-            : `${String(fileName)}.pdf`;
-
-        const iframe = document.createElement('iframe');
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = 'position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;';
-        document.body.appendChild(iframe);
-
-        try {
-            iframe.srcdoc = preparedHtml;
-            await new Promise((resolve) => {
-                iframe.onload = resolve;
-                iframe.onerror = resolve;
-                setTimeout(resolve, 6000);
-            });
-
-            const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (!iDoc) return false;
-
-            await this._waitArabicPdfFontsReady_(iDoc);
-
-            const images = Array.from(iDoc.images || []);
-            await Promise.all(images.map((img) => new Promise((resolve) => {
-                if (img.complete) return resolve();
-                img.onload = resolve;
-                img.onerror = resolve;
-                setTimeout(resolve, 3000);
-            })));
-
-            const root = iDoc.querySelector('.report-wrapper') || iDoc.body;
-            if (!root) return false;
-
-            const canvas = await this._captureHtmlToCanvas_(root);
-            if (!canvas) return false;
-
-            const pdf = Utils.PdfExport.createPdf({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            if (!pdf) return false;
-            Utils.PdfExport.appendCanvasAsPdfPages(pdf, canvas, { marginMm: 8 });
-            Utils.PdfExport.savePdf(pdf, pdfFileName);
-            return true;
-        } catch (error) {
-            if (Utils.safeWarn) Utils.safeWarn('فشل تحميل تقرير PDF:', error);
-            return false;
-        } finally {
-            iframe.remove();
-        }
-    },
-
-    _getAdaptivePdfCanvasScale_(root, preferredScale = 2.5) {
-        const scrollH = Math.max(root?.scrollHeight || 0, 1);
-        const scrollW = Math.max(root?.scrollWidth || 900, 900);
-        const maxDim = 14000;
-        const maxArea = 90000000;
-        let scale = Number(preferredScale) || 2.5;
-        while (scale > 0.85 && (
-            scrollW * scale > maxDim ||
-            scrollH * scale > maxDim ||
-            scrollW * scrollH * scale * scale > maxArea
-        )) {
-            scale -= 0.25;
-        }
-        return Math.max(0.85, Math.round(scale * 100) / 100);
-    },
-
-    _buildPdfSectionTable_(sectionTable, label, accent, headers, records, rowMapper, maxRows) {
-        const list = Array.isArray(records) ? records : [];
-        const limit = Math.max(1, Number(maxRows) || 50);
-        const shown = list.slice(0, limit);
-        const omitted = Math.max(0, list.length - shown.length);
-        const rowsHtml = shown.map(rowMapper).join('');
-        const titleSuffix = list.length
-            ? (omitted > 0 ? ` (${list.length} — عرض ${shown.length} في PDF)` : ` (${list.length})`)
-            : '';
-        return sectionTable(`${label}${titleSuffix}`, accent, headers, rowsHtml);
-    },
-
-    _getContractorClinicVisitDisplayName_(visit) {
-        if (!visit || typeof visit !== 'object') return '';
-        return String(
-            visit.contractorWorkerName ||
-            visit.personName ||
-            visit.employeeName ||
-            visit.externalName ||
-            visit.name ||
-            ''
-        ).replace(/\s+/g, ' ').trim();
-    },
-
-    buildEmployeeReportPdfContent(report, employeeCode) {
-        const emp = report.employee || {};
-        const ar = this._AR_PDF_TEXT_STYLE_;
-        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
-        const fmtDate = (d) => (d && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : '';
-        const code = emp.employeeNumber || emp.sapId || emp.employeeCode || employeeCode || '';
-        const name = emp.name || '—';
-        const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('') || 'م';
-        const reportDate = fmtDate(new Date()) || new Date().toLocaleDateString('ar-SA');
-
-        const statCard = (label, value, bg, border, labelColor, valueColor) => `
-            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${bg};border:1px solid ${border};text-align:center;">
-                <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:6px;${ar}">${esc(label)}</div>
-                <div style="font-size:26px;font-weight:800;color:${valueColor};line-height:1.1;${ar}">${value}</div>
-            </div>`;
-
-        const thStyle = (accent) => `padding:11px 8px;border:1px solid ${accent};text-align:center;font-weight:700;font-size:11px;${ar}`;
-        const tdStyle = `padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${ar}`;
-        const tdCenter = `padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${ar}`;
-
-        const sectionTable = (title, accent, headers, rowsHtml) => {
-            if (!rowsHtml) return '';
-            return `
+</style>`,r=this._stripScriptsFromHtml_(t);return r?r.includes("</head>")?r.replace("</head>",`${e}</head>`):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${e}</head><body>${r}</body></html>`:e},async _waitArabicPdfFontsReady_(t){if(!(!t||!t.fonts||typeof t.fonts.load!="function"))try{await Promise.all([t.fonts.load("400 12px Cairo"),t.fonts.load("600 14px Cairo"),t.fonts.load("700 18px Cairo"),t.fonts.load("800 24px Cairo")]),await t.fonts.ready}catch{}},async _captureHtmlToCanvas_(t,e={}){const a={scale:this._getAdaptivePdfCanvasScale_(t,e.scale||2.5),backgroundColor:"#ffffff",logging:!1,windowWidth:Math.max(t.scrollWidth,900),windowHeight:Math.max(t.scrollHeight,1),scrollX:0,scrollY:0},s=[{...a,useCORS:!0,allowTaint:!1},{...a,useCORS:!0,allowTaint:!0},{...a,useCORS:!1,allowTaint:!0}];let i=null;for(let n=0;n<s.length;n++)try{const o=await html2canvas(t,s[n]);if(o&&o.width>0&&o.height>0)return o}catch(o){i=o}if(i)throw i;return null},async _downloadHtmlReportAsPdf(t,e="report.pdf"){if(!await this._ensureReportPdfLibs_()||typeof html2canvas>"u"||!window.jspdf)return!1;await this._preloadCairoFontForPdf_();const a=this._prepareArabicPdfHtml_(t),s=String(e||"report.pdf").toLowerCase().endsWith(".pdf")?String(e):`${String(e)}.pdf`,i=document.createElement("iframe");i.setAttribute("aria-hidden","true"),i.style.cssText="position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;",document.body.appendChild(i);try{i.srcdoc=a,await new Promise(m=>{i.onload=m,i.onerror=m,setTimeout(m,6e3)});const n=i.contentDocument||i.contentWindow?.document;if(!n)return!1;await this._waitArabicPdfFontsReady_(n);const o=Array.from(n.images||[]);await Promise.all(o.map(m=>new Promise(g=>{if(m.complete)return g();m.onload=g,m.onerror=g,setTimeout(g,3e3)})));const f=n.querySelector(".report-wrapper")||n.body;if(!f)return!1;const p=await this._captureHtmlToCanvas_(f);if(!p)return!1;const l=Utils.PdfExport.createPdf({orientation:"portrait",unit:"mm",format:"a4"});return l?(Utils.PdfExport.appendCanvasAsPdfPages(l,p,{marginMm:8}),Utils.PdfExport.savePdf(l,s),!0):!1}catch(n){return Utils.safeWarn&&Utils.safeWarn("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 PDF:",n),!1}finally{i.remove()}},_getAdaptivePdfCanvasScale_(t,e=2.5){const r=Math.max(t?.scrollHeight||0,1),a=Math.max(t?.scrollWidth||900,900),s=14e3,i=9e7;let n=Number(e)||2.5;for(;n>.85&&(a*n>s||r*n>s||a*r*n*n>i);)n-=.25;return Math.max(.85,Math.round(n*100)/100)},_buildPdfSectionTable_(t,e,r,a,s,i,n){const o=Array.isArray(s)?s:[],f=Math.max(1,Number(n)||50),p=o.slice(0,f),l=Math.max(0,o.length-p.length),m=p.map(i).join(""),g=o.length?l>0?` (${o.length} \u2014 \u0639\u0631\u0636 ${p.length} \u0641\u064A PDF)`:` (${o.length})`:"";return t(`${e}${g}`,r,a,m)},_getContractorClinicVisitDisplayName_(t){return!t||typeof t!="object"?"":String(t.contractorWorkerName||t.personName||t.employeeName||t.externalName||t.name||"").replace(/\s+/g," ").trim()},buildEmployeeReportPdfContent(t,e){const r=t.employee||{},a=this._AR_PDF_TEXT_STYLE_,s=u=>Utils.escapeHTML(String(u??"")),i=u=>u&&typeof Utils.formatDate=="function"?Utils.formatDate(u):"",n=r.employeeNumber||r.sapId||r.employeeCode||e||"",o=r.name||"\u2014",f=o.trim().split(/\s+/).slice(0,2).map(u=>u.charAt(0)).join("")||"\u0645",p=i(new Date)||new Date().toLocaleDateString("ar-SA"),l=(u,S,U,P,E,H)=>`
+            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${U};border:1px solid ${P};text-align:center;">
+                <div style="font-size:11px;color:${E};font-weight:600;margin-bottom:6px;${a}">${s(u)}</div>
+                <div style="font-size:26px;font-weight:800;color:${H};line-height:1.1;${a}">${S}</div>
+            </div>`,m=u=>`padding:11px 8px;border:1px solid ${u};text-align:center;font-weight:700;font-size:11px;${a}`,g=`padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${a}`,b=`padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${a}`,C=(u,S,U,P)=>P?`
                 <div style="margin:28px 0 16px;direction:rtl;">
-                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${accent};font-weight:700;border-right:4px solid ${accent};padding-right:12px;${ar}">${esc(title)}</h3>
-                    <table dir="rtl" style="width:100%;border-collapse:collapse;${ar}">
-                        <thead><tr style="background:${accent};color:#FFFFFF;">${headers.map((h) => `<th dir="rtl" style="${thStyle(accent)}">${esc(h)}</th>`).join('')}</tr></thead>
-                        <tbody>${rowsHtml}</tbody>
+                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${S};font-weight:700;border-right:4px solid ${S};padding-right:12px;${a}">${s(u)}</h3>
+                    <table dir="rtl" style="width:100%;border-collapse:collapse;${a}">
+                        <thead><tr style="background:${S};color:#FFFFFF;">${U.map(E=>`<th dir="rtl" style="${m(S)}">${s(E)}</th>`).join("")}</tr></thead>
+                        <tbody>${P}</tbody>
                 </table>
-                </div>`;
-        };
-
-        const violationsRows = (report.violations || []).map((v) => `
+                </div>`:"",y=(t.violations||[]).map(u=>`
             <tr>
-                <td style="${tdStyle}">${esc(v.violationType)}</td>
-                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
-                <td style="${tdCenter}">${esc(v.severity)}</td>
-                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
-                <td style="${tdCenter}">${esc(v.status)}</td>
-            </tr>`).join('');
-
-        const sickLeaveRows = (report.sickLeave || []).map((s) => `
+                <td style="${g}">${s(u.violationType)}</td>
+                <td style="${b}">${i(u.violationDate)}</td>
+                <td style="${b}">${s(u.severity)}</td>
+                <td style="${g}">${s(u.actionTaken)}</td>
+                <td style="${b}">${s(u.status)}</td>
+            </tr>`).join(""),x=(t.sickLeave||[]).map(u=>`
             <tr>
-                <td style="${tdCenter}">${fmtDate(s.startDate)}</td>
-                <td style="${tdCenter}">${fmtDate(s.endDate)}</td>
-                <td style="${tdStyle}">${esc(s.reason)}</td>
-                <td style="${tdStyle}">${esc(s.medicalNotes)}</td>
-            </tr>`).join('');
-
-        const trainingRows = (report.training || []).map((t) => `
+                <td style="${b}">${i(u.startDate)}</td>
+                <td style="${b}">${i(u.endDate)}</td>
+                <td style="${g}">${s(u.reason)}</td>
+                <td style="${g}">${s(u.medicalNotes)}</td>
+            </tr>`).join(""),A=(t.training||[]).map(u=>`
             <tr>
-                <td style="${tdStyle}">${esc(t.name)}</td>
-                <td style="${tdStyle}">${esc(t.trainer)}</td>
-                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
-                <td style="${tdCenter}">${esc(t.status)}</td>
-            </tr>`).join('');
-
-        const ppeRows = (report.ppe || []).map((p) => `
+                <td style="${g}">${s(u.name)}</td>
+                <td style="${g}">${s(u.trainer)}</td>
+                <td style="${b}">${i(u.startDate)}</td>
+                <td style="${b}">${s(u.status)}</td>
+            </tr>`).join(""),T=(t.ppe||[]).map(u=>`
             <tr>
-                <td style="${tdCenter}">${esc(p.receiptNumber || p.id)}</td>
-                <td style="${tdStyle}">${esc(p.equipmentType)}</td>
-                <td style="${tdCenter}">${p.quantity != null ? p.quantity : 0}</td>
-                <td style="${tdCenter}">${fmtDate(p.receiptDate)}</td>
-                <td style="${tdCenter}">${esc(p.status)}</td>
-            </tr>`).join('');
-
-        const behaviorRows = (report.behaviorMonitoring || []).map((b) => `
+                <td style="${b}">${s(u.receiptNumber||u.id)}</td>
+                <td style="${g}">${s(u.equipmentType)}</td>
+                <td style="${b}">${u.quantity!=null?u.quantity:0}</td>
+                <td style="${b}">${i(u.receiptDate)}</td>
+                <td style="${b}">${s(u.status)}</td>
+            </tr>`).join(""),v=(t.behaviorMonitoring||[]).map(u=>`
             <tr>
-                <td style="${tdStyle}">${esc(b.behaviorType)}</td>
-                <td style="${tdCenter}">${b.rating != null ? `${b.rating}/5` : '—'}</td>
-                <td style="${tdCenter}">${fmtDate(b.date)}</td>
-                <td style="${tdStyle}">${esc(b.description)}</td>
-            </tr>`).join('');
-
-        const clinicRows = (report.clinicVisits || []).map((c) => `
+                <td style="${g}">${s(u.behaviorType)}</td>
+                <td style="${b}">${u.rating!=null?`${u.rating}/5`:"\u2014"}</td>
+                <td style="${b}">${i(u.date)}</td>
+                <td style="${g}">${s(u.description)}</td>
+            </tr>`).join(""),I=(t.clinicVisits||[]).map(u=>`
             <tr>
-                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
-                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
-                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
-                <td style="${tdStyle}">${esc(c.treatment)}</td>
-            </tr>`).join('');
-
-        const incidentRows = (report.incidents || []).map((i) => `
+                <td style="${b}">${i(u.visitDate)}</td>
+                <td style="${g}">${s(u.reason||"\u0632\u064A\u0627\u0631\u0629 \u0639\u0627\u062F\u064A\u0629")}</td>
+                <td style="${g}">${s(u.diagnosis)}</td>
+                <td style="${g}">${s(u.treatment)}</td>
+            </tr>`).join(""),N=(t.incidents||[]).map(u=>`
             <tr>
-                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
-                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
-                <td style="${tdCenter}">${esc(i.severity)}</td>
-                <td style="${tdCenter}">${esc(i.status)}</td>
-            </tr>`).join('');
-
-        const totalRecords = (report.violations?.length || 0) + (report.sickLeave?.length || 0)
-            + (report.training?.length || 0) + (report.ppe?.length || 0)
-            + (report.behaviorMonitoring?.length || 0) + (report.clinicVisits?.length || 0)
-            + (report.incidents?.length || 0);
-
-        return `
+                <td style="${b}">${i(u.incidentDate||u.date||u.createdAt)}</td>
+                <td style="${g}">${s(String(u.title||u.description||"").substring(0,120))}</td>
+                <td style="${b}">${s(u.severity)}</td>
+                <td style="${b}">${s(u.status)}</td>
+            </tr>`).join(""),L=(t.violations?.length||0)+(t.sickLeave?.length||0)+(t.training?.length||0)+(t.ppe?.length||0)+(t.behaviorMonitoring?.length||0)+(t.clinicVisits?.length||0)+(t.incidents?.length||0);return`
             <div style="direction:rtl;margin-bottom:24px;">
                 <div style="display:flex;align-items:center;gap:18px;padding:20px 22px;border-radius:16px;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1px solid #93c5fd;">
-                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(37,99,235,0.25);${ar}">${esc(initials)}</div>
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(37,99,235,0.25);${a}">${s(f)}</div>
                     <div style="flex:1;min-width:0;">
-                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#1e3a8a;${ar}">${esc(name)}</h2>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${ar}">
-                            <span><strong style="color:#1e40af;">الكود الوظيفي:</strong> ${esc(code)}</span>
-                            ${emp.department ? `<span><strong style="color:#1e40af;">القسم:</strong> ${esc(emp.department)}</span>` : ''}
-                            ${emp.position ? `<span><strong style="color:#1e40af;">المنصب:</strong> ${esc(emp.position)}</span>` : ''}
+                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#1e3a8a;${a}">${s(o)}</h2>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${a}">
+                            <span><strong style="color:#1e40af;">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:</strong> ${s(n)}</span>
+                            ${r.department?`<span><strong style="color:#1e40af;">\u0627\u0644\u0642\u0633\u0645:</strong> ${s(r.department)}</span>`:""}
+                            ${r.position?`<span><strong style="color:#1e40af;">\u0627\u0644\u0645\u0646\u0635\u0628:</strong> ${s(r.position)}</span>`:""}
                         </div>
                     </div>
-                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${ar}">
-                        <div><strong>تاريخ التقرير:</strong> ${esc(reportDate)}</div>
-                        <div><strong>إجمالي السجلات:</strong> ${totalRecords}</div>
+                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${a}">
+                        <div><strong>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631:</strong> ${s(p)}</div>
+                        <div><strong>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A:</strong> ${L}</div>
                     </div>
                 </div>
             </div>
 
             <div style="margin-bottom:8px;direction:rtl;">
-                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${ar}">ملخص مؤشرات السلامة والصحة المهنية</h3>
+                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${a}">\u0645\u0644\u062E\u0635 \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</h3>
                 <div style="display:flex;flex-wrap:wrap;gap:12px;">
-                    ${statCard('المخالفات', report.violations?.length || 0, '#FEF2F2', '#FECACA', '#B91C1C', '#991B1B')}
-                    ${statCard('الإجازات المرضية', report.sickLeave?.length || 0, '#EFF6FF', '#BFDBFE', '#1D4ED8', '#1E40AF')}
-                    ${statCard('برامج التدريب', report.training?.length || 0, '#ECFDF5', '#BBF7D0', '#047857', '#065F46')}
-                    ${statCard('مهمات الوقاية', report.ppe?.length || 0, '#FFFBEB', '#FDE68A', '#B45309', '#92400E')}
-                    ${statCard('مراقبة السلوكيات', report.behaviorMonitoring?.length || 0, '#F5F3FF', '#DDD6FE', '#6D28D9', '#5B21B6')}
-                    ${statCard('التردد على العيادة', report.clinicVisits?.length || 0, '#FDF2F8', '#FBCFE8', '#BE185D', '#9D174D')}
-                    ${statCard('الحوادث', report.incidents?.length || 0, '#FFF7ED', '#FED7AA', '#C2410C', '#9A3412')}
+                    ${l("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A",t.violations?.length||0,"#FEF2F2","#FECACA","#B91C1C","#991B1B")}
+                    ${l("\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0631\u0636\u064A\u0629",t.sickLeave?.length||0,"#EFF6FF","#BFDBFE","#1D4ED8","#1E40AF")}
+                    ${l("\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628",t.training?.length||0,"#ECFDF5","#BBF7D0","#047857","#065F46")}
+                    ${l("\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629",t.ppe?.length||0,"#FFFBEB","#FDE68A","#B45309","#92400E")}
+                    ${l("\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A",t.behaviorMonitoring?.length||0,"#F5F3FF","#DDD6FE","#6D28D9","#5B21B6")}
+                    ${l("\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",t.clinicVisits?.length||0,"#FDF2F8","#FBCFE8","#BE185D","#9D174D")}
+                    ${l("\u0627\u0644\u062D\u0648\u0627\u062F\u062B",t.incidents?.length||0,"#FFF7ED","#FED7AA","#C2410C","#9A3412")}
                 </div>
             </div>
 
-            ${sectionTable(`المخالفات (${report.violations?.length || 0})`, '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], violationsRows)}
-            ${sectionTable(`الإجازات المرضية (${report.sickLeave?.length || 0})`, '#1D4ED8', ['من تاريخ', 'إلى تاريخ', 'السبب', 'الملاحظات الطبية'], sickLeaveRows)}
-            ${sectionTable(`برامج التدريب (${report.training?.length || 0})`, '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], trainingRows)}
-            ${sectionTable(`مهمات الوقاية (${report.ppe?.length || 0})`, '#B45309', ['رقم الإيصال', 'نوع المعدة', 'الكمية', 'تاريخ الاستلام', 'الحالة'], ppeRows)}
-            ${sectionTable(`مراقبة السلوكيات (${report.behaviorMonitoring?.length || 0})`, '#6D28D9', ['نوع السلوك', 'التقييم', 'التاريخ', 'الوصف'], behaviorRows)}
-            ${sectionTable(`التردد على العيادة (${report.clinicVisits?.length || 0})`, '#BE185D', ['تاريخ الزيارة', 'السبب', 'التشخيص', 'العلاج'], clinicRows)}
-            ${sectionTable(`الحوادث (${report.incidents?.length || 0})`, '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], incidentRows)}
+            ${C(`\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (${t.violations?.length||0})`,"#B91C1C",["\u0627\u0644\u0646\u0648\u0639","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u062D\u0627\u0644\u0629"],y)}
+            ${C(`\u0627\u0644\u0625\u062C\u0627\u0632\u0627\u062A \u0627\u0644\u0645\u0631\u0636\u064A\u0629 (${t.sickLeave?.length||0})`,"#1D4ED8",["\u0645\u0646 \u062A\u0627\u0631\u064A\u062E","\u0625\u0644\u0649 \u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0633\u0628\u0628","\u0627\u0644\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0627\u0644\u0637\u0628\u064A\u0629"],x)}
+            ${C(`\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (${t.training?.length||0})`,"#047857",["\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C","\u0627\u0644\u0645\u062F\u0631\u0628","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0621","\u0627\u0644\u062D\u0627\u0644\u0629"],A)}
+            ${C(`\u0645\u0647\u0645\u0627\u062A \u0627\u0644\u0648\u0642\u0627\u064A\u0629 (${t.ppe?.length||0})`,"#B45309",["\u0631\u0642\u0645 \u0627\u0644\u0625\u064A\u0635\u0627\u0644","\u0646\u0648\u0639 \u0627\u0644\u0645\u0639\u062F\u0629","\u0627\u0644\u0643\u0645\u064A\u0629","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0633\u062A\u0644\u0627\u0645","\u0627\u0644\u062D\u0627\u0644\u0629"],T)}
+            ${C(`\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0633\u0644\u0648\u0643\u064A\u0627\u062A (${t.behaviorMonitoring?.length||0})`,"#6D28D9",["\u0646\u0648\u0639 \u0627\u0644\u0633\u0644\u0648\u0643","\u0627\u0644\u062A\u0642\u064A\u064A\u0645","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0648\u0635\u0641"],v)}
+            ${C(`\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629 (${t.clinicVisits?.length||0})`,"#BE185D",["\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0632\u064A\u0627\u0631\u0629","\u0627\u0644\u0633\u0628\u0628","\u0627\u0644\u062A\u0634\u062E\u064A\u0635","\u0627\u0644\u0639\u0644\u0627\u062C"],I)}
+            ${C(`\u0627\u0644\u062D\u0648\u0627\u062F\u062B (${t.incidents?.length||0})`,"#C2410C",["\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u062D\u0627\u0644\u0629"],N)}
 
-            ${totalRecords === 0 ? `<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${ar}">لا توجد سجلات مرتبطة بهذا الموظف في الأنظمة المتابَعة.</div>` : ''}
-        `;
-    },
-
-    buildContractorReportPdfContent(report) {
-        const con = report.contractor || {};
-        const ar = this._AR_PDF_TEXT_STYLE_;
-        const esc = (v) => Utils.escapeHTML(String(v ?? ''));
-        const fmtDate = (d) => (d && typeof Utils.formatDate === 'function') ? Utils.formatDate(d) : '';
-        const name = report.contractorName || con.companyName || con.name || '—';
-        const code = report.contractorCode || con.code || con.isoCode || '';
-        const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0)).join('') || 'م';
-        const reportDate = fmtDate(new Date()) || new Date().toLocaleDateString('ar-SA');
-        const ptwOpen = report.ptwOpen != null ? report.ptwOpen : 0;
-        const ptwClosed = report.ptwClosed != null ? report.ptwClosed : 0;
-        const ptwList = Array.isArray(report.ptwContractor) ? report.ptwContractor : [];
-        const injuriesList = Array.isArray(report.injuriesContractor) ? report.injuriesContractor : [];
-
-        const statCard = (label, value, bg, border, labelColor, valueColor) => `
-            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${bg};border:1px solid ${border};text-align:center;">
-                <div style="font-size:11px;color:${labelColor};font-weight:600;margin-bottom:6px;${ar}">${esc(label)}</div>
-                <div style="font-size:26px;font-weight:800;color:${valueColor};line-height:1.1;${ar}">${value}</div>
-            </div>`;
-
-        const thStyle = (accent) => `padding:11px 8px;border:1px solid ${accent};text-align:center;font-weight:700;font-size:11px;${ar}`;
-        const tdStyle = `padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${ar}`;
-        const tdCenter = `padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${ar}`;
-
-        const sectionTable = (title, accent, headers, rowsHtml) => {
-            if (!rowsHtml) return '';
-            return `
+            ${L===0?`<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${a}">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0638\u0641 \u0641\u064A \u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u0645\u062A\u0627\u0628\u064E\u0639\u0629.</div>`:""}
+        `},buildContractorReportPdfContent(t){const e=t.contractor||{},r=this._AR_PDF_TEXT_STYLE_,a=u=>Utils.escapeHTML(String(u??"")),s=u=>u&&typeof Utils.formatDate=="function"?Utils.formatDate(u):"",i=t.contractorName||e.companyName||e.name||"\u2014",n=t.contractorCode||e.code||e.isoCode||"",o=i.trim().split(/\s+/).slice(0,2).map(u=>u.charAt(0)).join("")||"\u0645",f=s(new Date)||new Date().toLocaleDateString("ar-SA"),p=t.ptwOpen!=null?t.ptwOpen:0,l=t.ptwClosed!=null?t.ptwClosed:0,m=Array.isArray(t.ptwContractor)?t.ptwContractor:[],g=Array.isArray(t.injuriesContractor)?t.injuriesContractor:[],b=(u,S,U,P,E,H)=>`
+            <div style="flex:1 1 140px;min-width:120px;padding:14px 12px;border-radius:12px;background:${U};border:1px solid ${P};text-align:center;">
+                <div style="font-size:11px;color:${E};font-weight:600;margin-bottom:6px;${r}">${a(u)}</div>
+                <div style="font-size:26px;font-weight:800;color:${H};line-height:1.1;${r}">${S}</div>
+            </div>`,C=u=>`padding:11px 8px;border:1px solid ${u};text-align:center;font-weight:700;font-size:11px;${r}`,y=`padding:10px 8px;border:1px solid #E5E7EB;text-align:right;font-size:11px;vertical-align:top;${r}`,x=`padding:10px 8px;border:1px solid #E5E7EB;text-align:center;font-size:11px;vertical-align:top;${r}`,A=(u,S,U,P)=>P?`
                 <div style="margin:28px 0 16px;direction:rtl;">
-                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${accent};font-weight:700;border-right:4px solid ${accent};padding-right:12px;${ar}">${esc(title)}</h3>
-                    <table dir="rtl" style="width:100%;border-collapse:collapse;${ar}">
-                        <thead><tr style="background:${accent};color:#FFFFFF;">${headers.map((h) => `<th dir="rtl" style="${thStyle(accent)}">${esc(h)}</th>`).join('')}</tr></thead>
-                        <tbody>${rowsHtml}</tbody>
+                    <h3 dir="rtl" style="font-size:16px;margin:0 0 12px;color:${S};font-weight:700;border-right:4px solid ${S};padding-right:12px;${r}">${a(u)}</h3>
+                    <table dir="rtl" style="width:100%;border-collapse:collapse;${r}">
+                        <thead><tr style="background:${S};color:#FFFFFF;">${U.map(E=>`<th dir="rtl" style="${C(S)}">${a(E)}</th>`).join("")}</tr></thead>
+                        <tbody>${P}</tbody>
                     </table>
-                </div>`;
-        };
-        const pdfRowLimit = this.CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS || 50;
-        const pdfSection = (label, accent, headers, records, rowMapper) =>
-            this._buildPdfSectionTable_(sectionTable, label, accent, headers, records, rowMapper, pdfRowLimit);
-
-        const totalRecords = ptwList.length + (report.violations?.length || 0) + (report.incidents?.length || 0)
-            + injuriesList.length + (report.training?.length || 0)
-            + (report.clinicVisits?.length || 0) + (report.contractorEvaluations?.length || 0);
-
-        const approvalDateStr = con.approvalDate ? fmtDate(con.approvalDate) : '';
-        const expiryDateStr = con.expiryDate ? fmtDate(con.expiryDate) : '';
-
-        return `
+                </div>`:"",T=this.CONTRACTOR_REPORT_PDF_MAX_SECTION_ROWS||50,v=(u,S,U,P,E)=>this._buildPdfSectionTable_(A,u,S,U,P,E,T),I=m.length+(t.violations?.length||0)+(t.incidents?.length||0)+g.length+(t.training?.length||0)+(t.clinicVisits?.length||0)+(t.contractorEvaluations?.length||0),N=e.approvalDate?s(e.approvalDate):"",L=e.expiryDate?s(e.expiryDate):"";return`
             <div style="direction:rtl;margin-bottom:24px;">
                 <div style="display:flex;align-items:center;gap:18px;padding:20px 22px;border-radius:16px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #fcd34d;">
-                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(217,119,6,0.25);${ar}">${esc(initials)}</div>
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#d97706,#b45309);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;box-shadow:0 8px 20px rgba(217,119,6,0.25);${r}">${a(o)}</div>
                     <div style="flex:1;min-width:0;">
-                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#92400e;${ar}">${esc(name)}</h2>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${ar}">
-                            <span><strong style="color:#b45309;">كود المقاول:</strong> ${esc(code)}</span>
-                            ${con.entityType ? `<span><strong style="color:#b45309;">نوع الكيان:</strong> ${esc(con.entityType)}</span>` : ''}
-                            ${con.serviceType ? `<span><strong style="color:#b45309;">نوع الخدمة:</strong> ${esc(con.serviceType)}</span>` : ''}
-                            ${approvalDateStr ? `<span><strong style="color:#b45309;">تاريخ الاعتماد:</strong> ${esc(approvalDateStr)}</span>` : ''}
-                            ${expiryDateStr ? `<span><strong style="color:#b45309;">تاريخ الانتهاء:</strong> ${esc(expiryDateStr)}</span>` : ''}
+                        <h2 dir="rtl" style="margin:0 0 8px;font-size:22px;font-weight:800;color:#92400e;${r}">${a(i)}</h2>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px 20px;font-size:12px;color:#334155;${r}">
+                            <span><strong style="color:#b45309;">\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644:</strong> ${a(n)}</span>
+                            ${e.entityType?`<span><strong style="color:#b45309;">\u0646\u0648\u0639 \u0627\u0644\u0643\u064A\u0627\u0646:</strong> ${a(e.entityType)}</span>`:""}
+                            ${e.serviceType?`<span><strong style="color:#b45309;">\u0646\u0648\u0639 \u0627\u0644\u062E\u062F\u0645\u0629:</strong> ${a(e.serviceType)}</span>`:""}
+                            ${N?`<span><strong style="color:#b45309;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F:</strong> ${a(N)}</span>`:""}
+                            ${L?`<span><strong style="color:#b45309;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621:</strong> ${a(L)}</span>`:""}
                         </div>
                     </div>
-                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${ar}">
-                        <div><strong>تاريخ التقرير:</strong> ${esc(reportDate)}</div>
-                        <div><strong>إجمالي السجلات:</strong> ${totalRecords}</div>
+                    <div style="text-align:left;font-size:11px;color:#64748b;line-height:1.7;flex-shrink:0;${r}">
+                        <div><strong>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0642\u0631\u064A\u0631:</strong> ${a(f)}</div>
+                        <div><strong>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0633\u062C\u0644\u0627\u062A:</strong> ${I}</div>
                     </div>
                 </div>
             </div>
 
             <div style="margin-bottom:8px;direction:rtl;">
-                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${ar}">ملخص مؤشرات السلامة والصحة المهنية</h3>
+                <h3 dir="rtl" style="font-size:15px;margin:0 0 14px;color:#003865;font-weight:700;${r}">\u0645\u0644\u062E\u0635 \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629</h3>
                 <div style="display:flex;flex-wrap:wrap;gap:12px;">
-                    ${statCard('تصاريح مفتوحة', ptwOpen, '#CCFBF1', '#99F6E4', '#0F766E', '#115E59')}
-                    ${statCard('تصاريح مغلقة', ptwClosed, '#ECFDF5', '#A7F3D0', '#047857', '#065F46')}
-                    ${statCard('إجمالي التصاريح', ptwList.length, '#F0FDFA', '#5EEAD4', '#0D9488', '#134E4A')}
-                    ${statCard('الحوادث', report.incidents?.length || 0, '#FFF7ED', '#FED7AA', '#C2410C', '#9A3412')}
-                    ${statCard('الإصابات', injuriesList.length, '#FFEDD5', '#FDBA74', '#EA580C', '#C2410C')}
-                    ${statCard('المخالفات', report.violations?.length || 0, '#FEF2F2', '#FECACA', '#B91C1C', '#991B1B')}
-                    ${statCard('برامج التدريب', report.training?.length || 0, '#ECFDF5', '#BBF7D0', '#047857', '#065F46')}
-                    ${statCard('التردد على العيادة', report.clinicVisits?.length || 0, '#FDF2F8', '#FBCFE8', '#BE185D', '#9D174D')}
-                    ${statCard('التقييمات', report.contractorEvaluations?.length || 0, '#EEF2FF', '#C7D2FE', '#4F46E5', '#3730A3')}
+                    ${b("\u062A\u0635\u0627\u0631\u064A\u062D \u0645\u0641\u062A\u0648\u062D\u0629",p,"#CCFBF1","#99F6E4","#0F766E","#115E59")}
+                    ${b("\u062A\u0635\u0627\u0631\u064A\u062D \u0645\u063A\u0644\u0642\u0629",l,"#ECFDF5","#A7F3D0","#047857","#065F46")}
+                    ${b("\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D",m.length,"#F0FDFA","#5EEAD4","#0D9488","#134E4A")}
+                    ${b("\u0627\u0644\u062D\u0648\u0627\u062F\u062B",t.incidents?.length||0,"#FFF7ED","#FED7AA","#C2410C","#9A3412")}
+                    ${b("\u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A",g.length,"#FFEDD5","#FDBA74","#EA580C","#C2410C")}
+                    ${b("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A",t.violations?.length||0,"#FEF2F2","#FECACA","#B91C1C","#991B1B")}
+                    ${b("\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628",t.training?.length||0,"#ECFDF5","#BBF7D0","#047857","#065F46")}
+                    ${b("\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629",t.clinicVisits?.length||0,"#FDF2F8","#FBCFE8","#BE185D","#9D174D")}
+                    ${b("\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A",t.contractorEvaluations?.length||0,"#EEF2FF","#C7D2FE","#4F46E5","#3730A3")}
                 </div>
             </div>
 
-            ${pdfSection('تصاريح العمل', '#0D9488', ['رقم التصريح', 'نوع/وصف العمل', 'الحالة', 'تاريخ البداية'], ptwList, (p) => `
+            ${v("\u062A\u0635\u0627\u0631\u064A\u062D \u0627\u0644\u0639\u0645\u0644","#0D9488",["\u0631\u0642\u0645 \u0627\u0644\u062A\u0635\u0631\u064A\u062D","\u0646\u0648\u0639/\u0648\u0635\u0641 \u0627\u0644\u0639\u0645\u0644","\u0627\u0644\u062D\u0627\u0644\u0629","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629"],m,u=>`
             <tr>
-                <td style="${tdCenter}">${esc(p.permitId || p.id || p.serialNumber)}</td>
-                <td style="${tdStyle}">${esc(p.workDescription || p.workType || p.location || p.siteName)}</td>
-                <td style="${tdCenter}">${esc(this.normalizePTWStatus(p.status))}</td>
-                <td style="${tdCenter}">${fmtDate(p.startDate || p.createdAt || p.issueDate)}</td>
+                <td style="${x}">${a(u.permitId||u.id||u.serialNumber)}</td>
+                <td style="${y}">${a(u.workDescription||u.workType||u.location||u.siteName)}</td>
+                <td style="${x}">${a(this.normalizePTWStatus(u.status))}</td>
+                <td style="${x}">${s(u.startDate||u.createdAt||u.issueDate)}</td>
             </tr>`)}
-            ${pdfSection('المخالفات', '#B91C1C', ['النوع', 'التاريخ', 'الشدة', 'الإجراء المتخذ', 'الحالة'], report.violations, (v) => `
+            ${v("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A","#B91C1C",["\u0627\u0644\u0646\u0648\u0639","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u062D\u0627\u0644\u0629"],t.violations,u=>`
             <tr>
-                <td style="${tdStyle}">${esc(v.violationType)}</td>
-                <td style="${tdCenter}">${fmtDate(v.violationDate)}</td>
-                <td style="${tdCenter}">${esc(v.severity)}</td>
-                <td style="${tdStyle}">${esc(v.actionTaken)}</td>
-                <td style="${tdCenter}">${esc(v.status)}</td>
+                <td style="${y}">${a(u.violationType)}</td>
+                <td style="${x}">${s(u.violationDate)}</td>
+                <td style="${x}">${a(u.severity)}</td>
+                <td style="${y}">${a(u.actionTaken)}</td>
+                <td style="${x}">${a(u.status)}</td>
             </tr>`)}
-            ${pdfSection('الحوادث', '#C2410C', ['التاريخ', 'الوصف', 'الشدة', 'الحالة'], report.incidents, (i) => `
+            ${v("\u0627\u0644\u062D\u0648\u0627\u062F\u062B","#C2410C",["\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u0648\u0635\u0641","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u062D\u0627\u0644\u0629"],t.incidents,u=>`
             <tr>
-                <td style="${tdCenter}">${fmtDate(i.incidentDate || i.date || i.createdAt)}</td>
-                <td style="${tdStyle}">${esc(String(i.title || i.description || '').substring(0, 120))}</td>
-                <td style="${tdCenter}">${esc(i.severity)}</td>
-                <td style="${tdCenter}">${esc(i.status)}</td>
+                <td style="${x}">${s(u.incidentDate||u.date||u.createdAt)}</td>
+                <td style="${y}">${a(String(u.title||u.description||"").substring(0,120))}</td>
+                <td style="${x}">${a(u.severity)}</td>
+                <td style="${x}">${a(u.status)}</td>
             </tr>`)}
-            ${pdfSection('الإصابات', '#EA580C', ['اسم المصاب', 'التاريخ', 'نوع الإصابة', 'الشدة'], injuriesList, (inj) => `
+            ${v("\u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A","#EA580C",["\u0627\u0633\u0645 \u0627\u0644\u0645\u0635\u0627\u0628","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0646\u0648\u0639 \u0627\u0644\u0625\u0635\u0627\u0628\u0629","\u0627\u0644\u0634\u062F\u0629"],g,u=>`
             <tr>
-                <td style="${tdStyle}">${esc(inj.personName || inj.employeeName || inj.contractorName)}</td>
-                <td style="${tdCenter}">${fmtDate(inj.injuryDate || inj.date || inj.createdAt)}</td>
-                <td style="${tdStyle}">${esc(inj.injuryType || inj.injuryDescription || inj.description)}</td>
-                <td style="${tdCenter}">${esc(inj.severity || inj.injurySeverity)}</td>
+                <td style="${y}">${a(u.personName||u.employeeName||u.contractorName)}</td>
+                <td style="${x}">${s(u.injuryDate||u.date||u.createdAt)}</td>
+                <td style="${y}">${a(u.injuryType||u.injuryDescription||u.description)}</td>
+                <td style="${x}">${a(u.severity||u.injurySeverity)}</td>
             </tr>`)}
-            ${pdfSection('برامج التدريب', '#047857', ['اسم البرنامج', 'المدرب', 'تاريخ البدء', 'الحالة'], report.training, (t) => `
+            ${v("\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628","#047857",["\u0627\u0633\u0645 \u0627\u0644\u0628\u0631\u0646\u0627\u0645\u062C","\u0627\u0644\u0645\u062F\u0631\u0628","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0621","\u0627\u0644\u062D\u0627\u0644\u0629"],t.training,u=>`
             <tr>
-                <td style="${tdStyle}">${esc(t.name)}</td>
-                <td style="${tdStyle}">${esc(t.trainer)}</td>
-                <td style="${tdCenter}">${fmtDate(t.startDate)}</td>
-                <td style="${tdCenter}">${esc(t.status)}</td>
+                <td style="${y}">${a(u.name)}</td>
+                <td style="${y}">${a(u.trainer)}</td>
+                <td style="${x}">${s(u.startDate)}</td>
+                <td style="${x}">${a(u.status)}</td>
             </tr>`)}
-            ${pdfSection('التردد على العيادة', '#BE185D', ['تاريخ الزيارة', 'الاسم', 'السبب', 'التشخيص', 'العلاج'], report.clinicVisits, (c) => `
+            ${v("\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629","#BE185D",["\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0632\u064A\u0627\u0631\u0629","\u0627\u0644\u0627\u0633\u0645","\u0627\u0644\u0633\u0628\u0628","\u0627\u0644\u062A\u0634\u062E\u064A\u0635","\u0627\u0644\u0639\u0644\u0627\u062C"],t.clinicVisits,u=>`
             <tr>
-                <td style="${tdCenter}">${fmtDate(c.visitDate)}</td>
-                <td style="${tdStyle}">${esc(this._getContractorClinicVisitDisplayName_(c) || '—')}</td>
-                <td style="${tdStyle}">${esc(c.reason || 'زيارة عادية')}</td>
-                <td style="${tdStyle}">${esc(c.diagnosis)}</td>
-                <td style="${tdStyle}">${esc(c.treatment)}</td>
+                <td style="${x}">${s(u.visitDate)}</td>
+                <td style="${y}">${a(this._getContractorClinicVisitDisplayName_(u)||"\u2014")}</td>
+                <td style="${y}">${a(u.reason||"\u0632\u064A\u0627\u0631\u0629 \u0639\u0627\u062F\u064A\u0629")}</td>
+                <td style="${y}">${a(u.diagnosis)}</td>
+                <td style="${y}">${a(u.treatment)}</td>
             </tr>`)}
-            ${pdfSection('التقييمات', '#4F46E5', ['المشروع', 'المقيّم', 'التاريخ', 'الدرجة/التقييم'], report.contractorEvaluations, (e) => `
+            ${v("\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A","#4F46E5",["\u0627\u0644\u0645\u0634\u0631\u0648\u0639","\u0627\u0644\u0645\u0642\u064A\u0651\u0645","\u0627\u0644\u062A\u0627\u0631\u064A\u062E","\u0627\u0644\u062F\u0631\u062C\u0629/\u0627\u0644\u062A\u0642\u064A\u064A\u0645"],t.contractorEvaluations,u=>`
             <tr>
-                <td style="${tdStyle}">${esc(e.projectName || 'تقييم')}</td>
-                <td style="${tdStyle}">${esc(e.evaluatorName)}</td>
-                <td style="${tdCenter}">${fmtDate(e.evaluationDate)}</td>
-                <td style="${tdCenter}">${e.finalScore != null ? e.finalScore : ''} ${esc(e.finalRating || '')}</td>
+                <td style="${y}">${a(u.projectName||"\u062A\u0642\u064A\u064A\u0645")}</td>
+                <td style="${y}">${a(u.evaluatorName)}</td>
+                <td style="${x}">${s(u.evaluationDate)}</td>
+                <td style="${x}">${u.finalScore!=null?u.finalScore:""} ${a(u.finalRating||"")}</td>
             </tr>`)}
 
-            ${totalRecords === 0 ? `<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${ar}">لا توجد سجلات مرتبطة بهذا المقاول في الأنظمة المتابَعة.</div>` : ''}
-        `;
-    },
-
-    contractorReportMatchesSearchCode(report, searchCode) {
-        if (!report || searchCode == null || searchCode === '') return false;
-        const code = String(searchCode).trim();
-        if (!code) return false;
-        if (String(report.contractorCode || '').trim() === code) return true;
-        if (report.contractorName && String(report.contractorName).trim() === code) return true;
-        const con = report.contractor || {};
-        const aliases = [con.code, con.isoCode, con.contractorId, con.id, con.companyName, con.name];
-        return aliases.some((a) => a != null && String(a).trim() === code);
-    },
-
-    /**
-     * تصدير تقرير الموظف كـ PDF
-     */
-    async exportEmployeeReportPDF(employeeCode) {
-        const codeTrimmed = String(employeeCode || '').trim();
-        const existing = window.currentEmployeeReport;
-        if (!existing || !this.employeeReportMatchesSearchCode(existing, codeTrimmed)) {
-            await this.generateEmployeeReport(codeTrimmed);
-        }
-
-        const report = window.currentEmployeeReport;
-        if (!report) {
-            Notification.error('لا توجد بيانات تقرير');
-            return;
-        }
-
-        try {
-            Loading.show('جاري إعداد وتحميل التقرير...');
-
-            const empName = report.employee.name || '';
-            const formCode = `EMP-REPORT-${codeTrimmed}-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = `تقرير شامل للموظف: ${empName}`;
-            const content = this.buildEmployeeReportPdfContent(report, codeTrimmed);
-
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, false, {
-                    titleAr: formTitle,
-                    titleEn: 'Comprehensive Employee Report',
-                    compactPdfFooter: true,
-                    includeQRCode: false
-                }, new Date(), new Date())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
-
-            const safeCode = String(codeTrimmed).replace(/[\\/:*?"<>|]/g, '_');
-            const fileName = `تقرير-موظف-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-
-                            Loading.hide();
-            if (downloaded) {
-                Notification.success('تم تحميل تقرير الموظف بصيغة PDF بنجاح');
-            } else {
-                Notification.error('تعذّر تحميل PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error.message || 'خطأ غير معروف'));
-        }
-    },
-
-    /**
-     * توليد تقرير شامل للمقاول (البحث بكود المقاول أو اسم الشركة)
-     */
-    async generateContractorReport(contractorCode) {
-        if (!AppState.appData) AppState.appData = {};
-        // ضمان تحميل بيانات الموديولات (التقييمات، المخالفات، ...) قبل الفلترة — مثل تقرير الموظف
-        await this.ensureContractorReportData();
-        let data = AppState.appData;
-        const approved = data.approvedContractors || [];
-        const searchTerm = String(contractorCode).trim();
-        const contractorSearch = typeof Utils !== 'undefined' && typeof Utils.findApprovedContractorByTerm === 'function'
-            ? Utils.findApprovedContractorByTerm(searchTerm, approved)
-            : { contractor: null, ambiguous: false, matches: [] };
-        const contractor = contractorSearch.contractor;
-
-        if (contractorSearch.ambiguous) {
-            Notification.error('يوجد أكثر من مقاول مطابق. استخدم كود المقاول الكامل أو الاسم الكامل لتجنب أي خلط.');
-            const contentContainer = document.getElementById('contractor-report-content');
-            if (contentContainer) contentContainer.classList.add('hidden');
-            return;
-        }
-
-        if (!contractor) {
-            Notification.error('لم يتم العثور على المقاول بهذا الكود أو الاسم');
-            const contentContainer = document.getElementById('contractor-report-content');
-            if (contentContainer) contentContainer.classList.add('hidden');
-            return;
-        }
-
-        let reportContractor = contractor;
-        if (typeof Contractors !== 'undefined' && typeof Contractors.resolveContractorForAnalytics === 'function') {
-            const mergedContractor = Contractors.resolveContractorForAnalytics(
-                typeof Contractors.getPreferredContractorAnalyticsKey === 'function'
-                    ? Contractors.getPreferredContractorAnalyticsKey(contractor, searchTerm)
-                    : searchTerm,
-                contractor.companyName || contractor.name || searchTerm
-            );
-            if (mergedContractor) {
-                reportContractor = {
-                    ...mergedContractor,
-                    ...contractor,
-                    aliasIds: Array.from(new Set([...(mergedContractor.aliasIds || []), ...(contractor.aliasIds || [])]))
-                };
-            }
-        }
-        if (typeof Contractors !== 'undefined' && typeof Contractors.prepareContractorForAnalytics === 'function') {
-            reportContractor = Contractors.prepareContractorForAnalytics(reportContractor);
-        }
-        const contractorName = String(reportContractor.companyName || reportContractor.name || '').trim();
-        const contractorLookupKey = typeof Contractors !== 'undefined' && typeof Contractors.getPreferredContractorAnalyticsKey === 'function'
-            ? Contractors.getPreferredContractorAnalyticsKey(reportContractor, searchTerm)
-            : (reportContractor.code || reportContractor.isoCode || reportContractor.contractorId || reportContractor.id || contractorCode);
-        const contractorCodeVal = reportContractor.code || reportContractor.isoCode || contractorLookupKey || contractorCode;
-        const contractorCtx = typeof Contractors !== 'undefined' && typeof Contractors.buildContractorAnalyticsMatchers === 'function'
-            ? Contractors.buildContractorAnalyticsMatchers(reportContractor, contractorLookupKey)
-            : (typeof Utils !== 'undefined' && typeof Utils.buildContractorIdentityMatcher === 'function'
-            ? Utils.buildContractorIdentityMatcher(reportContractor, contractorLookupKey)
-                : null);
-        const matchesContractor = contractorCtx ? contractorCtx.matchesContractor : (() => false);
-        const violationBelongsToContractor = contractorCtx
-            ? (record) => contractorCtx.violationBelongsToContractor(record)
-            : (() => false);
-        const evaluationBelongsToContractor = contractorCtx
-            ? (record) => contractorCtx.evaluationBelongsToContractor(record)
-            : (() => false);
-        const recordHasExplicitContractorIds = (record) => {
-            if (!record || !contractorCtx) return false;
-            if (typeof contractorCtx.hasAnyRecordIds === 'function' && contractorCtx.hasAnyRecordIds.length > 0) {
-                return contractorCtx.hasAnyRecordIds(record);
-            }
-            return ['contractorId', 'contractorCode', 'code', 'isoCode', 'licenseNumber', 'contractNumber', 'approvedEntityId', 'entityCode']
-                .some((field) => String(record?.[field] || '').trim() !== '');
-        };
-        const analyticsRecordBelongsToContractor = (record) => {
-            if (!record || !contractorCtx) return false;
-            if (typeof contractorCtx.violationBelongsToContractor === 'function') {
-                return contractorCtx.violationBelongsToContractor(record);
-            }
-            return matchesContractor(record);
-        };
-        const matchContractorNameFields = (values) => {
-            if (!contractorCtx || typeof contractorCtx.matchesNameValue !== 'function') return false;
-            return (Array.isArray(values) ? values : [values])
-                .filter(Boolean)
-                .some((value) => contractorCtx.matchesNameValue(value));
-        };
-        const pickContractorReportSection = (serverRecords, localRecords) => {
-            const serverList = Array.isArray(serverRecords) ? serverRecords : null;
-            const localList = Array.isArray(localRecords) ? localRecords : [];
-            if (serverList && serverList.length > 0) return serverList;
-            return localList;
-        };
-        const cacheKey = this.getContractorReportCacheKey(reportContractor, contractorLookupKey, searchTerm);
-        const dataSignature = this.getContractorReportDataSignature();
-        const requestKey = `${cacheKey}::${dataSignature}`;
-        const cachedReport = this.contractorReportCache.get(cacheKey);
-        if (cachedReport && cachedReport.__signature === dataSignature && (Date.now() - Number(cachedReport.__cachedAt || 0) < 60000)) {
-            this.renderContractorReportFromData(cachedReport);
-            return;
-        }
-        if (this.contractorReportRequests.has(requestKey)) {
-            this.renderContractorReportLoading(reportContractor, contractorCodeVal);
-            const inFlightReport = await this.contractorReportRequests.get(requestKey);
-            if (inFlightReport) {
-                this.renderContractorReportFromData(inFlightReport);
-            }
-            return;
-        }
-
-        let finalizeContractorReport = null;
-        const contractorReportPromise = new Promise((resolve) => {
-            finalizeContractorReport = resolve;
-        });
-        this.contractorReportRequests.set(requestKey, contractorReportPromise);
-        this.renderContractorReportLoading(reportContractor, contractorCodeVal);
-        // لا ننتظر تحميل جداول الموديولات (مثل ContractorTrainings) — نستخدم AppState + الخادم مباشرة
-        let serverDetailedAnalytics = null;
-        if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest && AppState.googleConfig?.appsScript?.enabled) {
-            try {
-                const analyticsRes = await GoogleIntegration.sendRequest({
-                    action: 'getContractorDetailedAnalytics',
-                    data: { contractor: reportContractor, contractorId: contractorLookupKey }
-                });
-                if (analyticsRes && analyticsRes.success && analyticsRes.data) {
-                    serverDetailedAnalytics = analyticsRes.data;
-                }
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('تعذر جلب تقرير المقاول من الخادم؛ سيتم استخدام البيانات المحلية:', e);
-                }
-            }
-        }
-
-        const dedupeContractorRecords = (records, primaryFields = [], fallbackFields = []) => {
-            const unique = [];
-            const primarySet = new Set();
-            const fallbackSet = new Set();
-            const list = Array.isArray(records) ? records : [];
-
-            list.forEach((record) => {
-                if (!record || typeof record !== 'object') return;
-                const primaryKey = (Array.isArray(primaryFields) ? primaryFields : [])
-                    .map((field) => String(record?.[field] || '').trim().toLowerCase())
-                    .find(Boolean);
-                if (primaryKey) {
-                    if (primarySet.has(primaryKey)) return;
-                    primarySet.add(primaryKey);
-                    unique.push(record);
-                    return;
-                }
-                const fallbackKey = (Array.isArray(fallbackFields) ? fallbackFields : [])
-                    .map((field) => String(record?.[field] || '').trim().toLowerCase())
-                    .join('|');
-                if (!fallbackKey || fallbackSet.has(fallbackKey)) return;
-                fallbackSet.add(fallbackKey);
-                unique.push(record);
-            });
-
-            return unique;
-        };
-
-        const localViolations = dedupeContractorRecords(
-            (data.violations || []).filter(v => violationBelongsToContractor(v)),
-            ['isoCode', 'id'],
-            ['contractorId', 'contractorName', 'violationType', 'violationDate', 'violationTime']
-        );
-        const violations = pickContractorReportSection(serverDetailedAnalytics?.violations, localViolations);
-        const isContractorIncident = (i) => (i && (i.personType === 'contractor' || i.contractorName || i.affiliation === 'contractor' || (i.contractorId != null && i.contractorId !== '')));
-        const localIncidents = (data.incidents || []).filter(i => isContractorIncident(i) && analyticsRecordBelongsToContractor(i));
-        const incidents = pickContractorReportSection(serverDetailedAnalytics?.incidents, localIncidents);
-        const rawClinicSources = (data.clinicVisits || []).concat(Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : []);
-        const seenClinicIds = new Set();
-        const clinicSources = rawClinicSources.filter(c => {
-            if (!c) return false;
-            const id = String(c.id || '').trim();
-            if (!id) return true;
-            if (seenClinicIds.has(id)) return false;
-            seenClinicIds.add(id);
-            return true;
-        });
-        const localClinicVisits = clinicSources.filter(c => (c.personType === 'contractor' || c.personType === 'external' || c.contractorName) && analyticsRecordBelongsToContractor(c));
-        const clinicVisits = pickContractorReportSection(serverDetailedAnalytics?.clinicVisits, localClinicVisits);
-        const localEvaluationRows = dedupeContractorRecords(
-            (data.contractorEvaluations || []).filter(e => evaluationBelongsToContractor(e)),
-            ['evaluationId', 'id', 'isoCode'],
-            ['contractorId', 'contractorName', 'evaluationDate', 'projectName', 'finalScore']
-        );
-        const contractorEvaluationRows = pickContractorReportSection(serverDetailedAnalytics?.evaluations, localEvaluationRows);
-        const seenEvaluationIds = new Set();
-        const contractorEvaluations = contractorEvaluationRows.filter(e => {
-            const evaluationId = String(e?.evaluationId || e?.id || '').trim();
-            if (!evaluationId) return true;
-            if (seenEvaluationIds.has(evaluationId)) return false;
-            seenEvaluationIds.add(evaluationId);
-            return true;
-        });
-
-        // مصدران للتدريب: (1) data.training (برامج بمشاركين)، (2) data.contractorTrainings (سجل تدريب المقاولين)
-        const contractorTrainingList = Array.isArray(data.training) ? data.training : [];
-        const trainingFromMain = contractorTrainingList.filter(t => {
-            if (!t) return false;
-            if (t.contractorName || t.contractorId || t.contractorCode) {
-                if (matchesContractor(t)) return true;
-            }
-            let participants = t.participants;
-            if (typeof participants === 'string' && participants.trim()) {
-                try { participants = JSON.parse(participants); } catch (e) { participants = null; }
-            }
-            if (participants && Array.isArray(participants)) {
-                return participants.some(p => {
-                    if (!p) return false;
-                    const isContractor = p.personType === 'contractor' || p.type === 'contractor' || p.contractorName || p.companyName || p.company || p.contractorCompany;
-                    return isContractor && matchesContractor(p);
-                });
-            }
-            return false;
-        });
-        const contractorTrainingsList = Array.isArray(data.contractorTrainings) ? data.contractorTrainings : [];
-        const trainingFromContractorTrainings = contractorTrainingsList.filter(ct => {
-            if (!ct) return false;
-            if (matchesContractor(ct)) return true;
-            const name = String(ct.contractorName || ct.companyName || '').replace(/\s+/g, ' ').trim();
-            return contractorCtx ? !recordHasExplicitContractorIds(ct) && contractorCtx.matchesNameValue(name) : false;
-        });
-        const seenTrainingIds = new Set();
-        let training = [...trainingFromMain];
-        trainingFromContractorTrainings.forEach(ct => {
-            const tid = ct.id || (ct.date + (ct.topic || ct.trainingName || ''));
-            if (tid && seenTrainingIds.has(tid)) return;
-            if (tid) seenTrainingIds.add(tid);
-            training.push({
-                id: ct.id,
-                name: ct.topic || ct.trainingName || ct.name || 'تدريب مقاول',
-                trainer: ct.trainer || '',
-                startDate: ct.date || ct.createdAt,
-                status: ct.status || 'منفذ'
-            });
-        });
-
-        const ptwAll = this.getUnifiedPTWDataset(data);
-        const matchesPtwContractor = (p) => {
-            if (!p) return false;
-            if (matchesContractor(p)) return true;
-            if (recordHasExplicitContractorIds(p)) return false;
-            const req = String(p.requestingParty || '').replace(/\s+/g, ' ').trim();
-            const auth = String(p.authorizedParty || '').replace(/\s+/g, ' ').trim();
-            const resp = String(p.responsible || '').replace(/\s+/g, ' ').trim();
-            return matchContractorNameFields([req, auth, resp]);
-        };
-        let ptwContractor = ptwAll.filter(matchesPtwContractor);
-        let ptwOpen = ptwContractor.filter(p => !this.isPTWClosedStatus(p?.status)).length;
-        let ptwClosed = ptwContractor.filter(p => this.isPTWClosedStatus(p?.status)).length;
-
-        const injuriesAll = data.injuries || [];
-        let injuriesContractor = injuriesAll.filter(inj => {
-            if (!inj) return false;
-            const pType = (inj.personType || '').toString().toLowerCase();
-            if (pType !== 'contractor') return false;
-            if (matchesContractor(inj)) return true;
-            const name = String(inj.personName || inj.employeeName || inj.contractorName || '').trim();
-            return contractorCtx ? !recordHasExplicitContractorIds(inj) && contractorCtx.matchesNameValue(name) : false;
-        });
-        const reportTraining = pickContractorReportSection(serverDetailedAnalytics?.trainings, training);
-        const reportPtwContractor = pickContractorReportSection(serverDetailedAnalytics?.ptw, ptwContractor);
-        let reportPtwOpen = reportPtwContractor.filter(p => !this.isPTWClosedStatus(p?.status)).length;
-        let reportPtwClosed = reportPtwContractor.filter(p => this.isPTWClosedStatus(p?.status)).length;
-        if (Array.isArray(serverDetailedAnalytics?.ptw) && serverDetailedAnalytics.ptw.length > 0) {
-            if (typeof serverDetailedAnalytics.ptwOpenCount === 'number') {
-                reportPtwOpen = serverDetailedAnalytics.ptwOpenCount;
-            }
-            if (typeof serverDetailedAnalytics.ptwClosedCount === 'number') {
-                reportPtwClosed = serverDetailedAnalytics.ptwClosedCount;
-            }
-        }
-        const reportInjuriesContractor = pickContractorReportSection(serverDetailedAnalytics?.injuries, injuriesContractor);
-
-        const reportContainer = document.getElementById('contractor-report-data');
-        const contentContainer = document.getElementById('contractor-report-content');
-        const exportBtnEl = document.getElementById('export-contractor-report-btn');
-        const employeeContent = document.getElementById('employee-report-content');
-        if (employeeContent) employeeContent.classList.add('hidden');
-        if (contentContainer) contentContainer.classList.add('hidden');
-        if (!reportContainer) {
-            Notification.error('عنصر عرض تقرير المقاول غير متوفر');
-            return;
-        }
-
-        const approvalDateStr = reportContractor.approvalDate ? Utils.formatDate(reportContractor.approvalDate) : '';
-        const expiryDateStr = reportContractor.expiryDate ? Utils.formatDate(reportContractor.expiryDate) : '';
-
-        reportContainer.innerHTML = `
+            ${I===0?`<div style="margin-top:24px;padding:18px;border-radius:12px;background:#F8FAFC;border:2px dashed #CBD5E1;text-align:center;color:#475569;font-size:13px;${r}">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0631\u062A\u0628\u0637\u0629 \u0628\u0647\u0630\u0627 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0641\u064A \u0627\u0644\u0623\u0646\u0638\u0645\u0629 \u0627\u0644\u0645\u062A\u0627\u0628\u064E\u0639\u0629.</div>`:""}
+        `},contractorReportMatchesSearchCode(t,e){if(!t||e==null||e==="")return!1;const r=String(e).trim();if(!r)return!1;if(String(t.contractorCode||"").trim()===r||t.contractorName&&String(t.contractorName).trim()===r)return!0;const a=t.contractor||{};return[a.code,a.isoCode,a.contractorId,a.id,a.companyName,a.name].some(i=>i!=null&&String(i).trim()===r)},async exportEmployeeReportPDF(t){const e=String(t||"").trim(),r=window.currentEmployeeReport;(!r||!this.employeeReportMatchesSearchCode(r,e))&&await this.generateEmployeeReport(e);const a=window.currentEmployeeReport;if(!a){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0642\u0631\u064A\u0631");return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0648\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631...");const s=a.employee.name||"",i=`EMP-REPORT-${e}-${new Date().toISOString().slice(0,10)}`,n=`\u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 \u0644\u0644\u0645\u0648\u0638\u0641: ${s}`,o=this.buildEmployeeReportPdfContent(a,e),f=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(i,n,o,!1,!1,{titleAr:n,titleEn:"Comprehensive Employee Report",compactPdfFooter:!0,includeQRCode:!1},new Date,new Date):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(n)}</title></head><body>${o}</body></html>`,l=`\u062A\u0642\u0631\u064A\u0631-\u0645\u0648\u0638\u0641-${String(e).replace(/[\\/:*?"<>|]/g,"_")}-${new Date().toISOString().slice(0,10)}.pdf`,m=await this._downloadHtmlReportAsPdf(f,l);Loading.hide(),m?Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0648\u0638\u0641 \u0628\u0635\u064A\u063A\u0629 PDF \u0628\u0646\u062C\u0627\u062D"):Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 PDF \u2014 \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}catch(s){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",s),Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 PDF: "+(s.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async generateContractorReport(t){AppState.appData||(AppState.appData={}),await this.ensureContractorReportData();let e=AppState.appData;const r=e.approvedContractors||[],a=String(t).trim(),s=typeof Utils<"u"&&typeof Utils.findApprovedContractorByTerm=="function"?Utils.findApprovedContractorByTerm(a,r):{contractor:null,ambiguous:!1,matches:[]},i=s.contractor;if(s.ambiguous){Notification.error("\u064A\u0648\u062C\u062F \u0623\u0643\u062B\u0631 \u0645\u0646 \u0645\u0642\u0627\u0648\u0644 \u0645\u0637\u0627\u0628\u0642. \u0627\u0633\u062A\u062E\u062F\u0645 \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0627\u0644\u0643\u0627\u0645\u0644 \u0623\u0648 \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644 \u0644\u062A\u062C\u0646\u0628 \u0623\u064A \u062E\u0644\u0637.");const c=document.getElementById("contractor-report-content");c&&c.classList.add("hidden");return}if(!i){Notification.error("\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0628\u0647\u0630\u0627 \u0627\u0644\u0643\u0648\u062F \u0623\u0648 \u0627\u0644\u0627\u0633\u0645");const c=document.getElementById("contractor-report-content");c&&c.classList.add("hidden");return}let n=i;if(typeof Contractors<"u"&&typeof Contractors.resolveContractorForAnalytics=="function"){const c=Contractors.resolveContractorForAnalytics(typeof Contractors.getPreferredContractorAnalyticsKey=="function"?Contractors.getPreferredContractorAnalyticsKey(i,a):a,i.companyName||i.name||a);c&&(n={...c,...i,aliasIds:Array.from(new Set([...c.aliasIds||[],...i.aliasIds||[]]))})}typeof Contractors<"u"&&typeof Contractors.prepareContractorForAnalytics=="function"&&(n=Contractors.prepareContractorForAnalytics(n));const o=String(n.companyName||n.name||"").trim(),f=typeof Contractors<"u"&&typeof Contractors.getPreferredContractorAnalyticsKey=="function"?Contractors.getPreferredContractorAnalyticsKey(n,a):n.code||n.isoCode||n.contractorId||n.id||t,p=n.code||n.isoCode||f||t,l=typeof Contractors<"u"&&typeof Contractors.buildContractorAnalyticsMatchers=="function"?Contractors.buildContractorAnalyticsMatchers(n,f):typeof Utils<"u"&&typeof Utils.buildContractorIdentityMatcher=="function"?Utils.buildContractorIdentityMatcher(n,f):null,m=l?l.matchesContractor:(()=>!1),g=l?c=>l.violationBelongsToContractor(c):(()=>!1),b=l?c=>l.evaluationBelongsToContractor(c):(()=>!1),C=c=>!c||!l?!1:typeof l.hasAnyRecordIds=="function"&&l.hasAnyRecordIds.length>0?l.hasAnyRecordIds(c):["contractorId","contractorCode","code","isoCode","licenseNumber","contractNumber","approvedEntityId","entityCode"].some(D=>String(c?.[D]||"").trim()!==""),y=c=>!c||!l?!1:typeof l.violationBelongsToContractor=="function"?l.violationBelongsToContractor(c):m(c),x=c=>!l||typeof l.matchesNameValue!="function"?!1:(Array.isArray(c)?c:[c]).filter(Boolean).some(D=>l.matchesNameValue(D)),A=(c,D)=>{const F=Array.isArray(c)?c:null,j=Array.isArray(D)?D:[];return F&&F.length>0?F:j},T=this.getContractorReportCacheKey(n,f,a),v=this.getContractorReportDataSignature(),I=`${T}::${v}`,N=this.contractorReportCache.get(T);if(N&&N.__signature===v&&Date.now()-Number(N.__cachedAt||0)<6e4){this.renderContractorReportFromData(N);return}if(this.contractorReportRequests.has(I)){this.renderContractorReportLoading(n,p);const c=await this.contractorReportRequests.get(I);c&&this.renderContractorReportFromData(c);return}let L=null;const u=new Promise(c=>{L=c});this.contractorReportRequests.set(I,u),this.renderContractorReportLoading(n,p);let S=null;if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest&&AppState.googleConfig?.appsScript?.enabled)try{const c=await GoogleIntegration.sendRequest({action:"getContractorDetailedAnalytics",data:{contractor:n,contractorId:f}});c&&c.success&&c.data&&(S=c.data)}catch(c){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u062A\u0639\u0630\u0631 \u062C\u0644\u0628 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645\u061B \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629:",c)}const U=(c,D=[],F=[])=>{const j=[],dt=new Set,lt=new Set;return(Array.isArray(c)?c:[]).forEach(q=>{if(!q||typeof q!="object")return;const J=(Array.isArray(D)?D:[]).map(tt=>String(q?.[tt]||"").trim().toLowerCase()).find(Boolean);if(J){if(dt.has(J))return;dt.add(J),j.push(q);return}const Z=(Array.isArray(F)?F:[]).map(tt=>String(q?.[tt]||"").trim().toLowerCase()).join("|");!Z||lt.has(Z)||(lt.add(Z),j.push(q))}),j},P=U((e.violations||[]).filter(c=>g(c)),["isoCode","id"],["contractorId","contractorName","violationType","violationDate","violationTime"]),E=A(S?.violations,P),H=c=>c&&(c.personType==="contractor"||c.contractorName||c.affiliation==="contractor"||c.contractorId!=null&&c.contractorId!==""),d=(e.incidents||[]).filter(c=>H(c)&&y(c)),h=A(S?.incidents,d),$=(e.clinicVisits||[]).concat(Array.isArray(e.clinicContractorVisits)?e.clinicContractorVisits:[]),w=new Set,M=$.filter(c=>{if(!c)return!1;const D=String(c.id||"").trim();return D?w.has(D)?!1:(w.add(D),!0):!0}).filter(c=>(c.personType==="contractor"||c.personType==="external"||c.contractorName)&&y(c)),R=A(S?.clinicVisits,M),W=U((e.contractorEvaluations||[]).filter(c=>b(c)),["evaluationId","id","isoCode"],["contractorId","contractorName","evaluationDate","projectName","finalScore"]),_=A(S?.evaluations,W),V=new Set,B=_.filter(c=>{const D=String(c?.evaluationId||c?.id||"").trim();return D?V.has(D)?!1:(V.add(D),!0):!0}),pt=(Array.isArray(e.training)?e.training:[]).filter(c=>{if(!c)return!1;if((c.contractorName||c.contractorId||c.contractorCode)&&m(c))return!0;let D=c.participants;if(typeof D=="string"&&D.trim())try{D=JSON.parse(D)}catch{D=null}return D&&Array.isArray(D)?D.some(F=>F?(F.personType==="contractor"||F.type==="contractor"||F.contractorName||F.companyName||F.company||F.contractorCompany)&&m(F):!1):!1}),ft=(Array.isArray(e.contractorTrainings)?e.contractorTrainings:[]).filter(c=>{if(!c)return!1;if(m(c))return!0;const D=String(c.contractorName||c.companyName||"").replace(/\s+/g," ").trim();return l?!C(c)&&l.matchesNameValue(D):!1}),et=new Set;let z=[...pt];ft.forEach(c=>{const D=c.id||c.date+(c.topic||c.trainingName||"");D&&et.has(D)||(D&&et.add(D),z.push({id:c.id,name:c.topic||c.trainingName||c.name||"\u062A\u062F\u0631\u064A\u0628 \u0645\u0642\u0627\u0648\u0644",trainer:c.trainer||"",startDate:c.date||c.createdAt,status:c.status||"\u0645\u0646\u0641\u0630"}))});const ut=this.getUnifiedPTWDataset(e),mt=c=>{if(!c)return!1;if(m(c))return!0;if(C(c))return!1;const D=String(c.requestingParty||"").replace(/\s+/g," ").trim(),F=String(c.authorizedParty||"").replace(/\s+/g," ").trim(),j=String(c.responsible||"").replace(/\s+/g," ").trim();return x([D,F,j])};let G=ut.filter(mt),bt=G.filter(c=>!this.isPTWClosedStatus(c?.status)).length,vt=G.filter(c=>this.isPTWClosedStatus(c?.status)).length,gt=(e.injuries||[]).filter(c=>{if(!c||(c.personType||"").toString().toLowerCase()!=="contractor")return!1;if(m(c))return!0;const F=String(c.personName||c.employeeName||c.contractorName||"").trim();return l?!C(c)&&l.matchesNameValue(F):!1});const at=A(S?.trainings,z),O=A(S?.ptw,G);let K=O.filter(c=>!this.isPTWClosedStatus(c?.status)).length,Y=O.filter(c=>this.isPTWClosedStatus(c?.status)).length;Array.isArray(S?.ptw)&&S.ptw.length>0&&(typeof S.ptwOpenCount=="number"&&(K=S.ptwOpenCount),typeof S.ptwClosedCount=="number"&&(Y=S.ptwClosedCount));const it=A(S?.injuries,gt),st=document.getElementById("contractor-report-data"),Q=document.getElementById("contractor-report-content"),rt=document.getElementById("export-contractor-report-btn"),nt=document.getElementById("employee-report-content");if(nt&&nt.classList.add("hidden"),Q&&Q.classList.add("hidden"),!st){Notification.error("\u0639\u0646\u0635\u0631 \u0639\u0631\u0636 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631");return}const ot=n.approvalDate?Utils.formatDate(n.approvalDate):"",ct=n.expiryDate?Utils.formatDate(n.expiryDate):"";st.innerHTML=`
             <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="text-xl font-bold text-gray-800 mb-2">
                             <i class="fas fa-hard-hat ml-2"></i>
-                            ${Utils.escapeHTML(contractorName || 'مقاول')}
+                            ${Utils.escapeHTML(o||"\u0645\u0642\u0627\u0648\u0644")}
                         </h3>
                         <p class="text-gray-600">
                             <i class="fas fa-barcode ml-2"></i>
-                            كود المقاول: <strong>${Utils.escapeHTML(String(contractorCodeVal))}</strong>
+                            \u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644: <strong>${Utils.escapeHTML(String(p))}</strong>
                         </p>
-                        ${reportContractor.entityType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>نوع الكيان: ${Utils.escapeHTML(reportContractor.entityType)}</p>` : ''}
-                        ${reportContractor.serviceType ? `<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>نوع الخدمة: ${Utils.escapeHTML(reportContractor.serviceType)}</p>` : ''}
-                        ${approvalDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>تاريخ الاعتماد: ${approvalDateStr}</p>` : ''}
-                        ${expiryDateStr ? `<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>تاريخ الانتهاء: ${expiryDateStr}</p>` : ''}
+                        ${n.entityType?`<p class="text-gray-600 mt-1"><i class="fas fa-tag ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u0643\u064A\u0627\u0646: ${Utils.escapeHTML(n.entityType)}</p>`:""}
+                        ${n.serviceType?`<p class="text-gray-600 mt-1"><i class="fas fa-tools ml-2"></i>\u0646\u0648\u0639 \u0627\u0644\u062E\u062F\u0645\u0629: ${Utils.escapeHTML(n.serviceType)}</p>`:""}
+                        ${ot?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-check ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F: ${ot}</p>`:""}
+                        ${ct?`<p class="text-gray-600 mt-1"><i class="fas fa-calendar-times ml-2"></i>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0646\u062A\u0647\u0627\u0621: ${ct}</p>`:""}
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #ccfbf1 0%, #99f6e4 100%); border: 1px solid #2dd4bf; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(13, 148, 136, 0.15);">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0d9488; margin-bottom: 0.25rem;">${reportPtwOpen}</div>
-                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">مفتوح</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0f766e; margin-bottom: 0.25rem;">${reportPtwClosed}</div>
-                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">مغلق</div>
-                    <div style="font-size: 1.125rem; font-weight: 700; color: #134e4a; border-top: 1px solid #2dd4bf; padding-top: 0.5rem; margin-top: 0.5rem;">${reportPtwContractor.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #134e4a;">التصاريح (الإجمالي)</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #0d9488; margin-bottom: 0.25rem;">${K}</div>
+                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">\u0645\u0641\u062A\u0648\u062D</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #0f766e; margin-bottom: 0.25rem;">${Y}</div>
+                    <div style="font-size: 0.75rem; color: #115e59; margin-bottom: 0.5rem;">\u0645\u063A\u0644\u0642</div>
+                    <div style="font-size: 1.125rem; font-weight: 700; color: #134e4a; border-top: 1px solid #2dd4bf; padding-top: 0.5rem; margin-top: 0.5rem;">${O.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #134e4a;">\u0627\u0644\u062A\u0635\u0627\u0631\u064A\u062D (\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A)</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #ffedd5 0%, #fed7aa 100%); border: 1px solid #fb923c; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.15);">
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #ea580c; margin-bottom: 0.25rem;">${incidents.length}</div>
-                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">حوادث</div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #c2410c; margin-bottom: 0.25rem;">${reportInjuriesContractor.length}</div>
-                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">إصابات</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9a3412;">الحوادث والإصابات</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #ea580c; margin-bottom: 0.25rem;">${h.length}</div>
+                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">\u062D\u0648\u0627\u062F\u062B</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #c2410c; margin-bottom: 0.25rem;">${it.length}</div>
+                    <div style="font-size: 0.75rem; color: #9a3412; margin-bottom: 0.5rem;">\u0625\u0635\u0627\u0628\u0627\u062A</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9a3412;">\u0627\u0644\u062D\u0648\u0627\u062F\u062B \u0648\u0627\u0644\u0625\u0635\u0627\u0628\u0627\u062A</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #f87171; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${violations.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">المخالفات</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #dc2626; margin-bottom: 0.25rem;">${E.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #991b1b;">\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #d1fae5 0%, #a7f3d0 100%); border: 1px solid #34d399; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${reportTraining.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #065f46;">برامج التدريب</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #059669; margin-bottom: 0.25rem;">${at.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #065f46;">\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #fce7f3 0%, #fbcfe8 100%); border: 1px solid #f472b6; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(219, 39, 119, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #db2777; margin-bottom: 0.25rem;">${clinicVisits.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9d174d;">التردد على العيادة</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #db2777; margin-bottom: 0.25rem;">${R.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #9d174d;">\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629</div>
                 </div>
                 <div class="dashboard-stat-card" style="background: linear-gradient(145deg, #e0e7ff 0%, #c7d2fe 100%); border: 1px solid #818cf8; border-radius: 12px; padding: 1rem; text-align: center; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);">
-                    <div style="font-size: 1.875rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.25rem;">${contractorEvaluations.length}</div>
-                    <div style="font-size: 0.8125rem; font-weight: 600; color: #3730a3;">التقييمات</div>
+                    <div style="font-size: 1.875rem; font-weight: 700; color: #4f46e5; margin-bottom: 0.25rem;">${B.length}</div>
+                    <div style="font-size: 0.8125rem; font-weight: 600; color: #3730a3;">\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A</div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${violations.length > 0 ? `
+                ${E.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>المخالفات (${violations.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-exclamation-circle ml-2"></i>\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (${E.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${violations.slice(0, 5).map(v => `
+                                ${E.slice(0,5).map(c=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(v.violationType || '')}</span>
-                                            <span class="badge badge-${v.severity === 'عالية' ? 'danger' : 'warning'}">${v.severity || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(c.violationType||"")}</span>
+                                            <span class="badge badge-${c.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":"warning"}">${c.severity||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((v.actionTaken || '').substring(0, 100))}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${v.violationDate ? Utils.formatDate(v.violationDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">${Utils.escapeHTML((c.actionTaken||"").substring(0,100))}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${c.violationDate?Utils.formatDate(c.violationDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${violations.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${violations.length - 5} مخالفات أخرى...</p>` : ''}
+                                `).join("")}
+                                ${E.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${E.length-5} \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${incidents.length > 0 ? `
+                ${h.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-exclamation-triangle ml-2"></i>الحوادث (${incidents.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-exclamation-triangle ml-2"></i>\u0627\u0644\u062D\u0648\u0627\u062F\u062B (${h.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${incidents.slice(0, 5).map(i => `
+                                ${h.slice(0,5).map(c=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(String(i.title || i.description || '').substring(0, 60))}</span>
-                                            <span class="badge badge-warning">${i.severity || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(String(c.title||c.description||"").substring(0,60))}</span>
+                                            <span class="badge badge-warning">${c.severity||""}</span>
                                         </div>
-                                        <p class="text-xs text-gray-500 mt-2">${i.date ? Utils.formatDate(i.date) : ''}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${c.date?Utils.formatDate(c.date):""}</p>
                                     </div>
-                                `).join('')}
-                                ${incidents.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${incidents.length - 5} حادث آخر...</p>` : ''}
+                                `).join("")}
+                                ${h.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${h.length-5} \u062D\u0627\u062F\u062B \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${training.length > 0 ? `
+                ${z.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>برامج التدريب (${training.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-graduation-cap ml-2"></i>\u0628\u0631\u0627\u0645\u062C \u0627\u0644\u062A\u062F\u0631\u064A\u0628 (${z.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${training.slice(0, 5).map(t => `
+                                ${z.slice(0,5).map(c=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(t.name || '')}</span>
-                                            <span class="badge badge-success">${t.status || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(c.name||"")}</span>
+                                            <span class="badge badge-success">${c.status||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">المدرب: ${Utils.escapeHTML(t.trainer || '')}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${t.startDate ? Utils.formatDate(t.startDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0645\u062F\u0631\u0628: ${Utils.escapeHTML(c.trainer||"")}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${c.startDate?Utils.formatDate(c.startDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${training.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${training.length - 5} برنامج آخر...</p>` : ''}
+                                `).join("")}
+                                ${z.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${z.length-5} \u0628\u0631\u0646\u0627\u0645\u062C \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${clinicVisits.length > 0 ? `
+                ${R.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>التردد على العيادة (${clinicVisits.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-hospital ml-2"></i>\u0627\u0644\u062A\u0631\u062F\u062F \u0639\u0644\u0649 \u0627\u0644\u0639\u064A\u0627\u062F\u0629 (${R.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${clinicVisits.slice(0, 5).map(c => `
+                                ${R.slice(0,5).map(c=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2 gap-2 flex-wrap">
-                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(c) || '—')}</span>
-                                            <span class="text-xs text-gray-500">${c.visitDate ? Utils.formatDate(c.visitDate) : ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(this._getContractorClinicVisitDisplayName_(c)||"\u2014")}</span>
+                                            <span class="text-xs text-gray-500">${c.visitDate?Utils.formatDate(c.visitDate):""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-700">السبب: ${Utils.escapeHTML(c.reason || 'زيارة عادية')}</p>
-                                        ${c.diagnosis ? `<p class="text-sm text-gray-600">التشخيص: ${Utils.escapeHTML(c.diagnosis)}</p>` : ''}
-                                        ${c.treatment ? `<p class="text-sm text-gray-600">العلاج: ${Utils.escapeHTML(c.treatment)}</p>` : ''}
+                                        <p class="text-sm text-gray-700">\u0627\u0644\u0633\u0628\u0628: ${Utils.escapeHTML(c.reason||"\u0632\u064A\u0627\u0631\u0629 \u0639\u0627\u062F\u064A\u0629")}</p>
+                                        ${c.diagnosis?`<p class="text-sm text-gray-600">\u0627\u0644\u062A\u0634\u062E\u064A\u0635: ${Utils.escapeHTML(c.diagnosis)}</p>`:""}
+                                        ${c.treatment?`<p class="text-sm text-gray-600">\u0627\u0644\u0639\u0644\u0627\u062C: ${Utils.escapeHTML(c.treatment)}</p>`:""}
                                     </div>
-                                `).join('')}
-                                ${clinicVisits.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${clinicVisits.length - 5} زيارة أخرى...</p>` : ''}
+                                `).join("")}
+                                ${R.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${R.length-5} \u0632\u064A\u0627\u0631\u0629 \u0623\u062E\u0631\u0649...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
 
-                ${contractorEvaluations.length > 0 ? `
+                ${B.length>0?`
                     <div class="content-card">
                         <div class="card-header">
-                            <h3 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>التقييمات (${contractorEvaluations.length})</h3>
+                            <h3 class="card-title"><i class="fas fa-clipboard-check ml-2"></i>\u0627\u0644\u062A\u0642\u064A\u064A\u0645\u0627\u062A (${B.length})</h3>
                         </div>
                         <div class="card-body">
                             <div class="space-y-3">
-                                ${contractorEvaluations.slice(0, 5).map(e => `
+                                ${B.slice(0,5).map(c=>`
                                     <div class="border rounded p-3">
                                         <div class="flex items-center justify-between mb-2">
-                                            <span class="font-semibold">${Utils.escapeHTML(e.projectName || 'تقييم')}</span>
-                                            <span class="badge badge-info">${e.finalScore != null ? e.finalScore : ''} ${e.finalRating || ''}</span>
+                                            <span class="font-semibold">${Utils.escapeHTML(c.projectName||"\u062A\u0642\u064A\u064A\u0645")}</span>
+                                            <span class="badge badge-info">${c.finalScore!=null?c.finalScore:""} ${c.finalRating||""}</span>
                                         </div>
-                                        <p class="text-sm text-gray-600">المقيّم: ${Utils.escapeHTML(e.evaluatorName || '')}</p>
-                                        <p class="text-xs text-gray-500 mt-2">${e.evaluationDate ? Utils.formatDate(e.evaluationDate) : ''}</p>
+                                        <p class="text-sm text-gray-600">\u0627\u0644\u0645\u0642\u064A\u0651\u0645: ${Utils.escapeHTML(c.evaluatorName||"")}</p>
+                                        <p class="text-xs text-gray-500 mt-2">${c.evaluationDate?Utils.formatDate(c.evaluationDate):""}</p>
                                     </div>
-                                `).join('')}
-                                ${contractorEvaluations.length > 5 ? `<p class="text-sm text-gray-500 text-center mt-2">و ${contractorEvaluations.length - 5} تقييم آخر...</p>` : ''}
+                                `).join("")}
+                                ${B.length>5?`<p class="text-sm text-gray-500 text-center mt-2">\u0648 ${B.length-5} \u062A\u0642\u064A\u064A\u0645 \u0622\u062E\u0631...</p>`:""}
                             </div>
                         </div>
                     </div>
-                ` : ''}
+                `:""}
             </div>
-        `;
-
-        contentContainer.classList.remove('hidden');
-        if (exportBtnEl) exportBtnEl.disabled = false;
-
-        const finalizedReport = {
-            __cacheKey: cacheKey,
-            __signature: dataSignature,
-            __cachedAt: Date.now(),
-            contractor: reportContractor,
-            contractorCode: contractorCodeVal,
-            contractorName,
-            violations,
-            incidents,
-            training: reportTraining,
-            clinicVisits,
-            contractorEvaluations,
-            ptwContractor: reportPtwContractor,
-            ptwOpen: reportPtwOpen,
-            ptwClosed: reportPtwClosed,
-            injuriesContractor: reportInjuriesContractor
-        };
-        window.currentContractorReport = finalizedReport;
-        this.contractorReportCache.set(cacheKey, finalizedReport);
-        this.contractorReportRequests.delete(requestKey);
-        if (typeof finalizeContractorReport === 'function') {
-            finalizeContractorReport(finalizedReport);
-        }
-    },
-
-    /**
-     * تصدير تقرير المقاول كـ PDF
-     */
-    async exportContractorReportPDF(contractorCode) {
-        const codeTrimmed = String(contractorCode || '').trim();
-        const existing = window.currentContractorReport;
-        if (!existing || !this.contractorReportMatchesSearchCode(existing, codeTrimmed)) {
-            await this.generateContractorReport(codeTrimmed);
-        }
-
-        const report = window.currentContractorReport;
-        if (!report) {
-            Notification.error('لا توجد بيانات تقرير للمقاول');
-            return;
-        }
-
-        try {
-            Loading.show('جاري إعداد وتحميل التقرير...');
-
-            const conName = report.contractorName || '';
-            const safeCode = String(report.contractorCode || codeTrimmed).replace(/[\\/:*?"<>|]/g, '_');
-            const formCode = `CON-REPORT-${safeCode}-${new Date().toISOString().slice(0, 10)}`;
-            const formTitle = `تقرير شامل للمقاول: ${conName}`;
-            const content = this.buildContractorReportPdfContent(report);
-
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, false, {
-                    titleAr: formTitle,
-                    titleEn: 'Comprehensive Contractor Report',
-                    compactPdfFooter: true,
-                    includeQRCode: false
-                }, new Date(), new Date())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(formTitle)}</title></head><body>${content}</body></html>`;
-
-            const fileName = `تقرير-مقاول-${safeCode}-${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-
-                            Loading.hide();
-            if (downloaded) {
-                Notification.success('تم تحميل تقرير المقاول بصيغة PDF بنجاح');
-            } else {
-                Notification.error('تعذّر إنشاء ملف PDF. أعد المحاولة بعد عرض التقرير أولاً.');
-            }
-        } catch (error) {
-            Loading.hide();
-            Utils.safeError('خطأ في تصدير تقرير المقاول PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error && error.message ? error.message : String(error)));
-        }
-    },
-
-    /**
-     * سجلات الحوادث الفعلية للوحة — مصدر قائمة الحوادث (incidents) عند توفرها؛
-     * لا يُفضَّل عدّ السجل (incidentsRegistry) وحده لتجنّب تضخيم العدد بسجلات يتيمة/مكررة.
-     */
-    _getDashboardIncidentsRecords(appData) {
-        const data = appData && typeof appData === 'object' ? appData : {};
-        const incidents = Array.isArray(data.incidents) ? data.incidents.filter(Boolean) : [];
-        if (incidents.length > 0) {
-            const seen = new Set();
-            return incidents.filter((i) => {
-                const id = String(i.id || i.incidentId || '').trim();
-                if (!id || seen.has(id)) return false;
-                seen.add(id);
-                return true;
-            });
-        }
-        const registry = Array.isArray(data.incidentsRegistry) ? data.incidentsRegistry.filter(Boolean) : [];
-        const seenReg = new Set();
-        return registry.filter((r) => {
-            const key = String(r.incidentId || r.id || r.registryId || '').trim();
-            if (!key || seenReg.has(key)) return false;
-            seenReg.add(key);
-            return true;
-        });
-    },
-
-    /**
-     * تصنيف سجل حادث لعرض التفصيل في كارت إجمالي الحوادث: حالية / سابقة / بدون سنة صالحة (مثل 0000).
-     */
-    _classifyIncidentYearForDashboard(record, currentYear) {
-        if (!record || typeof record !== 'object') return 'unknown';
-        const rawYear = record.year != null ? record.year : record.incidentYear;
-        const hasExplicitYear = rawYear !== undefined && rawYear !== null && String(rawYear).trim() !== '';
-        if (hasExplicitYear) {
-            const ys = String(rawYear).trim();
-            if (/^0+$/.test(ys)) return 'unknown';
-            const yn = parseInt(ys, 10);
-            if (!Number.isFinite(yn) || yn <= 0) return 'unknown';
-            if (yn > currentYear + 5) return 'unknown';
-            if (yn === currentYear) return 'current';
-            return 'prior';
-        }
-        const d = record.incidentDate || record.date || record.createdAt;
-        if (!d) return 'unknown';
-        const dt = new Date(d);
-        if (isNaN(dt.getTime())) return 'unknown';
-        const gy = dt.getFullYear();
-        if (gy <= 0 || gy < 1900 || gy > currentYear + 5) return 'unknown';
-        if (gy > currentYear) return 'unknown';
-        if (gy === currentYear) return 'current';
-        return 'prior';
-    },
-
-    /**
-     * هل يُضمَّن تقدير عمالة المقاولين (من حقول رقمية في سجل المقاول المعتمد) في إجمالي الساعات وTIR؟
-     */
-    workHoursIncludeContractors() {
-        const v = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_hours_include_contractors') : null;
-        if (v === null || String(v).trim() === '') return true;
-        return v !== '0' && String(v).toLowerCase() !== 'false' && String(v).toLowerCase() !== 'no';
-    },
-
-    /**
-     * إجمالي ساعات العمل المعروض في لوحة التحكم ومؤشرات FA/TRIR:
-     * أولوية لـ localStorage `hse_total_work_hours` إن وُجد ورقمًا صالحًا؛ وإلا تقدير من الموظفين النشطين (+ عمالة مقاولين عند التفعيل والبيانات).
-     */
-    getDashboardTotalWorkHours(appData) {
-        const rawSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_total_work_hours') : null;
-        if (rawSaved != null && String(rawSaved).trim() !== '') {
-            const parsed = parseFloat(String(rawSaved).replace(/,/g, ''));
-            if (Number.isFinite(parsed) && parsed > 0) return parsed;
-        }
-        const data = appData && typeof appData === 'object' ? appData : {};
-        const employees = Array.isArray(data.employees) ? data.employees : [];
-        const contractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-        return this._computeEstimatedAnnualWorkHoursTotal(employees, contractors);
-    },
-
-    /** إجمالي القوى العاملة (موظفون نشطون + عمالة مقاولين عند التفعيل) لحساب ساعات العمل اليومية */
-    _getDashboardWorkforceCount(appData) {
-        const data = appData && typeof appData === 'object' ? appData : {};
-        const employees = Array.isArray(data.employees) ? data.employees : [];
-        const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-        const empCount = employees.filter((e) => e && !this._isEmployeeInactive(e)).length;
-        const contractorCount = this.workHoursIncludeContractors()
-            ? this._sumContractorWorkforceHeadcount(approvedContractors, data)
-            : 0;
-        return empCount + contractorCount;
-    },
-
-    /**
-     * أيام منذ آخر حادث مسجل (من السجل أو الحوادث).
-     * @returns {number|null} null = لا حوادث مسجلة
-     */
-    _getDaysSinceLastIncidentForDashboard(appData) {
-        const data = appData && typeof appData === 'object' ? appData : {};
-        const allRecords = this._getDashboardIncidentsRecords(data).filter(
-            (r) => r && (r.incidentDate || r.date || r.createdAt)
-        );
-        if (allRecords.length === 0) return null;
-        const sortedRecords = allRecords.slice().sort((a, b) => {
-            const dateA = new Date(a.incidentDate || a.date || a.createdAt);
-            const dateB = new Date(b.incidentDate || b.date || b.createdAt);
-            return dateB - dateA;
-        });
-        const lastIncidentDate = new Date(
-            sortedRecords[0].incidentDate || sortedRecords[0].date || sortedRecords[0].createdAt
-        );
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        lastIncidentDate.setHours(0, 0, 0, 0);
-        return Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
-    },
-
-    /**
-     * ساعات العمل الآمنة — تُحسب منذ آخر حادث أو يدوياً عبر hse_safe_working_hours
-     * أولوية لـ localStorage `hse_safe_working_hours`؛ وإلا:
-     * - بلا حوادث: إجمالي ساعات العمل (كل الساعات «آمنة»)
-     * - مع حوادث: أيام منذ آخر حادث × القوى العاملة × ساعات/يوم (نفس إعدادات كارت إجمالي الساعات)
-     */
-    getDashboardSafeWorkingHours(appData) {
-        const rawSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_safe_working_hours') : null;
-        if (rawSaved != null && String(rawSaved).trim() !== '') {
-            const parsed = parseFloat(String(rawSaved).replace(/,/g, ''));
-            if (Number.isFinite(parsed) && parsed >= 0) return Math.round(parsed);
-        }
-        const data = appData && typeof appData === 'object' ? appData : {};
-        const daysSinceLast = this._getDaysSinceLastIncidentForDashboard(data);
-        if (daysSinceLast === null) {
-            return this.getDashboardTotalWorkHours(data);
-        }
-        const workforce = this._getDashboardWorkforceCount(data);
-        const hpd = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_hours_per_day') : null);
-        const hoursPerDay = !isNaN(hpd) && hpd > 0 ? hpd : 8;
-        const dailyManHours = Math.max(0, workforce) * hoursPerDay;
-        return Math.round(Math.max(0, daysSinceLast) * dailyManHours);
-    },
-
-    _parseNumWorkHours(v) {
-        if (v === undefined || v === null || v === '') return NaN;
-        const x = parseFloat(String(v).replace(/,/g, ''));
-        return Number.isFinite(x) ? x : NaN;
-    },
-
-    /** ساعات العمل السنوية الافتراضية لكل فرد (موظف أو عامل مقاول) من الإعدادات المحفوظة */
-    _getDashboardDefaultAnnualHoursPerCapita() {
-        const hpd = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_hours_per_day') : null);
-        const dpm = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_days_per_month') : null);
-        const mo = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_work_months_per_year') : null);
-        const hoursPerDay = !isNaN(hpd) && hpd > 0 ? hpd : 8;
-        const workDaysPerMonth = !isNaN(dpm) && dpm > 0 ? dpm : 22;
-        const monthsPerYear = !isNaN(mo) && mo > 0 ? mo : 12;
-        return hoursPerDay * workDaysPerMonth * monthsPerYear;
-    },
-
-    /**
-     * تحديد إذا كان الموظف غير نشط (مستقيل)
-     * يدعم: status = 'inactive' أو 'غير نشط' أو وجود تاريخ استقالة
-     */
-    _isEmployeeInactive(employee) {
-        if (!employee) return false;
-        const status = (employee.status != null && employee.status !== '') ? String(employee.status).trim() : '';
-        const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '') ? String(employee.resignationDate).trim() : '';
-        if (resignationDate) return true;
-        if (status === 'inactive' || status.toLowerCase() === 'inactive') return true;
-        if (status === 'غير نشط') return true;
-        return false;
-    },
-
-    /**
-     * جمع أعداد العمالة من سجلات المقاولين المعتمدين أو جدول العمالة الخارجية الشهري
-     */
-    _sumContractorWorkforceHeadcount(approvedContractors, appData) {
-        const data = appData && typeof appData === 'object'
-            ? appData
-            : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
-
-        const externalWorkforce = Array.isArray(data.externalWorkforceMonthly) ? data.externalWorkforceMonthly : [];
-        const currentYear = new Date().getFullYear();
-        const monthKeys = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-
-        // 1. جمع كل الأشهر المُدخلة لكل مقاول في السنة الحالية (ليس شهراً واحداً فقط)
-        const activeYearRecords = externalWorkforce.filter(r => r && Number(r.year) === currentYear);
-        if (activeYearRecords.length > 0) {
-            let totalSum = 0;
-            activeYearRecords.forEach(r => {
-                // استخدام حقل total إذا كان مُحسوباً مسبقاً، وإلا جمع الأشهر يدوياً
-                const savedTotal = parseFloat(r.total);
-                if (Number.isFinite(savedTotal) && savedTotal > 0) {
-                    totalSum += Math.round(savedTotal);
-                } else {
-                    monthKeys.forEach(key => {
-                        const val = parseFloat(r[key]);
-                        if (Number.isFinite(val) && val > 0) totalSum += Math.round(val);
-                    });
-                }
-            });
-            if (totalSum > 0) {
-                return totalSum;
-            }
-        }
-
-        // 2. كبديل: استخدام الأرقام الافتراضية/الثابتة من المقاولين المعتمدين
-        if (!Array.isArray(approvedContractors) || approvedContractors.length === 0) return 0;
-        const keys = ['workerCount', 'workersCount', 'laborCount', 'manpower', 'employeesCount', 'totalWorkers', 'averageWorkers', 'contractorWorkers', 'numberOfWorkers', 'expectedWorkers', 'workforceCount'];
-        let sum = 0;
-        approvedContractors.forEach((rec) => {
-            if (!rec || typeof rec !== 'object') return;
-            if (rec.active === false || rec.deactivated === true || rec.isActive === 'inactive' || rec.isActive === false || rec.isActive === 'false' || rec.isActive === 'FALSE') return;
-            let found = NaN;
-            for (let i = 0; i < keys.length; i++) {
-                const x = this._parseNumWorkHours(rec[keys[i]]);
-                if (!isNaN(x) && x > 0) {
-                    found = x;
-                    break;
-                }
-            }
-            if (!isNaN(found)) sum += Math.round(found);
-        });
-
-        // تعديل ذكي: إذا كانت قيمة العمالة المسجلة في المقاولين صفراً لعدم وجود الحقول في الهيكل الحالي
-        // نقوم بإرجاع عدد المقاولين المعتمدين والنشطين أنفسهم بدلاً من 0
-        if (sum === 0) {
-            const activeContractors = approvedContractors.filter(rec => 
-                rec && 
-                rec.active !== false && 
-                rec.deactivated !== true && 
-                rec.isActive !== 'inactive' && 
-                rec.isActive !== false && 
-                rec.isActive !== 'false' && 
-                rec.isActive !== 'FALSE'
-            );
-            return activeContractors.length;
-        }
-
-        return sum;
-    },
-
-    /**
-     * تقدير إجمالي الساعات السنوية: موظفون نشطون (+ حقول سنوية صريحة إن وُجدت) + عمالة مقاولين × نفس معادلة الساعات الافتراضية لكل فرد.
-     */
-    _computeEstimatedAnnualWorkHoursTotal(employees, approvedContractors) {
-        const list = Array.isArray(employees) ? employees.filter((e) => e && !this._isEmployeeInactive(e)) : [];
-        const n = list.length;
-        const defaultAnnualPerCapita = this._getDashboardDefaultAnnualHoursPerCapita();
-
-        const annualFromEmployee = (e) => {
-            const annualKeys = ['annualWorkHours', 'yearlyWorkHours', 'workHoursYear', 'annualHours', 'estimatedAnnualHours', 'totalAnnualHours'];
-            for (let i = 0; i < annualKeys.length; i++) {
-                const x = this._parseNumWorkHours(e[annualKeys[i]]);
-                if (!isNaN(x) && x > 0) return x;
-            }
-            const monthly = this._parseNumWorkHours(e.monthlyHours ?? e.monthlyWorkHours ?? e.workHoursMonth);
-            if (!isNaN(monthly) && monthly > 0) return monthly * 12;
-            const weekly = this._parseNumWorkHours(e.weeklyHours ?? e.hoursPerWeek ?? e.workHoursWeek);
-            if (!isNaN(weekly) && weekly > 0) return weekly * 52;
-            return null;
-        };
-
-        let sumExplicit = 0;
-        let withExplicit = 0;
-        list.forEach((e) => {
-            const a = annualFromEmployee(e);
-            if (a != null) {
-                sumExplicit += a;
-                withExplicit += 1;
-            }
-        });
-
-        let employeeHoursPart = 0;
-        if (n > 0) {
-            if (withExplicit === 0) employeeHoursPart = n * defaultAnnualPerCapita;
-            else employeeHoursPart = sumExplicit + (n - withExplicit) * defaultAnnualPerCapita;
-        }
-
-        let contractorHoursPart = 0;
-        if (this.workHoursIncludeContractors()) {
-            const contractorSlots = this._sumContractorWorkforceHeadcount(approvedContractors, AppState.appData);
-            contractorHoursPart = contractorSlots * defaultAnnualPerCapita;
-        }
-
-        return Math.round(employeeHoursPart + contractorHoursPart);
-    },
-
-    /**
-     * تحديث قيمة KPI بدون إعادة الرسم إذا لم تتغير (منع الوميض)
-     */
-    _updateKpiElement(el, formattedValue) {
-        if (!el || formattedValue == null) return;
-        const next = String(formattedValue);
-        if (el.textContent === next) return;
-        el.textContent = next;
-        this.applyEnglishNumberFormat(el);
-    },
-
-    /**
-     * تحديث مؤشرات الأداء
-     * جميع التحديثات بتغيير القيم (textContent) فقط؛ لا إعادة بناء DOM ولا إخفاء عناصر.
-     * الكروت تظهر مرة واحدة وتبقى ثابتة (لا display:none ولا conditional rendering).
-     */
-    updateKPIs() {
-        const data = AppState.appData;
-        if (!data) {
-            Utils.safeWarn('⚠️ AppState.appData غير متوفر');
-            return;
-        }
-
-        const syncUserEmail = AppState.syncMeta?.userEmail
-            ? String(AppState.syncMeta.userEmail).trim().toLowerCase()
-            : '';
-        const currentEmail = AppState.currentUser?.email
-            ? String(AppState.currentUser.email).trim().toLowerCase()
-            : '';
-        if (syncUserEmail && currentEmail && syncUserEmail !== currentEmail) {
-            Utils.safeWarn('⚠️ بيانات KPI من جلسة مستخدم سابق — تخطي التحديث');
-            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
-                Notification.warning('البيانات المحلية لا تطابق المستخدم الحالي — جاري إعادة المزامنة...');
-            }
-            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.syncData === 'function') {
-                GoogleIntegration.syncData({ silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false })
-                    .catch(() => {});
-            }
-            return;
-        }
-
-        /* لا نزيل kpis-values-ready أبداً؛ الكروت تظهر مرة واحدة وتبقى ثابتة. التحديث بتغيير القيم (textContent) فقط دون إخفاء أو إعادة إنشاء عناصر. */
-
-        try {
-            const incidents = Array.isArray(data.incidents) ? data.incidents : [];
-            const users = Array.isArray(data.users) ? data.users : [];
-            const ptwDataset = this.getUnifiedPTWDataset(data);
-            const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
-            const employees = Array.isArray(data.employees) ? data.employees : [];
-
-            // حساب كل القيم دون المساس بـ DOM — مصدر موحّد مع قائمة الحوادث في النظام
-            const allIncidentRecords = this._getDashboardIncidentsRecords(data);
-            const totalIncidentsCount = allIncidentRecords.length;
-            const currentYear = new Date().getFullYear();
-            let incidentsCurrentYearCount = 0;
-            let incidentsPriorYearsCount = 0;
-            allIncidentRecords.forEach((r) => {
-                const cat = this._classifyIncidentYearForDashboard(r, currentYear);
-                if (cat === 'current') incidentsCurrentYearCount += 1;
-                else if (cat === 'prior') incidentsPriorYearsCount += 1;
-            });
-            const activeUsersCount = users.filter(u => u && u.active !== false).length;
-
-            const openPTWCount = ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length;
-            const closedPTWCount = ptwDataset.filter(p => this.isPTWClosedStatus(p?.status)).length;
-            const totalPTWCount = ptwDataset.length;
-
-            const canIncDash = this.dashboardCan('incidents');
-            const canNearDash = this.dashboardCan('nearmiss');
-            const incidentsForCompliance = canIncDash ? incidents : [];
-            const nearmissForCompliance = canNearDash ? nearmiss : [];
-            const totalItems = incidentsForCompliance.length + nearmissForCompliance.length;
-            const resolvedIncidents = incidentsForCompliance.filter(i => i && (i.status === 'مغلق' || i.status === 'محلول')).length;
-            const resolvedNearMiss = nearmissForCompliance.filter(n => n && (n.correctiveProposed === false || n.status === 'مغلق' || n.status === 'محلول')).length;
-            const complianceRate = totalItems > 0 ? Math.round(((resolvedIncidents + resolvedNearMiss) / totalItems) * 100) : (canIncDash || canNearDash ? 100 : 0);
-            const complianceClass = complianceRate >= 90 ? 'kpi-value text-green-600' : complianceRate >= 70 ? 'kpi-value text-yellow-600' : 'kpi-value text-red-600';
-
-            const actualTotalHours = this.getDashboardTotalWorkHours(data);
-            const safeWorkingHours = this.getDashboardSafeWorkingHours(data);
-
-            let daysWithoutInjuryText = 'N/A';
-            if (canIncDash) {
-                const daysDiff = this._getDaysSinceLastIncidentForDashboard(data);
-                if (daysDiff !== null) {
-                    daysWithoutInjuryText = daysDiff >= 0 ? this.formatNumber(daysDiff) : '0';
-                }
-            }
-
-            const reportsUpdates = this.getReportsStatisticsUpdates();
-            const self = this;
-
-            // تنفيذ التحديثات بشكل متزامن في نفس الـ tick لتفادي وميض: تأجيلها إلى rAF يعرض إطاراً بقيم ابتدائية ثم إطاراً محدثاً.
-            (function applyAllKPIsSync() {
-                try {
-                    if (self.dashboardCan('incidents')) {
-                        const totalIncidentsEl = document.getElementById('total-incidents');
-                        self._updateKpiElement(totalIncidentsEl, self.formatNumber(totalIncidentsCount));
-                        const lblCur = document.getElementById('dash-incidents-label-current');
-                        const numCur = document.getElementById('dash-incidents-num-current');
-                        const numPrior = document.getElementById('dash-incidents-num-prior');
-                        const labelCurrent = `${self.t('dash.incidentsCurrentYear', 'حوادث العام الحالي')} (${currentYear}):`;
-                        if (lblCur && lblCur.textContent !== labelCurrent) {
-                            lblCur.textContent = labelCurrent;
-                        }
-                        self._updateKpiElement(numCur, self.formatNumber(incidentsCurrentYearCount));
-                        self._updateKpiElement(numPrior, self.formatNumber(incidentsPriorYearsCount));
-                    }
-                    if (self.dashboardCan('users')) {
-                        const activeUsersEl = document.getElementById('active-users');
-                        if (activeUsersEl) {
-                            activeUsersEl.textContent = self.formatNumber(activeUsersCount);
-                            self.applyEnglishNumberFormat(activeUsersEl);
-                        }
-                    }
-                    if (self.dashboardCan('ptw')) {
-                        const openPTWCountEl = document.getElementById('open-ptw-count');
-                        if (openPTWCountEl) {
-                            openPTWCountEl.textContent = self.formatNumber(openPTWCount);
-                            self.applyEnglishNumberFormat(openPTWCountEl);
-                        }
-                        const closedPTWCountEl = document.getElementById('closed-ptw-count');
-                        if (closedPTWCountEl) {
-                            closedPTWCountEl.textContent = self.formatNumber(closedPTWCount);
-                            self.applyEnglishNumberFormat(closedPTWCountEl);
-                        }
-                        const totalPTWCountEl = document.getElementById('total-ptw-count');
-                        if (totalPTWCountEl) {
-                            totalPTWCountEl.textContent = self.formatNumber(totalPTWCount);
-                            self.applyEnglishNumberFormat(totalPTWCountEl);
-                        }
-                        const activePTWEl = document.getElementById('active-ptw');
-                        if (activePTWEl) {
-                            activePTWEl.textContent = self.formatNumber(openPTWCount);
-                            self.applyEnglishNumberFormat(activePTWEl);
-                        }
-                    }
-                    if (canIncDash || canNearDash) {
-                        const complianceRateEl = document.getElementById('compliance-rate');
-                        if (complianceRateEl) {
-                            complianceRateEl.textContent = complianceRate + '%';
-                            complianceRateEl.className = complianceClass;
-                        }
-                    }
-                    if (self.dashboardCan('employees')) {
-                        const totalWorkHoursEl = document.getElementById('total-work-hours');
-                        if (totalWorkHoursEl) {
-                            totalWorkHoursEl.textContent = self.formatNumber(actualTotalHours);
-                            self.applyEnglishNumberFormat(totalWorkHoursEl);
-                        }
-                        const safeWorkingHoursEl = document.getElementById('safe-working-hours');
-                        if (safeWorkingHoursEl) {
-                            safeWorkingHoursEl.textContent = self.formatNumber(safeWorkingHours);
-                            self.applyEnglishNumberFormat(safeWorkingHoursEl);
-                        }
-                        const empCountDashEl = document.getElementById('dash-kpi-employees-active-count');
-                        if (empCountDashEl) {
-                            const empActiveOnly = employees.filter(e => e && !self._isEmployeeInactive(e)).length;
-                            empCountDashEl.textContent = self.formatNumber(empActiveOnly);
-                            self.applyEnglishNumberFormat(empCountDashEl);
-                        }
-                        
-                        // ✅ تحديث كارت العمالة الخارجية — مع جلب البيانات إن لم تكن محملة
-                        const contCountDashEl = document.getElementById('dash-kpi-contractors-active-count');
-                        if (contCountDashEl) {
-                            const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-                            const contractorWorkforceCount = self._sumContractorWorkforceHeadcount(approvedContractors, data);
-                            self._updateKpiElement(contCountDashEl, self.formatNumber(contractorWorkforceCount));
-
-                            if (!Array.isArray(data.externalWorkforceMonthly) || data.externalWorkforceMonthly.length === 0) {
-                                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
-                                    GoogleIntegration.readFromSheets('ExternalWorkforceMonthly', 15000)
-                                        .then(rows => {
-                                            if (Array.isArray(rows) && rows.length > 0) {
-                                                AppState.appData.externalWorkforceMonthly = rows;
-                                            } else if (!Array.isArray(AppState.appData.externalWorkforceMonthly)) {
-                                                AppState.appData.externalWorkforceMonthly = [];
-                                            }
-                                            const refreshedCount = self._sumContractorWorkforceHeadcount(
-                                                approvedContractors,
-                                                AppState.appData
-                                            );
-                                            self._updateKpiElement(
-                                                document.getElementById('dash-kpi-contractors-active-count'),
-                                                self.formatNumber(refreshedCount)
-                                            );
-                                        })
-                                        .catch(() => { /* الإبقاء على القيمة المتزامنة المحسوبة */ });
-                                }
-                            }
-                        }
-                    }
-                    if (self.dashboardCan('training')) {
-                        const trainingProgDashEl = document.getElementById('dash-kpi-training-programs');
-                        const tr = Array.isArray(data.training) ? data.training : [];
-                        self._updateKpiElement(trainingProgDashEl, self.formatNumber(tr.length));
-                    }
-                    if (self.dashboardCan('clinic')) {
-                        const clinicDashEl = document.getElementById('dash-kpi-clinic-visits-total');
-                        if (clinicDashEl) {
-                            clinicDashEl.textContent = self.formatNumber(self.getClinicVisitsTotalCount(data));
-                            self.applyEnglishNumberFormat(clinicDashEl);
-                        }
-                    }
-                    if (canIncDash) {
-                        const daysWithoutInjuryEl = document.getElementById('days-without-injury');
-                        if (daysWithoutInjuryEl) {
-                            daysWithoutInjuryEl.textContent = daysWithoutInjuryText;
-                            self.applyEnglishNumberFormat(daysWithoutInjuryEl);
-                        }
-                    }
-                    if (self.dashboardCan('incidents')) {
-                        self.calculateSafetyMetrics(data);
-                    }
-                    if (reportsUpdates && reportsUpdates.length) {
-                        self.applyReportsStatisticsUpdates(reportsUpdates);
-                    }
-                    document.querySelector('.safety-metrics-section')?.classList.add('kpis-values-ready');
-                    document.querySelector('.reports-statistics-section')?.classList.add('kpis-values-ready');
-                    document.getElementById('dashboard-section')?.classList.add('kpi-grid-values-ready');
-                } catch (err) {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في تحديث KPIs:', err);
-                }
-            })();
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحديث KPIs:', error);
-        }
-    },
-
-    /**
-     * حساب مؤشرات السلامة المهنية
-     * LTI, TIR, FA, TRIR
-     * يستخدم سجل الحوادث للحصول على دقة أعلى في الحسابات
-     */
-    calculateSafetyMetrics(appData = null) {
-        try {
-            if (!this.dashboardCan('incidents')) return;
-            if (typeof HseMetrics === 'undefined' || !HseMetrics.getDashboardSnapshot) {
-                Utils.safeWarn('⚠️ HseMetrics غير محمّل — تخطي مؤشرات السلامة');
-                return;
-            }
-
-            const dataBundle = appData && typeof appData === 'object'
-                ? appData
-                : (typeof AppState !== 'undefined' && AppState.appData ? AppState.appData : {});
-
-            const snap = HseMetrics.getDashboardSnapshot(dataBundle);
-            const rates = snap.rates || {};
-
-            const updateOneSafetyValue = (elementId, formattedValue) => {
-                const el = document.getElementById(elementId);
-                if (el && el.textContent !== formattedValue) {
-                    el.textContent = formattedValue;
-                    this.applyEnglishNumberFormat(el);
-                }
-            };
-
-            updateOneSafetyValue('trir-value', this.formatMetricRate(rates.trir, 2));
-            updateOneSafetyValue('afr-value', this.formatMetricRate(rates.afr, 2));
-            updateOneSafetyValue('far-value', this.formatMetricRate(rates.far, 4));
-            updateOneSafetyValue('fr-value', this.formatMetricRate(rates.fr, 2));
-            updateOneSafetyValue('lti-value', this.formatNumber(rates.ltiCount || 0));
-            updateOneSafetyValue('sr-value', this.formatMetricRate(rates.sr, 2));
-            updateOneSafetyValue('ir-value', this.formatMetricRate(rates.ir, 2));
-            const manDaysYtd = snap.totals?.manDays ?? 0;
-            updateOneSafetyValue('man-days-value', this.formatNumber(manDaysYtd));
-
-            if (typeof Utils !== 'undefined' && Utils.safeLog) {
-                Utils.safeLog('📊 مؤشرات السلامة (HseMetrics YTD):', {
-                    year: snap.year,
-                    ytdLimit: snap.ytdLimit,
-                    totals: snap.totals,
-                    rates: snap.rates
-                });
-            }
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في حساب مؤشرات السلامة:', error);
-        }
-    },
-
-    /**
-     * تحديث بيانات الحوادث في Dashboard
-     * يتم استدعاؤها عند إضافة/تحديث/حذف حادث
-     */
-    refreshIncidents() {
-        this.updateKPIs();
-    },
-
-    /**
-     * تحميل الأنشطة الأخيرة
-     */
-    loadRecentActivities() {
-        const container = document.getElementById('recent-activities');
-        if (!container) return;
-
-        try {
-            // التحقق من وجود AppState
-            if (!AppState || !AppState.appData) {
-                container.innerHTML = `
+        `,Q.classList.remove("hidden"),rt&&(rt.disabled=!1);const X={__cacheKey:T,__signature:v,__cachedAt:Date.now(),contractor:n,contractorCode:p,contractorName:o,violations:E,incidents:h,training:at,clinicVisits:R,contractorEvaluations:B,ptwContractor:O,ptwOpen:K,ptwClosed:Y,injuriesContractor:it};window.currentContractorReport=X,this.contractorReportCache.set(T,X),this.contractorReportRequests.delete(I),typeof L=="function"&&L(X)},async exportContractorReportPDF(t){const e=String(t||"").trim(),r=window.currentContractorReport;(!r||!this.contractorReportMatchesSearchCode(r,e))&&await this.generateContractorReport(e);const a=window.currentContractorReport;if(!a){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0642\u0631\u064A\u0631 \u0644\u0644\u0645\u0642\u0627\u0648\u0644");return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0648\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u062A\u0642\u0631\u064A\u0631...");const s=a.contractorName||"",i=String(a.contractorCode||e).replace(/[\\/:*?"<>|]/g,"_"),n=`CON-REPORT-${i}-${new Date().toISOString().slice(0,10)}`,o=`\u062A\u0642\u0631\u064A\u0631 \u0634\u0627\u0645\u0644 \u0644\u0644\u0645\u0642\u0627\u0648\u0644: ${s}`,f=this.buildContractorReportPdfContent(a),p=typeof FormHeader<"u"&&FormHeader.generatePDFHTML?FormHeader.generatePDFHTML(n,o,f,!1,!1,{titleAr:o,titleEn:"Comprehensive Contractor Report",compactPdfFooter:!0,includeQRCode:!1},new Date,new Date):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(o)}</title></head><body>${f}</body></html>`,l=`\u062A\u0642\u0631\u064A\u0631-\u0645\u0642\u0627\u0648\u0644-${i}-${new Date().toISOString().slice(0,10)}.pdf`,m=await this._downloadHtmlReportAsPdf(p,l);Loading.hide(),m?Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0628\u0635\u064A\u063A\u0629 PDF \u0628\u0646\u062C\u0627\u062D"):Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF. \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0628\u0639\u062F \u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0623\u0648\u0644\u0627\u064B.")}catch(s){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 PDF:",s),Notification.error("\u0641\u0634\u0644 \u062A\u0635\u062F\u064A\u0631 PDF: "+(s&&s.message?s.message:String(s)))}},_getDashboardIncidentsRecords(t){const e=t&&typeof t=="object"?t:{},r=Array.isArray(e.incidents)?e.incidents.filter(Boolean):[];if(r.length>0){const i=new Set;return r.filter(n=>{const o=String(n.id||n.incidentId||"").trim();return!o||i.has(o)?!1:(i.add(o),!0)})}const a=Array.isArray(e.incidentsRegistry)?e.incidentsRegistry.filter(Boolean):[],s=new Set;return a.filter(i=>{const n=String(i.incidentId||i.id||i.registryId||"").trim();return!n||s.has(n)?!1:(s.add(n),!0)})},_classifyIncidentYearForDashboard(t,e){if(!t||typeof t!="object")return"unknown";const r=t.year!=null?t.year:t.incidentYear;if(r!=null&&String(r).trim()!==""){const o=String(r).trim();if(/^0+$/.test(o))return"unknown";const f=parseInt(o,10);return!Number.isFinite(f)||f<=0||f>e+5?"unknown":f===e?"current":"prior"}const s=t.incidentDate||t.date||t.createdAt;if(!s)return"unknown";const i=new Date(s);if(isNaN(i.getTime()))return"unknown";const n=i.getFullYear();return n<=0||n<1900||n>e+5||n>e?"unknown":n===e?"current":"prior"},workHoursIncludeContractors(){const t=typeof localStorage<"u"?localStorage.getItem("hse_work_hours_include_contractors"):null;return t===null||String(t).trim()===""?!0:t!=="0"&&String(t).toLowerCase()!=="false"&&String(t).toLowerCase()!=="no"},getDashboardTotalWorkHours(t){const e=typeof localStorage<"u"?localStorage.getItem("hse_total_work_hours"):null;if(e!=null&&String(e).trim()!==""){const i=parseFloat(String(e).replace(/,/g,""));if(Number.isFinite(i)&&i>0)return i}const r=t&&typeof t=="object"?t:{},a=Array.isArray(r.employees)?r.employees:[],s=Array.isArray(r.approvedContractors)?r.approvedContractors:[];return this._computeEstimatedAnnualWorkHoursTotal(a,s)},_getDashboardWorkforceCount(t){const e=t&&typeof t=="object"?t:{},r=Array.isArray(e.employees)?e.employees:[],a=Array.isArray(e.approvedContractors)?e.approvedContractors:[],s=r.filter(n=>n&&!this._isEmployeeInactive(n)).length,i=this.workHoursIncludeContractors()?this._sumContractorWorkforceHeadcount(a,e):0;return s+i},_getDaysSinceLastIncidentForDashboard(t){const e=t&&typeof t=="object"?t:{},r=this._getDashboardIncidentsRecords(e).filter(n=>n&&(n.incidentDate||n.date||n.createdAt));if(r.length===0)return null;const a=r.slice().sort((n,o)=>{const f=new Date(n.incidentDate||n.date||n.createdAt);return new Date(o.incidentDate||o.date||o.createdAt)-f}),s=new Date(a[0].incidentDate||a[0].date||a[0].createdAt),i=new Date;return i.setHours(0,0,0,0),s.setHours(0,0,0,0),Math.floor((i-s)/864e5)},getDashboardSafeWorkingHours(t){const e=typeof localStorage<"u"?localStorage.getItem("hse_safe_working_hours"):null;if(e!=null&&String(e).trim()!==""){const f=parseFloat(String(e).replace(/,/g,""));if(Number.isFinite(f)&&f>=0)return Math.round(f)}const r=t&&typeof t=="object"?t:{},a=this._getDaysSinceLastIncidentForDashboard(r);if(a===null)return this.getDashboardTotalWorkHours(r);const s=this._getDashboardWorkforceCount(r),i=this._parseNumWorkHours(typeof localStorage<"u"?localStorage.getItem("hse_hours_per_day"):null),n=!isNaN(i)&&i>0?i:8,o=Math.max(0,s)*n;return Math.round(Math.max(0,a)*o)},_parseNumWorkHours(t){if(t==null||t==="")return NaN;const e=parseFloat(String(t).replace(/,/g,""));return Number.isFinite(e)?e:NaN},_getDashboardDefaultAnnualHoursPerCapita(){const t=this._parseNumWorkHours(typeof localStorage<"u"?localStorage.getItem("hse_hours_per_day"):null),e=this._parseNumWorkHours(typeof localStorage<"u"?localStorage.getItem("hse_work_days_per_month"):null),r=this._parseNumWorkHours(typeof localStorage<"u"?localStorage.getItem("hse_work_months_per_year"):null),a=!isNaN(t)&&t>0?t:8,s=!isNaN(e)&&e>0?e:22,i=!isNaN(r)&&r>0?r:12;return a*s*i},_isEmployeeInactive(t){if(!t)return!1;const e=t.status!=null&&t.status!==""?String(t.status).trim():"";return!!((t.resignationDate!=null&&t.resignationDate!==""?String(t.resignationDate).trim():"")||e==="inactive"||e.toLowerCase()==="inactive"||e==="\u063A\u064A\u0631 \u0646\u0634\u0637")},_sumContractorWorkforceHeadcount(t,e){const r=e&&typeof e=="object"?e:typeof AppState<"u"&&AppState.appData?AppState.appData:{},a=Array.isArray(r.externalWorkforceMonthly)?r.externalWorkforceMonthly:[],s=new Date().getFullYear(),i=["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"],n=a.filter(p=>p&&Number(p.year)===s);if(n.length>0){let p=0;if(n.forEach(l=>{const m=parseFloat(l.total);Number.isFinite(m)&&m>0?p+=Math.round(m):i.forEach(g=>{const b=parseFloat(l[g]);Number.isFinite(b)&&b>0&&(p+=Math.round(b))})}),p>0)return p}if(!Array.isArray(t)||t.length===0)return 0;const o=["workerCount","workersCount","laborCount","manpower","employeesCount","totalWorkers","averageWorkers","contractorWorkers","numberOfWorkers","expectedWorkers","workforceCount"];let f=0;return t.forEach(p=>{if(!p||typeof p!="object"||p.active===!1||p.deactivated===!0||p.isActive==="inactive"||p.isActive===!1||p.isActive==="false"||p.isActive==="FALSE")return;let l=NaN;for(let m=0;m<o.length;m++){const g=this._parseNumWorkHours(p[o[m]]);if(!isNaN(g)&&g>0){l=g;break}}isNaN(l)||(f+=Math.round(l))}),f===0?t.filter(l=>l&&l.active!==!1&&l.deactivated!==!0&&l.isActive!=="inactive"&&l.isActive!==!1&&l.isActive!=="false"&&l.isActive!=="FALSE").length:f},_computeEstimatedAnnualWorkHoursTotal(t,e){const r=Array.isArray(t)?t.filter(l=>l&&!this._isEmployeeInactive(l)):[],a=r.length,s=this._getDashboardDefaultAnnualHoursPerCapita(),i=l=>{const m=["annualWorkHours","yearlyWorkHours","workHoursYear","annualHours","estimatedAnnualHours","totalAnnualHours"];for(let C=0;C<m.length;C++){const y=this._parseNumWorkHours(l[m[C]]);if(!isNaN(y)&&y>0)return y}const g=this._parseNumWorkHours(l.monthlyHours??l.monthlyWorkHours??l.workHoursMonth);if(!isNaN(g)&&g>0)return g*12;const b=this._parseNumWorkHours(l.weeklyHours??l.hoursPerWeek??l.workHoursWeek);return!isNaN(b)&&b>0?b*52:null};let n=0,o=0;r.forEach(l=>{const m=i(l);m!=null&&(n+=m,o+=1)});let f=0;a>0&&(o===0?f=a*s:f=n+(a-o)*s);let p=0;return this.workHoursIncludeContractors()&&(p=this._sumContractorWorkforceHeadcount(e,AppState.appData)*s),Math.round(f+p)},_updateKpiElement(t,e){if(!t||e==null)return;const r=String(e);t.textContent!==r&&(t.textContent=r,this.applyEnglishNumberFormat(t))},updateKPIs(){const t=AppState.appData;if(!t){Utils.safeWarn("\u26A0\uFE0F AppState.appData \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631");return}const e=AppState.syncMeta?.userEmail?String(AppState.syncMeta.userEmail).trim().toLowerCase():"",r=AppState.currentUser?.email?String(AppState.currentUser.email).trim().toLowerCase():"";if(e&&r&&e!==r){Utils.safeWarn("\u26A0\uFE0F \u0628\u064A\u0627\u0646\u0627\u062A KPI \u0645\u0646 \u062C\u0644\u0633\u0629 \u0645\u0633\u062A\u062E\u062F\u0645 \u0633\u0627\u0628\u0642 \u2014 \u062A\u062E\u0637\u064A \u0627\u0644\u062A\u062D\u062F\u064A\u062B"),typeof Notification<"u"&&typeof Notification.warning=="function"&&Notification.warning("\u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0644\u0627 \u062A\u0637\u0627\u0628\u0642 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0627\u0644\u062D\u0627\u0644\u064A \u2014 \u062C\u0627\u0631\u064A \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629..."),typeof GoogleIntegration<"u"&&typeof GoogleIntegration.syncData=="function"&&GoogleIntegration.syncData({silent:!0,showLoader:!1,notifyOnSuccess:!1,notifyOnError:!1}).catch(()=>{});return}try{const a=Array.isArray(t.incidents)?t.incidents:[],s=Array.isArray(t.users)?t.users:[],i=this.getUnifiedPTWDataset(t),n=Array.isArray(t.nearmiss)?t.nearmiss:[],o=Array.isArray(t.employees)?t.employees:[],f=this._getDashboardIncidentsRecords(t),p=f.length,l=new Date().getFullYear();let m=0,g=0;f.forEach($=>{const w=this._classifyIncidentYearForDashboard($,l);w==="current"?m+=1:w==="prior"&&(g+=1)});const b=s.filter($=>$&&$.active!==!1).length,C=i.filter($=>!this.isPTWClosedStatus($?.status)).length,y=i.filter($=>this.isPTWClosedStatus($?.status)).length,x=i.length,A=this.dashboardCan("incidents"),T=this.dashboardCan("nearmiss"),v=A?a:[],I=T?n:[],N=v.length+I.length,L=v.filter($=>$&&($.status==="\u0645\u063A\u0644\u0642"||$.status==="\u0645\u062D\u0644\u0648\u0644")).length,u=I.filter($=>$&&($.correctiveProposed===!1||$.status==="\u0645\u063A\u0644\u0642"||$.status==="\u0645\u062D\u0644\u0648\u0644")).length,S=N>0?Math.round((L+u)/N*100):A||T?100:0,U=S>=90?"kpi-value text-green-600":S>=70?"kpi-value text-yellow-600":"kpi-value text-red-600",P=this.getDashboardTotalWorkHours(t),E=this.getDashboardSafeWorkingHours(t);let H="N/A";if(A){const $=this._getDaysSinceLastIncidentForDashboard(t);$!==null&&(H=$>=0?this.formatNumber($):"0")}const d=this.getReportsStatisticsUpdates(),h=this;(function(){try{if(h.dashboardCan("incidents")){const w=document.getElementById("total-incidents");h._updateKpiElement(w,h.formatNumber(p));const k=document.getElementById("dash-incidents-label-current"),M=document.getElementById("dash-incidents-num-current"),R=document.getElementById("dash-incidents-num-prior"),W=`${h.t("dash.incidentsCurrentYear","\u062D\u0648\u0627\u062F\u062B \u0627\u0644\u0639\u0627\u0645 \u0627\u0644\u062D\u0627\u0644\u064A")} (${l}):`;k&&k.textContent!==W&&(k.textContent=W),h._updateKpiElement(M,h.formatNumber(m)),h._updateKpiElement(R,h.formatNumber(g))}if(h.dashboardCan("users")){const w=document.getElementById("active-users");w&&(w.textContent=h.formatNumber(b),h.applyEnglishNumberFormat(w))}if(h.dashboardCan("ptw")){const w=document.getElementById("open-ptw-count");w&&(w.textContent=h.formatNumber(C),h.applyEnglishNumberFormat(w));const k=document.getElementById("closed-ptw-count");k&&(k.textContent=h.formatNumber(y),h.applyEnglishNumberFormat(k));const M=document.getElementById("total-ptw-count");M&&(M.textContent=h.formatNumber(x),h.applyEnglishNumberFormat(M));const R=document.getElementById("active-ptw");R&&(R.textContent=h.formatNumber(C),h.applyEnglishNumberFormat(R))}if(A||T){const w=document.getElementById("compliance-rate");w&&(w.textContent=S+"%",w.className=U)}if(h.dashboardCan("employees")){const w=document.getElementById("total-work-hours");w&&(w.textContent=h.formatNumber(P),h.applyEnglishNumberFormat(w));const k=document.getElementById("safe-working-hours");k&&(k.textContent=h.formatNumber(E),h.applyEnglishNumberFormat(k));const M=document.getElementById("dash-kpi-employees-active-count");if(M){const W=o.filter(_=>_&&!h._isEmployeeInactive(_)).length;M.textContent=h.formatNumber(W),h.applyEnglishNumberFormat(M)}const R=document.getElementById("dash-kpi-contractors-active-count");if(R){const W=Array.isArray(t.approvedContractors)?t.approvedContractors:[],_=h._sumContractorWorkforceHeadcount(W,t);h._updateKpiElement(R,h.formatNumber(_)),(!Array.isArray(t.externalWorkforceMonthly)||t.externalWorkforceMonthly.length===0)&&typeof GoogleIntegration<"u"&&typeof GoogleIntegration.readFromSheets=="function"&&GoogleIntegration.readFromSheets("ExternalWorkforceMonthly",15e3).then(V=>{Array.isArray(V)&&V.length>0?AppState.appData.externalWorkforceMonthly=V:Array.isArray(AppState.appData.externalWorkforceMonthly)||(AppState.appData.externalWorkforceMonthly=[]);const B=h._sumContractorWorkforceHeadcount(W,AppState.appData);h._updateKpiElement(document.getElementById("dash-kpi-contractors-active-count"),h.formatNumber(B))}).catch(()=>{})}}if(h.dashboardCan("training")){const w=document.getElementById("dash-kpi-training-programs"),k=Array.isArray(t.training)?t.training:[];h._updateKpiElement(w,h.formatNumber(k.length))}if(h.dashboardCan("clinic")){const w=document.getElementById("dash-kpi-clinic-visits-total");w&&(w.textContent=h.formatNumber(h.getClinicVisitsTotalCount(t)),h.applyEnglishNumberFormat(w))}if(A){const w=document.getElementById("days-without-injury");w&&(w.textContent=H,h.applyEnglishNumberFormat(w))}h.dashboardCan("incidents")&&h.calculateSafetyMetrics(t),d&&d.length&&h.applyReportsStatisticsUpdates(d),document.querySelector(".safety-metrics-section")?.classList.add("kpis-values-ready"),document.querySelector(".reports-statistics-section")?.classList.add("kpis-values-ready"),document.getElementById("dashboard-section")?.classList.add("kpi-grid-values-ready")}catch(w){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B KPIs:",w)}})()}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B KPIs:",a)}},calculateSafetyMetrics(t=null){try{if(!this.dashboardCan("incidents"))return;if(typeof HseMetrics>"u"||!HseMetrics.getDashboardSnapshot){Utils.safeWarn("\u26A0\uFE0F HseMetrics \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644 \u2014 \u062A\u062E\u0637\u064A \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629");return}const e=t&&typeof t=="object"?t:typeof AppState<"u"&&AppState.appData?AppState.appData:{},r=HseMetrics.getDashboardSnapshot(e),a=r.rates||{},s=(n,o)=>{const f=document.getElementById(n);f&&f.textContent!==o&&(f.textContent=o,this.applyEnglishNumberFormat(f))};s("trir-value",this.formatMetricRate(a.trir,2)),s("afr-value",this.formatMetricRate(a.afr,2)),s("far-value",this.formatMetricRate(a.far,4)),s("fr-value",this.formatMetricRate(a.fr,2)),s("lti-value",this.formatNumber(a.ltiCount||0)),s("sr-value",this.formatMetricRate(a.sr,2)),s("ir-value",this.formatMetricRate(a.ir,2));const i=r.totals?.manDays??0;s("man-days-value",this.formatNumber(i)),typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u{1F4CA} \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629 (HseMetrics YTD):",{year:r.year,ytdLimit:r.ytdLimit,totals:r.totals,rates:r.rates})}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0633\u0627\u0628 \u0645\u0624\u0634\u0631\u0627\u062A \u0627\u0644\u0633\u0644\u0627\u0645\u0629:",e)}},refreshIncidents(){this.updateKPIs()},loadRecentActivities(){const t=document.getElementById("recent-activities");if(t)try{if(!AppState||!AppState.appData){t.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
-                        <p class="text-yellow-600">جاري تحميل البيانات...</p>
+                        <p class="text-yellow-600">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...</p>
                     </div>
-                `;
-                return;
-            }
-
-            const activities = [];
-            const ad = AppState.appData;
-
-            if (this.dashboardCan('incidents')) {
-                const incidents = Array.isArray(ad.incidents) ? ad.incidents : [];
-                incidents.forEach((incident) => {
-                    if (!incident) return;
-                    try {
-                        const incidentDate = incident.createdAt || incident.date;
-                        if (!incidentDate) return;
-                        const dateObj = new Date(incidentDate);
-                        if (isNaN(dateObj.getTime())) return;
-                        const incidentType = incident.incidentType || incident.title || incident.type || 'حادث';
-                        activities.push({
-                            type: 'incident',
-                            title: `تم تسجيل حادث: ${incidentType}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(incidentDate),
-                            icon: 'fa-exclamation-triangle',
-                            color: 'text-red-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة حادث:', e);
-                    }
-                });
-            }
-
-            if (this.dashboardCan('nearmiss')) {
-                const nearmiss = Array.isArray(ad.nearmiss) ? ad.nearmiss : [];
-                nearmiss.forEach((nm) => {
-                    if (!nm) return;
-                    try {
-                        const d = nm.createdAt || nm.date || nm.reportDate;
-                        if (!d) return;
-                        const dateObj = new Date(d);
-                        if (isNaN(dateObj.getTime())) return;
-                        const title = nm.title || nm.description || nm.type || 'حادث وشيك';
-                        activities.push({
-                            type: 'nearmiss',
-                            title: `حادث وشيك: ${title}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(d),
-                            icon: 'fa-triangle-exclamation',
-                            color: 'text-orange-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة حادث وشيك:', e);
-                    }
-                });
-            }
-
-            if (this.dashboardCan('ptw')) {
-                const ptwList = this.getUnifiedPTWDataset(ad);
-                ptwList.forEach((p) => {
-                    if (!p) return;
-                    try {
-                        const d = p.createdAt || p.startDate || p.issueDate;
-                        if (!d) return;
-                        const dateObj = new Date(d);
-                        if (isNaN(dateObj.getTime())) return;
-                        const label = p.permitNumber || p.workDescription || p.location || 'تصريح عمل';
-                        activities.push({
-                            type: 'ptw',
-                            title: `تصريح عمل: ${label}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(d),
-                            icon: 'fa-id-card',
-                            color: 'text-blue-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة تصريح:', e);
-                    }
-                });
-            }
-
-            if (this.dashboardCan('training')) {
-                const training = Array.isArray(ad.training) ? ad.training : [];
-                training.forEach((t) => {
-                    if (!t) return;
-                    try {
-                        const d = t.createdAt || t.startDate || t.date;
-                        if (!d) return;
-                        const dateObj = new Date(d);
-                        if (isNaN(dateObj.getTime())) return;
-                        const name = t.programName || t.courseName || t.title || 'برنامج تدريبي';
-                        activities.push({
-                            type: 'training',
-                            title: `تدريب: ${name}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(d),
-                            icon: 'fa-graduation-cap',
-                            color: 'text-green-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة تدريب:', e);
-                    }
-                });
-            }
-
-            if (this.dashboardCan('violations')) {
-                const violations = Array.isArray(ad.violations) ? ad.violations : [];
-                violations.forEach((v) => {
-                    if (!v) return;
-                    try {
-                        const d = v.createdAt || v.date || v.violationDate;
-                        if (!d) return;
-                        const dateObj = new Date(d);
-                        if (isNaN(dateObj.getTime())) return;
-                        const desc = v.description || v.type || v.category || 'مخالفة';
-                        activities.push({
-                            type: 'violation',
-                            title: `مخالفة: ${desc}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(d),
-                            icon: 'fa-ban',
-                            color: 'text-pink-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة مخالفة:', e);
-                    }
-                });
-            }
-
-            // قائمة المرور اليومي للسلامة (Daily Safety Checklist)
-            if (this.dashboardCan('periodic-inspections')) {
-                const dscList = Array.isArray(ad.dailySafetyCheckList) ? ad.dailySafetyCheckList : [];
-                dscList.forEach((r) => {
-                    if (!r) return;
-                    try {
-                        const d = r.createdAt || r.date;
-                        if (!d) return;
-                        const dateObj = new Date(d);
-                        if (isNaN(dateObj.getTime())) return;
-                        const loc = r.siteName || r.siteId || 'موقع';
-                        activities.push({
-                            type: 'daily-safety-checklist',
-                            title: `مرور يومي للسلامة: ${loc} - ${r.shift || ''}`,
-                            date: dateObj,
-                            time: this.getTimeAgo(d),
-                            icon: 'fa-clipboard-check',
-                            color: 'text-cyan-500'
-                        });
-                    } catch (e) {
-                        Utils.safeWarn('⚠️ خطأ في معالجة المرور اليومي:', e);
-                    }
-                });
-            }
-
-            // ترتيب الأنشطة حسب التاريخ الفعلي (الأحدث أولاً)
-            activities.sort((a, b) => {
-                if (!a.date || !b.date) return 0;
-                return b.date - a.date;
-            });
-
-            if (activities.length === 0) {
-                container.innerHTML = `
+                `;return}const e=[],r=AppState.appData;if(this.dashboardCan("incidents")&&(Array.isArray(r.incidents)?r.incidents:[]).forEach(s=>{if(s)try{const i=s.createdAt||s.date;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.incidentType||s.title||s.type||"\u062D\u0627\u062F\u062B";e.push({type:"incident",title:`\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u062D\u0627\u062F\u062B: ${o}`,date:n,time:this.getTimeAgo(i),icon:"fa-exclamation-triangle",color:"text-red-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u062D\u0627\u062F\u062B:",i)}}),this.dashboardCan("nearmiss")&&(Array.isArray(r.nearmiss)?r.nearmiss:[]).forEach(s=>{if(s)try{const i=s.createdAt||s.date||s.reportDate;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.title||s.description||s.type||"\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643";e.push({type:"nearmiss",title:`\u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643: ${o}`,date:n,time:this.getTimeAgo(i),icon:"fa-triangle-exclamation",color:"text-orange-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u062D\u0627\u062F\u062B \u0648\u0634\u064A\u0643:",i)}}),this.dashboardCan("ptw")&&this.getUnifiedPTWDataset(r).forEach(s=>{if(s)try{const i=s.createdAt||s.startDate||s.issueDate;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.permitNumber||s.workDescription||s.location||"\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644";e.push({type:"ptw",title:`\u062A\u0635\u0631\u064A\u062D \u0639\u0645\u0644: ${o}`,date:n,time:this.getTimeAgo(i),icon:"fa-id-card",color:"text-blue-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u062A\u0635\u0631\u064A\u062D:",i)}}),this.dashboardCan("training")&&(Array.isArray(r.training)?r.training:[]).forEach(s=>{if(s)try{const i=s.createdAt||s.startDate||s.date;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.programName||s.courseName||s.title||"\u0628\u0631\u0646\u0627\u0645\u062C \u062A\u062F\u0631\u064A\u0628\u064A";e.push({type:"training",title:`\u062A\u062F\u0631\u064A\u0628: ${o}`,date:n,time:this.getTimeAgo(i),icon:"fa-graduation-cap",color:"text-green-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u062A\u062F\u0631\u064A\u0628:",i)}}),this.dashboardCan("violations")&&(Array.isArray(r.violations)?r.violations:[]).forEach(s=>{if(s)try{const i=s.createdAt||s.date||s.violationDate;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.description||s.type||s.category||"\u0645\u062E\u0627\u0644\u0641\u0629";e.push({type:"violation",title:`\u0645\u062E\u0627\u0644\u0641\u0629: ${o}`,date:n,time:this.getTimeAgo(i),icon:"fa-ban",color:"text-pink-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0645\u062E\u0627\u0644\u0641\u0629:",i)}}),this.dashboardCan("periodic-inspections")&&(Array.isArray(r.dailySafetyCheckList)?r.dailySafetyCheckList:[]).forEach(s=>{if(s)try{const i=s.createdAt||s.date;if(!i)return;const n=new Date(i);if(isNaN(n.getTime()))return;const o=s.siteName||s.siteId||"\u0645\u0648\u0642\u0639";e.push({type:"daily-safety-checklist",title:`\u0645\u0631\u0648\u0631 \u064A\u0648\u0645\u064A \u0644\u0644\u0633\u0644\u0627\u0645\u0629: ${o} - ${s.shift||""}`,date:n,time:this.getTimeAgo(i),icon:"fa-clipboard-check",color:"text-cyan-500"})}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0645\u0639\u0627\u0644\u062C\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0627\u0644\u064A\u0648\u0645\u064A:",i)}}),e.sort((a,s)=>!a.date||!s.date?0:s.date-a.date),e.length===0){t.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-inbox text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">${this.t('dash.noRecentActivities', 'لا توجد أنشطة حديثة')}</p>
+                        <p class="text-gray-500">${this.t("dash.noRecentActivities","\u0644\u0627 \u062A\u0648\u062C\u062F \u0623\u0646\u0634\u0637\u0629 \u062D\u062F\u064A\u062B\u0629")}</p>
                     </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = activities.slice(0, 5).map(activity => `
+                `;return}t.innerHTML=e.slice(0,5).map(a=>`
                 <div class="activity-item">
-                    <div class="activity-icon ${activity.color} bg-gray-100">
-                        <i class="fas ${activity.icon}"></i>
+                    <div class="activity-icon ${a.color} bg-gray-100">
+                        <i class="fas ${a.icon}"></i>
                     </div>
                     <div class="activity-content">
-                        <div class="activity-title">${activity.title}</div>
-                        <div class="activity-time">${activity.time}</div>
+                        <div class="activity-title">${a.title}</div>
+                        <div class="activity-time">${a.time}</div>
                     </div>
                 </div>
-            `).join('');
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحميل الأنشطة الأخيرة:', error);
-            if (container) {
-                container.innerHTML = `
+            `).join("")}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0646\u0634\u0637\u0629 \u0627\u0644\u0623\u062E\u064A\u0631\u0629:",e),t&&(t.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-4xl text-red-500 mb-4"></i>
-                        <p class="text-red-600">حدث خطأ في تحميل الأنشطة</p>
+                        <p class="text-red-600">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0646\u0634\u0637\u0629</p>
                     </div>
-                `;
-            }
-        }
-    },
-
-    /**
-     * تحميل مهام المستخدم في لوحة التحكم
-     */
-    async loadUserTasksWidget() {
-        const container = document.getElementById('user-tasks-widget');
-        if (!container) return;
-
-        if (!this.dashboardCan('user-tasks')) {
-            container.innerHTML = `
+                `)}},async loadUserTasksWidget(){const t=document.getElementById("user-tasks-widget");if(!t)return;if(!this.dashboardCan("user-tasks")){t.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-lock text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">${this.t('dash.noPermissionTasks', 'لا توجد صلاحية لعرض مهام المستخدمين.')}</p>
+                    <p class="text-gray-500">${this.t("dash.noPermissionTasks","\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646.")}</p>
                 </div>
-            `;
-            return;
-        }
-
-        // الحصول على المستخدم الحالي
-        const currentUser = AppState.currentUser;
-        if (!currentUser) {
-            container.innerHTML = `
+            `;return}const e=AppState.currentUser;if(!e){t.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-user-slash text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">لم يتم تسجيل الدخول</p>
+                    <p class="text-gray-500">\u0644\u0645 \u064A\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644</p>
                 </div>
-            `;
-            return;
-        }
-
-        // عرض حالة التحميل
-        container.innerHTML = `
+            `;return}t.innerHTML=`
             <div class="empty-state">
                 <i class="fas fa-spinner fa-spin text-4xl text-gray-300 mb-4"></i>
-                <p class="text-gray-500">جاري تحميل المهام...</p>
+                <p class="text-gray-500">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645...</p>
             </div>
-        `;
-
-        try {
-            // التحقق من توفر AppState
-            if (typeof AppState === 'undefined' || !AppState.appData) {
-                container.innerHTML = `
+        `;try{if(typeof AppState>"u"||!AppState.appData){t.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-exclamation-triangle text-4xl text-yellow-500 mb-4"></i>
-                        <p class="text-yellow-600">جاري تحميل البيانات...</p>
+                        <p class="text-yellow-600">\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A...</p>
                     </div>
-                `;
-                return;
-            }
-
-            // الحصول على معرف المستخدم
-            const userId = currentUser.id || currentUser.email;
-
-            // جلب المهام من Backend API
-            let userTasks = [];
-
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendToAppsScript) {
-                try {
-                    const response = await GoogleIntegration.sendToAppsScript('getUserTasksByUserId', {
-                        userId: userId
-                    });
-
-                    if (response && response.success && response.data) {
-                        userTasks = Array.isArray(response.data) ? response.data : [];
-                    }
-                } catch (apiError) {
-                    // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
-                    const errorMsg = String(apiError?.message || '').toLowerCase();
-                    if (!errorMsg.includes('circuit breaker') &&
-                        !errorMsg.includes('google apps script غير مفعل') &&
-                        !errorMsg.includes('غير مفعل')) {
-                        // تسجيل الأخطاء الأخرى فقط
-                        Utils.safeWarn('⚠️ خطأ في جلب المهام من API:', apiError);
-                    }
-                    // المتابعة باستخدام البيانات المحلية
-                }
-            }
-
-            // إذا فشل جلب البيانات من Backend، نستخدم البيانات المحلية كبديل
-            if (userTasks.length === 0) {
-                const allTasks = AppState.appData.userTasks || [];
-                const userId = currentUser.id || currentUser.email;
-
-                // تصفية المهام الخاصة بالمستخدم الحالي
-                userTasks = allTasks.filter(task => {
-                    const taskUserId = task.userId || task.assignedTo || task.assignedUserId;
-                    return taskUserId === userId || taskUserId === currentUser.email;
-                });
-            }
-
-            // ترتيب المهام حسب الأولوية والتاريخ
-            userTasks.sort((a, b) => {
-                // أولاً: المهام غير المكتملة أولاً
-                if (a.status !== 'مكتمل' && b.status === 'مكتمل') return -1;
-                if (a.status === 'مكتمل' && b.status !== 'مكتمل') return 1;
-
-                // ثانياً: حسب الأولوية
-                const priorityOrder = { 'عالية': 3, 'متوسطة': 2, 'منخفضة': 1 };
-                const aPriority = priorityOrder[a.priority] || 0;
-                const bPriority = priorityOrder[b.priority] || 0;
-                if (aPriority !== bPriority) return bPriority - aPriority;
-
-                // ثالثاً: حسب تاريخ الاستحقاق
-                if (a.dueDate && b.dueDate) {
-                    return new Date(a.dueDate) - new Date(b.dueDate);
-                }
-                if (a.dueDate) return -1;
-                if (b.dueDate) return 1;
-
-                // رابعاً: حسب تاريخ الإنشاء
-                if (a.createdAt && b.createdAt) {
-                    return new Date(b.createdAt) - new Date(a.createdAt);
-                }
-                return 0;
-            });
-
-            // عرض أول 5 مهام
-            const tasksToShow = userTasks.slice(0, 5);
-
-            if (tasksToShow.length === 0) {
-                container.innerHTML = `
+                `;return}const r=e.id||e.email;let a=[];if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendToAppsScript)try{const o=await GoogleIntegration.sendToAppsScript("getUserTasksByUserId",{userId:r});o&&o.success&&o.data&&(a=Array.isArray(o.data)?o.data:[])}catch(o){const f=String(o?.message||"").toLowerCase();!f.includes("circuit breaker")&&!f.includes("google apps script \u063A\u064A\u0631 \u0645\u0641\u0639\u0644")&&!f.includes("\u063A\u064A\u0631 \u0645\u0641\u0639\u0644")&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062C\u0644\u0628 \u0627\u0644\u0645\u0647\u0627\u0645 \u0645\u0646 API:",o)}if(a.length===0){const o=AppState.appData.userTasks||[],f=e.id||e.email;a=o.filter(p=>{const l=p.userId||p.assignedTo||p.assignedUserId;return l===f||l===e.email})}a.sort((o,f)=>{if(o.status!=="\u0645\u0643\u062A\u0645\u0644"&&f.status==="\u0645\u0643\u062A\u0645\u0644")return-1;if(o.status==="\u0645\u0643\u062A\u0645\u0644"&&f.status!=="\u0645\u0643\u062A\u0645\u0644")return 1;const p={\u0639\u0627\u0644\u064A\u0629:3,\u0645\u062A\u0648\u0633\u0637\u0629:2,\u0645\u0646\u062E\u0641\u0636\u0629:1},l=p[o.priority]||0,m=p[f.priority]||0;return l!==m?m-l:o.dueDate&&f.dueDate?new Date(o.dueDate)-new Date(f.dueDate):o.dueDate?-1:f.dueDate?1:o.createdAt&&f.createdAt?new Date(f.createdAt)-new Date(o.createdAt):0});const s=a.slice(0,5);if(s.length===0){t.innerHTML=`
                     <div class="empty-state">
                         <i class="fas fa-tasks text-4xl text-gray-300 mb-4"></i>
-                        <p class="text-gray-500">${this.t('dash.noTasks', 'لا توجد مهام')}</p>
+                        <p class="text-gray-500">${this.t("dash.noTasks","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0647\u0627\u0645")}</p>
                     </div>
-                `;
-                return;
-            }
-
-            // تحديد الألوان والأيقونات حسب الحالة
-            const getTaskStatusInfo = (status) => {
-                switch (status) {
-                    case 'مكتمل':
-                    case 'مكتملة':
-                    case 'completed':
-                        return { icon: 'fa-check-circle', color: 'text-green-500', bgColor: 'bg-green-100' };
-                    case 'قيد التنفيذ':
-                    case 'في العمل':
-                    case 'in-progress':
-                        return { icon: 'fa-spinner', color: 'text-blue-500', bgColor: 'bg-blue-100' };
-                    case 'معلقة':
-                    case 'pending':
-                        return { icon: 'fa-pause-circle', color: 'text-yellow-500', bgColor: 'bg-yellow-100' };
-                    case 'ملغاة':
-                    case 'cancelled':
-                        return { icon: 'fa-times-circle', color: 'text-red-500', bgColor: 'bg-red-100' };
-                    default:
-                        return { icon: 'fa-circle', color: 'text-gray-500', bgColor: 'bg-gray-100' };
-                }
-            };
-
-            // تحديد لون الأولوية
-            const getPriorityColor = (priority) => {
-                switch (priority) {
-                    case 'عالية':
-                    case 'high':
-                        return 'text-red-600';
-                    case 'متوسطة':
-                    case 'medium':
-                        return 'text-yellow-600';
-                    case 'منخفضة':
-                    case 'low':
-                        return 'text-green-600';
-                    default:
-                        return 'text-gray-600';
-                }
-            };
-
-            container.innerHTML = tasksToShow.map(task => {
-                const statusInfo = getTaskStatusInfo(task.status);
-                const priorityColor = getPriorityColor(task.priority);
-                const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-                const isOverdue = dueDate && dueDate < new Date() && task.status !== 'مكتمل' && task.status !== 'مكتملة';
-
-                // حساب الوقت المتبقي
-                let timeInfo = '';
-                if (dueDate) {
-                    const now = new Date();
-                    const diff = dueDate - now;
-                    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-                    if (isOverdue) {
-                        timeInfo = `<span class="text-red-600 font-semibold">متأخرة ${Math.abs(days)} يوم</span>`;
-                    } else if (days === 0) {
-                        timeInfo = '<span class="text-orange-600 font-semibold">اليوم</span>';
-                    } else if (days === 1) {
-                        timeInfo = '<span class="text-yellow-600 font-semibold">غداً</span>';
-                    } else if (days <= 7) {
-                        timeInfo = `<span class="text-gray-600">خلال ${days} أيام</span>`;
-                    } else {
-                        timeInfo = `<span class="text-gray-500">${days} يوم متبقي</span>`;
-                    }
-                }
-
-                return `
-                    <div class="activity-item ${isOverdue ? 'border-r-4 border-red-500' : ''}" style="cursor: pointer;" onclick="UI.showSection('user-tasks')">
-                        <div class="activity-icon ${statusInfo.color} ${statusInfo.bgColor}">
-                            <i class="fas ${statusInfo.icon}"></i>
+                `;return}const i=o=>{switch(o){case"\u0645\u0643\u062A\u0645\u0644":case"\u0645\u0643\u062A\u0645\u0644\u0629":case"completed":return{icon:"fa-check-circle",color:"text-green-500",bgColor:"bg-green-100"};case"\u0642\u064A\u062F \u0627\u0644\u062A\u0646\u0641\u064A\u0630":case"\u0641\u064A \u0627\u0644\u0639\u0645\u0644":case"in-progress":return{icon:"fa-spinner",color:"text-blue-500",bgColor:"bg-blue-100"};case"\u0645\u0639\u0644\u0642\u0629":case"pending":return{icon:"fa-pause-circle",color:"text-yellow-500",bgColor:"bg-yellow-100"};case"\u0645\u0644\u063A\u0627\u0629":case"cancelled":return{icon:"fa-times-circle",color:"text-red-500",bgColor:"bg-red-100"};default:return{icon:"fa-circle",color:"text-gray-500",bgColor:"bg-gray-100"}}},n=o=>{switch(o){case"\u0639\u0627\u0644\u064A\u0629":case"high":return"text-red-600";case"\u0645\u062A\u0648\u0633\u0637\u0629":case"medium":return"text-yellow-600";case"\u0645\u0646\u062E\u0641\u0636\u0629":case"low":return"text-green-600";default:return"text-gray-600"}};t.innerHTML=s.map(o=>{const f=i(o.status),p=n(o.priority),l=o.dueDate?new Date(o.dueDate):null,m=l&&l<new Date&&o.status!=="\u0645\u0643\u062A\u0645\u0644"&&o.status!=="\u0645\u0643\u062A\u0645\u0644\u0629";let g="";if(l){const C=l-new Date,y=Math.ceil(C/(1e3*60*60*24));m?g=`<span class="text-red-600 font-semibold">\u0645\u062A\u0623\u062E\u0631\u0629 ${Math.abs(y)} \u064A\u0648\u0645</span>`:y===0?g='<span class="text-orange-600 font-semibold">\u0627\u0644\u064A\u0648\u0645</span>':y===1?g='<span class="text-yellow-600 font-semibold">\u063A\u062F\u0627\u064B</span>':y<=7?g=`<span class="text-gray-600">\u062E\u0644\u0627\u0644 ${y} \u0623\u064A\u0627\u0645</span>`:g=`<span class="text-gray-500">${y} \u064A\u0648\u0645 \u0645\u062A\u0628\u0642\u064A</span>`}return`
+                    <div class="activity-item ${m?"border-r-4 border-red-500":""}" style="cursor: pointer;" onclick="UI.showSection('user-tasks')">
+                        <div class="activity-icon ${f.color} ${f.bgColor}">
+                            <i class="fas ${f.icon}"></i>
                         </div>
                         <div class="activity-content" style="flex: 1;">
                             <div class="activity-title" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                <span>${Utils.escapeHTML(task.title || task.taskTitle || 'مهمة بدون عنوان')}</span>
-                                ${task.priority ? `<span class="text-xs px-2 py-1 rounded ${priorityColor} bg-gray-100">${Utils.escapeHTML(task.priority)}</span>` : ''}
+                                <span>${Utils.escapeHTML(o.title||o.taskTitle||"\u0645\u0647\u0645\u0629 \u0628\u062F\u0648\u0646 \u0639\u0646\u0648\u0627\u0646")}</span>
+                                ${o.priority?`<span class="text-xs px-2 py-1 rounded ${p} bg-gray-100">${Utils.escapeHTML(o.priority)}</span>`:""}
                             </div>
                             <div class="activity-time" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                                ${task.status ? `<span class="text-xs ${statusInfo.color}">${Utils.escapeHTML(task.status)}</span>` : ''}
-                                ${timeInfo ? `<span class="text-xs">${timeInfo}</span>` : ''}
-                                ${task.description ? `<span class="text-xs text-gray-500 truncate" style="max-width: 300px;">${Utils.escapeHTML(task.description)}</span>` : ''}
+                                ${o.status?`<span class="text-xs ${f.color}">${Utils.escapeHTML(o.status)}</span>`:""}
+                                ${g?`<span class="text-xs">${g}</span>`:""}
+                                ${o.description?`<span class="text-xs text-gray-500 truncate" style="max-width: 300px;">${Utils.escapeHTML(o.description)}</span>`:""}
                             </div>
                         </div>
                     </div>
-                `;
-            }).join('');
-
-            // إضافة رابط لعرض جميع المهام
-            if (userTasks.length > 5) {
-                container.innerHTML += `
+                `}).join(""),a.length>5&&(t.innerHTML+=`
                     <div class="mt-4 pt-4 border-t text-center">
                         <a href="#user-tasks" class="text-sm text-blue-600 hover:text-blue-800" style="text-decoration: none;">
-                            عرض جميع المهام (${userTasks.length}) <i class="fas fa-arrow-left mr-1"></i>
+                            \u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0647\u0627\u0645 (${a.length}) <i class="fas fa-arrow-left mr-1"></i>
                         </a>
                     </div>
-                `;
-            }
-        } catch (error) {
-            Utils.safeError('خطأ في تحميل مهام المستخدم:', error);
-            container.innerHTML = `
+                `)}catch(r){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u0647\u0627\u0645 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645:",r),t.innerHTML=`
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle text-4xl text-gray-300 mb-4"></i>
-                    <p class="text-gray-500">حدث خطأ أثناء تحميل المهام</p>
-                    <p class="text-xs text-gray-400 mt-2">يرجى المحاولة مرة أخرى</p>
+                    <p class="text-gray-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0647\u0627\u0645</p>
+                    <p class="text-xs text-gray-400 mt-2">\u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649</p>
                 </div>
-            `;
-        }
-    },
-
-    /**
-     * تحديث الإحصائيات السريعة (Quick Stats)
-     */
-    updateStats() {
-        const data = AppState.appData;
-        if (!data) return;
-
-        try {
-            const now = new Date();
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-            const ptwDataset = this.getUnifiedPTWDataset(data);
-            const training = Array.isArray(data.training) ? data.training : [];
-            const dashboardIncidents = this._getDashboardIncidentsRecords(data);
-
-            // حساب الإحصائيات الأسبوعية مع معالجة الأخطاء
-            const weekIncidents = this.dashboardCan('incidents')
-                ? dashboardIncidents.filter(i => {
-                    if (!i) return false;
-                    const rawDate = i.incidentDate || i.date || i.createdAt;
-                    if (!rawDate) return false;
-                    try {
-                        const incidentDate = new Date(rawDate);
-                        return !isNaN(incidentDate.getTime()) && incidentDate > weekAgo;
-                    } catch (e) {
-                        return false;
-                    }
-                }).length
-                : 0;
-
-            const openPTW = this.dashboardCan('ptw')
-                ? ptwDataset.filter(p => !this.isPTWClosedStatus(p?.status)).length
-                : 0;
-
-            const completedTraining = this.dashboardCan('training')
-                ? training.filter(t => {
-                    if (!t || !t.status) return false;
-                    const status = String(t.status).toLowerCase();
-                    return status === 'مكتمل' || status === 'منتهي' || status === 'completed' || status === 'finished';
-                }).length
-                : 0;
-
-            // تحديث العناصر مع التحقق من وجودها وتطبيق تنسيق الأرقام الإنجليزية
-            const weekIncidentsEl = document.getElementById('week-incidents');
-            const openPTWEl = document.getElementById('open-ptw');
-            const completedTrainingEl = document.getElementById('completed-training');
-            const daysWithoutIncidentEl = document.getElementById('days-without-incident');
-
-            // تحديث الأرقام مع تنسيق إنجليزي
-            if (this.dashboardCan('incidents') && weekIncidentsEl) {
-                weekIncidentsEl.textContent = this.formatNumber(weekIncidents);
-                this.applyEnglishNumberFormat(weekIncidentsEl);
-            }
-            if (this.dashboardCan('ptw') && openPTWEl) {
-                openPTWEl.textContent = this.formatNumber(openPTW);
-                this.applyEnglishNumberFormat(openPTWEl);
-            }
-            if (this.dashboardCan('training') && completedTrainingEl) {
-                completedTrainingEl.textContent = this.formatNumber(completedTraining);
-                this.applyEnglishNumberFormat(completedTrainingEl);
-            }
-
-            // تحديث أيام بدون حوادث
-            if (this.dashboardCan('incidents') && daysWithoutIncidentEl) {
-                const allIncidents = this._getDashboardIncidentsRecords(data);
-
-                if (allIncidents.length > 0) {
-                    const sortedIncidents = allIncidents
-                        .filter(i => i && (i.incidentDate || i.date || i.createdAt))
-                        .map(i => new Date(i.incidentDate || i.date || i.createdAt))
-                        .filter(d => !isNaN(d.getTime()))
-                        .sort((a, b) => b - a);
-                    
-                    if (sortedIncidents.length > 0) {
-                        const lastIncidentDate = sortedIncidents[0];
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        lastIncidentDate.setHours(0, 0, 0, 0);
-                        const daysDiff = Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
-                        daysWithoutIncidentEl.textContent = daysDiff >= 0 ? this.formatNumber(daysDiff) : '0';
-                    } else {
-                        daysWithoutIncidentEl.textContent = '0';
-                    }
-                } else {
-                    daysWithoutIncidentEl.textContent = '0';
-                }
-                this.applyEnglishNumberFormat(daysWithoutIncidentEl);
-            }
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تحديث الإحصائيات السريعة:', error);
-        }
-    },
-
-    /**
-     * حساب مصفوفة تحديثات التقارير والإحصائيات (بدون تطبيق على DOM)
-     */
-    getReportsStatisticsUpdates() {
-        const data = AppState.appData;
-        if (!data) return null;
-        try {
-            const incidents = this._getDashboardIncidentsRecords(data);
-            const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
-            const inspections = Array.isArray(data.inspections) ? data.inspections : [];
-            const training = Array.isArray(data.training) ? data.training : [];
-            const violations = Array.isArray(data.violations) ? data.violations : [];
-            const ptwDataset = this.getUnifiedPTWDataset(data);
-            const ptwCount = ptwDataset.length;
-            const audits = Array.isArray(data.audits) ? data.audits : [];
-
-            let totalReports = 0;
-            const rows = [];
-
-            if (this.dashboardCan('incidents')) {
-                totalReports += incidents.length;
-                rows.push(['incident-reports-value', incidents.length, 'report']);
-            }
-            if (this.dashboardCan('nearmiss')) {
-                totalReports += nearmiss.length;
-                rows.push(['nearmiss-reports-value', nearmiss.length, 'report']);
-            }
-            if (this.dashboardCan('periodic-inspections')) {
-                totalReports += inspections.length;
-                rows.push(['inspections-reports-value', inspections.length, 'report']);
-            }
-            if (this.dashboardCan('training')) {
-                totalReports += training.length;
-                rows.push(['training-sessions-value', training.length, 'report']);
-            }
-            if (this.dashboardCan('violations')) {
-                totalReports += violations.length;
-                rows.push(['violations-value', violations.length, 'report']);
-            }
-            if (this.dashboardCan('contractors')) {
-                const approvedContractors = Array.isArray(data.approvedContractors) ? data.approvedContractors : [];
-                rows.push(['approved-contractors-value', this.getUniqueApprovedContractorsCount(approvedContractors), 'report']);
-            }
-            if (this.dashboardCan('ptw')) {
-                totalReports += ptwCount;
-                rows.push(['ptw-reports-value', ptwCount, 'report']);
-            }
-            if (this.dashboardCan('iso')) {
-                totalReports += audits.length;
-                rows.push(['audits-value', audits.length, 'report']);
-            }
-
-            // ✅ إصابات العيادة (موظفين / مقاولين) — تُقرأ من AppState.appData.injuries
-            // مع التفريق بحقل personType ('employee' vs 'contractor'/'external')
-            if (this.dashboardCan('clinic')) {
-                const injuries = Array.isArray(data.injuries) ? data.injuries : [];
-                let employeeInjuries = 0;
-                let contractorInjuries = 0;
-                for (const inj of injuries) {
-                    const pType = String((inj && inj.personType) || 'employee').toLowerCase().trim();
-                    if (pType === 'employee') {
-                        employeeInjuries++;
-                    } else {
-                        // أي شيء غير 'employee' يُعدّ ضمن مقاولين/عمالة خارجية
-                        // (يتطابق مع منطق فلترة تبويب الإصابات في clinic.js السطر 2386-2388)
-                        contractorInjuries++;
-                    }
-                }
-                rows.push(['clinic-injuries-employee-value', employeeInjuries, 'report']);
-                rows.push(['clinic-injuries-contractor-value', contractorInjuries, 'report']);
-            }
-
-            if (this.anyReportsStatisticVisibleForDashboard()) {
-                rows.unshift(['total-reports-value', totalReports, 'report']);
-            }
-
-            const resourceConsumption = data.resourceConsumption || {};
-            const electricityData = Array.isArray(resourceConsumption.electricity) ? resourceConsumption.electricity : [];
-            const waterData = Array.isArray(resourceConsumption.water) ? resourceConsumption.water : [];
-            const gasData = Array.isArray(resourceConsumption.gas) ? resourceConsumption.gas : [];
-
-            if (this.dashboardCan('sustainability')) {
-                const electricityTotal = electricityData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
-                const waterTotal = waterData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
-                const gasTotal = gasData.reduce((sum, record) => sum + (parseFloat(record.totalConsumption) || 0), 0);
-                rows.push(
-                    ['electricity-consumption-value', electricityTotal, 'consumption'],
-                    ['water-consumption-value', waterTotal, 'consumption'],
-                    ['gas-consumption-value', gasTotal, 'consumption']
-                );
-            }
-
-            return rows;
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في حساب تحديثات التقارير والإحصائيات:', error);
-            return null;
-        }
-    },
-
-    getUniqueApprovedContractorsCount(approvedContractors = []) {
-        if (!Array.isArray(approvedContractors) || approvedContractors.length === 0) {
-            return 0;
-        }
-
-        const seen = new Set();
-        approvedContractors.forEach(record => {
-            if (!record) return;
-
-            // استخدام نفس منطق الـ key المستخدم في موديول المقاولين للتوحيد
-            const entityType = String(record.entityType || record.type || '').trim().toLowerCase();
-            const normalizedName = String(record.companyName || record.name || '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-            const normalizedCode = String(record.code || record.isoCode || '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-            const normalizedLinkedId = String(record.contractorId || record.id || '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-
-            const key = `${entityType}::${normalizedName || normalizedCode || normalizedLinkedId}`;
-
-            if (key && key !== `${entityType}::`) {
-                seen.add(key);
-            }
-        });
-
-        return seen.size;
-    },
-
-    /**
-     * تطبيق مصفوفة التحديثات على DOM (بدون استدعاء setupReportsStatisticsCardsClickHandlers لتجنب الوميض)
-     */
-    applyReportsStatisticsUpdates(updates) {
-        if (!updates || !updates.length) return;
-        const self = this;
-        try {
-            updates.forEach(function (row) {
-                const id = row[0], value = row[1], kind = row[2];
-                if (kind === 'consumption') {
-                    self.updateConsumptionValue(id, value);
-                } else {
-                    self.updateReportValue(id, value);
-                }
-            });
-        } catch (err) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ خطأ في تطبيق قيم التقارير:', err);
-        }
-    },
-
-    /**
-     * تحديث قيم التقارير والإحصائيات مع دعم اللغة العربية والإنجليزية
-     * يتم تجميع كل التحديثات في إطار رسم واحد (requestAnimationFrame) لمنع وميض الكروت
-     */
-    updateReportsStatistics() {
-        const updates = this.getReportsStatisticsUpdates();
-        if (!updates || !updates.length) return;
-        requestAnimationFrame(() => this.applyReportsStatisticsUpdates(updates));
-    },
-
-    /**
-     * تحديث قيمة تقرير مع تنسيق الأرقام
-     * عناصر التقارير والإحصائيات منسقة في HTML/CSS فلا نغيّر class لتفادي وميض (مثل Inspections و TRIR).
-     */
-    updateReportValue(elementId, value) {
-        if (!elementId) return;
-        const element = document.getElementById(elementId);
-        if (!element) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn(`⚠️ العنصر ${elementId} غير موجود في DOM`);
-            return;
-        }
-        try {
-            const formattedValue = this.formatNumber(value);
-            if (element.textContent !== formattedValue) {
-                element.textContent = formattedValue;
-            }
-            if (element.dataset.reportFormatted !== 'true') {
-                element.dataset.reportFormatted = 'true';
-            }
-        } catch (error) {
-            Utils.safeWarn(`⚠️ خطأ في تحديث ${elementId}:`, error);
-        }
-    },
-
-    /**
-     * تحديث قيمة استهلاك مع تنسيق الأرقام العشرية
-     * استهلاك الكهرباء/الغاز منسقان في HTML/CSS فلا نغيّر style/class لتفادي وميض.
-     */
-    updateConsumptionValue(elementId, value) {
-        if (!elementId) return;
-        const element = document.getElementById(elementId);
-        if (!element) {
-            if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn(`⚠️ العنصر ${elementId} غير موجود في DOM`);
-            return;
-        }
-        try {
-            const numValue = Number(value);
-            const formattedValue = isNaN(numValue) || !isFinite(numValue)
-                ? '0.00'
-                : numValue.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                    useGrouping: true
-                });
-            if (element.textContent !== formattedValue) {
-                element.textContent = formattedValue;
-            }
-            const isReportsSectionConsumption = (elementId === 'electricity-consumption-value' || elementId === 'gas-consumption-value');
-            if (element.dataset.consumptionFormatted !== 'true') {
-                if (isReportsSectionConsumption) {
-                    element.dataset.consumptionFormatted = 'true';
-                } else {
-                    element.setAttribute('dir', 'ltr');
-                    element.style.direction = 'ltr';
-                    element.style.textAlign = 'left';
-                    element.style.unicodeBidi = 'embed';
-                    element.style.fontVariantNumeric = 'tabular-nums';
-                    element.style.fontFeatureSettings = '"tnum"';
-                    element.classList.add('english-number');
-                    element.dataset.consumptionFormatted = 'true';
-                }
-            }
-        } catch (error) {
-            Utils.safeWarn(`⚠️ خطأ في تحديث ${elementId}:`, error);
-        }
-    },
-
-    /**
-     * تنسيق معدلات السلامة (كسور عشرية) — LTI يبقى عدداً صحيحاً عبر formatNumber.
-     */
-    formatMetricRate(number, decimals = 2) {
-        if (typeof HseMetrics !== 'undefined' && HseMetrics.formatRateDisplay) {
-            return HseMetrics.formatRateDisplay(number, decimals);
-        }
-        const numValue = Number(number);
-        if (!Number.isFinite(numValue)) return '0';
-        return numValue.toLocaleString('en-US', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals,
-            useGrouping: true
-        });
-    },
-
-    /**
-     * تنسيق الأرقام بالإنجليزية مع دعم الفواصل
-     */
-    formatNumber(number) {
-        // التحقق من القيم الفارغة أو غير الصالحة
-        if (number === null || number === undefined) {
-            return '0';
-        }
-        
-        // التحقق من أن القيمة رقمية
-        const numValue = Number(number);
-        if (isNaN(numValue) || !isFinite(numValue)) {
-            return '0';
-        }
-        
-        // استخدام تنسيق الأرقام الإنجليزية مع الفواصل
-        // استخدام options لضمان التنسيق الصحيح
-        return numValue.toLocaleString('en-US', {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-            useGrouping: true
-        });
-    },
-
-    /**
-     * تطبيق تنسيق الأرقام الإنجليزية على عنصر DOM
-     * عناصر مؤشرات السلامة (trir/fa/tir/lti-value) منسقة بالكامل في CSS فلا نغيّر class/style لتفادي وميض.
-     */
-    applyEnglishNumberFormat(element) {
-        if (!element) return;
-        if (element.dataset.numberFormatted === 'true') return;
-        const id = element.id || '';
-        const isSafetyMetricValue = (id === 'trir-value' || id === 'afr-value' || id === 'far-value' || id === 'fr-value' || id === 'lti-value' || id === 'sr-value' || id === 'ir-value' || id === 'man-days-value');
-        try {
-            if (isSafetyMetricValue) {
-                element.dataset.numberFormatted = 'true';
-                return;
-            }
-            element.classList.add('english-number');
-            element.setAttribute('dir', 'ltr');
-            element.style.direction = 'ltr';
-            element.style.textAlign = 'left';
-            element.style.fontVariantNumeric = 'tabular-nums';
-            element.dataset.numberFormatted = 'true';
-        } catch (error) {
-            Utils.safeWarn('⚠️ خطأ في تطبيق تنسيق الأرقام الإنجليزية:', error);
-        }
-    },
-
-    /**
-     * حساب الوقت المنقضي
-     */
-    getTimeAgo(date) {
-        if (!date) return 'تاريخ غير محدد';
-
-        const now = new Date();
-        const past = new Date(date);
-
-        // التحقق من صحة التاريخ
-        if (isNaN(past.getTime())) return 'تاريخ غير صحيح';
-
-        const diff = now - past;
-
-        // إذا كان التاريخ في المستقبل، إرجاع رسالة مناسبة
-        if (diff < 0) return 'في المستقبل';
-
-        const minutes = Math.floor(diff / 60000);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-
-        if (minutes < 1) return 'الآن';
-        if (minutes < 60) return `منذ ${minutes} دقيقة`;
-        if (hours < 24) return `منذ ${hours} ساعة`;
-        return `منذ ${days} يوم`;
-    },
-
-    /**
-     * تحميل الرسوم البيانية التفاعلية
-     */
-    loadCharts() {
-        let container = document.getElementById('dashboard-charts');
-        if (!container) {
-            const dashboardSection = document.getElementById('dashboard-section');
-            if (dashboardSection) {
-                const chartsDiv = document.createElement('div');
-                chartsDiv.id = 'dashboard-charts';
-                chartsDiv.className = 'mt-6';
-                dashboardSection.appendChild(chartsDiv);
-                container = chartsDiv;
-            } else {
-                return;
-            }
-        }
-
-        const showIncidents = this.dashboardCan('incidents');
-        const showPtw = this.dashboardCan('ptw');
-        const showTraining = this.dashboardCan('training');
-        if (!showIncidents && !showPtw && !showTraining) {
-            container.innerHTML = '';
-            container.classList.remove('dashboard-charts-root');
-            return;
-        }
-
-        container.classList.add('dashboard-charts-root');
-
-        const data = AppState.appData || {};
-        const now = new Date();
-        const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-        const incidentsByDate = {};
-        const ptwByDate = {};
-        const trainingByDate = {};
-
-        const toLocalDateKey = (raw) => {
-            const x = new Date(raw);
-            if (isNaN(x.getTime())) return null;
-            const y = x.getFullYear();
-            const m = String(x.getMonth() + 1).padStart(2, '0');
-            const d = String(x.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        };
-
-        // ✅ مستخرج تاريخ مرن للحوادث (يدعم date, incidentDate, createdAt, updatedAt)
-        const getIncidentDate = (rec) => {
-            if (!rec) return null;
-            const candidates = [rec.date, rec.incidentDate, rec.createdAt, rec.updatedAt, rec.reportDate];
-            for (const v of candidates) {
-                if (!v) continue;
-                const d = new Date(v);
-                if (!isNaN(d.getTime())) return d;
-            }
-            return null;
-        };
-
-        // ✅ نتيجة الفلترة المُستخدَمة في كلا الكارتين (نفس النافذة الزمنية)
-        const incidentsLast30 = (data.incidents || []).filter(i => {
-            const d = getIncidentDate(i);
-            return d && d >= last30Days;
-        });
-
-        if (showIncidents) {
-            // ✅ مفاتيح بصيغة YYYY-MM-DD للتوافق مع renderTrendBarList
-            incidentsLast30.forEach(i => {
-                const k = toLocalDateKey(getIncidentDate(i));
-                if (k) incidentsByDate[k] = (incidentsByDate[k] || 0) + 1;
-            });
-        }
-
-        if (showPtw) {
-            const ptwData = (data.ptw || []).filter(p => {
-                const t = new Date(p.createdAt || p.startDate);
-                return !isNaN(t.getTime()) && t >= last30Days;
-            });
-            ptwData.forEach(p => {
-                const k = toLocalDateKey(p.createdAt || p.startDate);
-                if (k) ptwByDate[k] = (ptwByDate[k] || 0) + 1;
-            });
-        }
-
-        if (showTraining) {
-            const trainingData = (data.training || []).filter(t => {
-                const d = new Date(t.createdAt || t.startDate);
-                return !isNaN(d.getTime()) && d >= last30Days;
-            });
-            trainingData.forEach(t => {
-                const k = toLocalDateKey(t.createdAt || t.startDate);
-                if (k) trainingByDate[k] = (trainingByDate[k] || 0) + 1;
-            });
-        }
-
-        const sections = [];
-
-        if (showIncidents) {
-            sections.push(`
+            `}},updateStats(){const t=AppState.appData;if(t)try{const e=new Date,r=new Date(e.getTime()-10080*60*1e3),a=this.getUnifiedPTWDataset(t),s=Array.isArray(t.training)?t.training:[],i=this._getDashboardIncidentsRecords(t),n=this.dashboardCan("incidents")?i.filter(b=>{if(!b)return!1;const C=b.incidentDate||b.date||b.createdAt;if(!C)return!1;try{const y=new Date(C);return!isNaN(y.getTime())&&y>r}catch{return!1}}).length:0,o=this.dashboardCan("ptw")?a.filter(b=>!this.isPTWClosedStatus(b?.status)).length:0,f=this.dashboardCan("training")?s.filter(b=>{if(!b||!b.status)return!1;const C=String(b.status).toLowerCase();return C==="\u0645\u0643\u062A\u0645\u0644"||C==="\u0645\u0646\u062A\u0647\u064A"||C==="completed"||C==="finished"}).length:0,p=document.getElementById("week-incidents"),l=document.getElementById("open-ptw"),m=document.getElementById("completed-training"),g=document.getElementById("days-without-incident");if(this.dashboardCan("incidents")&&p&&(p.textContent=this.formatNumber(n),this.applyEnglishNumberFormat(p)),this.dashboardCan("ptw")&&l&&(l.textContent=this.formatNumber(o),this.applyEnglishNumberFormat(l)),this.dashboardCan("training")&&m&&(m.textContent=this.formatNumber(f),this.applyEnglishNumberFormat(m)),this.dashboardCan("incidents")&&g){const b=this._getDashboardIncidentsRecords(t);if(b.length>0){const C=b.filter(y=>y&&(y.incidentDate||y.date||y.createdAt)).map(y=>new Date(y.incidentDate||y.date||y.createdAt)).filter(y=>!isNaN(y.getTime())).sort((y,x)=>x-y);if(C.length>0){const y=C[0],x=new Date;x.setHours(0,0,0,0),y.setHours(0,0,0,0);const A=Math.floor((x-y)/(1e3*60*60*24));g.textContent=A>=0?this.formatNumber(A):"0"}else g.textContent="0"}else g.textContent="0";this.applyEnglishNumberFormat(g)}}catch(e){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629:",e)}},getReportsStatisticsUpdates(){const t=AppState.appData;if(!t)return null;try{const e=this._getDashboardIncidentsRecords(t),r=Array.isArray(t.nearmiss)?t.nearmiss:[],a=Array.isArray(t.inspections)?t.inspections:[],s=Array.isArray(t.training)?t.training:[],i=Array.isArray(t.violations)?t.violations:[],o=this.getUnifiedPTWDataset(t).length,f=Array.isArray(t.audits)?t.audits:[];let p=0;const l=[];if(this.dashboardCan("incidents")&&(p+=e.length,l.push(["incident-reports-value",e.length,"report"])),this.dashboardCan("nearmiss")&&(p+=r.length,l.push(["nearmiss-reports-value",r.length,"report"])),this.dashboardCan("periodic-inspections")&&(p+=a.length,l.push(["inspections-reports-value",a.length,"report"])),this.dashboardCan("training")&&(p+=s.length,l.push(["training-sessions-value",s.length,"report"])),this.dashboardCan("violations")&&(p+=i.length,l.push(["violations-value",i.length,"report"])),this.dashboardCan("contractors")){const y=Array.isArray(t.approvedContractors)?t.approvedContractors:[];l.push(["approved-contractors-value",this.getUniqueApprovedContractorsCount(y),"report"])}if(this.dashboardCan("ptw")&&(p+=o,l.push(["ptw-reports-value",o,"report"])),this.dashboardCan("iso")&&(p+=f.length,l.push(["audits-value",f.length,"report"])),this.dashboardCan("clinic")){const y=Array.isArray(t.injuries)?t.injuries:[];let x=0,A=0;for(const T of y)String(T&&T.personType||"employee").toLowerCase().trim()==="employee"?x++:A++;l.push(["clinic-injuries-employee-value",x,"report"]),l.push(["clinic-injuries-contractor-value",A,"report"])}this.anyReportsStatisticVisibleForDashboard()&&l.unshift(["total-reports-value",p,"report"]);const m=t.resourceConsumption||{},g=Array.isArray(m.electricity)?m.electricity:[],b=Array.isArray(m.water)?m.water:[],C=Array.isArray(m.gas)?m.gas:[];if(this.dashboardCan("sustainability")){const y=g.reduce((T,v)=>T+(parseFloat(v.totalConsumption)||0),0),x=b.reduce((T,v)=>T+(parseFloat(v.totalConsumption)||0),0),A=C.reduce((T,v)=>T+(parseFloat(v.totalConsumption)||0),0);l.push(["electricity-consumption-value",y,"consumption"],["water-consumption-value",x,"consumption"],["gas-consumption-value",A,"consumption"])}return l}catch(e){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0633\u0627\u0628 \u062A\u062D\u062F\u064A\u062B\u0627\u062A \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631 \u0648\u0627\u0644\u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A:",e),null}},getUniqueApprovedContractorsCount(t=[]){if(!Array.isArray(t)||t.length===0)return 0;const e=new Set;return t.forEach(r=>{if(!r)return;const a=String(r.entityType||r.type||"").trim().toLowerCase(),s=String(r.companyName||r.name||"").replace(/\s+/g," ").trim().toLowerCase(),i=String(r.code||r.isoCode||"").replace(/\s+/g," ").trim().toLowerCase(),n=String(r.contractorId||r.id||"").replace(/\s+/g," ").trim().toLowerCase(),o=`${a}::${s||i||n}`;o&&o!==`${a}::`&&e.add(o)}),e.size},applyReportsStatisticsUpdates(t){if(!t||!t.length)return;const e=this;try{t.forEach(function(r){const a=r[0],s=r[1];r[2]==="consumption"?e.updateConsumptionValue(a,s):e.updateReportValue(a,s)})}catch(r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0637\u0628\u064A\u0642 \u0642\u064A\u0645 \u0627\u0644\u062A\u0642\u0627\u0631\u064A\u0631:",r)}},updateReportsStatistics(){const t=this.getReportsStatisticsUpdates();!t||!t.length||requestAnimationFrame(()=>this.applyReportsStatisticsUpdates(t))},updateReportValue(t,e){if(!t)return;const r=document.getElementById(t);if(!r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn(`\u26A0\uFE0F \u0627\u0644\u0639\u0646\u0635\u0631 ${t} \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM`);return}try{const a=this.formatNumber(e);r.textContent!==a&&(r.textContent=a),r.dataset.reportFormatted!=="true"&&(r.dataset.reportFormatted="true")}catch(a){Utils.safeWarn(`\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B ${t}:`,a)}},updateConsumptionValue(t,e){if(!t)return;const r=document.getElementById(t);if(!r){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn(`\u26A0\uFE0F \u0627\u0644\u0639\u0646\u0635\u0631 ${t} \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM`);return}try{const a=Number(e),s=isNaN(a)||!isFinite(a)?"0.00":a.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:!0});r.textContent!==s&&(r.textContent=s);const i=t==="electricity-consumption-value"||t==="gas-consumption-value";r.dataset.consumptionFormatted!=="true"&&(i||(r.setAttribute("dir","ltr"),r.style.direction="ltr",r.style.textAlign="left",r.style.unicodeBidi="embed",r.style.fontVariantNumeric="tabular-nums",r.style.fontFeatureSettings='"tnum"',r.classList.add("english-number")),r.dataset.consumptionFormatted="true")}catch(a){Utils.safeWarn(`\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B ${t}:`,a)}},formatMetricRate(t,e=2){if(typeof HseMetrics<"u"&&HseMetrics.formatRateDisplay)return HseMetrics.formatRateDisplay(t,e);const r=Number(t);return Number.isFinite(r)?r.toLocaleString("en-US",{minimumFractionDigits:e,maximumFractionDigits:e,useGrouping:!0}):"0"},formatNumber(t){if(t==null)return"0";const e=Number(t);return isNaN(e)||!isFinite(e)?"0":e.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:0,useGrouping:!0})},applyEnglishNumberFormat(t){if(!t||t.dataset.numberFormatted==="true")return;const e=t.id||"",r=e==="trir-value"||e==="afr-value"||e==="far-value"||e==="fr-value"||e==="lti-value"||e==="sr-value"||e==="ir-value"||e==="man-days-value";try{if(r){t.dataset.numberFormatted="true";return}t.classList.add("english-number"),t.setAttribute("dir","ltr"),t.style.direction="ltr",t.style.textAlign="left",t.style.fontVariantNumeric="tabular-nums",t.dataset.numberFormatted="true"}catch(a){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0637\u0628\u064A\u0642 \u062A\u0646\u0633\u064A\u0642 \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629:",a)}},getTimeAgo(t){if(!t)return"\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0645\u062D\u062F\u062F";const e=new Date,r=new Date(t);if(isNaN(r.getTime()))return"\u062A\u0627\u0631\u064A\u062E \u063A\u064A\u0631 \u0635\u062D\u064A\u062D";const a=e-r;if(a<0)return"\u0641\u064A \u0627\u0644\u0645\u0633\u062A\u0642\u0628\u0644";const s=Math.floor(a/6e4),i=Math.floor(s/60),n=Math.floor(i/24);return s<1?"\u0627\u0644\u0622\u0646":s<60?`\u0645\u0646\u0630 ${s} \u062F\u0642\u064A\u0642\u0629`:i<24?`\u0645\u0646\u0630 ${i} \u0633\u0627\u0639\u0629`:`\u0645\u0646\u0630 ${n} \u064A\u0648\u0645`},loadCharts(){let t=document.getElementById("dashboard-charts");if(!t){const y=document.getElementById("dashboard-section");if(y){const x=document.createElement("div");x.id="dashboard-charts",x.className="mt-6",y.appendChild(x),t=x}else return}const e=this.dashboardCan("incidents"),r=this.dashboardCan("ptw"),a=this.dashboardCan("training");if(!e&&!r&&!a){t.innerHTML="",t.classList.remove("dashboard-charts-root");return}t.classList.add("dashboard-charts-root");const s=AppState.appData||{},i=new Date,n=new Date(i.getTime()-720*60*60*1e3),o={},f={},p={},l=y=>{const x=new Date(y);if(isNaN(x.getTime()))return null;const A=x.getFullYear(),T=String(x.getMonth()+1).padStart(2,"0"),v=String(x.getDate()).padStart(2,"0");return`${A}-${T}-${v}`},m=y=>{if(!y)return null;const x=[y.date,y.incidentDate,y.createdAt,y.updatedAt,y.reportDate];for(const A of x){if(!A)continue;const T=new Date(A);if(!isNaN(T.getTime()))return T}return null},g=(s.incidents||[]).filter(y=>{const x=m(y);return x&&x>=n});e&&g.forEach(y=>{const x=l(m(y));x&&(o[x]=(o[x]||0)+1)}),r&&(s.ptw||[]).filter(x=>{const A=new Date(x.createdAt||x.startDate);return!isNaN(A.getTime())&&A>=n}).forEach(x=>{const A=l(x.createdAt||x.startDate);A&&(f[A]=(f[A]||0)+1)}),a&&(s.training||[]).filter(x=>{const A=new Date(x.createdAt||x.startDate);return!isNaN(A.getTime())&&A>=n}).forEach(x=>{const A=l(x.createdAt||x.startDate);A&&(p[A]=(p[A]||0)+1)});const b=[];e&&b.push(`
             <div class="dashboard-charts-grid-row">
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-line ml-2"></i>
-                            ${this.t('dash.chartIncidents30d', 'الحوادث - آخر 30 يوم')}
+                            ${this.t("dash.chartIncidents30d","\u0627\u0644\u062D\u0648\u0627\u062F\u062B - \u0622\u062E\u0631 30 \u064A\u0648\u0645")}
                         </h2>
                     </div>
                     <div class="card-body">
                         <div class="chart-container dash-chart-container--trend">
-                            ${this.renderTrendBarList(incidentsByDate, 'حادثاً مسجلاً', 'incidents')}
+                            ${this.renderTrendBarList(o,"\u062D\u0627\u062F\u062B\u0627\u064B \u0645\u0633\u062C\u0644\u0627\u064B","incidents")}
                         </div>
                     </div>
                 </div>
@@ -4902,180 +1193,74 @@ const Dashboard = {
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-pie ml-2"></i>
-                            ${this.t('dash.chartIncidentsBySeverity', 'توزيع الحوادث حسب الخطورة')}
+                            ${this.t("dash.chartIncidentsBySeverity","\u062A\u0648\u0632\u064A\u0639 \u0627\u0644\u062D\u0648\u0627\u062F\u062B \u062D\u0633\u0628 \u0627\u0644\u062E\u0637\u0648\u0631\u0629")}
                         </h2>
                     </div>
                     <div class="card-body">
                         <div class="chart-container dash-chart-container--severity">
-                            ${this.renderSeverityChart(incidentsLast30)}
+                            ${this.renderSeverityChart(g)}
                         </div>
                     </div>
                 </div>
-            </div>`);
-        }
-
-        const row2 = [];
-        if (showPtw) {
-            row2.push(`
+            </div>`);const C=[];r&&C.push(`
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-bar ml-2"></i>
-                            ${this.t('dash.chartPtw30d', 'Work Permits - آخر 30 يوم')}
+                            ${this.t("dash.chartPtw30d","Work Permits - \u0622\u062E\u0631 30 \u064A\u0648\u0645")}
                         </h2>
                     </div>
                     <div class="card-body">
                         <div class="chart-container dash-chart-container--trend">
-                            ${this.renderTrendBarList(ptwByDate, 'تصريحاً مسجلاً', 'ptw')}
+                            ${this.renderTrendBarList(f,"\u062A\u0635\u0631\u064A\u062D\u0627\u064B \u0645\u0633\u062C\u0644\u0627\u064B","ptw")}
                         </div>
                     </div>
-                </div>`);
-        }
-        if (showTraining) {
-            row2.push(`
+                </div>`),a&&C.push(`
                 <div class="content-card">
                     <div class="card-header">
                         <h2 class="card-title">
                             <i class="fas fa-chart-area ml-2"></i>
-                            ${this.t('dash.chartTraining30d', 'Training - آخر 30 يوم')}
+                            ${this.t("dash.chartTraining30d","Training - \u0622\u062E\u0631 30 \u064A\u0648\u0645")}
                         </h2>
                     </div>
                     <div class="card-body">
                         <div class="chart-container dash-chart-container--trend">
-                            ${this.renderTrendBarList(trainingByDate, 'نشاطاً تدريبياً', 'training')}
+                            ${this.renderTrendBarList(p,"\u0646\u0634\u0627\u0637\u0627\u064B \u062A\u062F\u0631\u064A\u0628\u064A\u0627\u064B","training")}
                         </div>
                     </div>
-                </div>`);
-        }
-        if (row2.length > 0) {
-            sections.push(`<div class="dashboard-charts-grid-row">${row2.join('')}</div>`);
-        }
-
-        container.innerHTML = sections.join('');
-
-        setTimeout(() => {
-            this.renderSimpleCharts();
-        }, 100);
-    },
-
-    /**
-     * تطبيع قيمة الخطورة → 'high' | 'medium' | 'low' | 'unknown'
-     * يدعم العربية والإنجليزية معاً ولا يفترض أن المجهول = منخفض.
-     */
-    _normalizeIncidentSeverity(raw) {
-        const v = String(raw || '').trim().toLowerCase();
-        if (!v) return 'unknown';
-        if (v.includes('عالي') || v.includes('عاليه') || v.includes('حرج') || v.includes('high') || v.includes('critical')) return 'high';
-        if (v.includes('متوسط') || v.includes('medium') || v.includes('moderate')) return 'medium';
-        if (v.includes('منخفض') || v.includes('بسيط') || v.includes('low') || v.includes('minor')) return 'low';
-        return 'unknown';
-    },
-
-    renderSeverityChart(incidents) {
-        // ✅ تطبيع موحَّد للخطورة + bucket مستقل للمجهول
-        const counts = { high: 0, medium: 0, low: 0, unknown: 0 };
-        (incidents || []).forEach(i => {
-            const k = this._normalizeIncidentSeverity(i && i.severity);
-            counts[k]++;
-        });
-
-        const total = counts.high + counts.medium + counts.low + counts.unknown;
-        if (total === 0) {
-            return `<div class="empty-state"><p class="text-gray-500">${this.t('dash.noData30d', 'لا توجد بيانات في آخر 30 يوماً')}</p></div>`;
-        }
-
-        const pct = (n) => total > 0 ? (n / total) * 100 : 0;
-        const row = (labelAr, value, percent, fillMod, textClass) => `
+                </div>`),C.length>0&&b.push(`<div class="dashboard-charts-grid-row">${C.join("")}</div>`),t.innerHTML=b.join(""),setTimeout(()=>{this.renderSimpleCharts()},100)},_normalizeIncidentSeverity(t){const e=String(t||"").trim().toLowerCase();return e?e.includes("\u0639\u0627\u0644\u064A")||e.includes("\u0639\u0627\u0644\u064A\u0647")||e.includes("\u062D\u0631\u062C")||e.includes("high")||e.includes("critical")?"high":e.includes("\u0645\u062A\u0648\u0633\u0637")||e.includes("medium")||e.includes("moderate")?"medium":e.includes("\u0645\u0646\u062E\u0641\u0636")||e.includes("\u0628\u0633\u064A\u0637")||e.includes("low")||e.includes("minor")?"low":"unknown":"unknown"},renderSeverityChart(t){const e={high:0,medium:0,low:0,unknown:0};(t||[]).forEach(n=>{const o=this._normalizeIncidentSeverity(n&&n.severity);e[o]++});const r=e.high+e.medium+e.low+e.unknown;if(r===0)return`<div class="empty-state"><p class="text-gray-500">${this.t("dash.noData30d","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0622\u062E\u0631 30 \u064A\u0648\u0645\u0627\u064B")}</p></div>`;const a=n=>r>0?n/r*100:0,s=(n,o,f,p,l)=>`
                 <div class="dash-severity-bar">
                     <div class="flex items-center justify-between">
-                        <span class="text-sm font-semibold">${labelAr}</span>
-                        <span class="text-sm font-bold ${textClass}" dir="ltr">${value} <span class="text-xs text-gray-400">(${percent.toFixed(1)}%)</span></span>
+                        <span class="text-sm font-semibold">${n}</span>
+                        <span class="text-sm font-bold ${l}" dir="ltr">${o} <span class="text-xs text-gray-400">(${f.toFixed(1)}%)</span></span>
                     </div>
                     <div class="dash-severity-bar__track" role="presentation">
-                        <div class="dash-severity-bar__fill dash-severity-bar__fill--${fillMod}" style="width: ${percent}%"></div>
+                        <div class="dash-severity-bar__fill dash-severity-bar__fill--${p}" style="width: ${f}%"></div>
                     </div>
-                </div>`;
-
-        // ✅ يُعرض bucket "غير محدد" فقط لو فيه قيم — لا يظهر كصف فارغ
-        const unknownRow = counts.unknown > 0
-            ? row('غير محدد', counts.unknown, pct(counts.unknown), 'unknown', 'text-gray-600')
-            : '';
-
-        return `
+                </div>`,i=e.unknown>0?s("\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",e.unknown,a(e.unknown),"unknown","text-gray-600"):"";return`
             <div class="dash-severity-chart">
                 <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
-                    <span>إجمالي الحوادث (آخر 30 يوم)</span>
-                    <span class="text-gray-700" dir="ltr">${total}</span>
+                    <span>\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u062D\u0648\u0627\u062F\u062B (\u0622\u062E\u0631 30 \u064A\u0648\u0645)</span>
+                    <span class="text-gray-700" dir="ltr">${r}</span>
                 </div>
-                ${row('عالي / حرج', counts.high, pct(counts.high), 'high', 'text-red-600')}
-                ${row('متوسط', counts.medium, pct(counts.medium), 'medium', 'text-yellow-600')}
-                ${row('منخفض', counts.low, pct(counts.low), 'low', 'text-green-600')}
-                ${unknownRow}
+                ${s("\u0639\u0627\u0644\u064A / \u062D\u0631\u062C",e.high,a(e.high),"high","text-red-600")}
+                ${s("\u0645\u062A\u0648\u0633\u0637",e.medium,a(e.medium),"medium","text-yellow-600")}
+                ${s("\u0645\u0646\u062E\u0641\u0636",e.low,a(e.low),"low","text-green-600")}
+                ${i}
             </div>
-        `;
-    },
-
-    /**
-     * مخطط يومي واضح: تاريخ مقروء + شريط نسبي + الرقم الفعلي (آخر 14 يوماً ببيانات ضمن النافذة).
-     * المفاتيح متوقعة بصيغة YYYY-MM-DD لفرز زمني صحيح.
-     */
-    renderTrendBarList(dataByDateIso, unitPhrase, variant = 'ptw') {
-        const keys = Object.keys(dataByDateIso || {}).sort();
-        if (keys.length === 0) {
-            return `<div class="dash-trend-empty"><p class="dash-trend-empty__text">${this.t('dash.noData30d', 'لا توجد بيانات في آخر 30 يوماً')}</p></div>`;
-        }
-
-        const windowKeys = keys.slice(-14);
-        const values = windowKeys.map((k) => dataByDateIso[k] || 0);
-        const total = values.reduce((a, b) => a + b, 0);
-        const maxValue = Math.max(...values, 1);
-
-        const formatTrendDayLabel = (isoKey) => {
-            const parts = isoKey.split('-').map(Number);
-            if (parts.length !== 3 || parts.some((n) => !n)) return isoKey;
-            const dt = new Date(parts[0], parts[1] - 1, parts[2]);
-            return dt.toLocaleDateString('ar-SA', {
-                weekday: 'short',
-                month: 'numeric',
-                day: 'numeric'
-            });
-        };
-
-        const rows = windowKeys.map((isoKey) => {
-            const value = dataByDateIso[isoKey] || 0;
-            const pct = Math.round((value / maxValue) * 100);
-            const label = formatTrendDayLabel(isoKey);
-            return `
+        `},renderTrendBarList(t,e,r="ptw"){const a=Object.keys(t||{}).sort();if(a.length===0)return`<div class="dash-trend-empty"><p class="dash-trend-empty__text">${this.t("dash.noData30d","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0641\u064A \u0622\u062E\u0631 30 \u064A\u0648\u0645\u0627\u064B")}</p></div>`;const s=a.slice(-14),i=s.map(m=>t[m]||0),n=i.reduce((m,g)=>m+g,0),o=Math.max(...i,1),f=m=>{const g=m.split("-").map(Number);return g.length!==3||g.some(C=>!C)?m:new Date(g[0],g[1]-1,g[2]).toLocaleDateString("ar-SA",{weekday:"short",month:"numeric",day:"numeric"})},p=s.map(m=>{const g=t[m]||0,b=Math.round(g/o*100);return`
                 <li class="dash-trend-row">
-                    <span class="dash-trend-date">${label}</span>
+                    <span class="dash-trend-date">${f(m)}</span>
                     <div class="dash-trend-track" role="presentation">
-                        <div class="dash-trend-fill" style="width: ${pct}%"></div>
+                        <div class="dash-trend-fill" style="width: ${b}%"></div>
                     </div>
-                    <span class="dash-trend-count" dir="ltr" title="${unitPhrase}">${value}</span>
-                </li>`;
-        }).join('');
-
-        const variantClass = variant === 'training' ? ' dash-trend-chart--training' : ' dash-trend-chart--ptw';
-
-        return `
-            <div class="dash-trend-chart${variantClass}" dir="rtl">
+                    <span class="dash-trend-count" dir="ltr" title="${e}">${g}</span>
+                </li>`}).join("");return`
+            <div class="dash-trend-chart${r==="training"?" dash-trend-chart--training":" dash-trend-chart--ptw"}" dir="rtl">
                 <div class="dash-trend-summary">
-                    <span class="dash-trend-summary__label">مجموع الأيام المعروضة</span>
-                    <strong class="dash-trend-summary__value" dir="ltr">${total}</strong>
+                    <span class="dash-trend-summary__label">\u0645\u062C\u0645\u0648\u0639 \u0627\u0644\u0623\u064A\u0627\u0645 \u0627\u0644\u0645\u0639\u0631\u0648\u0636\u0629</span>
+                    <strong class="dash-trend-summary__value" dir="ltr">${n}</strong>
                 </div>
-                <p class="dash-trend-hint">كل صف يمثل يوماً واحداً: الطول النسبي مقارنة بأعلى يوم في هذه الفترة، والرقم يمثل ${unitPhrase} في ذلك اليوم.</p>
-                <ul class="dash-trend-rows">${rows}</ul>
-            </div>`;
-    },
-
-    renderSimpleCharts() {
-        // يمكن إضافة مكتبة Chart.js هنا لرسوم بيانية أكثر تفصيلاً
-        if (typeof Utils !== 'undefined' && Utils.safeLog) {
-            Utils.safeLog('الرسوم البيانية جاهزة');
-        }
-    }
-};
-// تصدير Dashboard للتوافق مع الكود القديم
-if (typeof window !== "undefined") {
-    window.Dashboard = window.Dashboard || Dashboard;
-}
+                <p class="dash-trend-hint">\u0643\u0644 \u0635\u0641 \u064A\u0645\u062B\u0644 \u064A\u0648\u0645\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B: \u0627\u0644\u0637\u0648\u0644 \u0627\u0644\u0646\u0633\u0628\u064A \u0645\u0642\u0627\u0631\u0646\u0629 \u0628\u0623\u0639\u0644\u0649 \u064A\u0648\u0645 \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0641\u062A\u0631\u0629\u060C \u0648\u0627\u0644\u0631\u0642\u0645 \u064A\u0645\u062B\u0644 ${e} \u0641\u064A \u0630\u0644\u0643 \u0627\u0644\u064A\u0648\u0645.</p>
+                <ul class="dash-trend-rows">${p}</ul>
+            </div>`},renderSimpleCharts(){typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629 \u062C\u0627\u0647\u0632\u0629")}};typeof window<"u"&&(window.Dashboard=window.Dashboard||Dashboard);

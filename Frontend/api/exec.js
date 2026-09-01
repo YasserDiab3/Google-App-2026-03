@@ -29,10 +29,18 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
         const action = req.query?.action;
         if (action === 'getProfileImage') {
-            const { getProfileImage } = require('../backend-sql/src/handlers/file-handlers');
-            const result = getProfileImage(req.query);
-            // JSON دائماً — الواجهة تجلب عبر fetch وتتحقق من redirectUrl يدوياً (تجنب 403 في img.src)
-            return res.status(200).json(result);
+            try {
+                const { getProfileImage } = require('../backend-sql/src/handlers/file-handlers');
+                const result = await getProfileImage(req.query);
+                // JSON دائماً — الواجهة تجلب عبر fetch وتتحقق من redirectUrl يدوياً (تجنب 403 في img.src)
+                return res.status(200).json(result);
+            } catch (err) {
+                return res.status(500).json({
+                    success: false,
+                    message: err.message || 'فشل جلب الصورة',
+                    errorCode: 'PROFILE_IMAGE_ERROR'
+                });
+            }
         }
         if (action) {
             try {

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1585",
+  "version": "1.0.1591",
   "highlights": {
     "ar": [
-      "إصلاح تهنيج الملاحظات: القائمة بدون صور حتى لا تنفد ذاكرة المتصفح.",
-      "سجل الملاحظات يعرض 50 صفاً ثم زر عرض المزيد.",
-      "صور الملاحظة تُحمَّل عند فتح التفاصيل فقط."
+      "صور الملاحظات تظهر في تقرير PowerPoint بعد إصلاح جلب مرفقات Drive.",
+      "تصدير PPTX يعرض الصورة المرفقة بدل رسالة «لا توجد صورة».",
+      "وكيل الصور يستخدم خادم SQL ويجلب الملف كصورة مضمّنة."
     ],
     "en": [
-      "Fix observations Out of Memory: list loads without photo blobs.",
-      "Observations table shows 50 rows then Load more.",
-      "Photos load only when opening one observation."
+      "Observation photos now appear in the PowerPoint export after Drive attachment fetch was fixed.",
+      "PPTX export shows the attached image instead of the missing-photo placeholder.",
+      "Image proxy uses the SQL server and embeds the file as a data URI."
     ]
   }
 }

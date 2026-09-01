@@ -1,13 +1,15 @@
 {
-  "version": "1.0.1589",
+  "version": "1.0.1591",
   "highlights": {
     "ar": [
-      "ترحيل بيانات جديدة من Google Sheets إلى SQL: تصاريح، تدريب، تردد، وباقي الموديولات.",
-      "حسابات المستخدمين لم تُمس. تصاريح العمل وسجل التصاريح مطابقان عدداً وبيانات."
+      "صور الملاحظات تظهر في تقرير PowerPoint بعد إصلاح جلب مرفقات Drive.",
+      "تصدير PPTX يعرض الصورة المرفقة بدل رسالة «لا توجد صورة».",
+      "وكيل الصور يستخدم خادم SQL ويجلب الملف كصورة مضمّنة."
     ],
     "en": [
-      "New Google Sheets data migrated to SQL: permits, training, clinic visits, and other modules.",
-      "User accounts unchanged. PTW and PTWRegistry now match in count and records."
+      "Observation photos now appear in the PowerPoint export after Drive attachment fetch was fixed.",
+      "PPTX export shows the attached image instead of the missing-photo placeholder.",
+      "Image proxy uses the SQL server and embeds the file as a data URI."
     ]
   }
 }

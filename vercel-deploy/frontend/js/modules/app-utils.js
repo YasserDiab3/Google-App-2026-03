@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1589',
+    appVersion: '1.0.1591',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -5233,14 +5233,14 @@ const Utils = {
 
     /** رابط API للصور — SQL /api/exec أو GAS */
     getEffectiveImageApiUrl() {
-        const gas = this.getAppsScriptScriptUrl();
-        if (gas) return gas;
         try {
             if (typeof window !== 'undefined' && typeof window.getEffectiveApiUrl === 'function') {
                 const u = String(window.getEffectiveApiUrl() || '').trim();
                 if (u) return u;
             }
         } catch (_e) { /* ignore */ }
+        const gas = this.getAppsScriptScriptUrl();
+        if (gas) return gas;
         return '/api/exec';
     },
 
@@ -5373,14 +5373,19 @@ const Utils = {
     /**
      * جلب صورة عبر getProfileImage (dataUri أو رابط عام بعد التحقق) — دون وضع رابط الوكيل في img.src.
      */
-    async fetchDriveImageDataUri(fileId) {
+    async fetchDriveImageDataUri(fileId, options) {
         const id = String(fileId || '').trim();
         if (!id) return null;
-        if (this._isDriveImageFetchBlocked(id)) return null;
+        const force = !!(options && options.force);
+        if (!force && this._isDriveImageFetchBlocked(id)) return null;
+        if (force) {
+            if (this._driveImageFailCache) this._driveImageFailCache.delete(id);
+            try { sessionStorage.removeItem(this._DRIVE_IMAGE_FAIL_SS_PREFIX + id); } catch (e) { /* ignore */ }
+        }
 
         if (this._driveImageMemoryCache && this._driveImageMemoryCache.has(id)) {
             const cached = this._driveImageMemoryCache.get(id);
-            return cached || null;
+            if (!force || (cached && String(cached).startsWith('data:'))) return cached || null;
         }
         try {
             const cached = sessionStorage.getItem('HSE_IMG_CACHE_' + id);

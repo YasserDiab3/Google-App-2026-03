@@ -8679,13 +8679,18 @@ const DailyObservations = {
                             return { data: dataVal.startsWith('data:') ? dataVal : ('data:image/jpeg;base64,' + dataVal) };
                         }
                     }
-                    url = input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || input.data || '';
+                    url = String(input.url || input.directLink || input.shareableLink || input.link || input.driveUrl || input.data || '').trim();
                     const rawId = String(input.fileId || input.driveId || '').trim();
                     const attId = String(input.id || '').trim();
                     fileId = rawId;
                     if (!fileId && /^FILE_/i.test(attId)) fileId = attId;
-                    if (!fileId && typeof Utils !== 'undefined' && typeof Utils.extractImageProxyId === 'function') {
-                        fileId = Utils.extractImageProxyId(url) || Utils.extractImageProxyId(attId) || '';
+                    if (!fileId && typeof Utils !== 'undefined') {
+                        if (typeof Utils.extractImageProxyId === 'function') {
+                            fileId = Utils.extractImageProxyId(url) || Utils.extractImageProxyId(attId) || '';
+                        }
+                        if (!fileId && typeof Utils.extractDriveFileId === 'function') {
+                            fileId = Utils.extractDriveFileId(url) || Utils.extractDriveFileId(attId) || '';
+                        }
                     }
                 } else if (typeof input === 'string') {
                     url = input.trim();
@@ -8700,33 +8705,33 @@ const DailyObservations = {
                     return { data: url };
                 }
 
-                if (!fileId && typeof Utils !== 'undefined' && typeof Utils.extractImageProxyId === 'function') {
-                    fileId = Utils.extractImageProxyId(url) || '';
+                if (!fileId && typeof Utils !== 'undefined') {
+                    if (typeof Utils.extractImageProxyId === 'function') fileId = Utils.extractImageProxyId(url) || '';
+                    if (!fileId && typeof Utils.extractDriveFileId === 'function') fileId = Utils.extractDriveFileId(url) || '';
                 }
                 if (/^FILE_/i.test(url)) fileId = url.split(/[?#\s]/)[0];
                 if (fileId && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
                     try {
-                        const uri = await Utils.fetchDriveImageDataUri(fileId);
+                        const uri = await Utils.fetchDriveImageDataUri(fileId, { force: true });
                         if (uri && String(uri).startsWith('data:image/')) return { data: uri };
                     } catch (_e) { /* fallback below */ }
                 }
 
-                if (imageCache.has(url)) return imageCache.get(url);
+                if (url && imageCache.has(url)) return imageCache.get(url);
 
-                // استخراج معرف ملف الخادم إن وجد
                 const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/[?&]id=([a-zA-Z0-9_-]+)/) ||
                                    url.match(/\/d\/([a-zA-Z0-9_-]+)/) ||
                                    url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/) ||
                                    (url.match(/^[a-zA-Z0-9_-]{25,}$/) ? [null, url] : null);
-                const fileId = driveMatch ? driveMatch[1] : '';
+                const extractedDriveId = driveMatch ? driveMatch[1] : (fileId || '');
 
                 // تجميع روابط الصور المباشرة المخففة والمحسنة للحجم والسرعة
                 const candidates = [];
-                if (fileId) {
-                    candidates.push(`https://lh3.googleusercontent.com/d/${fileId}=w800`);
-                    candidates.push(`https://drive.google.com/thumbnail?id=${fileId}&sz=w800`);
-                    candidates.push(`https://drive.google.com/uc?export=download&id=${fileId}`);
+                if (extractedDriveId) {
+                    candidates.push(`https://lh3.googleusercontent.com/d/${extractedDriveId}=w800`);
+                    candidates.push(`https://drive.google.com/thumbnail?id=${extractedDriveId}&sz=w800`);
+                    candidates.push(`https://drive.google.com/uc?export=download&id=${extractedDriveId}`);
                 }
                 if (url.startsWith('http://') || url.startsWith('https://')) {
                     candidates.push(url);
@@ -8797,7 +8802,7 @@ const DailyObservations = {
                 }
 
                 // 3. محاولة سريعة عبر OAuth Token إذا كان مسجلاً بالـ Google API
-                if (fileId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
+                if (extractedDriveId && typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.isLoggedIn === 'function' && GoogleIntegration.isLoggedIn()) {
                     try {
                         const token = (typeof GoogleIntegration.getAuthToken === 'function' && GoogleIntegration.getAuthToken()) ||
                                       (typeof gapi !== 'undefined' && gapi?.auth2?.getAuthInstance()?.currentUser?.get()?.getAuthResponse()?.access_token) ||
@@ -8805,7 +8810,7 @@ const DailyObservations = {
                         if (token) {
                             const controller = new AbortController();
                             const timer = setTimeout(() => controller.abort(), 1800);
-                            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${extractedDriveId}?alt=media`, {
                                 headers: { Authorization: `Bearer ${token}` },
                                 signal: controller.signal
                             });
@@ -8834,15 +8839,15 @@ const DailyObservations = {
                 if (!obs) return '';
                 const isImageAtt = (att) => {
                     if (!att || att.__listOnly) return false;
-                    const type = String(att?.type || '').toLowerCase();
+                    const type = String(att?.type || att?.mimeType || '').toLowerCase();
                     const name = String(att?.name || att?.fileName || '').toLowerCase();
-                    const data = String(att?.data || att?.url || att?.directLink || att?.shareableLink || att?.fileId || '');
-                    return type.startsWith('image/') ||
+                    const data = String(att?.data || att?.url || att?.directLink || att?.shareableLink || att?.fileId || att?.driveId || '');
+                    return type === 'image' || type.startsWith('image') ||
                            name.match(/\.(jpe?g|png|webp|gif|bmp)$/i) ||
                            /^image[-_]?\d+/i.test(name) ||
                            data.startsWith('data:image/') ||
                            /^FILE_/i.test(data) ||
-                           data.match(/\/d\/|\/file\/d\/|drive\.google|googleusercontent|vercel-storage/i);
+                           data.match(/\/d\/|\/file\/d\/|[?&]id=|drive\.google|googleusercontent|vercel-storage/i);
                 };
                 if (Array.isArray(obs.attachments) && obs.attachments.length > 0) {
                     const imageAtt = obs.attachments.find(isImageAtt) || obs.attachments.find((a) => a && !a.__listOnly) || null;
@@ -10740,8 +10745,16 @@ const DailyObservations = {
         if (!rawAttachments) {
             rawAttachments = [];
         } else if (typeof rawAttachments === 'string') {
-            // If it's a string (e.g. "Name - URL"), wrap it in an array
-            rawAttachments = [rawAttachments];
+            const trimmedAtt = rawAttachments.trim();
+            if (trimmedAtt.startsWith('[') || trimmedAtt.startsWith('{')) {
+                try {
+                    rawAttachments = JSON.parse(trimmedAtt);
+                } catch (_e) {
+                    rawAttachments = [rawAttachments];
+                }
+            } else {
+                rawAttachments = [rawAttachments];
+            }
         } else if (!Array.isArray(rawAttachments)) {
             // If it's an object, wrap it in an array
             rawAttachments = [rawAttachments];
