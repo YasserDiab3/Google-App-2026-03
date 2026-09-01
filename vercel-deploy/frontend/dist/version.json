@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1607",
+  "version": "1.0.1609",
   "highlights": {
     "ar": [
-      "إغلاق الملاحظة من سجل الملاحظات مباشرة، مع تحديد جماعي للسلامة والمدير.",
-      "إعادة منع تكرار تسجيل المخالفة عند الضغط المتكرر.",
-      "إعادة دائرة اعتماد المخالفات بعد تراجع رُفع بالخطأ."
+      "مربعات التحديد في سجل الملاحظات تعمل على الصفوف وليس الرأس فقط.",
+      "يمكن تحديد الملاحظات المفتوحة وقيد التنفيذ وإغلاقها جماعياً.",
+      "الملاحظات المغلقة بلا مربع تحديد حتى لا يُختار سجل منتهٍ."
     ],
     "en": [
-      "Close observations from the registry list, including bulk close for safety and managers.",
-      "Restore the guard that blocks duplicate violation submissions.",
-      "Restore the violation approval circle after a mistaken rollback."
+      "Observation list checkboxes now work on the rows, not only in the header.",
+      "Open and in-progress observations can be selected and closed in bulk.",
+      "Closed observations have no checkbox so finished records are not selected."
     ]
   }
 }

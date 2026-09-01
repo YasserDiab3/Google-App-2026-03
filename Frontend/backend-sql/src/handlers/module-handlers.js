@@ -67,8 +67,12 @@ function actorCanCloseObservation(actorUserData, payloadActor) {
 }
 
 function observationStageAllowsClose(obs) {
-    const stage = String(obs?.workflowStage || '').trim() || 'pending_specialist';
-    return stage === 'in_progress' || stage === 'pending_department';
+    const status = String(obs?.status || '').trim();
+    const statusLow = status.toLowerCase();
+    if (status === 'مغلق' || statusLow === 'closed' || statusLow === 'resolved' || statusLow === 'done') return false;
+    const stage = String(obs?.workflowStage || '').trim().toLowerCase();
+    if (stage === 'closed') return false;
+    return true;
 }
 
 function findDailyObservationRow(db, observationId) {

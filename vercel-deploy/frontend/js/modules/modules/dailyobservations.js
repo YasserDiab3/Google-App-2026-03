@@ -400,12 +400,7 @@ const DailyObservations = {
             Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve');
     },
 
-    canCloseObservationFromList(obs) {
-        if (!obs) return false;
-        const status = String(obs.status || '').trim();
-        if (status === 'مغلق' || status === 'closed') return false;
-        const stage = String(obs.workflowStage || '').trim();
-        if (stage !== 'in_progress' && stage !== 'pending_department') return false;
+    canUseObservationListClose() {
         const u = AppState.currentUser;
         if (!u) return false;
         if (this._isAdminRole(u) || this._isSafetyOfficerRole(u)) return true;
@@ -414,6 +409,12 @@ const DailyObservations = {
             if (Permissions.hasDetailedPermission('daily-observations', 'observations-manager-approve')) return true;
         }
         return false;
+    },
+
+    canCloseObservationFromList(obs) {
+        if (!obs) return false;
+        if (this.isObservationClosed(obs)) return false;
+        return this.canUseObservationListClose();
     },
 
     _buildObservationWorkflowActor() {
@@ -1160,19 +1161,14 @@ const DailyObservations = {
             if (!this.canCloseObservationQuick(obs)) {
                 return { success: false, message: this._t('module.dailyobs.close.noPermission', 'لا صلاحية لإغلاق هذه الملاحظة') };
             }
-            const stage = String(obs.workflowStage || '').trim();
-            const useWorkflow = stage === 'in_progress' || stage === 'pending_department';
-            if (useWorkflow) {
-                const res = await this.runWorkflowTransition(observationId, 'close_observation', {
-                    silent: silent
-                });
-                if (res && res.success) {
-                    this._markObservationClosedLocal(observationId);
-                    return { success: true };
-                }
-                return { success: false, message: (res && res.message) || 'فشل إغلاق الملاحظة' };
+            const res = await this.runWorkflowTransition(observationId, 'close_observation', {
+                silent: silent
+            });
+            if (res && res.success) {
+                this._markObservationClosedLocal(observationId);
+                return { success: true };
             }
-            return { success: false, message: 'لا يمكن الإغلاق في هذه المرحلة' };
+            return { success: false, message: (res && res.message) || 'فشل إغلاق الملاحظة' };
         } finally {
             delete this._obsCloseInFlight[observationId];
         }
@@ -1201,6 +1197,7 @@ const DailyObservations = {
         const all = document.getElementById('obs-select-all-closable');
         if (all) {
             const boxes = Array.from(document.querySelectorAll('.obs-row-select:not(:disabled)'));
+            all.disabled = boxes.length === 0;
             all.checked = boxes.length > 0 && boxes.every((cb) => cb.checked);
         }
     },
@@ -1314,6 +1311,7 @@ const DailyObservations = {
             const t = e.target;
             if (!t) return;
             if (t.id === 'obs-select-all-closable') {
+                if (t.disabled) return;
                 const set = this._ensureObsSelectedSet();
                 document.querySelectorAll('.obs-row-select:not(:disabled)').forEach((cb) => {
                     const id = cb.getAttribute('data-oid');
@@ -1580,10 +1578,8 @@ const DailyObservations = {
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_return_specialist" style="background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.35);"><i class="fas fa-user-shield ml-1"></i>إرجاع من مدير النظام لمسؤول السلامة</button>`);
             btns.push(`<button type="button" class="btn-secondary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="admin_reject" style="background: #7f1d1d; color: white; border: none;"><i class="fas fa-ban ml-1"></i>رفض إداري</button>`);
         }
-        if ((stage === 'in_progress' || stage === 'pending_department')) {
-            if (adm || canActAsSafetyManager || canActAsSpecialist) {
-                btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>إغلاق الملاحظة</button>`);
-            }
+        if ((adm || canActAsSafetyManager || canActAsSpecialist) && stage !== 'closed') {
+            btns.push(`<button type="button" class="btn-primary btn-sm obs-wf-action" data-oid="${oidAttr}" data-wfa="close_observation" style="background: #6366f1; border: none;"><i class="fas fa-flag-checkered ml-1"></i>إغلاق الملاحظة</button>`);
         }
         return btns.join('');
     },
@@ -2832,15 +2828,19 @@ const DailyObservations = {
 
     _renderObservationTableRow(obs, tbl) {
         const oid = Utils.escapeHTML(String(obs.id || ''));
-        const canClose = this.canCloseObservationQuick(obs);
+        const showSelect = !!(tbl && tbl.showSelect);
+        const canClose = showSelect && this.canCloseObservationQuick(obs);
         const closed = this.isObservationClosed(obs);
         const selected = this._ensureObsSelectedSet().has(String(obs.id || ''));
         const closeTitle = Utils.escapeHTML(tbl && tbl.closeObs ? tbl.closeObs : 'إغلاق الملاحظة');
+        const selectCell = showSelect
+            ? `<td style="width:44px;text-align:center;vertical-align:middle;">
+                    ${canClose ? `<input type="checkbox" class="obs-row-select" data-oid="${oid}" ${selected ? 'checked' : ''} title="${Utils.escapeHTML(tbl && tbl.select ? tbl.select : 'تحديد')}" style="width:18px;height:18px;cursor:pointer;accent-color:#4f46e5;vertical-align:middle;">` : ''}
+               </td>`
+            : '';
         return `
             <tr data-oid="${oid}" class="${closed ? 'obs-row-closed' : ''}">
-                <td style="width:36px;text-align:center;">
-                    <input type="checkbox" class="obs-row-select" data-oid="${oid}" ${canClose ? '' : 'disabled'} ${selected && canClose ? 'checked' : ''} title="${Utils.escapeHTML(tbl && tbl.select ? tbl.select : 'تحديد')}">
-                </td>
+                ${selectCell}
                 <td>${Utils.escapeHTML(obs.isoCode || '')}</td>
                 <td>
                     <div class="text-sm font-medium text-gray-800">${Utils.escapeHTML(obs.siteName || '-')}</div>
@@ -8269,9 +8269,11 @@ const DailyObservations = {
             emptySearch: this._t('module.dailyobs.registry.emptySearch', 'لا توجد نتائج للبحث'),
             view: this._t('module.dailyobs.common.view', 'عرض'),
             closeObs: this._t('module.dailyobs.close.quick', 'إغلاق الملاحظة'),
-            select: this._t('module.dailyobs.close.select', 'تحديد')
+            select: this._t('module.dailyobs.close.select', 'تحديد'),
+            showSelect: this.canUseObservationListClose()
         };
 
+        const colCount = tbl.showSelect ? 12 : 11;
         const renderRow = (obs) => this._renderObservationTableRow(obs, tbl);
 
         // دالة مساعدة لاستخراج الرقم من رقم الملاحظة للترتيب
@@ -8307,7 +8309,7 @@ const DailyObservations = {
         const remaining = Math.max(0, filteredObservations.length - visible.length);
         const rowsHtml = visible.length === 0
             ? `<tr>
-                    <td colspan="12" style="text-align: center; padding: 40px;">
+                    <td colspan="${colCount}" style="text-align: center; padding: 40px;">
                         <i class="fas fa-search text-4xl text-gray-300 mb-4"></i>
                         <p class="text-gray-500">${Utils.escapeHTML(tbl.emptySearch)}</p>
                     </td>
@@ -8323,17 +8325,17 @@ const DailyObservations = {
             : '';
 
         container.innerHTML = `
-            <div id="obs-bulk-close-bar" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:10px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;">
+            ${tbl.showSelect ? `<div id="obs-bulk-close-bar" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:10px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;">
                 <span id="obs-bulk-close-count" style="font-weight:700;color:#3730a3;">${Utils.escapeHTML(this._t('module.dailyobs.close.noneSelected', 'لم يُحدد شيء'))}</span>
                 <button type="button" id="obs-bulk-close-btn" class="btn-primary btn-sm" disabled style="background:#4f46e5;border:none;">
                     <i class="fas fa-flag-checkered ml-1"></i>${Utils.escapeHTML(this._t('module.dailyobs.close.selected', 'إغلاق المحدد'))}
                 </button>
-            </div>
+            </div>` : ''}
             <div class="table-wrapper observations-table-wrapper" style="overflow-x: auto; overflow-y: auto; max-height: 70vh;" dir="rtl">
                 <table class="data-table" style="font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, Arial, sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
                     <thead>
                         <tr>
-                            <th style="width:36px;text-align:center;"><input type="checkbox" id="obs-select-all-closable" title="${Utils.escapeHTML(tbl.select)}"></th>
+                            ${tbl.showSelect ? `<th style="width:44px;text-align:center;"><input type="checkbox" id="obs-select-all-closable" title="${Utils.escapeHTML(tbl.select)}" style="width:18px;height:18px;cursor:pointer;accent-color:#4f46e5;vertical-align:middle;"></th>` : ''}
                             <th>${Utils.escapeHTML(tbl.code)}</th>
                             <th>${Utils.escapeHTML(tbl.location)}</th>
                             <th>${Utils.escapeHTML(tbl.datetime)}</th>
@@ -8357,9 +8359,6 @@ const DailyObservations = {
 
         this._bindObservationListCloseActions(container);
         this._updateObsBulkCloseBar();
-        const canUseCloseBar = this._isAdminRole(AppState.currentUser) || this.hasSpecialistWorkflowPermission() || this.hasManagerWorkflowPermission();
-        const bulkBar = document.getElementById('obs-bulk-close-bar');
-        if (bulkBar && !canUseCloseBar) bulkBar.style.display = 'none';
 
         const moreBtn = document.getElementById('obs-load-more-btn');
         if (moreBtn) {
