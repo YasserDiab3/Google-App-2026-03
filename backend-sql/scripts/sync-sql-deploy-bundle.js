@@ -31,20 +31,20 @@ const targets = [
     path.join(repoRoot, 'vercel-deploy/frontend/dist/data/sql/clinic_hse.db')
 ];
 
-const buf = fs.readFileSync(sourceDb);
+let sessionDb = null;
 
 // لا تُضمَّن جلسات نشطة في bundle النشر — تسبب رفض الطلبات على Vercel
 try {
     const { initDatabase } = require('../src/db/database');
-    const db = initDatabase(sourceDb);
-    const users = db.readSheet('Users') || [];
+    sessionDb = initDatabase(sourceDb);
+    const users = sessionDb.readSheet('Users') || [];
     let cleared = 0;
     for (const u of users) {
         if (!u || !u.id) continue;
         const sid = String(u.activeSessionId || '').trim();
         const online = String(u.isOnline || '').toUpperCase();
         if (sid || online === 'TRUE' || online === '1') {
-            db.updateRow('Users', 'id', u.id, { isOnline: 'false', activeSessionId: '' });
+            sessionDb.updateRow('Users', 'id', u.id, { isOnline: 'false', activeSessionId: '' });
             cleared++;
         }
     }
@@ -53,6 +53,15 @@ try {
     }
 } catch (e) {
     console.warn('Session cleanup skipped:', e.message);
+}
+
+// دمج WAL في الملف الرئيسي قبل القراءة — بدونها يُرفع bundle قديم (MFA/كلمة مرور ناقصة)
+try {
+    if (sessionDb && typeof sessionDb.exec === 'function') {
+        sessionDb.exec('PRAGMA wal_checkpoint(FULL);');
+    }
+} catch (e) {
+    console.warn('WAL checkpoint skipped:', e.message);
 }
 
 const finalBuf = fs.readFileSync(sourceDb);
