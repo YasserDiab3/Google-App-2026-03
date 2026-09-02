@@ -8067,9 +8067,12 @@ body {
 }
 
 .content-card .rounded-full.w-full,
-.content-card .rounded-full[class*="w-full"] {
-    aspect-ratio: auto;
+.content-card .rounded-full[class*="w-full"],
+#user-photo-migration-card .user-photo-migration-track,
+#user-photo-migration-card .user-photo-migration-track * {
+    aspect-ratio: auto !important;
     border-radius: 9999px !important;
+    max-height: 8px;
 }
 
 /* تحسينات للكروت في HSE Dashboard */

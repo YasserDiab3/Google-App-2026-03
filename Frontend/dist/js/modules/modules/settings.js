@@ -1348,8 +1348,8 @@ const Settings={currentApprovalCircuitOwner:"__default__",async compressLogo(e,t
                         \u0627\u0644\u062A\u0631\u062D\u064A\u0644 \u064A\u0639\u0645\u0644 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629 (\u0635\u0648\u0631\u0629 \u0648\u0627\u062D\u062F\u0629 \u0643\u0644 \u062B\u0627\u0646\u064A\u0629 \u062A\u0642\u0631\u064A\u0628\u0627\u064B) \u0648\u064A\u0645\u0643\u0646 \u0625\u064A\u0642\u0627\u0641\u0647 \u0641\u064A \u0623\u064A \u0648\u0642\u062A.
                     </p>
                     <div id="user-photo-migration-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                        <div id="user-photo-migration-progress-bar" class="bg-teal-600 h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
+                    <div class="user-photo-migration-track" style="width:100%;height:8px;max-height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;">
+                        <div id="user-photo-migration-progress-bar" style="width:0%;height:8px;max-height:8px;border-radius:999px;background:#0d9488;transition:width .3s ease;"></div>
                     </div>
                     <p id="user-photo-migration-status" class="text-sm text-gray-700">\u062C\u0627\u0647\u0632 \u0644\u0644\u062A\u0631\u062D\u064A\u0644.</p>
                     <div class="flex flex-wrap items-center gap-2">

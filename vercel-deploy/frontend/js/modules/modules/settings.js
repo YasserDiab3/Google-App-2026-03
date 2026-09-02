@@ -1878,8 +1878,8 @@ const Settings = {
                         الترحيل يعمل في الخلفية (صورة واحدة كل ثانية تقريباً) ويمكن إيقافه في أي وقت.
                     </p>
                     <div id="user-photo-migration-stats" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                        <div id="user-photo-migration-progress-bar" class="bg-teal-600 h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
+                    <div class="user-photo-migration-track" style="width:100%;height:8px;max-height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;">
+                        <div id="user-photo-migration-progress-bar" style="width:0%;height:8px;max-height:8px;border-radius:999px;background:#0d9488;transition:width .3s ease;"></div>
                     </div>
                     <p id="user-photo-migration-status" class="text-sm text-gray-700">جاهز للترحيل.</p>
                     <div class="flex flex-wrap items-center gap-2">
