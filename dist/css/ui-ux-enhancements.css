@@ -1477,5 +1477,99 @@ body.hse-has-offline-banner {
     }
 }
 
+/* معاينة صورة الملاحظة: الإطار يلتف حول أبعاد الصورة بدل عرض 90vw فارغ */
+.obs-photo-lightbox {
+    padding: 12px !important;
+    background: rgba(2, 6, 23, 0.72) !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.obs-photo-lightbox .modal-content.obs-photo-lightbox-frame {
+    width: fit-content !important;
+    max-width: min(92vw, 1080px) !important;
+    max-height: 92vh !important;
+    padding: 0 !important;
+    background: #0b1220 !important;
+    border: 1px solid rgba(148, 163, 184, 0.28) !important;
+    border-radius: 14px !important;
+    overflow: hidden !important;
+}
+
+.obs-photo-lightbox-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px 8px 12px;
+    min-height: 40px;
+}
+
+.obs-photo-lightbox-title {
+    color: #e2e8f0;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.obs-photo-lightbox-title i {
+    color: #60a5fa;
+}
+
+.obs-photo-lightbox-close {
+    color: #f8fafc !important;
+    font-size: 1.15rem !important;
+    cursor: pointer;
+    background: transparent !important;
+    border: none !important;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.obs-photo-lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.obs-photo-lightbox-stage {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 8px 10px;
+    background: #0b1220;
+}
+
+.obs-photo-lightbox-img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(92vw, 1080px);
+    max-height: calc(92vh - 56px);
+    object-fit: contain;
+    border-radius: 8px;
+    background: #020617;
+}
+
+@media (max-width: 640px) {
+    .obs-photo-lightbox {
+        padding: 8px !important;
+    }
+
+    .obs-photo-lightbox .modal-content.obs-photo-lightbox-frame {
+        max-width: 96vw !important;
+        border-radius: 12px !important;
+    }
+
+    .obs-photo-lightbox-img {
+        max-width: 96vw;
+        max-height: calc(92vh - 52px);
+    }
+}
+
 /* ===== End of UI/UX Enhancements ===== */
 

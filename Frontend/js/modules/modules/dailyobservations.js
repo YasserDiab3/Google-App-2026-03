@@ -14612,6 +14612,7 @@ const DailyObservations = {
 
     viewFullImage(url) {
         if (!url) return;
+        document.querySelectorAll('.obs-photo-lightbox').forEach((el) => el.remove());
         const fileId = this.resolveObservationDriveFileId(url);
         const placeholderGif = (typeof Utils !== 'undefined' && Utils.IMG_DRIVE_PLACEHOLDER_GIF)
             ? Utils.IMG_DRIVE_PLACEHOLDER_GIF
@@ -14620,28 +14621,64 @@ const DailyObservations = {
         const displaySrc = isData ? url : (fileId ? placeholderGif : url);
         const driveProxyAttr = (!isData && fileId) ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
         const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
+        modal.className = 'modal-overlay obs-photo-lightbox';
         modal.style.zIndex = '99999';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 90vw; max-height: 90vh; background: rgba(15, 23, 42, 0.95); border-radius: 16px; padding: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <span style="color: #ffffff; font-weight: 700; font-size: 1rem;"><i class="fas fa-image ml-2 text-blue-400"></i>معاينة الصورة بالحجم الكامل</span>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: #ffffff; font-size: 1.4rem; cursor: pointer; background: transparent; border: none;">
+            <div class="modal-content obs-photo-lightbox-frame" role="dialog" aria-modal="true" aria-label="معاينة الصورة">
+                <div class="obs-photo-lightbox-bar">
+                    <span class="obs-photo-lightbox-title"><i class="fas fa-image"></i>معاينة الصورة</span>
+                    <button type="button" class="modal-close obs-photo-lightbox-close" aria-label="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div style="display: flex; justify-content: center; align-items: center; overflow: auto; max-height: 80vh;">
-                    <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="صورة الملاحظة" style="max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
+                <div class="obs-photo-lightbox-stage">
+                    <img class="obs-photo-lightbox-img" src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr} alt="صورة الملاحظة">
                 </div>
             </div>
         `;
         document.body.appendChild(modal);
-        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
-            Utils.hydrateDriveProxyImages(modal);
+        const frame = modal.querySelector('.obs-photo-lightbox-frame');
+        const img = modal.querySelector('.obs-photo-lightbox-img');
+        const closeBtn = modal.querySelector('.obs-photo-lightbox-close');
+        const fit = () => this._fitObservationLightboxImage(img, frame);
+        const onKey = (e) => {
+            if (e.key === 'Escape') close();
+        };
+        const close = () => {
+            window.removeEventListener('resize', fit);
+            document.removeEventListener('keydown', onKey);
+            modal.remove();
+        };
+        if (img) {
+            img.addEventListener('load', fit);
+            if (img.complete && img.naturalWidth > 2) fit();
         }
+        window.addEventListener('resize', fit);
+        document.addEventListener('keydown', onKey);
+        if (closeBtn) closeBtn.addEventListener('click', close);
         modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.remove();
+            if (e.target === modal) close();
         });
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: () => {}
+            });
+            if (img) img.addEventListener('load', fit);
+        }
+    },
+
+    _fitObservationLightboxImage(img, frame) {
+        if (!img || !frame) return;
+        const nw = img.naturalWidth || 0;
+        const nh = img.naturalHeight || 0;
+        if (nw < 8 || nh < 8) return;
+        const maxW = Math.min(window.innerWidth * 0.92, 1080);
+        const maxH = Math.max(220, window.innerHeight * 0.92 - 56);
+        const scale = Math.min(maxW / nw, maxH / nh);
+        const w = Math.max(200, Math.round(nw * scale));
+        img.style.width = w + 'px';
+        img.style.height = 'auto';
+        frame.style.width = 'fit-content';
     },
 
     _observationPhotoLoadingHtml() {

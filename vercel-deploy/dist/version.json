@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1616",
+  "version": "1.0.1618",
   "highlights": {
     "ar": [
-      "تصدير PPT يضمّن صورة الملاحظة عبر الخادم بدل مربع فارغ.",
-      "مزامنة معدات الوقاية مع نسخة النشر.",
-      "اختبارات النظام أصبحت تنتظر الجلسة ولا تُعلّق بعد النجاح."
+      "معاينة صورة الملاحظة أصبحت بإطار يناسب أبعاد الصورة.",
+      "الصور العمودية لم تعد تظهر بجوانب فارغة عريضة.",
+      "يمكن إغلاق المعاينة بمفتاح Escape أو بالنقر خارج الصورة."
     ],
     "en": [
-      "PPT export embeds observation photos through the server instead of a blank box.",
-      "PPE module is synced to the published frontend copy.",
-      "Backend tests now await the session and exit cleanly after success."
+      "Observation photo preview now uses a frame that matches the image size.",
+      "Portrait photos no longer show wide empty side margins.",
+      "Close the preview with Escape or by clicking outside the photo."
     ]
   }
 }
