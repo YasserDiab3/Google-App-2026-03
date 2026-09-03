@@ -21,6 +21,50 @@ function sanitizeIdentifier(name) {
     return clean;
 }
 
+function isSafeIdentifier(name) {
+    try {
+        sanitizeIdentifier(name);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+/** حد استجابة Vercel ~4.5MB — نُبقي هامش JSON/التغليف */
+const MAX_RPC_LIST_BYTES = 3 * 1024 * 1024;
+
+function capRowsForRpc(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return rows;
+    let jsonLen = 0;
+    try {
+        jsonLen = JSON.stringify(rows).length;
+    } catch (_e) {
+        return rows.slice(0, Math.min(80, rows.length));
+    }
+    if (jsonLen <= MAX_RPC_LIST_BYTES) return rows;
+    let lo = 1;
+    let hi = rows.length;
+    let best = rows.slice(-1);
+    while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const slice = rows.slice(-mid);
+        let n = 0;
+        try {
+            n = JSON.stringify(slice).length;
+        } catch (_e) {
+            hi = mid - 1;
+            continue;
+        }
+        if (n <= MAX_RPC_LIST_BYTES) {
+            best = slice;
+            lo = mid + 1;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    return best;
+}
+
 function formatSqliteValue(val) {
     if (val === undefined || val === null) return null;
     if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
@@ -99,8 +143,8 @@ function buildListSelectSql(sheetName, tableName) {
     const omit = (HEAVY_LIST_FIELDS[sheetName] || []).filter((c) => allCols.includes(c));
     if (!allCols.length || !omit.length) return `SELECT * FROM ${tableName}`;
     const cols = allCols
-        .filter((c) => !omit.includes(c))
-        .map((c) => `"${sanitizeIdentifier(c)}"`);
+        .filter((c) => !omit.includes(c) && isSafeIdentifier(c))
+        .map((c) => `"${c.trim()}"`);
     if (omit.includes('attachments')) {
         cols.push('CASE WHEN "attachments" IS NOT NULL AND length("attachments") > 2 THEN 1 ELSE 0 END AS attachmentCount');
     }
@@ -221,7 +265,8 @@ function initDatabase(overridePath = null) {
                         if (params.length) sql += ' WHERE ' + Object.keys(filter).map((key) => `"${sanitizeIdentifier(key)}" = ?`).join(' AND ');
                         rows = this.all(sql, params).map(hydrateSheetRow);
                     }
-                    return listMode ? slimRowsForList(sheetName, rows) : rows;
+                    const slim = listMode ? slimRowsForList(sheetName, rows) : rows;
+                    return listMode ? capRowsForRpc(slim) : slim;
                 } catch (e) {
                     if (e.message && e.message.includes('no such table')) {
                         return [];
@@ -383,7 +428,8 @@ function initDatabase(overridePath = null) {
                 const filtered = !filter
                     ? list
                     : list.filter(row => Object.entries(filter).every(([k, v]) => String(row[k]) === String(v)));
-                return isListModeRead(filter, options) ? slimRowsForList(sheetName, filtered) : filtered;
+                const slim = isListModeRead(filter, options) ? slimRowsForList(sheetName, filtered) : filtered;
+                return isListModeRead(filter, options) ? capRowsForRpc(slim) : slim;
             },
             readSheet(sheetName, filter = null, options = {}) {
                 return this.readFromSheet(sheetName, filter, options);

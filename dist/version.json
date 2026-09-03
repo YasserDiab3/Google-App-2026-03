@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1622",
+  "version": "1.0.1623",
   "highlights": {
     "ar": [
-      "بيانات النظام محدَّثة من Google Sheets: زيارات العيادة، الموظفين، التصاريح، التدريب، والملاحظات.",
-      "أعداد السجلات في SQL مطابقة للشيت الحي.",
-      "حسابات الدخول لم تُستبدل."
+      "المزامنة لا توقف تحميل بقية البيانات إذا فشلت ورقة المقاولين المعتمدين.",
+      "قائمة المقاولين تُعرض من المعتمدين إذا ورقة Contractors فارغة.",
+      "بعد المزامنة الجزئية تُحدَّث الشاشة بدل رسالة فشل كاملة."
     ],
     "en": [
-      "App data refreshed from the live Google Sheet: clinic visits, employees, permits, training, and observations.",
-      "SQL row counts now match the live spreadsheet.",
-      "Login accounts were not overwritten."
+      "Sync no longer blocks the rest of the data if ApprovedContractors fails.",
+      "Contractor lists fall back to approved contractors when Contractors is empty.",
+      "A partial sync still refreshes the screen instead of a full failure."
     ]
   }
 }

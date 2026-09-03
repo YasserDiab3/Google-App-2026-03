@@ -2185,8 +2185,9 @@ const GoogleIntegration = {
                     // تسجيل الأوراق الفاشلة
                     if (result.failedSheets && result.failedSheets.length > 0) {
                         result.failedSheets.forEach(failed => {
-                            failedSheets.push(failed.sheetName);
-                            Utils.safeWarn(`⚠️ فشل قراءة ${failed.sheetName}: ${failed.error}`);
+                            const failedName = failed.sheet || failed.sheetName;
+                            if (failedName) failedSheets.push(failedName);
+                            Utils.safeWarn(`⚠️ فشل قراءة ${failedName || '?'}: ${failed.error}`);
                         });
                     }
 
@@ -3524,7 +3525,6 @@ const GoogleIntegration = {
                 'PTW',
                 'PTWRegistry',
                 'Training',
-                'EmployeeTrainingMatrix',
                 'TrainingAttendance',
                 'TrainingAnalysisData',
                 'ClinicVisits',
@@ -3693,7 +3693,7 @@ const GoogleIntegration = {
                 'incidents': ['Incidents'],
                 'nearmiss': ['NearMiss'],
                 'ptw': ['PTW', 'PTWRegistry'],
-                'training': ['Training'],
+                'training': ['Training', 'EmployeeTrainingMatrix'],
                 'clinic': ['ClinicVisits', 'ClinicContractorVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
                 'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
                 'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
@@ -3831,7 +3831,7 @@ const GoogleIntegration = {
             sheets = this._filterSheetsForCurrentUser(sheets);
 
             if (!requestedSheets) {
-                const ownedHeavy = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly', 'PTW', 'PTWRegistry', 'DailyObservations', 'UserActivityLog'];
+                const ownedHeavy = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly', 'PTW', 'PTWRegistry', 'DailyObservations', 'UserActivityLog', 'EmployeeTrainingMatrix', 'SecurityAuditLog'];
                 sheets = sheets.filter((sheet) => !ownedHeavy.includes(sheet));
             }
 
@@ -4277,6 +4277,7 @@ const GoogleIntegration = {
             }
 
             const success = failedSheets.length === 0;
+            const anyOk = results.some((r) => r && r.success);
 
             if (success) {
                 if (notifyOnSuccess && syncedCount > 0) {
@@ -4286,10 +4287,10 @@ const GoogleIntegration = {
                 }
             } else {
                 this._lastSyncError = failedSheets.length
-                    ? ('فشلت أوراق: ' + failedSheets.slice(0, 8).join(', ') + (failedSheets.length > 8 ? '...' : ''))
+                    ? ('فشلت أوراق: ' + failedSheets.filter(Boolean).slice(0, 8).join(', ') + (failedSheets.length > 8 ? '...' : ''))
                     : 'لم تُحمَّل أي بيانات من الخادم';
                 if (notifyOnError) {
-                    Notification.warning(`فشل مزامنة بعض الجداول: ${failedSheets.join(', ')}`);
+                    Notification.warning(`فشل مزامنة بعض الجداول: ${failedSheets.filter(Boolean).join(', ')}`);
                 }
                 if (shouldLog) {
                     Utils.safeWarn('فشل مزامنة بعض الجداول:', failedSheets);
@@ -4302,7 +4303,7 @@ const GoogleIntegration = {
 
             this._syncInProgress.global = false;
             this._currentSyncForceRefresh = false;
-            return success || syncedCount > 0;
+            return success || syncedCount > 0 || anyOk;
         } catch (error) {
             this._syncInProgress.global = false;
             this._currentSyncForceRefresh = false;

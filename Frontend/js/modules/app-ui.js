@@ -9607,7 +9607,11 @@ window.UI = {
                 const detail = (GoogleIntegration && GoogleIntegration._lastSyncError)
                     ? String(GoogleIntegration._lastSyncError)
                     : '';
-                throw new Error(detail ? `فشلت المزامنة مع قاعدة البيانات: ${detail}` : 'فشلت المزامنة مع قاعدة البيانات');
+                if (typeof Notification !== 'undefined') {
+                    Notification.warning(detail ? `مزامنة جزئية: ${detail}` : 'مزامنة جزئية — بعض الأوراق لم تُحمَّل');
+                }
+                try { this.refreshCurrentSection(true); } catch (_e) {}
+                return;
             }
 
             if (typeof Notification !== 'undefined') {

@@ -11,10 +11,13 @@ function initSchema(db = getDatabase()) {
         const tableName = `"${sheetName}"`;
         
         // Determine column DDL definitions
-        const colDefs = columns.map(col => {
+        const colDefs = columns
+            .filter((col) => typeof col === 'string' && /^[a-zA-Z0-9_\s\-\/#\(\)\.\&%:\+,أ-ي]+$/.test(col.trim()) && !col.includes('--') && !col.includes(';') && !col.includes('"'))
+            .map(col => {
             const colName = `"${col}"`;
             return `${colName} TEXT`;
         });
+        if (!colDefs.length) continue;
 
         // Table creation
         const ddl = `CREATE TABLE IF NOT EXISTS ${tableName} (

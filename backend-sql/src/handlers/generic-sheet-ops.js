@@ -61,14 +61,15 @@ const genericSheetOps = {
             'dailysafety': 'DailySafetyCheckList',
             'nearmisses': 'NearMiss',
             'fireequipment': 'FireEquipmentAssets',
-            'fireinspections': 'FireEquipmentInspections'
+            'fireinspections': 'FireEquipmentInspections',
+            'contractors': 'ApprovedContractors'
         };
 
         let totalCount = 0;
         for (const name of sheetNames) {
             const readGate = checkSheetReadAccess(name, actorUserData, action);
             if (!readGate.ok) {
-                failedSheets.push({ sheet: name, error: readGate.message, errorCode: readGate.errorCode });
+                failedSheets.push({ sheet: name, sheetName: name, error: readGate.message, errorCode: readGate.errorCode });
                 result[name] = [];
                 continue;
             }
@@ -87,7 +88,7 @@ const genericSheetOps = {
                 result[name] = rows || [];
                 totalCount += (result[name] ? result[name].length : 0);
             } catch (err) {
-                failedSheets.push({ sheet: name, error: err.message });
+                failedSheets.push({ sheet: name, sheetName: name, error: err.message });
                 result[name] = [];
             }
         }
