@@ -9,6 +9,9 @@
   "devDependencies": {
     "esbuild": "^0.25.12"
   },
+  "allowScripts": {
+    "esbuild": true
+  },
   "dependencies": {
     "@vercel/blob": "^0.27.3",
     "clinic-repo": "file:../.."
