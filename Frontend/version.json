@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1620",
+  "version": "1.0.1622",
   "highlights": {
     "ar": [
-      "شريط تقدم ترحيل صور المستخدمين أصبح خطاً رفيعاً بدل دائرة رمادية تغطي الشاشة.",
-      "بطاقة الترحيل في إعدادات النظام تعرض الإحصائيات دون تغطية بصرية.",
-      "تحديث الصفحة يظهر الشريط بشكل أفقي ثابت أسفل الأرقام."
+      "بيانات النظام محدَّثة من Google Sheets: زيارات العيادة، الموظفين، التصاريح، التدريب، والملاحظات.",
+      "أعداد السجلات في SQL مطابقة للشيت الحي.",
+      "حسابات الدخول لم تُستبدل."
     ],
     "en": [
-      "User-photo SQL migration progress is a thin bar instead of a huge grey circle.",
-      "The system-settings migration card no longer covers the stats.",
-      "Refresh the page to see a fixed horizontal progress track under the numbers."
+      "App data refreshed from the live Google Sheet: clinic visits, employees, permits, training, and observations.",
+      "SQL row counts now match the live spreadsheet.",
+      "Login accounts were not overwritten."
     ]
   }
 }
