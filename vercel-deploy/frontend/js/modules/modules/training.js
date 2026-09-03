@@ -854,11 +854,11 @@ const Training = {
             }
             if (active === 'attendance') {
                 const attendanceData = await runAction('getAllTrainingAttendance', 'سجل الحضور');
-                if (attendanceData && attendanceGuardOk()) AppState.appData.trainingAttendance = this._dedupeRegistryRecords(attendanceData);
+                if (Array.isArray(attendanceData) && attendanceData.length > 0 && attendanceGuardOk()) AppState.appData.trainingAttendance = this._dedupeRegistryRecords(attendanceData);
                 persistAndRefreshUi(active);
                 if (this._trainingTabFetchOk.programs !== true) {
                     void runAction('getAllTrainings', 'برامج التدريب').then((trainingData) => {
-                        if (trainingData && trainingGuardOk()) {
+                        if (Array.isArray(trainingData) && trainingData.length > 0 && trainingGuardOk()) {
                             AppState.appData.training = trainingData;
                             this._trainingTabFetchOk.programs = true;
                             this._trainingBackendFetchOk = true;
@@ -872,17 +872,17 @@ const Training = {
             }
             if (active === 'legalTraining') {
                 const legalData = await runAction('getAllLegalTrainings', 'التدريبات القانونية');
-                if (legalData && legalGuardOk()) AppState.appData.legalTrainings = legalData;
+                if (Array.isArray(legalData) && legalData.length > 0 && legalGuardOk()) AppState.appData.legalTrainings = legalData;
                 const attendeesData = await runAction('getAllLegalTrainingAttendees', 'حضور التدريبات القانونية');
-                if (attendeesData && legalAttendeesGuardOk()) AppState.appData.legalTrainingAttendees = attendeesData;
+                if (Array.isArray(attendeesData) && attendeesData.length > 0 && legalAttendeesGuardOk()) AppState.appData.legalTrainingAttendees = attendeesData;
                 const registerData = await runAction('getAllLegalRegisters', 'سجل التشريعات');
-                if (registerData && legalRegisterGuardOk()) AppState.appData.legalRegister = registerData;
+                if (Array.isArray(registerData) && registerData.length > 0 && legalRegisterGuardOk()) AppState.appData.legalRegister = registerData;
                 persistAndRefreshUi(active);
                 return;
             }
 
             const trainingData = await runAction('getAllTrainings', 'برامج التدريب');
-            if (trainingData && trainingGuardOk()) {
+            if (Array.isArray(trainingData) && trainingData.length > 0 && trainingGuardOk()) {
                 AppState.appData.training = trainingData;
                 Utils.safeLog(`✅ تم تحميل ${trainingData.length} برنامج تدريبي`);
             }

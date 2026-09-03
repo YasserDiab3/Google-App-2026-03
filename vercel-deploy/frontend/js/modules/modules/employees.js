@@ -548,11 +548,12 @@ const Employees = {
     },
 
     async load() {
-        // إضافة مستمع لتغيير اللغة
+        // إضافة مستمع لتغيير اللغة (debounce لمنع تكرار load() الكامل عند تبديل سريع)
         if (!this._languageChangeListenerAdded) {
             document.addEventListener('language-changed', () => {
                 if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
-                this.load();
+                clearTimeout(this._langChangeTimer);
+                this._langChangeTimer = setTimeout(() => { this.load(); }, 150);
             });
             this._languageChangeListenerAdded = true;
         }
@@ -4305,6 +4306,9 @@ const Employees = {
             window.addEventListener('employeesDataUpdated', this.handleDataUpdate);
 
             document.querySelectorAll('[data-employees-tab]').forEach(button => {
+                // منع تكرار الربط على نفس الزر (يتراكم عند إعادة setupEventListeners بلا إعادة رسم DOM)
+                if (button.dataset.empTabBound === '1') return;
+                button.dataset.empTabBound = '1';
                 button.addEventListener('click', () => this.switchTab(button.getAttribute('data-employees-tab') || 'employees-list'));
             });
 

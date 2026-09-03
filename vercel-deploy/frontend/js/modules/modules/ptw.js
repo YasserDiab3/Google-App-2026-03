@@ -19392,7 +19392,7 @@ const PTW = {
         else sublocationSelect.value = '';
     },
 
-    filterItems() {
+    filterItems(opts = {}) {
         const searchTerm = (document.getElementById('ptw-search')?.value || '').trim();
         const statusFilter = (document.getElementById('ptw-filter-status')?.value || '').trim();
         const workTypeFilter = (document.getElementById('ptw-filter-work-type')?.value || '').trim();
@@ -19436,11 +19436,23 @@ const PTW = {
             });
         }
         filtered = this.sortPermitRecordsNewestFirst(filtered);
+        // ✅ أداء: ترقيم صفحات — لا نحقن كل الصفوف في innerHTML واحد (كان يجمّد الواجهة مع قوائم كبيرة).
+        //   كل فلتر/بحث يبدأ من 100 صف؛ زر "عرض المزيد" يزيد الحد تدريجياً.
+        const PTW_LIST_PAGE = 100;
+        if (!opts.keepLimit || !Number.isFinite(this._ptwListLimit)) {
+            this._ptwListLimit = PTW_LIST_PAGE;
+        }
+        const totalFiltered = filtered.length;
+        const visiblePermits = filtered.slice(0, this._ptwListLimit);
+        const remainingPermits = Math.max(0, totalFiltered - visiblePermits.length);
+        const loadMoreRow = remainingPermits > 0
+            ? `<tr><td colspan="8" class="text-center py-4"><button type="button" onclick="PTW.showMorePermits()" class="btn btn-secondary btn-sm"><i class="fas fa-chevron-down"></i> عرض المزيد (${remainingPermits})</button></td></tr>`
+            : '';
         const tbody = document.querySelector('#ptw-table-container tbody');
         if (tbody) {
-            tbody.innerHTML = filtered.length === 0 ?
+            tbody.innerHTML = totalFiltered === 0 ?
                 '<tr><td colspan="8" class="text-center text-gray-500 py-8">لا توجد نتائج</td></tr>' :
-                filtered.map(item => {
+                (visiblePermits.map(item => {
                     const skipApprovalUi = item.isManualEntry === true
                         || item.skipApprovalFlow === true
                         || String(item.approvalCircuitOwnerId || '').trim() === '__manual__';
@@ -19505,15 +19517,15 @@ const PTW = {
                         </td>
                     </tr>
                 `;
-                }).join('');
+                }).join('') + loadMoreRow);
         }
 
         const countEl = document.getElementById('ptw-filter-count');
         if (countEl) {
-            countEl.textContent = String(filtered.length);
+            countEl.textContent = String(totalFiltered);
         }
         const visibleCount = document.getElementById('ptw-list-visible-count');
-        if (visibleCount) visibleCount.textContent = String(filtered.length);
+        if (visibleCount) visibleCount.textContent = String(visiblePermits.length);
 
         // تحديث الفلاتر والأزرار
         const resetButton = document.getElementById('ptw-reset-filters');
@@ -19524,6 +19536,12 @@ const PTW = {
             if (field) field.classList.toggle('is-active', !!control.value);
         });
 
+    },
+
+    /** زيادة عدد صفوف قائمة التصاريح المعروضة (ترقيم صفحات) */
+    showMorePermits() {
+        this._ptwListLimit = (Number.isFinite(this._ptwListLimit) ? this._ptwListLimit : 100) + 100;
+        this.filterItems({ keepLimit: true });
     },
 
     /**

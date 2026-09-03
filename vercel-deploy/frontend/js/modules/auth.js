@@ -1587,7 +1587,8 @@ window.Auth = {
                     let cursor = 0;
                     const loadPrioritySheet = async (sheetName) => {
                         try {
-                            const data = await GoogleIntegration.readFromSheets(sheetName, 8000);
+                            // مهلة كافية للأوراق الثقيلة (Employees/Contractors) — 8s كانت تُجهض الجلب وتعيد المحاولة
+                            const data = await GoogleIntegration.readFromSheets(sheetName, 30000);
                             const key = sheetMapping[sheetName];
 
                             if (key && Array.isArray(data) && data.length > 0) {
@@ -2653,7 +2654,8 @@ window.Auth = {
             };
 
             const PRELOAD_CACHE_TTL_MS = 10 * 60 * 1000;
-            const PER_SHEET_TIMEOUT_MS = 7000;
+            // 7s كانت تُجهض الأوراق الكبيرة وتُعيد محاولتها فتزحم الطابور أثناء رسم اللوحة
+            const PER_SHEET_TIMEOUT_MS = 15000;
             const GLOBAL_PRELOAD_BUDGET_MS = 55000;
             const preloadStartedAt = Date.now();
 
@@ -2769,8 +2771,8 @@ window.Auth = {
                 }
             };
 
-            // تحميل الموديولات على دفعات متوازية لتقليل زمن التحميل الكلي
-            const moduleConcurrency = 8;
+            // تحميل الموديولات على دفعات متوازية — 4 بدل 8 لتخفيف الضغط على طابور 3 عمّال أثناء رسم اللوحة
+            const moduleConcurrency = 4;
             for (let i = 0; i < modulesToLoad.length; i += moduleConcurrency) {
                 if ((Date.now() - preloadStartedAt) >= GLOBAL_PRELOAD_BUDGET_MS) {
                     Utils.safeWarn('⏱️ تم الوصول للحد الزمني للتحميل الخلفي (55s) - استكمال التحميل عند فتح الموديول');

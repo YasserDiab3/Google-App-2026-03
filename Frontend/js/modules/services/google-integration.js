@@ -692,7 +692,23 @@ const GoogleIntegration = {
      * التحقق من هل هو getRequestKey
      */
     _getRequestKey(action, data) {
-        const dataStr = JSON.stringify(data || {});
+        // استبعاد حقول التحكم في النقل (__timeoutMs/__highPriority/__deadline...) من المفتاح
+        // حتى لا تُنشئ نفس القراءة عدة مفاتيح مختلفة فيضيع الدمج/الكاش (readFromSheets بمهل مختلفة).
+        let keyData = data || {};
+        if (keyData && typeof keyData === 'object' && !Array.isArray(keyData)) {
+            const clean = {};
+            for (const k of Object.keys(keyData)) {
+                if (k.indexOf('__') === 0) continue; // تخطي حقول التحكم
+                clean[k] = keyData[k];
+            }
+            keyData = clean;
+        }
+        let dataStr;
+        try {
+            dataStr = JSON.stringify(keyData);
+        } catch (_e) {
+            dataStr = String(action);
+        }
         return `${action}_${dataStr}`;
     },
 
@@ -1066,6 +1082,7 @@ const GoogleIntegration = {
                 'getPeriodicInspectionsData', 'getViolationsData',
                 'getActionTrackingData', 'getBehaviorMonitoringData',
                 'saveOrUpdate', 'getAll', 'import',
+                'batchReadSheets', 'batchRead',
                 'getAllClinicVisits',
                 'getAllEmployees',
                 'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
@@ -4265,14 +4282,9 @@ const GoogleIntegration = {
                 }
             }
 
-            // اكتمال المزامنة
+            // اكتمال المزامنة — إخفاء فوري (كان تأخير 1s يُبقي الشاشة مغطاة بلا داع)
             if (showLoader && typeof Loading !== 'undefined') {
                 Loading.setProgress(100, 'جاري تحميل البيانات');
-                // إخفاء شريط التقدم بعد ثانية واحدة
-                setTimeout(() => {
-                    Loading.hide();
-                }, 1000);
-            } else if (showLoader && typeof Loading !== 'undefined') {
                 Loading.hide();
             }
 

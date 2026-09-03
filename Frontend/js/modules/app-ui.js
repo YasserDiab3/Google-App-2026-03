@@ -4401,9 +4401,22 @@ window.UI = {
         };
         sheetNames.forEach((sheet) => {
             const key = keyMap[sheet];
-            if (key && Array.isArray(batch.data[sheet])) {
-                AppState.appData[key] = batch.data[sheet];
+            if (!key || !Array.isArray(batch.data[sheet])) return;
+            const incoming = batch.data[sheet];
+            const existing = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+            // حماية: لا تستبدل بيانات محلية غير فارغة برد فارغ (timeout جزئي داخل الدفعة)
+            if (incoming.length === 0 && existing.length > 0) return;
+            // سجل التردد: دمج بدل الاستبدال حتى لا نفقد الزيارات المحلية
+            if (key === 'clinicVisits'
+                && typeof Clinic !== 'undefined'
+                && typeof Clinic.mergeClinicVisitsWithLocalOnly === 'function'
+                && incoming.length > 0) {
+                try {
+                    AppState.appData.clinicVisits = Clinic.mergeClinicVisitsWithLocalOnly(incoming, existing);
+                    return;
+                } catch (_e) { /* fallback للتعيين المباشر */ }
             }
+            AppState.appData[key] = incoming;
         });
     },
 

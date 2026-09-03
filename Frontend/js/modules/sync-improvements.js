@@ -338,7 +338,17 @@
         setTimeout(function() {
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.syncData) {
                 const originalSyncData = GoogleIntegration.syncData;
-                
+
+                // ⚠️ تعطيل استبدال syncData: النسخة البديلة أدناه كانت تقرأ ورقة-ورقتين (BATCH_SIZE=2)
+                //   مع تأخير 200ms وحفظ متكرر — أبطأ بكثير من batchReadFromSheets الأصلي (batch=12).
+                //   نُبقي syncData الأصلي كما هو. الكود بعد return يبقى معطّلاً (مرجعياً فقط).
+                void originalSyncData;
+                if (typeof Utils !== 'undefined' && Utils.safeLog) {
+                    Utils.safeLog('ℹ️ sync-improvements: الإبقاء على syncData الأصلي (batch=12) — تعطيل الاستبدال البطيء');
+                }
+                return;
+
+                // eslint-disable-next-line no-unreachable
                 GoogleIntegration.syncData = async function(options = {}) {
                     const {
                         silent = false,

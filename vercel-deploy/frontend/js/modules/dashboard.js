@@ -1708,8 +1708,14 @@ const Dashboard = {
                     if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.readFromSheets) continue;
                     const data = await GoogleIntegration.readFromSheets(sheetName);
                     if (Array.isArray(data)) {
-                        AppState.appData[key] = data;
-                        if (Utils.safeLog) Utils.safeLog(`✅ تقرير الموظف: تم تحميل ${sheetName} (${data.length} سجل)`);
+                        const existing = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                        // حماية: لا تستبدل بيانات محلية غير فارغة برد فارغ
+                        if (data.length === 0 && existing.length > 0) {
+                            if (Utils.safeLog) Utils.safeLog(`⚠️ تقرير الموظف: ${sheetName} فارغ - الاحتفاظ بالمحلي`);
+                        } else {
+                            AppState.appData[key] = data;
+                            if (Utils.safeLog) Utils.safeLog(`✅ تقرير الموظف: تم تحميل ${sheetName} (${data.length} سجل)`);
+                        }
                     }
                 } catch (err) {
                     if (Utils.safeWarn) Utils.safeWarn(`⚠️ تقرير الموظف: فشل تحميل ${sheetName}:`, err?.message || err);

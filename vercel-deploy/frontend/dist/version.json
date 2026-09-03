@@ -1,15 +1,17 @@
 {
-  "version": "1.0.1623",
+  "version": "1.0.1625",
   "highlights": {
     "ar": [
-      "المزامنة لا توقف تحميل بقية البيانات إذا فشلت ورقة المقاولين المعتمدين.",
-      "قائمة المقاولين تُعرض من المعتمدين إذا ورقة Contractors فارغة.",
-      "بعد المزامنة الجزئية تُحدَّث الشاشة بدل رسالة فشل كاملة."
+      "تحميل أسرع: إلغاء التحميل البطيء ورقة-ورقتين واستعادة الجلب المجمّع.",
+      "لا فقد للبيانات عند إعادة التحميل: حفظ فوري عند الخروج وحماية من استبدالها بمصفوفة فارغة.",
+      "إزالة تجميد الواجهة: ترقيم صفحات التصاريح وتخفيف معالجة زيارات العيادة والملاحظات.",
+      "منع تكرار الطلبات وجلب المستخدمين، وإخفاء شاشة التحميل فور انتهاء المزامنة."
     ],
     "en": [
-      "Sync no longer blocks the rest of the data if ApprovedContractors fails.",
-      "Contractor lists fall back to approved contractors when Contractors is empty.",
-      "A partial sync still refreshes the screen instead of a full failure."
+      "Faster loading: removed the slow one-sheet-at-a-time sync and restored batch fetching.",
+      "No data loss on reload: immediate save on exit and guards against empty-array overwrites.",
+      "No UI freezes: paginated permits list and lighter clinic-visits/observations processing.",
+      "Deduplicated requests and Users fetches, and the loading screen hides right after sync."
     ]
   }
 }

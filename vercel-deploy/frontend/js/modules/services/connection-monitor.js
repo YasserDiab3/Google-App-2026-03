@@ -94,6 +94,19 @@ const ConnectionMonitor = {
 
         this.state.lastCheckTime = new Date().toISOString();
 
+        // ✅ منع تكرار جلب Users: إن نجح جلب مستخدمين حديثاً (خلال 90s — مثلاً من تسجيل الدخول)
+        //   فالاتصال مؤكَّد؛ لا داعي لسحب Users مرة أخرى ومزاحمة الطابور.
+        try {
+            const lastUsersFetch = Number(AppState?.syncMeta?.users || 0);
+            if (lastUsersFetch && (Date.now() - lastUsersFetch) < 90000) {
+                this.state.consecutiveFailures = 0;
+                this.state.lastSuccessTime = new Date().toISOString();
+                this.state.isConnected = true;
+                this.emitUserConnectionState(true);
+                return;
+            }
+        } catch (_e) { /* تجاهل — نكمل بالفحص الفعلي */ }
+
         try {
             // محاولة قراءة بيانات بسيطة من قاعدة SQL
             // استخدام timeout أطول (60 ثانية) لتجنب أخطاء timeout غير ضرورية

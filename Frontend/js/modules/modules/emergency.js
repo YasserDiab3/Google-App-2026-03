@@ -446,6 +446,8 @@ const Emergency = {
 
     setupAutoRefresh() {
         const moduleRef = Emergency;
+        // ✅ منع تراكم المؤقتات: ألغِ أي مؤقت سابق قبل إنشاء جديد (load يُستدعى عند كل فتح للموديول)
+        moduleRef.clearAutoRefresh();
         const autoRefreshInput = document.getElementById('emergency-auto-refresh');
         const shouldRefresh = autoRefreshInput ? autoRefreshInput.checked : true;
         if (!shouldRefresh) return;

@@ -2202,9 +2202,8 @@ const DailyObservations = {
                     const slim = data.map((row) => this.slimObservationForList(row));
                     const oldData = AppState.appData.dailyObservations || [];
                     const viewAll = typeof this.canViewAllObservationsWorkflow === 'function' && this.canViewAllObservationsWorkflow();
-                    if (!viewAll) {
-                        AppState.appData.dailyObservations = slim;
-                    } else if (slim.length === 0 && oldData.length > 0) {
+                    if (slim.length === 0 && oldData.length > 0) {
+                        // حماية: لا تستبدل بيانات محلية غير فارغة برد فارغ (حتى لغير عرض الكل)
                         Utils?.safeLog?.('⚠️ DailyObservations: البيانات الجديدة فارغة - الاحتفاظ بالمحلي');
                     } else {
                         AppState.appData.dailyObservations = slim;
@@ -2457,7 +2456,11 @@ const DailyObservations = {
             let listContent = '';
             let analysisContent = '';
             let top10Content = '';
-            if (firstTab === 'observations-registry' || canRegistry) {
+            if (firstTab === 'observations-registry') {
+                // ✅ أداء: لا نبني shell السجل الثقيل (تطبيع كامل + 8 مجموعات فلاتر) قبل أول رسم.
+                //   نعرض هيكل + spinner فوراً ثم نملأ التبويب بعد الرسم في runDeferred.
+                listContent = obsLazyPlaceholder;
+            } else if (canRegistry) {
                 listContent = (await withTimeout(this.renderList(), listErrorHtml)) || listErrorHtml;
             }
             if (firstTab === 'top-10-observations') {
@@ -2600,9 +2603,19 @@ const DailyObservations = {
             
             try {
                 requestAnimationFrame(() => {
-                    const runDeferred = () => {
+                    const runDeferred = async () => {
                         try {
                             if (this.state && this.state.activeTab === 'observations-registry') {
+                                // ✅ ملء shell السجل بعد أول رسم (كان يُبنى قبله ويؤخّر الظهور)
+                                try {
+                                    const regEl = document.getElementById('tab-observations-registry');
+                                    if (regEl && regEl.querySelector('.empty-state')) {
+                                        regEl.innerHTML = await this.renderList();
+                                        this.applyModuleI18n(regEl);
+                                    }
+                                } catch (shellErr) {
+                                    Utils.safeWarn('⚠️ بناء سجل الملاحظات:', shellErr);
+                                }
                                 void this.loadObservationsList();
                                 try {
                                     this.runObservationDueDateReminders();

@@ -59,9 +59,14 @@ if (typeof window !== 'undefined') {
                         });
                         if (result && result.success) {
                             const dataKey = sheetName.charAt(0).toLowerCase() + sheetName.slice(1);
-                            AppState.appData[dataKey] = result.data || [];
-                            if (!silent) Utils.safeLog(`✅ تم مزامنة ${sheetName}: ${AppState.appData[dataKey].length} سجل`);
-                            return { sheet: sheetName, success: true, count: AppState.appData[dataKey].length };
+                            const incoming = Array.isArray(result.data) ? result.data : [];
+                            const existing = Array.isArray(AppState.appData[dataKey]) ? AppState.appData[dataKey] : [];
+                            // حماية: لا تستبدل بيانات محلية غير فارغة برد فارغ
+                            if (!(incoming.length === 0 && existing.length > 0)) {
+                                AppState.appData[dataKey] = incoming;
+                            }
+                            if (!silent) Utils.safeLog(`✅ تم مزامنة ${sheetName}: ${(AppState.appData[dataKey] || []).length} سجل`);
+                            return { sheet: sheetName, success: true, count: (AppState.appData[dataKey] || []).length };
                         }
                         return { sheet: sheetName, success: false };
                     } catch (error) {

@@ -621,18 +621,22 @@
          * إعداد حفظ تلقائي للبيانات عند إغلاق الصفحة
          */
         setupAutoSaveOnUnload() {
-            // ✅ حماية: حفظ البيانات تلقائياً عند إغلاق الصفحة
-            window.addEventListener('beforeunload', (e) => {
+            // ✅ حماية: حفظ فوري متزامن قبل تفريغ الصفحة — save() المؤجَّل (300ms) يموت مع الـ unload
+            const flushSave = () => {
                 try {
-                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
-                        // محاولة حفظ البيانات بشكل متزامن (قبل إغلاق الصفحة)
+                    if (typeof window.DataManager !== 'undefined' && typeof window.DataManager.saveImmediate === 'function') {
+                        window.DataManager.saveImmediate();
+                    } else if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                         window.DataManager.save();
                     }
                 } catch (error) {
                     // لا نعرض أخطاء عند إغلاق الصفحة
                     console.error('خطأ في حفظ البيانات عند الإغلاق:', error);
                 }
-            });
+            };
+            window.addEventListener('beforeunload', flushSave);
+            // pagehide يغطي الجوال/إغلاق التبويب حيث قد لا يُطلق beforeunload
+            window.addEventListener('pagehide', flushSave);
         },
 
         /**
@@ -1136,13 +1140,21 @@
                 return requiredData;
             }
 
+            // ✅ عقد StableLoader: الأوراق المملوكة الثقيلة تُجلب من موديولها عند فتح تبويبه — لا من Bootstrap.
+            //   منعها هنا يوقف عاصفة الجلب عند إعادة التحميل (F5) التي تزاحم طابور 3 عمّال.
+            const OWNED_HEAVY_KEYS = new Set([
+                'clinicVisits', 'clinicContractorVisits', 'training',
+                'employees', 'ptw', 'ptwRegistry', 'dailyObservations'
+            ]);
+            const stripOwnedHeavy = (list) => [...new Set(list)].filter((k) => !OWNED_HEAVY_KEYS.has(k));
+
             if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
                 requiredData.push(
                     'users', 'employees', 'approvedContractors', 'contractors',
                     'incidents', 'nearmiss', 'ptw', 'ptwRegistry', 'training',
                     'clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries', 'dailyObservations'
                 );
-                return [...new Set(requiredData)];
+                return stripOwnedHeavy(requiredData);
             }
 
             if (typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
@@ -1165,7 +1177,7 @@
                 requiredData.push('clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries');
             }
 
-            return [...new Set(requiredData)];
+            return stripOwnedHeavy(requiredData);
         },
 
         /**

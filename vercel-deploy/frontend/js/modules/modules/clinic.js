@@ -8404,6 +8404,24 @@ const Clinic = {
             }
         });
 
+        // ✅ أداء: فهرس مطابقة O(n+m) بدل server.some O(local×server).
+        //   نبني مفاتيح مركّبة من الخادم مرة واحدة ثم نبحث O(1) لكل سجل محلي.
+        const serverMatchKeys = new Set();
+        server.forEach((sv) => {
+            if (!sv) return;
+            const vd = sv.visitDate;
+            if (sv.personType === 'employee') {
+                const svCode = String(sv.employeeCode || sv.employeeNumber || '').trim();
+                if (svCode) serverMatchKeys.add(`emp|${vd}|code|${svCode}`);
+                const svName = Clinic.normalizeArabicText(sv.employeeName);
+                if (svName) serverMatchKeys.add(`emp|${vd}|name|${svName}`);
+            } else {
+                const svCName = Clinic.normalizeArabicText(sv.contractorName || sv.externalName);
+                const svWName = Clinic.normalizeArabicText(sv.contractorWorkerName);
+                serverMatchKeys.add(`${sv.personType}|${vd}|${svCName}|${svWName}`);
+            }
+        });
+
         const extras = [];
         local.forEach((v) => {
             if (!v || v.id == null || String(v.id).trim() === '') return;
@@ -8411,37 +8429,40 @@ const Clinic = {
 
             // ✅ إذا لم يكن السجل المحلي موجوداً في الخادم، نحتفظ به (سجل لم يتم مزامنته بعد أو كاش قديم)
             if (!seen.has(id)) {
-                // محاولة البحث عن بديل (نفس الشخص والوقت) لتجنب التكرار إذا تغير الـ ID
-                const isDuplicate = server.some(sv => {
-                    if (sv.personType !== v.personType) return false;
-                    if (sv.visitDate !== v.visitDate) return false;
-                    
-                    if (sv.personType === 'employee') {
-                        const svCode = String(sv.employeeCode || sv.employeeNumber || '').trim();
-                        const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
-                        if (svCode && vCode && svCode === vCode) return true;
-                        
-                        const svName = Clinic.normalizeArabicText(sv.employeeName);
-                        const vName = Clinic.normalizeArabicText(v.employeeName);
-                        return !!svName && svName === vName;
-                    } else {
-                        // contractor or external
-                        const svCName = Clinic.normalizeArabicText(sv.contractorName || sv.externalName);
-                        const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
-                        const svWName = Clinic.normalizeArabicText(sv.contractorWorkerName);
-                        const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
-                        
-                        return svCName === vCName && svWName === vWName;
+                // مطابقة بديلة (نفس الشخص والوقت) عبر الفهرس لتجنب التكرار إذا تغيّر الـ ID
+                let isDuplicate = false;
+                const vd = v.visitDate;
+                if (v.personType === 'employee') {
+                    const vCode = String(v.employeeCode || v.employeeNumber || '').trim();
+                    const vName = Clinic.normalizeArabicText(v.employeeName);
+                    if (vCode && serverMatchKeys.has(`emp|${vd}|code|${vCode}`)) {
+                        isDuplicate = true;
+                    } else if (vName && serverMatchKeys.has(`emp|${vd}|name|${vName}`)) {
+                        isDuplicate = true;
                     }
-                });
+                } else {
+                    const vCName = Clinic.normalizeArabicText(v.contractorName || v.externalName);
+                    const vWName = Clinic.normalizeArabicText(v.contractorWorkerName);
+                    isDuplicate = serverMatchKeys.has(`${v.personType}|${vd}|${vCName}|${vWName}`);
+                }
 
                 if (!isDuplicate) {
                     // ✅ المشكلة: السجلات التي تُحذف من الخادم تبقى هنا للأبد بسبب الدمج!
-                    // ✅ الحل: نحتفظ بالسجلات المحلية الإضافية فقط إذا كانت حديثة جداً (أقل من 2 ساعة)
-                    // على افتراض أنها أُضيفت أوفلاين ولم تُرفع بعد. أما السجلات القديمة المحذوفة من الخادم فنتخلص منها.
+                    // ✅ الحل: نحتفظ بالسجل المحلي إذا كان (أ) يحمل علامة عدم اكتمال الرفع، أو
+                    //    (ب) حديثاً جداً (أقل من ساعتين)، أو (ج) بلا تاريخ. غير ذلك نعتبره محذوفاً من الخادم.
+                    const isPendingLocal = !!(
+                        v.pendingSync || v._pendingSync || v.pending ||
+                        v._local || v._localOnly || v.isLocalOnly ||
+                        v.syncStatus === 'pending' || v.__unsynced ||
+                        /^(_TMP_|local[_-])/i.test(id)
+                    );
                     const recordTime = new Date(v.createdAt || v.visitDate).getTime();
                     const now = new Date().getTime();
-                    if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
+                    if (isPendingLocal) {
+                        // سجل لم يُرفع للخادم بعد — لا يُحذف مهما كان عمره
+                        seen.add(id);
+                        extras.push(v);
+                    } else if (!isNaN(recordTime) && (now - recordTime) < (2 * 60 * 60 * 1000)) { // ساعتين
                         seen.add(id);
                         extras.push(v);
                     } else if (isNaN(recordTime)) {
@@ -8513,18 +8534,8 @@ const Clinic = {
 
         if (this._visitsBackendFetchOk === true) return false;
 
-        const visits = AppState.appData.clinicVisits;
-        if (Array.isArray(visits) && visits.length > 0) {
-            const lastSync = localStorage.getItem('clinic_last_sync');
-            if (lastSync) {
-                const cacheAge = Date.now() - parseInt(lastSync, 10);
-                const CACHE_DURATION = 10 * 60 * 1000;
-                if (!isNaN(cacheAge) && cacheAge < CACHE_DURATION) {
-                    return false;
-                }
-            }
-        }
-
+        // بعد F5 لا يثبت _visitsBackendFetchOk — اجلب دائماً من getAllClinicVisits
+        // لا نعتمد على clinic_last_sync وحده: الكاش قد يكون نسخة light مقصوصة أو صفوف خام من bootstrap
         return true;
     },
 
@@ -10486,6 +10497,9 @@ const Clinic = {
         }
         data.clinicVisits = data.clinicVisits.map((visit) => {
             if (!visit || typeof visit !== 'object') return visit;
+            // ✅ أداء: تخطي الزيارات المُطبّعة مسبقاً — التطبيع فكري idempotent، فلا داعي لإعادته
+            //   (JSON.stringify للأدوية + تحليل التواريخ) في كل رسم. بيانات الخادم الجديدة بلا العلم.
+            if (visit.__clinicNormV2 === true) return visit;
 
             // توحيد النوع إلى حروف صغيرة
             let type = String(visit.personType || '').toLowerCase().trim();
@@ -10593,6 +10607,7 @@ const Clinic = {
                 }
             }
             
+            visit.__clinicNormV2 = true; // وسم الزيارة كمُطبّعة لتخطيها في الرسومات التالية
             return visit;
         });
 
@@ -10620,9 +10635,9 @@ const Clinic = {
 
         AppState.appData = data;
         
-        // ✅ حفظ البيانات في جميع الحالات لضمان عدم فقدانها
-        // (مثل تبويب الأدوية - نحفظ دائماً بعد ensureData)
-            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+        // ✅ أداء: احفظ فقط عند حدوث تغيير فعلي — كان يُستدعى save() (تسلسل كامل AppState) في كل رسم
+        //   حتى بلا تغيير، وهو سبب رئيسي لتجميد الواجهة عند فتح/تبديل تبويب الزيارات.
+            if ((medicationsChanged || visitsChanged) && typeof window.DataManager !== 'undefined' && window.DataManager.save) {
             try {
                 window.DataManager.save();
                 if (AppState.debugMode && (medicationsChanged || visitsChanged)) {
@@ -14948,6 +14963,17 @@ const Clinic = {
             // هذا يضمن عدم وجود واجهة فارغة حتى لو فشل تحميل البيانات
             this.renderUI();
 
+            // ✅ بدء جلب سجل التردد مباشرةً عند فتح الموديول — لا ننتظر 80ms إذا لم يُجلب بعد في هذه الجلسة
+            if (!this._visitsBackendFetchOk && !this._clinicVisitsLoadPromise) {
+                if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('clinic');
+                this.loadVisitsDataFromBackend()
+                    .then(() => {
+                        if (this.state && this.state.activeTab === 'visits') this.scheduleVisitsTabRender(false, 0);
+                    })
+                    .catch(() => {})
+                    .finally(() => { if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('clinic'); });
+            }
+
             const runSecondaryClinicLoads = () => {
                 if (this._userNeedsClinicStaffForAttendance() && !this.isActiveClinicStaffMember()) {
                     void this._ensureClinicStaffLoadedForAttendance()
@@ -14968,7 +14994,10 @@ const Clinic = {
                         130000,
                         'انتهت مهلة تحميل البيانات'
                     ).then(() => {
-                        localStorage.setItem('clinic_last_sync', Date.now().toString());
+                        // ختم المزامنة فقط عند نجاح جلب سجل التردد فعلاً — ممنوع ختم كاذب يمنع الجلب التالي
+                        if (this._visitsBackendFetchOk === true) {
+                            localStorage.setItem('clinic_last_sync', Date.now().toString());
+                        }
                         this.ensureData();
                         if (this.state && this.state.activeTab === 'visits') {
                             this.scheduleVisitsTabRender(false, 0);
@@ -15028,8 +15057,8 @@ const Clinic = {
         const injuries = ad.injuries || [];
         const visits = ad.clinicVisits || [];
 
-        // نعتبر البيانات صالحة إذا كان هناك على الأقل نوع واحد من البيانات
-        return medications.length > 0 || sickLeave.length > 0 || injuries.length > 0 || visits.length > 0;
+        // سجل التردد هو المعيار: لا نعتبر العيادة محمّلة من الأدوية/الإجازات وحدها
+        return visits.length > 0;
     },
 
     /**

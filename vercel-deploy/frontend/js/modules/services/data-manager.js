@@ -845,20 +845,24 @@ const DataManager = {
                 await this.purgeLocalAppData('load_owner_mismatch');
                 return false;
             }
-            // كاش بدون مالك + توجد جلسة متوقعة → لا نحمّل بيانات يتيمة
+            // كاش بدون مالك + توجد جلسة متوقعة.
+            // ⚠️ لا نمسح فوراً: إن وُجد hse_app_data فهو يحمل _ownerEmail داخله ويُتحقق منه أدناه
+            //   (السطر ~870). المسح المبكر هنا كان يفقد كاش نفس المستخدم عند غياب علامة cacheOwner المنفصلة.
+            //   نمسح فقط عندما لا يمكن التحقق إطلاقاً (مفاتيح PTW يتيمة بلا hse_app_data).
             if (expectedOwner && !cacheOwner) {
-                const orphanPayload = !!(
-                    localStorage.getItem('hse_app_data') ||
+                const hasAppData = !!localStorage.getItem('hse_app_data');
+                const hasPtwOrphan = !!(
                     localStorage.getItem('hse_ptw_list') ||
                     localStorage.getItem('hse_ptw_registry')
                 );
-                if (orphanPayload) {
+                if (!hasAppData && hasPtwOrphan) {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                        Utils.safeWarn('🔒 رفض كاش يتيم أثناء استعادة الجلسة — مسح');
+                        Utils.safeWarn('🔒 مفاتيح PTW يتيمة بلا hse_app_data للتحقق — مسح');
                     }
-                    await this.purgeLocalAppData('load_orphan_with_session');
+                    await this.purgeLocalAppData('load_orphan_ptw_no_appdata');
                     return false;
                 }
+                // إن وُجد hse_app_data: نترك فحص _ownerEmail أدناه يقرر (يتبنّى الملكية إن تطابق أو غاب المالك)
             }
             
             const saved = localStorage.getItem('hse_app_data');
@@ -1127,13 +1131,20 @@ const DataManager = {
         return true;
     },
 
-    /** حفظ فوري بدون debounce — استخدمه عند تسجيل الخروج أو العمليات الحرجة */
+    /** حفظ فوري بدون debounce — استخدمه عند تسجيل الخروج أو العمليات الحرجة.
+     * متزامن لـ localStorage (يضمن الحفظ عند unload) ويعيد Promise ينتظر اكتمال IndexedDB. */
     saveImmediate() {
         if (this._saveDebounceTimer) {
             clearTimeout(this._saveDebounceTimer);
             this._saveDebounceTimer = null;
         }
-        return this._saveImmediate();
+        // localStorage يُكتب متزامناً داخل _saveImmediate — آمن حتى لو لم يُنتظر Promise (مسار unload)
+        const result = this._saveImmediate();
+        const idbPromise = this._lastIdbSetPromise;
+        if (idbPromise && typeof idbPromise.then === 'function') {
+            return idbPromise.then(() => result).catch(() => result);
+        }
+        return result;
     },
 
     /**
@@ -1152,8 +1163,9 @@ const DataManager = {
             const dataToSave = this.sanitizeAppDataForStorage(AppState.appData);
             
             // ✅ حفظ كامل البيانات في IndexedDB لتفادي قيد الـ 5MB في localStorage وحماية البيانات من الفقد
+            this._lastIdbSetPromise = null;
             if (typeof LocalDBCache !== 'undefined' && typeof LocalDBCache.set === 'function') {
-                LocalDBCache.set('hse_app_data', dataToSave).catch(e => {
+                this._lastIdbSetPromise = LocalDBCache.set('hse_app_data', dataToSave).catch(e => {
                     if (typeof Utils !== 'undefined' && Utils.safeWarn) {
                         Utils.safeWarn('⚠️ فشل الحفظ في IndexedDB:', e);
                     }
@@ -1291,7 +1303,8 @@ const DataManager = {
             'trainingCertificates': 'TrainingCertificates',
             'trainingAttendance': 'Training',
             'contractorTrainings': 'ContractorTrainings',
-            'trainingAnalysisData': 'Training'
+            'trainingAnalysisData': 'Training',
+            'clinicVisits': 'ClinicVisits'
         };
 
         const truncatedFields = AppState._truncatedFields || {};
@@ -1315,9 +1328,28 @@ const DataManager = {
         let refreshed = 0;
         results.forEach(({ field, result, error }) => {
             if (result && result.success && Array.isArray(result.data)) {
-                AppState.appData[field] = result.data;
+                const incoming = result.data;
+                const existing = Array.isArray(AppState.appData[field]) ? AppState.appData[field] : [];
+                // shouldKeepOld: لا تستبدل بيانات محلية غير فارغة برد فارغ
+                if (incoming.length === 0 && existing.length > 0) {
+                    Utils.safeWarn(`⚠️ ترميم ${field}: رد فارغ — الاحتفاظ بالمحلي (${existing.length})`);
+                    return;
+                }
+                // سجل التردد: دمج بدل الاستبدال حتى لا نفقد الزيارات المحلية غير المرفوعة
+                if (field === 'clinicVisits'
+                    && typeof Clinic !== 'undefined'
+                    && typeof Clinic.mergeClinicVisitsWithLocalOnly === 'function'
+                    && incoming.length > 0) {
+                    try {
+                        AppState.appData.clinicVisits = Clinic.mergeClinicVisitsWithLocalOnly(incoming, existing);
+                    } catch (_e) {
+                        AppState.appData[field] = incoming;
+                    }
+                } else {
+                    AppState.appData[field] = incoming;
+                }
                 refreshed++;
-                Utils.safeLog(`✅ تم تحديث ${field}: ${result.data.length} سجل (كان مبتوراً على ${truncatedFields[field]})`);
+                Utils.safeLog(`✅ تم تحديث ${field}: ${incoming.length} سجل (كان مبتوراً على ${truncatedFields[field]})`);
             } else if (error) {
                 Utils.safeWarn(`⚠️ فشل تحديث ${field}:`, error.message || error);
             }
