@@ -2,16 +2,16 @@
   "version": "1.0.1625",
   "highlights": {
     "ar": [
-      "تحميل أسرع: إلغاء التحميل البطيء ورقة-ورقتين واستعادة الجلب المجمّع.",
-      "لا فقد للبيانات عند إعادة التحميل: حفظ فوري عند الخروج وحماية من استبدالها بمصفوفة فارغة.",
-      "إزالة تجميد الواجهة: ترقيم صفحات التصاريح وتخفيف معالجة زيارات العيادة والملاحظات.",
-      "منع تكرار الطلبات وجلب المستخدمين، وإخفاء شاشة التحميل فور انتهاء المزامنة."
+      "إصلاح فقدان بيانات العيادة بعد إعادة التحميل: سجل التردد يُجلب كاملاً من أول فتح للموديول.",
+      "منع استبدال الكاش الكامل بصفوف خام أو مصفوفات فارغة أثناء التحميل الأولي.",
+      "تحميل مباشر أسرع لسجل التردد دون انتظار مؤقتات أو شروط كاش ناقصة.",
+      "منع حفظ حالة فارغة فوق البيانات المخزنة — الحفظ فقط عند تغيّر فعلي."
     ],
     "en": [
-      "Faster loading: removed the slow one-sheet-at-a-time sync and restored batch fetching.",
-      "No data loss on reload: immediate save on exit and guards against empty-array overwrites.",
-      "No UI freezes: paginated permits list and lighter clinic-visits/observations processing.",
-      "Deduplicated requests and Users fetches, and the loading screen hides right after sync."
+      "Fixed clinic data loss after reload: visits now load fully on first module open.",
+      "Prevented raw/partial server rows from overwriting the full local cache during bootstrap.",
+      "Faster direct visits fetch — no timer waits or stale-cache skip conditions.",
+      "Blocked saving empty state over stored data — save only on real changes."
     ]
   }
 }
