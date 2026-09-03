@@ -19,9 +19,6 @@
     "import:xlsx": "node backend-sql/scripts/import-from-xlsx.js",
     "import:xlsx:compare": "node backend-sql/scripts/import-from-xlsx.js --compare"
   },
-  "allowScripts": {
-    "esbuild": true
-  },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
     "esbuild": "^0.25.12",

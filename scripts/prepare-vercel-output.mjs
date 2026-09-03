@@ -76,6 +76,7 @@ function setupNodeFunction(routeName, entryFile, opts = {}) {
         runtime: 'nodejs20.x',
         handler: 'index.js',
         launcherType: 'Nodejs',
+        memory: opts.memory || 128,
         maxDuration: opts.maxDuration || 10,
         supportsResponseStreaming: false
     });
@@ -93,9 +94,10 @@ if (!fs.existsSync(distDir)) {
 rmrf(outRoot);
 cpDir(distDir, staticRoot);
 
-setupNodeFunction('api/health', 'api/health.js', { maxDuration: 10 });
+setupNodeFunction('api/health', 'api/health.js', { memory: 128, maxDuration: 10 });
 
 setupNodeFunction('api/exec', 'Frontend/api/exec.js', {
+    memory: 1024,
     maxDuration: 60,
     includeDirs: ['backend-sql/src'],
     includeFiles: [
