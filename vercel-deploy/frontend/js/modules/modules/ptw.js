@@ -2487,11 +2487,24 @@ const PTW = {
             return this._metricsDatasetCache;
         }
         const registryRows = this.getRegistrySanitizedDataset();
-        const permitsFromList = AppState.appData?.ptw || [];
+        const permitsFromList = Array.isArray(AppState.appData?.ptw) ? AppState.appData.ptw : [];
         const permitsFromRegistry = this.getRegistryPermitsForMetrics();
         const merged = this.mergePermitsPreferRegistry(permitsFromList, permitsFromRegistry);
-        // مصدر العدّ: صفوف PTWRegistry المعقّمة (تطابق السجل/الورقة) وليس دمج PTW الفريد فقط
-        const source = permitsFromRegistry.length > 0 ? permitsFromRegistry : merged;
+        // قائمة التصاريح = ورقة PTW (مطابقة الشيت). لا تفضّل السجل إذا كان أقصر/مقطوعاً.
+        // السجل يُستخدم لـ KPI تبويب السجل فقط عبر registryRows.
+        let source;
+        if (permitsFromList.length > 0) {
+            source = permitsFromList.map((permit) => ({
+                id: permit.id || permit.permitId,
+                workType: permit.workType,
+                status: this.normalizePermitStatus(permit.status),
+                isFromRegistry: false
+            }));
+        } else if (permitsFromRegistry.length > 0) {
+            source = permitsFromRegistry;
+        } else {
+            source = merged;
+        }
         const res = { source, merged, permitsFromList, permitsFromRegistry, registryRows };
         this._metricsDatasetCache = res;
         return res;

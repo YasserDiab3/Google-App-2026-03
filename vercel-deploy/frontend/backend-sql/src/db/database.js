@@ -112,6 +112,26 @@ const HEAVY_LIST_FIELDS = {
     NearMiss: ['attachments']
 };
 
+/**
+ * أوراق ثقيلة: في listMode نُرجع أعمدة القائمة فقط (منع قطع الصفوف بصمت عبر capRowsForRpc).
+ * يجب أن يكفي العدّ/الفلاتر/KPIs دون حقول Blob.
+ */
+const LIST_FIELD_WHITELIST = {
+    PTW: [
+        'id', 'workType', 'siteId', 'siteName', 'sublocationId', 'sublocationName',
+        'workDescription', 'location', 'sublocation', 'startDate', 'endDate', 'status',
+        'requestingParty', 'authorizedParty', 'approvalCircuitOwnerId', 'approvalCircuitName',
+        'isManualEntry', 'skipApprovalFlow', 'createdAt', 'updatedAt', 'createdBy',
+        'paperPermitNumber', 'sequentialNumber', 'closureDate', 'closureStatus'
+    ],
+    PTWRegistry: [
+        'id', 'permitId', 'sequentialNumber', 'paperPermitNumber', 'permitType', 'permitTypeDisplay',
+        'status', 'openDate', 'timeFrom', 'timeTo', 'closureDate', 'location', 'sublocation',
+        'workDescription', 'requestingParty', 'authorizedParty', 'isManualEntry', 'skipApprovalFlow',
+        'approvalCircuitOwnerId', 'approvalCircuitName', 'createdAt', 'updatedAt'
+    ]
+};
+
 function isListModeRead(filter, options) {
     return !!(options && options.listMode) && !filter;
 }
@@ -128,8 +148,23 @@ function countStoredBlob(val) {
 }
 
 function slimRowsForList(sheetName, rows) {
+    if (!Array.isArray(rows) || rows.length === 0) return rows;
+    const whitelist = LIST_FIELD_WHITELIST[sheetName];
+    if (Array.isArray(whitelist) && whitelist.length) {
+        const allow = new Set(whitelist);
+        return rows.map((row) => {
+            if (!row || typeof row !== 'object') return row;
+            const out = {};
+            for (const key of allow) {
+                if (Object.prototype.hasOwnProperty.call(row, key)) out[key] = row[key];
+            }
+            // احتفظ بـ id دائماً إن وُجد
+            if (row.id != null && out.id == null) out.id = row.id;
+            return out;
+        });
+    }
     const omit = HEAVY_LIST_FIELDS[sheetName];
-    if (!omit || !Array.isArray(rows) || rows.length === 0) return rows;
+    if (!omit) return rows;
     return rows.map((row) => {
         if (!row || typeof row !== 'object') return row;
         const out = { ...row };
@@ -152,6 +187,13 @@ function slimRowsForList(sheetName, rows) {
 
 function buildListSelectSql(sheetName, tableName) {
     const allCols = headersMap[sheetName] || [];
+    const whitelist = LIST_FIELD_WHITELIST[sheetName];
+    if (Array.isArray(whitelist) && whitelist.length && allCols.length) {
+        const cols = whitelist
+            .filter((c) => allCols.includes(c) && isSafeIdentifier(c))
+            .map((c) => `"${c.trim()}"`);
+        if (cols.length) return `SELECT ${cols.join(', ')} FROM ${tableName}`;
+    }
     const omit = (HEAVY_LIST_FIELDS[sheetName] || []).filter((c) => allCols.includes(c));
     if (!allCols.length || !omit.length) return `SELECT * FROM ${tableName}`;
     const cols = allCols
