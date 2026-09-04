@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1639",
+  "version": "1.0.1640",
   "highlights": {
     "ar": [
-      "تثبيت oracledb في جذر Frontend لنشر Vercel الصحيح.",
-      "تفعيل Oracle للإنتاج مع ملفات Wallet عبر الأسرار.",
-      "مهلة فحص الصحة أطول لاتصال Oracle البارد."
+      "إصلاح Oracle على Vercel: oracledb داخل العملية بدل Worker.",
+      "تفعيل الدخول على قاعدة Oracle الدائمة.",
+      "تضمين حزم oracledb/deasync في نشر Frontend."
     ],
     "en": [
-      "Install oracledb at Frontend root for correct Vercel deploys.",
-      "Production Oracle enabled with wallet secrets.",
-      "Longer health timeout for Oracle cold start."
+      "Fix Vercel Oracle: in-process oracledb instead of worker.",
+      "Enable login on persistent Oracle database.",
+      "Bundle oracledb/deasync into Frontend deploy."
     ]
   }
 }

@@ -7,10 +7,13 @@
     "build:prod": "node scripts/build-frontend-prod.mjs"
   },
   "dependencies": {
+    "deasync": "^0.1.31",
     "oracledb": "^6.10.0"
   },
   "devDependencies": {
     "esbuild": "^0.25.12"
   },
-  "trustedDependencies": ["esbuild"]
+  "trustedDependencies": [
+    "esbuild"
+  ]
 }
