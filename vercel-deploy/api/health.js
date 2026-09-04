@@ -21,6 +21,9 @@ module.exports = (req, res) => {
         service: 'HSE API',
         dbEngine,
         persistent,
+        dbType: process.env.DB_TYPE || 'sqlite',
+        oracleWalletB64Len: String(process.env.ORACLE_WALLET_FILES_B64 || '').length,
+        oracleUserSet: !!(process.env.ORACLE_USER || '').trim(),
         timestamp: new Date().toISOString()
     });
 };
