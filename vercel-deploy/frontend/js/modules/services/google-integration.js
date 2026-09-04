@@ -393,10 +393,13 @@ const GoogleIntegration = {
             const host = urlObj.hostname.toLowerCase();
             const path = urlObj.pathname || '';
             if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
-                return path.endsWith('/exec');
+                return false;
             }
-            if (host.includes('safety-icapp.com') || host.endsWith('.trycloudflare.com') || host.includes('vercel.app') || host === 'localhost' || host === '127.0.0.1' || host === '') {
-                return true;
+            if (host.includes('icapphub') || host.includes('trycloudflare.com')) {
+                return false;
+            }
+            if (host.includes('safety-icapp.com') || host === 'safetyicapp-ecru.vercel.app' || host === 'localhost' || host === '127.0.0.1' || host === '') {
+                return path === '/api/exec' || path.endsWith('/api/exec') || path === '/exec' || path.endsWith('/exec') || trimmed.startsWith('/');
             }
             return false;
         } catch (error) {

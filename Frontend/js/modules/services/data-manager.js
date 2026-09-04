@@ -1731,10 +1731,18 @@ const DataManager = {
                 try {
                     const sc = AppState.googleConfig && AppState.googleConfig.appsScript;
                     const u = sc && String(sc.scriptUrl || '').trim();
-                    if (u && u.includes('trycloudflare.com')) {
-                        Utils.safeWarn('⚠️ إزالة رابط نفق منتهي من googleConfig:', u.slice(0,40));
-                        sc.scriptUrl = '';
-                        sc.enabled = false;
+                    const foreign = u && (
+                        u.includes('trycloudflare.com')
+                        || u.includes('script.google.com')
+                        || u.includes('icapphub')
+                        || (typeof window !== 'undefined' && typeof window.__hseIsForeignBackend === 'function' && window.__hseIsForeignBackend(u))
+                    );
+                    if (foreign) {
+                        Utils.safeWarn('⚠️ إزالة رابط خلفية أجنبي من googleConfig:', u.slice(0, 40));
+                        sc.scriptUrl = (typeof window !== 'undefined' && window.HSE_CANONICAL_SQL_API)
+                            ? window.HSE_CANONICAL_SQL_API
+                            : 'https://www.safety-icapp.com/api/exec';
+                        sc.enabled = true;
                         localStorage.setItem('hse_google_config', JSON.stringify(AppState.googleConfig));
                         localStorage.removeItem('hse_public_api_url');
                         localStorage.removeItem('HSE_API_URL');

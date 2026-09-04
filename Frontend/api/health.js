@@ -3,8 +3,10 @@
  */
 'use strict';
 
+const { applyRestrictiveCors } = require('../backend-sql/src/allowed-origins');
+
 module.exports = (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    applyRestrictiveCors(req, res);
     let dbEngine = 'unknown';
     let persistent = false;
     try {

@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1631",
+  "version": "1.0.1632",
   "highlights": {
     "ar": [
-      "نشر أسرع: تخطي فحص npm البطيء أثناء البناء على Vercel.",
-      "إزالة تحذيرات الذاكرة وسكربت esbuild من سجل النشر.",
-      "إشعار التحديث يظهر أسرع بعد اكتمال النشر — بدون كاش قديم لـ version.json."
+      "الاتصال بالخلفية عبر SQL على نطاق المشروع فقط.",
+      "منع التحويل أو الطلبات نحو مواقع أو مستودعات أخرى.",
+      "حماية واجهة البرمجة: رفض المصادر الأجنبية ومسح الروابط القديمة من المتصفح."
     ],
     "en": [
-      "Faster deploys: skip slow npm audit during the Vercel build.",
-      "Removed memory and esbuild script warnings from the deploy log.",
-      "Update notice appears sooner after deploy — version.json is no longer cached."
+      "The app talks to this project's SQL API on its own domain only.",
+      "No redirects or API calls to other sites or repositories.",
+      "Foreign origins are blocked and old backend URLs are cleared from the browser."
     ]
   }
 }

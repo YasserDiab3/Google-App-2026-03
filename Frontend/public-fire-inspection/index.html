@@ -2018,7 +2018,7 @@
         function getEffectiveApiUrl() {
             try {
                 const host = (window.location.hostname || '').toLowerCase();
-                if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
+                if (host.includes('safety-icapp.com') || host === 'safetyicapp-ecru.vercel.app') {
                     return window.location.origin + '/api/exec';
                 }
             } catch (_h) {}

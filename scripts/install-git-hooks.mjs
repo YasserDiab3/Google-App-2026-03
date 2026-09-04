@@ -28,6 +28,7 @@ if ! echo "$remote_url" | grep -Fqi "$allowed"; then
     exit 1
 fi
 cd "$(git rev-parse --show-toplevel)" || exit 1
+node scripts/check-repo-isolation.js || exit 1
 node scripts/check-version-bump.js || exit 1
 exit 0
 `;

@@ -9,6 +9,7 @@
 
 - المستودع الافتراضي والوحيد للرفع: **`https://github.com/YasserDiab3/Google-App-2026-03.git`** عبر **`git push origin main`** (انظر `google-app-2026-03-default-repo.mdc`).
 - **ممنوع نهائياً** الرفع إلى `ICAPP-V092026` أو `google-TR` أو أي مستودع آخر بأي طريقة.
+- **ممنوع** مشاركة الدومين أو `/api/exec` أو ملف SQLite مع `icapphub.vercel.app` أو أي مشروع Vercel آخر.
 
 ## ملاحظة تقنية
 

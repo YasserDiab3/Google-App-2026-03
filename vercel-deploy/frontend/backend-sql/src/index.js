@@ -21,27 +21,13 @@ initSchema(db);
 startDailyBackupScheduler(db);
 
 // Allowed Origin Whitelist (Production Domains + Development)
-const ALLOWED_ORIGINS = [
-    'https://www.safety-icapp.com',
-    'https://safetyicapp-ecru.vercel.app',
-    /^https:\/\/.*\.vercel\.app$/,
-    /^https:\/\/.*\.trycloudflare\.com$/,
-    /^http:\/\/localhost(:\d+)?$/,
-    /^http:\/\/127\.0\.0\.1(:\d+)?$/
-];
+const { isAllowedOrigin } = require('./allowed-origins');
 
 app.use(cors({
     origin: function(origin, callback) {
-        if (!origin) return callback(null, true); // Mobile WebView, curl, server-to-server
-        const isAllowed = ALLOWED_ORIGINS.some(allowed => {
-            if (allowed instanceof RegExp) return allowed.test(origin);
-            return allowed === origin;
-        });
-        if (isAllowed) {
-            callback(null, true);
-        } else {
-            callback(null, true); // Allow with warning in development/tunnel
-        }
+        if (!origin) return callback(null, true);
+        if (isAllowedOrigin(origin)) return callback(null, true);
+        callback(new Error('CORS: origin not allowed for this project'));
     },
     methods: ['GET', 'POST', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']

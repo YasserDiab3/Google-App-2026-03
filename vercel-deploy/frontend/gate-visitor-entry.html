@@ -3547,7 +3547,7 @@ function resetCheckInForm() {
                     localStorage.removeItem('HSE_API_URL');
                 }
                 const host = (window.location.hostname || '').toLowerCase();
-                if (host.includes('safety-icapp.com') || host.includes('vercel.app')) {
+                if (host.includes('safety-icapp.com') || host === 'safetyicapp-ecru.vercel.app') {
                     return window.location.origin + '/api/exec';
                 }
                 if (host === 'localhost' || host === '127.0.0.1' || host === '') {

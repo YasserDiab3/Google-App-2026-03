@@ -12,7 +12,7 @@
     (function enforceCanonicalDomain() {
         try {
             const h = window.location.hostname;
-            if (h === 'safetyicapp-ecru.vercel.app' || (h.endsWith('.vercel.app') && !h.includes('localhost'))) {
+            if (h === 'safetyicapp-ecru.vercel.app') {
                 const targetUrl = 'https://www.safety-icapp.com' + window.location.pathname + window.location.search + window.location.hash;
                 window.location.replace(targetUrl);
                 return;
