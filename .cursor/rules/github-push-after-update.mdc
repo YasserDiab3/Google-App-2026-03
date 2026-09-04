@@ -9,8 +9,8 @@
  - إن شملت التغييرات **الواجهة** (`Frontend/` أو `vercel-deploy/frontend/`): نفّذ **`node bump-version.js`** قبل الـ commit (انظر `bump-version-on-push.mdc`).
  - تنفيذ `git add` للملفات المعدّلة **بما فيها ملفات الإصدار**.
  - تنفيذ `git commit` برسالة واضحة بالعربية تصف التحديث.
- - تنفيذ **`git push origin main` فقط** — و`origin` يشير إلى **`https://github.com/YasserDiab3/ICAPP-V092026.git`** (انظر `icapp-v092026-default-repo.mdc` و`github-remote-canonical.mdc`).
- - **ممنوع نهائياً** أي دفع إلى `Google-App-2026-03` أو `google-TR` أو أي مستودع آخر بأي طريقة.
+ - تأكد أن `origin` = **`https://github.com/YasserDiab3/Google-App-2026-03.git`** ثم نفّذ **`git push origin main` فقط**.
+ - **ممنوع نهائياً** أي دفع إلى `ICAPP-V092026` أو `google-TR` أو أي مستودع آخر بأي طريقة.
 5. إذا لم يكتب المستخدم كلمة **«رفع»**، لا تنفّذ أي أوامر `commit` أو `push`.
 
 الأمثلة المقبولة للتأكيد:

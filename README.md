@@ -57,4 +57,4 @@
 
 ## الرفع إلى GitHub
 
-اتبع سياسة المستودع في `.cursor/rules/` (الرفع إلى `origin`؛ لا ترفع إلى `google-TR` إلا بطلب صريح).
+اتبع سياسة المستودع في `.cursor/rules/` (الرفع إلى `origin` = `https://github.com/YasserDiab3/Google-App-2026-03.git` فقط).

@@ -2,18 +2,18 @@
 
 ## المستودع الافتراضي والوحيد للرفع (هذا الـ workspace)
 
-- **`origin`** → `https://github.com/YasserDiab3/ICAPP-V092026.git` (الفرع **`main`**)
+- **`origin`** → `https://github.com/YasserDiab3/Google-App-2026-03.git` (الفرع **`main`**)
 - أمر الرفع الاعتيادي بعد الـ commit: **`git push origin main`** فقط.
-- انظر `icapp-v092026-default-repo.mdc` — قاعدة نهائية بقرار المستخدم.
+- انظر `google-app-2026-03-default-repo.mdc` — قاعدة نهائية بقرار المستخدم.
 
 ## مستودعات محظورة للرفع (بأي طريقة)
 
-- `https://github.com/YasserDiab3/Google-App-2026-03.git` — **ممنوع** الرفع إليه نهائياً.
+- `https://github.com/YasserDiab3/ICAPP-V092026.git` — **ممنوع** الرفع إليه نهائياً.
 - `https://github.com/YasserDiab3/google-TR.git` — **ممنوع** الرفع إليه نهائياً.
-- أي مستودع آخر غير ICAPP-V092026 — **ممنوع**.
+- أي مستودع آخر غير Google-App-2026-03 — **ممنوع**.
 
 ## قواعد للوكيل
 
-1. عند الرفع بعد «رفع»: **`git push origin main`** فقط (origin = ICAPP-V092026).
+1. عند الرفع بعد «رفع»: **`git push origin main`** فقط (origin = Google-App-2026-03).
 2. لا تُضِف remote ثانياً لأغراض الدفع.
-3. لا تغيّر URL الخاص بـ `origin` بعيداً عن ICAPP-V092026 إلا بطلب صريح موثّق من المستخدم.
+3. إن كان `origin` على رابط آخر: صحّحه إلى Google-App-2026-03 قبل الدفع.

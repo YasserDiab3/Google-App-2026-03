@@ -1,0 +1,25 @@
+#!/bin/sh
+# يرفض أي دفع لغير المستودع الإلزامي Google-App-2026-03
+remote_name="$1"
+remote_url="$2"
+
+allowed='github.com/YasserDiab3/Google-App-2026-03'
+blocked='ICAPP-V092026|google-TR'
+
+if echo "$remote_url" | grep -Eqi "$blocked"; then
+    echo "❌ ممنوع الدفع إلى $remote_url"
+    echo "المستودع الوحيد: https://github.com/YasserDiab3/Google-App-2026-03.git"
+    exit 1
+fi
+
+if ! echo "$remote_url" | grep -Fqi "$allowed"; then
+    echo "❌ ممنوع الدفع إلى $remote_url"
+    echo "المستودع الوحيد: https://github.com/YasserDiab3/Google-App-2026-03.git"
+    exit 1
+fi
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if [ -f scripts/check-version-bump.js ]; then
+    node scripts/check-version-bump.js || exit 1
+fi
+exit 0
