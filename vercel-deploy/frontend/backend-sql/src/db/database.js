@@ -96,7 +96,20 @@ function hydrateSheetRow(row) {
 /** أعمدة Blob لا تُجلب في قوائم الموديولات — الصور تُحمَّل عند عرض سجل واحد */
 const HEAVY_LIST_FIELDS = {
     DailyObservations: ['attachments', 'afterExecutionImages', 'timeLog', 'updates', 'comments'],
-    Incidents: ['attachments', 'investigation', 'actionPlan']
+    Incidents: ['attachments', 'investigation', 'actionPlan', 'image', 'injuries', 'losses', 'actions', 'userData'],
+    Employees: ['photo'],
+    PTW: [
+        'approvals', 'riskAssessment', 'teamMembers', 'hotWorkDetails', 'confinedSpaceDetails',
+        'heightWorkDetails', 'equipment', 'tools', 'toolsList', 'requiredPPE', 'preStartChecklist',
+        'gasTesting', 'governmentPermits', 'mocRequest', 'closureApproval', 'manualApprovals',
+        'manualClosureApprovals'
+    ],
+    PTWRegistry: [
+        'equipment', 'tools', 'toolsList', 'hotWorkDetails', 'confinedSpaceDetails',
+        'heightWorkDetails', 'preStartChecklist', 'governmentPermits', 'gasTesting',
+        'mocRequest', 'requiredPPE'
+    ],
+    NearMiss: ['attachments']
 };
 
 function isListModeRead(filter, options) {
@@ -130,9 +143,8 @@ function slimRowsForList(sheetName, rows) {
         }
         for (const field of omit) {
             if (field === 'attachments' || field === 'afterExecutionImages') continue;
-            if (Array.isArray(out[field]) || field === 'timeLog' || field === 'updates' || field === 'comments') {
-                out[field] = [];
-            }
+            if (!(field in out)) continue;
+            out[field] = Array.isArray(out[field]) ? [] : '';
         }
         return out;
     });

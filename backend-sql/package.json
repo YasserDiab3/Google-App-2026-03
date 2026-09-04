@@ -13,7 +13,8 @@
     "test:parity": "node tests/parity-engine.test.js",
     "test:security": "node tests/security-guard.test.js",
     "test:benchmark": "node tests/benchmark.test.js",
-    "test:e2e": "node tests/e2e-smoke.test.js"
+    "test:e2e": "node tests/e2e-smoke.test.js",
+    "migrate:turso": "node scripts/migrate-to-turso.js"
   },
   "dependencies": {
     "@vercel/blob": "^0.27.3",
@@ -21,5 +22,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2"
+  },
+  "optionalDependencies": {
+    "libsql": "^0.5.0"
   }
 }

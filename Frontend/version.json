@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1625",
+  "version": "1.0.1627",
   "highlights": {
     "ar": [
-      "إصلاح فقدان بيانات العيادة بعد إعادة التحميل: سجل التردد يُجلب كاملاً من أول فتح للموديول.",
-      "منع استبدال الكاش الكامل بصفوف خام أو مصفوفات فارغة أثناء التحميل الأولي.",
-      "تحميل مباشر أسرع لسجل التردد دون انتظار مؤقتات أو شروط كاش ناقصة.",
-      "منع حفظ حالة فارغة فوق البيانات المخزنة — الحفظ فقط عند تغيّر فعلي."
+      "عودة قوائم التصاريح والموظفين والحوادث: تحميل خفيف بدون الصور والتفاصيل الثقيلة.",
+      "جلب الحوادث تلقائياً عند فتح الموديول حتى لا تبقى الشاشة فارغة.",
+      "تبديل لغة شاشة الدخول بنقرة واحدة على الزر.",
+      "تحقق أدق لكلمة المرور عند تسجيل الدخول مع رسائل أوضح."
     ],
     "en": [
-      "Fixed clinic data loss after reload: visits now load fully on first module open.",
-      "Prevented raw/partial server rows from overwriting the full local cache during bootstrap.",
-      "Faster direct visits fetch — no timer waits or stale-cache skip conditions.",
-      "Blocked saving empty state over stored data — save only on real changes."
+      "Permits, employees, and incidents lists load again — slim payloads without photos/heavy JSON.",
+      "Incidents fetch on module open so the screen is no longer empty.",
+      "Login language toggles with a single button click.",
+      "More reliable password checks at login with clearer error messages."
     ]
   }
 }

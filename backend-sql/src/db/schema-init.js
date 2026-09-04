@@ -40,6 +40,9 @@ function initSchema(db = getDatabase()) {
             }
         }
     }
+
+    // دفع DDL (CREATE TABLE/INDEX) إلى Turso إن كان المحرك embedded replica
+    try { if (db && typeof db.syncNow === 'function') db.syncNow(); } catch (_) {}
 }
 
 module.exports = {

@@ -941,12 +941,14 @@ window.Auth = {
                             };
                         }
                     } else {
-                        // الخادم ردّ فعلاً ورفض: قراره نهائي. المسار المحلي مخصص لانعدام الاتصال فقط،
+                        // الخادم ردّ فعلاً — لا تستبدل الرسالة إلا عند خطأ الاعتمادات
                         let hardErrMsg = loginResult.message;
-                        try {
-                            await Utils.RateLimiter.recordFailedAttempt(email);
-                        } catch (rateLimitErr) {
-                            hardErrMsg = rateLimitErr.message || hardErrMsg;
+                        if (errCode === 'INVALID_CREDENTIALS') {
+                            try {
+                                await Utils.RateLimiter.recordFailedAttempt(email);
+                            } catch (rateLimitErr) {
+                                hardErrMsg = rateLimitErr.message || hardErrMsg;
+                            }
                         }
                         Notification.error(hardErrMsg);
                         return {

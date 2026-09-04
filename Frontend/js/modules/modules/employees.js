@@ -3708,10 +3708,6 @@ const Employees = {
                     return true;
                 }
 
-                if (!forceReload) {
-                    return false;
-                }
-
                 if (AppState.debugMode) {
                     Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
                 }

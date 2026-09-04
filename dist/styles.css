@@ -11431,7 +11431,7 @@ label {
 
 .login-card {
     max-width: min(95vw, 420px);
-    overflow-x: hidden;
+    overflow: visible;
 }
 
 /* تحسينات نهائية للتوافق */

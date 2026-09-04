@@ -2865,7 +2865,8 @@ const PTW = {
                 action: 'readFromSheet',
                 data: {
                     sheetName: 'PTW',
-                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                    spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId,
+                    __timeoutMs: 25000
                 }
             });
 
@@ -2919,7 +2920,8 @@ const PTW = {
                     action: 'readFromSheet',
                     data: {
                         sheetName: 'PTWRegistry',
-                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId,
+                        __timeoutMs: 25000
                     }
                 });
 

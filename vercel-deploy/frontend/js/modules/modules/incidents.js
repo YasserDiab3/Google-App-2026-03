@@ -164,7 +164,15 @@ const Incidents = {
         if (!AppState?.appData?.incidents || !Array.isArray(AppState.appData.incidents)) {
             return [];
         }
-        return AppState.appData.incidents.filter((item) => item && typeof item === 'object' && item.id);
+        return AppState.appData.incidents.filter((item) => {
+            if (!item || typeof item !== 'object') return false;
+            if (item.id) return true;
+            if (item.incidentId) {
+                item.id = item.incidentId;
+                return true;
+            }
+            return false;
+        });
     },
 
     getUnifiedIncidentCounts() {
@@ -1322,6 +1330,70 @@ const Incidents = {
 
     currentTab: 'annual-log',
 
+    /** جلب سجل الحوادث من الخادم عند فتح الموديول — لا يعتمد فقط على Bootstrap */
+    _startIncidentsBackendSync() {
+        if (this._backendSyncStarted || this._incidentsBackendLoadPromise) return;
+        this._backendSyncStarted = true;
+
+        const rpcReady = typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration._isBackendRpcConfigured === 'function' &&
+            GoogleIntegration._isBackendRpcConfigured();
+        if (!rpcReady) {
+            this._backendSyncStarted = false;
+            return;
+        }
+
+        const runSync = async () => {
+            if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('incidents');
+            try {
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: {
+                        sheetName: 'Incidents',
+                        spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId,
+                        __timeoutMs: 25000
+                    }
+                });
+                if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
+                    const incoming = result.data;
+                    const existing = Array.isArray(AppState.appData.incidents) ? AppState.appData.incidents : [];
+                    const byId = new Map();
+                    existing.forEach((row) => {
+                        const id = row && (row.id || row.incidentId);
+                        if (id) byId.set(String(id), row);
+                    });
+                    incoming.forEach((row) => {
+                        if (!row || typeof row !== 'object') return;
+                        const id = row.id || row.incidentId;
+                        if (!id) return;
+                        const key = String(id);
+                        const prev = byId.get(key);
+                        byId.set(key, prev ? { ...prev, ...row, id: prev.id || row.id || id } : { ...row, id });
+                    });
+                    AppState.appData.incidents = Array.from(byId.values());
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+                    try {
+                        this.lastRenderedSignature = '';
+                        const container = document.getElementById('incidents-table-container');
+                        if (container) this.loadIncidentsList();
+                    } catch (_e) { /* ignore */ }
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('⚠️ فشل جلب الحوادث من الخادم:', err);
+                }
+            } finally {
+                if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('incidents');
+            }
+        };
+
+        this._incidentsBackendLoadPromise = runSync().finally(() => {
+            this._incidentsBackendLoadPromise = null;
+        });
+    },
+
     async load() {
         // إضافة مستمع لتغيير اللغة
         if (!this._languageChangeListenerAdded) {
@@ -1430,6 +1502,10 @@ const Incidents = {
                     console.error('خطأ في إعداد المستمعين:', error);
                 }
             }
+
+            setTimeout(() => {
+                try { this._startIncidentsBackendSync(); } catch (_e) { /* ignore */ }
+            }, 400);
         } catch (error) {
             if (typeof Utils !== 'undefined' && Utils.safeError) {
                 Utils.safeError('خطأ فادح في تحميل مديول الحوادث:', error);

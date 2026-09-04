@@ -9955,9 +9955,9 @@ window.UI = {
             return; // لا نعرض تحذير إذا كنا لسنا في شاشة تسجيل الدخول
         }
 
-        // التحقق مما إذا كان login-init-fixed.js قد قام بالفعل بتهيئة الزر
-        if (loginLangToggle.dataset.handlerBound === 'true') {
-            Utils.safeLog('ℹ️ زر اللغة في شاشة تسجيل الدخول مفعل مسبقاً بواسطة login-init-fixed.js');
+        // التحقق مما إذا كان login-init-fixed.js أو السكربت المضمّن قد هيّأ الزر
+        if (window._loginLangDirectBound || loginLangToggle.dataset.handlerBound === 'true' || loginLangToggle.dataset.loginLangBound === 'true') {
+            Utils.safeLog('ℹ️ زر اللغة في شاشة تسجيل الدخول مفعل مسبقاً');
             return;
         }
 

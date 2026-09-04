@@ -1111,7 +1111,7 @@ const moduleHandlers = {
     // ==========================================
     'getAllEmployees': function(payload, postData, action) {
         const db = getDatabase();
-        const records = db.readSheet('Employees');
+        const records = db.readSheet('Employees', null, { listMode: true });
         return {
             success: true,
             employees: records,

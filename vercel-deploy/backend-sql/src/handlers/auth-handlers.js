@@ -13,7 +13,42 @@ const {
 } = require('./mfa-handlers');
 
 function sha256(str) {
-    return crypto.createHash('sha256').update(String(str || '')).digest('hex');
+    return crypto.createHash('sha256').update(String(str || ''), 'utf8').digest('hex');
+}
+
+function normalizeStoredPasswordHash(raw) {
+    if (raw == null || raw === '') return '';
+    if (typeof raw === 'object') {
+        if (raw.value != null) return String(raw.value).trim();
+        const values = Object.values(raw);
+        if (values.length === 1 && values[0] != null) return String(values[0]).trim();
+        return '';
+    }
+    const s = String(raw).trim();
+    if (!s || s === '***' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return '';
+    return s;
+}
+
+function isSha256Hex(value) {
+    return /^[a-f0-9]{64}$/i.test(String(value || '').trim());
+}
+
+function passwordsMatch(password, user) {
+    const plain = String(password || '').trim();
+    const storedHash = normalizeStoredPasswordHash(user && user.passwordHash);
+    const storedPlain = String((user && user.password) || '').trim();
+    const inputHash = plain ? sha256(plain) : '';
+
+    if (isSha256Hex(storedHash) && inputHash && storedHash.toLowerCase() === inputHash.toLowerCase()) {
+        return true;
+    }
+    if (isSha256Hex(storedPlain) && inputHash && storedPlain.toLowerCase() === inputHash.toLowerCase()) {
+        return true;
+    }
+    if (plain && storedPlain && storedPlain !== '***' && !isSha256Hex(storedPlain) && plain === storedPlain) {
+        return true;
+    }
+    return false;
 }
 
 const authHandlers = {
@@ -22,16 +57,25 @@ const authHandlers = {
             ? payload
             : (postData && (postData.email || postData.password || postData.passwordHash) ? postData : (payload?.data || postData?.data || {}));
         const email = String(data.email || '').trim().toLowerCase();
-        const password = String(data.password || '');
-        const providedHash = data.passwordHash || (password ? sha256(password) : '');
+        const password = String(data.password || '').trim();
 
         if (!email) {
             return { success: false, message: 'البريد الإلكتروني مطلوب', errorCode: 'EMAIL_REQUIRED' };
         }
+        if (!password && !normalizeStoredPasswordHash(data.passwordHash)) {
+            return { success: false, message: 'كلمة المرور مطلوبة', errorCode: 'PASSWORD_REQUIRED' };
+        }
 
         const db = getDatabase();
         const users = db.readSheet('Users');
-        const user = users.find(u => String(u.email || '').toLowerCase() === email);
+        if (!Array.isArray(users) || users.length === 0) {
+            return {
+                success: false,
+                message: 'تعذر قراءة حسابات المستخدمين من الخادم. يرجى المحاولة لاحقاً.',
+                errorCode: 'USERS_UNAVAILABLE'
+            };
+        }
+        const user = users.find(u => String(u.email || '').trim().toLowerCase() === email);
 
         if (!user) {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };
@@ -44,11 +88,10 @@ const authHandlers = {
             return { success: false, message: 'هذا الحساب معطل. يرجى مراجعة المسؤول.', errorCode: 'ACCOUNT_DISABLED' };
         }
 
-        // Verify password hash or plain text password (legacy rows)
-        const userHash = user.passwordHash || (user.password ? sha256(user.password) : '');
-
-        const match = (providedHash && userHash && providedHash === userHash) ||
-                      (password && user.password && password === user.password);
+        const providedHash = normalizeStoredPasswordHash(data.passwordHash);
+        const match = passwordsMatch(password, user) ||
+            (isSha256Hex(providedHash) && isSha256Hex(normalizeStoredPasswordHash(user.passwordHash))
+                && providedHash.toLowerCase() === normalizeStoredPasswordHash(user.passwordHash).toLowerCase());
 
         if (!match) {
             return { success: false, message: 'البريد الإلكتروني أو كلمة المرور غير صحيحة', errorCode: 'INVALID_CREDENTIALS' };
