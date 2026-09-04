@@ -200,25 +200,63 @@ function initDatabase(overridePath = null) {
 
     let sqliteDb = null;
     let engineType = 'node:sqlite';
+    let syncFn = null; // دالة مزامنة embedded replica مع Turso (إن فُعِّلت)
+
+    // 0. Turso / libSQL embedded replica (قاعدة دائمة) — الأولوية عند ضبط بيانات الاعتماد.
+    //    محرك متزامن متوافق مع better-sqlite3، فلا يتطلب إعادة كتابة المعالجات.
+    if (config.turso && config.turso.enabled) {
+        try {
+            const Database = require('libsql');
+            const replicaPath = config.turso.replicaPath || dbPath;
+            const replicaDir = path.dirname(replicaPath);
+            if (!fs.existsSync(replicaDir)) {
+                try { fs.mkdirSync(replicaDir, { recursive: true }); } catch (_) {}
+            }
+            const opts = {
+                authToken: config.turso.authToken,
+                syncUrl: config.turso.url
+            };
+            if (config.turso.syncIntervalMs > 0) {
+                opts.syncInterval = Math.floor(config.turso.syncIntervalMs / 1000) || 1;
+            }
+            sqliteDb = new Database(replicaPath, opts);
+            // سحب أحدث نسخة من Turso عند البدء (cold start)
+            try { if (typeof sqliteDb.sync === 'function') sqliteDb.sync(); } catch (_) {}
+            try { sqliteDb.pragma('journal_mode = WAL'); } catch (_) {}
+            try { sqliteDb.pragma('foreign_keys = ON'); } catch (_) {}
+            engineType = 'libsql-turso';
+            syncFn = function () {
+                try { if (typeof sqliteDb.sync === 'function') sqliteDb.sync(); } catch (_) {}
+            };
+        } catch (e) {
+            sqliteDb = null;
+            engineType = 'node:sqlite';
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn('⚠️ تعذّر تفعيل Turso/libSQL — الرجوع لمحرك SQLite المحلي:', e && e.message);
+            }
+        }
+    }
 
     // 1. Try Node 22+ built-in node:sqlite
-    try {
-        const { DatabaseSync } = require('node:sqlite');
-        sqliteDb = new DatabaseSync(dbPath);
-        sqliteDb.exec('PRAGMA journal_mode = WAL;');
-        sqliteDb.exec('PRAGMA synchronous = NORMAL;');
-        sqliteDb.exec('PRAGMA foreign_keys = ON;');
-    } catch (_) {
-        // 2. Try better-sqlite3 (Node 18/20)
+    if (!sqliteDb) {
         try {
-            const Database = require('better-sqlite3');
-            sqliteDb = new Database(dbPath);
-            sqliteDb.pragma('journal_mode = WAL');
-            sqliteDb.pragma('synchronous = NORMAL');
-            sqliteDb.pragma('foreign_keys = ON');
-            engineType = 'better-sqlite3';
+            const { DatabaseSync } = require('node:sqlite');
+            sqliteDb = new DatabaseSync(dbPath);
+            sqliteDb.exec('PRAGMA journal_mode = WAL;');
+            sqliteDb.exec('PRAGMA synchronous = NORMAL;');
+            sqliteDb.exec('PRAGMA foreign_keys = ON;');
         } catch (_) {
-            engineType = 'json-fallback';
+            // 2. Try better-sqlite3 (Node 18/20)
+            try {
+                const Database = require('better-sqlite3');
+                sqliteDb = new Database(dbPath);
+                sqliteDb.pragma('journal_mode = WAL');
+                sqliteDb.pragma('synchronous = NORMAL');
+                sqliteDb.pragma('foreign_keys = ON');
+                engineType = 'better-sqlite3';
+            } catch (_) {
+                engineType = 'json-fallback';
+            }
         }
     }
 
@@ -228,6 +266,12 @@ function initDatabase(overridePath = null) {
         wrapper = {
             raw: sqliteDb,
             engineType,
+            _suspendSync: false,
+
+            /** يدفع كتابات النسخة المحلية إلى Turso (لا شيء مع محركات SQLite العادية) */
+            syncNow() {
+                if (syncFn && !this._suspendSync) syncFn();
+            },
 
             exec(sql) {
                 return sqliteDb.exec(sql);
@@ -327,6 +371,7 @@ function initDatabase(overridePath = null) {
                     stmt.run(...values);
                     count++;
                 }
+                this.syncNow();
                 return count;
             },
 
@@ -341,6 +386,7 @@ function initDatabase(overridePath = null) {
                 const values = columns.map(c => formatSqliteValue(row[c]));
 
                 this.run(insertSql, values);
+                this.syncNow();
                 return row;
             },
 
@@ -350,9 +396,15 @@ function initDatabase(overridePath = null) {
 
             insertRows(sheetName, rows) {
                 if (!Array.isArray(rows)) return 0;
-                for (const r of rows) {
-                    this.appendToSheet(sheetName, r);
+                this._suspendSync = true;
+                try {
+                    for (const r of rows) {
+                        this.appendToSheet(sheetName, r);
+                    }
+                } finally {
+                    this._suspendSync = false;
                 }
+                this.syncNow();
                 return rows.length;
             },
 
@@ -385,6 +437,7 @@ function initDatabase(overridePath = null) {
                 values.push(formatSqliteValue(keyVal));
                 const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(updateSql, values);
+                this.syncNow();
                 return result.changes;
             },
 
@@ -402,6 +455,7 @@ function initDatabase(overridePath = null) {
                 const tableName = `"${safeTable}"`;
                 const deleteSql = `DELETE FROM ${tableName} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(deleteSql, [keyVal]);
+                this.syncNow();
                 return result.changes;
             },
 
