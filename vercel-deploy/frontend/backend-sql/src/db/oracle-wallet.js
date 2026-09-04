@@ -23,8 +23,20 @@ function patchSqlnetOra(destDir) {
 }
 
 function materializeFromFilesJson(destDir) {
-    const raw = (process.env.ORACLE_WALLET_FILES_JSON || '').trim();
+    let raw = (process.env.ORACLE_WALLET_FILES_JSON || '').trim();
+    const b64Bag = (process.env.ORACLE_WALLET_FILES_B64 || '').trim();
+    if (!raw && b64Bag) {
+        try {
+            raw = Buffer.from(b64Bag, 'base64').toString('utf8').trim();
+        } catch (_e) {
+            throw new Error('ORACLE_WALLET_FILES_B64 decode failed');
+        }
+    }
     if (!raw) return false;
+    // Strip accidental wrapping quotes from env UIs
+    if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
+        raw = raw.slice(1, -1);
+    }
     let map;
     try {
         map = JSON.parse(raw);

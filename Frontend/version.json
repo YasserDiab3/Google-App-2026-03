@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1636",
+  "version": "1.0.1637",
   "highlights": {
     "ar": [
-      "إصلاح Wallet على Vercel لتفعيل Oracle في الإنتاج.",
-      "دخول النظام على القاعدة الدائمة Oracle.",
-      "فحص الصحة يعرض محرك oracle عند نجاح الاتصال."
+      "إصلاح تحميل Wallet Oracle على إنتاج Vercel.",
+      "تفعيل الدخول على قاعدة Oracle الدائمة.",
+      "فحص الصحة يعرض oracle عند نجاح الاتصال."
     ],
     "en": [
-      "Fix Vercel wallet materialization for production Oracle.",
-      "App login uses persistent Oracle database.",
-      "Health check reports oracle when connected."
+      "Fix Oracle wallet loading on Vercel production.",
+      "Enable login against persistent Oracle DB.",
+      "Health reports oracle when connection succeeds."
     ]
   }
 }
