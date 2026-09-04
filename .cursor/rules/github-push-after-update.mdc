@@ -1,8 +1,3 @@
----
-description: لا يتم رفع أي تحديث على GitHub إلا بعد تأكيد المستخدم بكلمة رفع
-alwaysApply: true
----
-
 # رفع التحديثات على GitHub
 
 بعد تنفيذ أي تعديلات على الملفات (إصلاح، ميزة جديدة، أو تغيير في المشروع):
@@ -11,12 +6,11 @@ alwaysApply: true
 2. **لا تنفّذ أي رفع تلقائي** حتى لو طلب المستخدم بشكل عام المتابعة.
 3. **شرط الرفع الإجباري:** تنفيذ الرفع فقط إذا كتب المستخدم صراحة كلمة: **«رفع»**.
 4. إذا كتب المستخدم كلمة **«رفع»**:
-   - إن شملت التغييرات **الواجهة** (`Frontend/` أو `vercel-deploy/frontend/`): نفّذ **`node bump-version.js`** قبل الـ commit (انظر `bump-version-on-push.mdc`).
-   - تنفيذ `git add` للملفات المعدّلة **بما فيها ملفات الإصدار**.
-   - تنفيذ `git commit` برسالة واضحة بالعربية تصف التحديث.
-   - تنفيذ **`git push origin main` فقط** (البعيد **`origin`** — انظر `github-remote-canonical.mdc`).
-   - **ممنوع** تنفيذ **`git push icapp`** أو أي دفع إلى **`https://github.com/YasserDiab3/ICAPP-V092026.git`**.
-   - **ممنوع** تنفيذ **`git push google-tr`** أو أي دفع إلى المستودع **`YasserDiab3/google-TR`** ما لم يطلب المستخدم ذلك **صراحة** في نفس الطلب (ذكر google-TR أو الرابط مع طلب الرفع هناك).
+ - إن شملت التغييرات **الواجهة** (`Frontend/` أو `vercel-deploy/frontend/`): نفّذ **`node bump-version.js`** قبل الـ commit (انظر `bump-version-on-push.mdc`).
+ - تنفيذ `git add` للملفات المعدّلة **بما فيها ملفات الإصدار**.
+ - تنفيذ `git commit` برسالة واضحة بالعربية تصف التحديث.
+ - تنفيذ **`git push origin main` فقط** — و`origin` يشير إلى **`https://github.com/YasserDiab3/ICAPP-V092026.git`** (انظر `icapp-v092026-default-repo.mdc` و`github-remote-canonical.mdc`).
+ - **ممنوع نهائياً** أي دفع إلى `Google-App-2026-03` أو `google-TR` أو أي مستودع آخر بأي طريقة.
 5. إذا لم يكتب المستخدم كلمة **«رفع»**، لا تنفّذ أي أوامر `commit` أو `push`.
 
 الأمثلة المقبولة للتأكيد:

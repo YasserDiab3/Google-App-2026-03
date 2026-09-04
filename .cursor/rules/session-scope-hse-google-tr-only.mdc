@@ -1,8 +1,3 @@
----
-description: HSE-04-2026 — فصل كيان المشروع؛ الرفع على origin فقط — لا رفع إلى google-TR
-alwaysApply: true
----
-
 # نطاق الجلسة والمستودع (HSE-04-2026)
 
 ## فصل الكيان (مهم — عدم الخلط)
@@ -12,10 +7,9 @@ alwaysApply: true
 
 ## GitHub — الرفع المسموح
 
-- الرفع الاعتيادي للكود: **`git push origin main`** على البعيد **`origin`** المحلي (انظر `github-remote-canonical.mdc`).
-- **لا ترفع** إلى المستودع **`https://github.com/YasserDiab3/ICAPP-V092026.git`** (ولا تنفّذ `git push icapp`) — محظور تماماً.
-- **لا ترفع** إلى المستودع **`https://github.com/YasserDiab3/google-TR.git`** (ولا تنفّذ `git push google-tr`) **ما لم يطلب المستخدم ذلك صراحة** في رسالته. هذا المستودع **ليس** هدف الرفع الافتراضي لهذا المشروع.
+- المستودع الافتراضي والوحيد للرفع: **`https://github.com/YasserDiab3/ICAPP-V092026.git`** عبر **`git push origin main`** (انظر `icapp-v092026-default-repo.mdc` — قاعدة نهائية بقرار المستخدم).
+- **ممنوع نهائياً** الرفع إلى `Google-App-2026-03` أو `google-TR` أو أي مستودع آخر بأي طريقة.
 
 ## ملاحظة تقنية
 
-- قواعد Cursor تُحمَّل لكل محادثة داخل هذا الـ workspace؛ سياسة «عدم الرفع إلى google-TR» و«فصل الكيان» خاصة بمشروع HSE-04-2026 حسب إعدادات المستخدم.
+- قواعد Cursor تُحمَّل لكل محادثة داخل هذا الـ workspace؛ سياسة «ICAPP-V092026 فقط» و«فصل الكيان» خاصة بمشروع HSE-04-2026 حسب إعدادات المستخدم.

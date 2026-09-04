@@ -1,34 +1,19 @@
----
-description: المستودع الرسمي على GitHub وأسماء remotes — بدون رفع إلى google-TR
-alwaysApply: true
----
-
 # المستودع الرسمي وـ Git remotes
 
-## المستودع الافتراضي للرفع (هذا الـ workspace)
+## المستودع الافتراضي والوحيد للرفع (هذا الـ workspace)
 
-- **`origin`** يشير إلى مستودع التطوير/النشر الفعلي للمشروع محلياً (الفرع **`main`**).
-- في الإعداد الحالي الشائع: **`origin`** → `https://github.com/YasserDiab3/Google-App-2026-03.git`
+- **`origin`** → `https://github.com/YasserDiab3/ICAPP-V092026.git` (الفرع **`main`**)
 - أمر الرفع الاعتيادي بعد الـ commit: **`git push origin main`** فقط.
+- انظر `icapp-v092026-default-repo.mdc` — قاعدة نهائية بقرار المستخدم.
 
-## مستودع ICAPP-V092026 (محظور تماماً)
+## مستودعات محظورة للرفع (بأي طريقة)
 
-- **URL:** `https://github.com/YasserDiab3/ICAPP-V092026.git`
-- إن وُجد بعيد اسمه **`icapp`**: **ممنوع** أي `git push icapp` أو دفع إلى هذا المستودع.
-- انظر `never-push-icapp-v092026.mdc`.
-
-## مستودع google-TR (قيود صارمة)
-
-- **URL:** `https://github.com/YasserDiab3/google-TR.git`
-- إن وُجد بعيد اسمه **`google-tr`** يشير إلى هذا الرابط: **ممنوع** تنفيذ **`git push google-tr`** أو أي دفع يحدّث `google-TR` ما لم يطلب المستخدم ذلك **صراحة** (جملة واضحة مثل: «ارفع على google-TR» أو ذكر الرابط مع طلب الدفع).
-- **لا** تُضِف تلقائياً رفعاً إلى `google-TR` وليس هو المستودع الافتراضي للرفع في هذا المشروع حسب تعليمات المستخدم.
-
-## مستودع آخر (مرجعية / أرشيف)
-
-- يمكن الاحتفاظ ببعيد **`legacy`** أو غيره للمرجعية فقط، دون رفع إليه إلا بطلب صريح من المستخدم.
+- `https://github.com/YasserDiab3/Google-App-2026-03.git` — **ممنوع** الرفع إليه نهائياً.
+- `https://github.com/YasserDiab3/google-TR.git` — **ممنوع** الرفع إليه نهائياً.
+- أي مستودع آخر غير ICAPP-V092026 — **ممنوع**.
 
 ## قواعد للوكيل
 
-1. عند الرفع بعد «رفع»: **`git push origin main`** فقط — **لا** `git push icapp` و**لا** `git push google-tr`.
-2. لا تُضِف remote ثانياً بنفس URL الخاص بـ `origin` (تجنّب التكرار غير الضروري).
-3. لا تغيّر URL الخاص بـ `origin` إلا إذا طلب المستخدم ذلك صراحة.
+1. عند الرفع بعد «رفع»: **`git push origin main`** فقط (origin = ICAPP-V092026).
+2. لا تُضِف remote ثانياً لأغراض الدفع.
+3. لا تغيّر URL الخاص بـ `origin` بعيداً عن ICAPP-V092026 إلا بطلب صريح موثّق من المستخدم.
