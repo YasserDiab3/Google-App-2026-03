@@ -13,7 +13,7 @@ module.exports = (req, res) => {
         const { getDatabase } = require('../backend-sql/src/db/database');
         const db = getDatabase();
         dbEngine = (db && db.engineType) || 'unknown';
-        persistent = dbEngine === 'libsql-turso';
+        persistent = dbEngine === 'libsql-turso' || dbEngine === 'oracle' || !!(db && db.persistent);
     } catch (_) {}
     res.status(200).json({
         status: 'ok',

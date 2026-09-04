@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1633",
+  "version": "1.0.1634",
   "highlights": {
     "ar": [
-      "إصلاح تسجيل الدخول: حسابات النظام عادت إلى قاعدة SQL.",
-      "الدخول عبر الخادم الحي على نطاق المشروع.",
-      "رسالة أوضح عند فشل الاتصال بدل اعتبار كلمة المرور خاطئة."
+      "محرك Oracle Autonomous جاهز اختيارياً بجانب SQLite.",
+      "سكربتات ترحيل وDDL لنقل بيانات SQL إلى Oracle.",
+      "فحص الصحة يعرض محرك القاعدة بدقة أكبر."
     ],
     "en": [
-      "Login fix: system accounts are restored in the SQL database.",
-      "Sign-in uses this project's live SQL API.",
-      "Connection failures are no longer shown as a wrong password."
+      "Optional Oracle Autonomous engine ready alongside SQLite.",
+      "Migration scripts and DDL to move SQL data to Oracle.",
+      "Health check reports the database engine more accurately."
     ]
   }
 }

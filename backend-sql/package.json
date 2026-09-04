@@ -14,7 +14,10 @@
     "test:security": "node tests/security-guard.test.js",
     "test:benchmark": "node tests/benchmark.test.js",
     "test:e2e": "node tests/e2e-smoke.test.js",
-    "migrate:turso": "node scripts/migrate-to-turso.js"
+    "migrate:turso": "node scripts/migrate-to-turso.js",
+    "oracle:ddl": "node scripts/oracle-generate-ddl.js",
+    "oracle:migrate": "node scripts/migrate-sqlite-to-oracle.js",
+    "oracle:migrate:dry": "node scripts/migrate-sqlite-to-oracle.js --dry-run"
   },
   "dependencies": {
     "@vercel/blob": "^0.27.3",
@@ -24,6 +27,8 @@
     "express": "^4.21.2"
   },
   "optionalDependencies": {
-    "libsql": "^0.5.0"
+    "deasync": "^0.1.31",
+    "libsql": "^0.5.0",
+    "oracledb": "^6.10.0"
   }
 }

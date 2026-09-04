@@ -171,6 +171,13 @@ let dbInstance = null;
 function initDatabase(overridePath = null) {
     if (dbInstance) return dbInstance;
 
+    // Oracle Autonomous DB (permanent) — قبل SQLite/Turso
+    if (!overridePath && config.oracle && config.oracle.enabled) {
+        const { initOracleEngine } = require('./oracle-engine');
+        dbInstance = initOracleEngine(config.oracle);
+        return dbInstance;
+    }
+
     const dbPath = overridePath || config.sqlitePath;
     const dbDir = path.dirname(dbPath);
     if (!fs.existsSync(dbDir)) {
