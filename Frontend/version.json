@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1635",
+  "version": "1.0.1636",
   "highlights": {
     "ar": [
-      "تفعيل Oracle على الإنتاج عبر متغيرات Vercel وWallet.",
-      "محرك Oracle عبر Worker متوافق مع Serverless.",
-      "فحص الصحة ودخول النظام يعملان على القاعدة الدائمة."
+      "إصلاح Wallet على Vercel لتفعيل Oracle في الإنتاج.",
+      "دخول النظام على القاعدة الدائمة Oracle.",
+      "فحص الصحة يعرض محرك oracle عند نجاح الاتصال."
     ],
     "en": [
-      "Production Oracle activation via Vercel env + wallet.",
-      "Oracle engine uses a Serverless-safe worker bridge.",
-      "Health check and login use the persistent database."
+      "Fix Vercel wallet materialization for production Oracle.",
+      "App login uses persistent Oracle database.",
+      "Health check reports oracle when connected."
     ]
   }
 }
