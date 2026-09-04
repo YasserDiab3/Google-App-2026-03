@@ -919,10 +919,12 @@ window.Auth = {
                     // تذبذب تسليم Google — ليس خطأ اعتمادات. لا تسقط للـ fallback المحلي برسالة مضلّلة.
                     const isDeliveryFailure = errCode === 'REACHED_DOGET_STATUS' ||
                         errCode === 'WRONG_URL_ENDPOINT' ||
+                        errCode === 'CORS_FORBIDDEN' ||
                         (loginResult.message && (
                             loginResult.message.includes('تعذّر تسليم') ||
                             loginResult.message.includes('doGet') ||
-                            loginResult.message.includes('انتهت مهلة الاتصال')
+                            loginResult.message.includes('انتهت مهلة الاتصال') ||
+                            loginResult.message.includes('Origin not allowed')
                         ));
                     // P0 Fix: عند فشل التسليم (نفق ميت/مهلة) نحاول fallback محلي إن وجدت بيانات محلية
                     if (isDeliveryFailure) {

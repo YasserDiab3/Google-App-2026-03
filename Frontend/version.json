@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1632",
+  "version": "1.0.1633",
   "highlights": {
     "ar": [
-      "الاتصال بالخلفية عبر SQL على نطاق المشروع فقط.",
-      "منع التحويل أو الطلبات نحو مواقع أو مستودعات أخرى.",
-      "حماية واجهة البرمجة: رفض المصادر الأجنبية ومسح الروابط القديمة من المتصفح."
+      "إصلاح تسجيل الدخول: حسابات النظام عادت إلى قاعدة SQL.",
+      "الدخول عبر الخادم الحي على نطاق المشروع.",
+      "رسالة أوضح عند فشل الاتصال بدل اعتبار كلمة المرور خاطئة."
     ],
     "en": [
-      "The app talks to this project's SQL API on its own domain only.",
-      "No redirects or API calls to other sites or repositories.",
-      "Foreign origins are blocked and old backend URLs are cleared from the browser."
+      "Login fix: system accounts are restored in the SQL database.",
+      "Sign-in uses this project's live SQL API.",
+      "Connection failures are no longer shown as a wrong password."
     ]
   }
 }
