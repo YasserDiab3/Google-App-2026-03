@@ -1,15 +1,15 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "installCommand": "npm install --no-audit --no-fund && npm install oracledb@6.10.0 --no-audit --no-fund",
   "outputDirectory": "dist",
   "functions": {
     "api/exec.js": {
       "maxDuration": 60,
-      "includeFiles": "backend-sql/data/clinic_hse.db.gz",
+      "includeFiles": "{backend-sql/data/clinic_hse.db.gz,backend-sql/src/db/oracle-worker.js}",
       "excludeFiles": "{**/*.db,**/*.db-wal,**/*.db-shm,**/*.rebuilt.db,**/backups/**}"
     },
     "api/health.js": {
-      "maxDuration": 10
+      "maxDuration": 60
     }
   },
   "redirects": [

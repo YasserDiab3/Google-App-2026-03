@@ -6,6 +6,9 @@
     "build": "node scripts/build-frontend-prod.mjs",
     "build:prod": "node scripts/build-frontend-prod.mjs"
   },
+  "dependencies": {
+    "oracledb": "^6.10.0"
+  },
   "devDependencies": {
     "esbuild": "^0.25.12"
   },

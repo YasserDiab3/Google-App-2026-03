@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1638",
+  "version": "1.0.1639",
   "highlights": {
     "ar": [
-      "إصلاح تحميل Wallet Oracle على إنتاج Vercel.",
-      "تفعيل الدخول على قاعدة Oracle الدائمة.",
-      "فحص الصحة يعرض oracle عند نجاح الاتصال."
+      "تثبيت oracledb في جذر Frontend لنشر Vercel الصحيح.",
+      "تفعيل Oracle للإنتاج مع ملفات Wallet عبر الأسرار.",
+      "مهلة فحص الصحة أطول لاتصال Oracle البارد."
     ],
     "en": [
-      "Fix Oracle wallet loading on Vercel production.",
-      "Enable login against persistent Oracle DB.",
-      "Health reports oracle when connection succeeds."
+      "Install oracledb at Frontend root for correct Vercel deploys.",
+      "Production Oracle enabled with wallet secrets.",
+      "Longer health timeout for Oracle cold start."
     ]
   }
 }
