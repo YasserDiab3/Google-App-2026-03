@@ -2,16 +2,14 @@
   "version": "1.0.1642",
   "highlights": {
     "ar": [
-      "بيانات الإنتاج من الإكسل على SQLite + حزمة clinic_hse.db.gz.",
-      "مرآة تلقائية: أي تحديث SQLite يُزامَن إلى Oracle Cloud.",
-      "إلغاء شاشة «جاري تحميل البيانات» المعطّلة داخل التطبيق.",
-      "سجل الملاحظات يُحمَّل فوراً بدل «سيُحمَّل هذا التبويب عند فتحه»."
+      "مطابقة عدد تصاريح PTW مع الشيت (بدون قطع صفوف).",
+      "جلب قائمة/سجل التصاريح بأعمدة خفيفة كاملة تحت حد الاستجابة.",
+      "إجمالي التصاريح من ورقة PTW بدل مصدر مقطوع."
     ],
     "en": [
-      "Production Excel data on SQLite + clinic_hse.db.gz bundle.",
-      "Auto-mirror: SQLite writes sync to Oracle Cloud.",
-      "No blocking «Loading data» overlay inside the app.",
-      "Notes registry loads immediately instead of lazy placeholder."
+      "Match PTW permit counts with the sheet (no silent row truncation).",
+      "Fetch full PTW/Registry lists via slim columns under response limit.",
+      "Total permits KPI uses PTW sheet, not a truncated source."
     ]
   }
 }
