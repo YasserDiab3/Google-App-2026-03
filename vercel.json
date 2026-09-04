@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install --prefix Frontend --no-audit --no-fund --prefer-offline --loglevel=error",
+  "installCommand": "npm install --prefix Frontend --no-audit --no-fund --prefer-offline --loglevel=error && npm install oracledb@6.10.0 --no-audit --no-fund --loglevel=error",
   "functions": {
     "api/exec.js": {
       "maxDuration": 60,

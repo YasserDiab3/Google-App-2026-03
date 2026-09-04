@@ -48,7 +48,7 @@ function setupNodeFunction(routeName, entryFile, opts = {}) {
         throw new Error(`Missing serverless entry: ${entry}`);
     }
     let code = fs.readFileSync(entry, 'utf8');
-    if (entryFile.includes('exec.js')) {
+    if (entryFile.includes('exec.js') || entryFile.includes('health.js')) {
         code = code.replaceAll("require('../backend-sql/", "require('./backend-sql/");
     }
     fs.writeFileSync(path.join(funcDir, 'index.js'), code);
@@ -69,6 +69,24 @@ function setupNodeFunction(routeName, entryFile, opts = {}) {
             const dest = path.join(funcDir, rel);
             fs.mkdirSync(path.dirname(dest), { recursive: true });
             fs.copyFileSync(src, dest);
+        }
+    }
+
+    if (opts.includeNodeModules && opts.includeNodeModules.length) {
+        const nmDest = path.join(funcDir, 'node_modules');
+        fs.mkdirSync(nmDest, { recursive: true });
+        for (const pkg of opts.includeNodeModules) {
+            const candidates = [
+                path.join(root, 'node_modules', pkg),
+                path.join(root, 'backend-sql', 'node_modules', pkg),
+                path.join(root, 'Frontend', 'node_modules', pkg)
+            ];
+            const src = candidates.find((p) => fs.existsSync(p));
+            if (!src) {
+                console.warn('missing node_module for function:', pkg);
+                continue;
+            }
+            cpDir(src, path.join(nmDest, pkg));
         }
     }
 
@@ -93,14 +111,19 @@ if (!fs.existsSync(distDir)) {
 rmrf(outRoot);
 cpDir(distDir, staticRoot);
 
-setupNodeFunction('api/health', 'api/health.js', { maxDuration: 10 });
+setupNodeFunction('api/health', 'api/health.js', {
+    maxDuration: 30,
+    includeDirs: ['backend-sql/src'],
+    includeNodeModules: ['oracledb']
+});
 
 setupNodeFunction('api/exec', 'Frontend/api/exec.js', {
     maxDuration: 60,
     includeDirs: ['backend-sql/src'],
     includeFiles: [
         'backend-sql/data/clinic_hse.db.gz'
-    ]
+    ],
+    includeNodeModules: ['oracledb']
 });
 
 writeJson(path.join(outRoot, 'config.json'), {

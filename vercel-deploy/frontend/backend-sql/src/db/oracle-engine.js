@@ -1,11 +1,15 @@
 /**
  * Oracle Autonomous DB engine — same sheet API as SQLite wrapper (sync).
+ * Uses a worker_threads bridge (no deasync required) — Vercel-safe thin mode.
  * Env: ORACLE_USER, ORACLE_PASSWORD, ORACLE_CONNECT_STRING
- * Optional: ORACLE_WALLET_DIR / TNS_ADMIN / ORACLE_WALLET_PASSWORD
+ * Optional: ORACLE_WALLET_DIR / ORACLE_WALLET_ZIP_BASE64 / ORACLE_WALLET_PASSWORD
  */
 'use strict';
 
+const path = require('path');
+const { Worker, MessageChannel, receiveMessageOnPort } = require('worker_threads');
 const { headersMap } = require('./headers-schema');
+const { resolveOracleWalletDir } = require('./oracle-wallet');
 
 const SAFE_IDENTIFIER_REGEX = /^[a-zA-Z0-9_\s\-\/#\(\)\.\&%:\+,أ-ي]+$/;
 
@@ -66,11 +70,12 @@ function qIdent(name) {
 }
 
 function awaitSync(promise) {
+    // Kept for migrate scripts that still import awaitSync with native promises in-process.
     let deasync;
     try {
         deasync = require('deasync');
     } catch (_e) {
-        throw new Error('حزمة deasync مطلوبة لمحرك Oracle. نفّذ: npm install deasync --prefix backend-sql');
+        throw new Error('awaitSync يحتاج deasync محلياً، أو استخدم مسار Worker');
     }
     let done = false;
     let err = null;
@@ -87,7 +92,71 @@ function awaitSync(promise) {
     return value;
 }
 
+function createSyncWorker(oracleCfg) {
+    const workerPath = path.join(__dirname, 'oracle-worker.js');
+    const readySab = new SharedArrayBuffer(8);
+    const readyView = new Int32Array(readySab);
+    // readyView[0] = 0 pending | 1 ok | 2 fail
+    Atomics.store(readyView, 0, 0);
+
+    const worker = new Worker(workerPath, {
+        workerData: {
+            user: oracleCfg.user,
+            password: oracleCfg.password,
+            connectString: oracleCfg.connectString,
+            walletLocation: oracleCfg.walletLocation || '',
+            walletPassword: oracleCfg.walletPassword || '',
+            poolMax: oracleCfg.poolMax || (process.env.VERCEL ? 1 : 4),
+            readySab
+        }
+    });
+
+    const readyStart = Date.now();
+    while (Atomics.load(readyView, 0) === 0) {
+        if (Date.now() - readyStart > 90000) {
+            try { worker.terminate(); } catch (_e) {}
+            throw new Error('Oracle worker ready timeout');
+        }
+        Atomics.wait(readyView, 0, 0, 100);
+    }
+    if (Atomics.load(readyView, 0) !== 1) {
+        try { worker.terminate(); } catch (_e) {}
+        throw new Error('Oracle worker failed to start (check wallet / credentials)');
+    }
+
+    let nextId = 1;
+
+    function call(op, sql, params) {
+        const id = nextId++;
+        const { port1, port2 } = new MessageChannel();
+        const sab = new SharedArrayBuffer(4);
+        const signal = new Int32Array(sab);
+        Atomics.store(signal, 0, 0);
+        worker.postMessage({ id, op, sql, params, port: port2, sab }, [port2]);
+
+        const start = Date.now();
+        const timeoutMs = Number(process.env.ORACLE_SYNC_TIMEOUT_MS || 120000);
+        let msg;
+        while (!(msg = receiveMessageOnPort(port1))) {
+            if (Date.now() - start > timeoutMs) {
+                try { port1.close(); } catch (_e) {}
+                throw new Error('Oracle worker timeout');
+            }
+            Atomics.wait(signal, 0, 0, 50);
+        }
+        try { port1.close(); } catch (_e) {}
+        const payload = msg.message;
+        if (!payload || payload.ok === false) {
+            throw new Error((payload && payload.error) || 'Oracle worker error');
+        }
+        return payload.result;
+    }
+
+    return { worker, call };
+}
+
 async function createPool(oracleCfg) {
+    // Used by migrate scripts (async). Thin mode only — never force Instant Client on Vercel.
     let oracledb;
     try {
         oracledb = require('oracledb');
@@ -95,17 +164,20 @@ async function createPool(oracleCfg) {
         throw new Error('حزمة oracledb غير مثبتة. نفّذ: npm install oracledb --prefix backend-sql');
     }
 
-    if (oracleCfg.walletLocation) {
-        process.env.TNS_ADMIN = oracleCfg.walletLocation;
+    const walletLocation = resolveOracleWalletDir(oracleCfg.walletLocation);
+    if (walletLocation) {
+        process.env.TNS_ADMIN = walletLocation;
+        oracleCfg = { ...oracleCfg, walletLocation };
+    }
+
+    if (walletLocation && !process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
         try {
-            oracledb.initOracleClient({ configDir: oracleCfg.walletLocation });
-        } catch (_e) { /* thin TLS may still work */ }
+            oracledb.initOracleClient({ configDir: walletLocation });
+        } catch (_e) { /* thin */ }
     }
 
     oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
-    try {
-        oracledb.fetchAsString = [oracledb.CLOB];
-    } catch (_e) { /* older versions */ }
+    try { oracledb.fetchAsString = [oracledb.CLOB]; } catch (_e) {}
     oracledb.autoCommit = true;
 
     const poolOpts = {
@@ -128,39 +200,25 @@ async function createPool(oracleCfg) {
     return { oracledb, pool };
 }
 
-function buildOracleWrapper(pool, oracledb) {
-    async function withConn(fn) {
-        const conn = await pool.getConnection();
-        try {
-            return await fn(conn);
-        } finally {
-            try { await conn.close(); } catch (_e) {}
-        }
-    }
-
+function buildOracleWrapperFromWorker(bridge) {
     const wrapper = {
-        raw: pool,
+        raw: bridge.worker,
         engineType: 'oracle',
         persistent: true,
 
         syncNow() {},
 
         close() {
-            return awaitSync(pool.close(0));
+            try { bridge.call('close'); } catch (_e) {}
+            try { bridge.worker.terminate(); } catch (_e2) {}
         },
 
         exec(sql) {
-            return awaitSync(withConn(async (conn) => {
-                await conn.execute(sql, {}, { autoCommit: true });
-            }));
+            return bridge.call('exec', sql, []);
         },
 
         run(sql, params = []) {
-            return awaitSync(withConn(async (conn) => {
-                const { sql: oSql, binds } = toOracleBinds(sql, params);
-                const result = await conn.execute(oSql, binds, { autoCommit: true });
-                return { changes: result.rowsAffected || 0, lastInsertRowid: null };
-            }));
+            return bridge.call('run', sql, params);
         },
 
         get(sql, params = []) {
@@ -169,14 +227,8 @@ function buildOracleWrapper(pool, oracledb) {
         },
 
         all(sql, params = []) {
-            return awaitSync(withConn(async (conn) => {
-                const { sql: oSql, binds } = toOracleBinds(sql, params);
-                const result = await conn.execute(oSql, binds, {
-                    outFormat: oracledb.OUT_FORMAT_OBJECT,
-                    autoCommit: true
-                });
-                return (result.rows || []).map(hydrateRow);
-            }));
+            const rows = bridge.call('all', sql, params) || [];
+            return rows.map(hydrateRow);
         },
 
         readFromSheet(sheetName, filter = null) {
@@ -317,16 +369,24 @@ function initOracleEngine(oracleCfg) {
     if (!oracleCfg || !oracleCfg.user || !oracleCfg.password || !oracleCfg.connectString) {
         throw new Error('Oracle: اضبط ORACLE_USER و ORACLE_PASSWORD و ORACLE_CONNECT_STRING');
     }
-    const { oracledb, pool } = awaitSync(createPool(oracleCfg));
-    awaitSync((async () => {
-        const conn = await pool.getConnection();
-        try {
-            await conn.execute('SELECT 1 AS ok FROM DUAL');
-        } finally {
-            await conn.close();
-        }
-    })());
-    return buildOracleWrapper(pool, oracledb);
+
+    const walletLocation = resolveOracleWalletDir(oracleCfg.walletLocation);
+    const cfg = {
+        ...oracleCfg,
+        walletLocation: walletLocation || oracleCfg.walletLocation || '',
+        walletPassword: oracleCfg.walletPassword || process.env.ORACLE_WALLET_PASSWORD || ''
+    };
+
+    // Fix worker message protocol: include sab notify in worker
+    const bridge = createSyncWorker(cfg);
+    // Verify with ping
+    try {
+        bridge.call('ping');
+    } catch (e) {
+        try { bridge.worker.terminate(); } catch (_e) {}
+        throw e;
+    }
+    return buildOracleWrapperFromWorker(bridge);
 }
 
 module.exports = {
@@ -336,5 +396,6 @@ module.exports = {
     qIdent,
     formatValue,
     toOracleBinds,
-    awaitSync
+    awaitSync,
+    resolveOracleWalletDir
 };

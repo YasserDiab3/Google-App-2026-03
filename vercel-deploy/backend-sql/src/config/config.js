@@ -27,6 +27,11 @@ const oraclePassword = (process.env.ORACLE_PASSWORD || '').trim();
 const oracleConnectString = (process.env.ORACLE_CONNECT_STRING || process.env.DATABASE_URL || '').trim();
 const oracleWalletDir = (process.env.ORACLE_WALLET_DIR || process.env.TNS_ADMIN || '').trim();
 const oracleWalletPassword = (process.env.ORACLE_WALLET_PASSWORD || '').trim();
+let resolvedWalletDir = oracleWalletDir;
+try {
+    const { resolveOracleWalletDir } = require('../db/oracle-wallet');
+    resolvedWalletDir = resolveOracleWalletDir(oracleWalletDir) || oracleWalletDir;
+} catch (_e) { /* optional until engine loads */ }
 const dbTypeRaw = (process.env.DB_TYPE || 'sqlite').trim().toLowerCase();
 const oracleEnabled = dbTypeRaw === 'oracle';
 
@@ -56,9 +61,9 @@ module.exports = {
         user: oracleUser,
         password: oraclePassword,
         connectString: oracleConnectString,
-        walletLocation: oracleWalletDir || '',
+        walletLocation: resolvedWalletDir || '',
         walletPassword: oracleWalletPassword || '',
-        poolMax: parseInt(process.env.ORACLE_POOL_MAX || '4', 10)
+        poolMax: parseInt(process.env.ORACLE_POOL_MAX || (onVercel ? '1' : '4'), 10)
     },
-    buildTag: 'HSE_SQL_BACKEND_v1.2.0-oracle'
+    buildTag: 'HSE_SQL_BACKEND_v1.2.1-oracle-vercel'
 };

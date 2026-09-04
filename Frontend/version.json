@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1634",
+  "version": "1.0.1635",
   "highlights": {
     "ar": [
-      "محرك Oracle Autonomous جاهز اختيارياً بجانب SQLite.",
-      "سكربتات ترحيل وDDL لنقل بيانات SQL إلى Oracle.",
-      "فحص الصحة يعرض محرك القاعدة بدقة أكبر."
+      "تفعيل Oracle على الإنتاج عبر متغيرات Vercel وWallet.",
+      "محرك Oracle عبر Worker متوافق مع Serverless.",
+      "فحص الصحة ودخول النظام يعملان على القاعدة الدائمة."
     ],
     "en": [
-      "Optional Oracle Autonomous engine ready alongside SQLite.",
-      "Migration scripts and DDL to move SQL data to Oracle.",
-      "Health check reports the database engine more accurately."
+      "Production Oracle activation via Vercel env + wallet.",
+      "Oracle engine uses a Serverless-safe worker bridge.",
+      "Health check and login use the persistent database."
     ]
   }
 }

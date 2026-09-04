@@ -72,6 +72,38 @@ npm start
 
 لا تغيير في الواجهة — نفس `/api/exec`. فقط الخادم يقرأ Oracle بدل SQLite.
 
-## ملاحظة استقرار Vercel
+## 8) تفعيل الإنتاج على Vercel
 
-Wallet + Oracle على Serverless محدود. بعد نجاح الترحيل محلياً، الأنسب للإنتاج: Compute على OCI يشغّل `backend-sql`، وVercel للواجهة فقط.
+الإنتاج يحتاج أسرار البيئة + Wallet كـ Base64 (لا ترفع Wallet إلى Git).
+
+### أ) تجهيز محلي مرة واحدة
+
+```bash
+# إنشاء wallet.b64.txt (إن لم يوجد)
+# الملف عندنا: D:\secrets\oracle-wallet\wallet.b64.txt
+```
+
+### ب) تسجيل Vercel CLI ثم ضبط الأسرار
+
+```bash
+npx vercel login
+node scripts/set-vercel-oracle-env.mjs
+```
+
+المتغيرات التي تُضبط:
+
+- `DB_TYPE=oracle`
+- `ORACLE_USER` / `ORACLE_PASSWORD`
+- `ORACLE_CONNECT_STRING=mrj8uznak8telasp_high`
+- `ORACLE_WALLET_PASSWORD`
+- `ORACLE_WALLET_ZIP_BASE64`
+
+### ج) نشر
+
+ادفع إلى `main` أو:
+
+```bash
+npx vercel --prod
+```
+
+فحص: `https://www.safety-icapp.com/api/health` يجب أن يظهر `dbEngine:"oracle"` و `persistent:true`.
