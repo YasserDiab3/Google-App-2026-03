@@ -938,7 +938,7 @@ const GoogleIntegration = {
         const scriptUrl = this._resolveScriptUrl();
 
         if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
-            throw new Error('رابط Web App غير صالح. يجب أن يكون رابط خادم SQL من النوع https://script.google.com/macros/s/.../exec');
+            throw new Error('رابط الخادم غير صالح. استخدم https://www.safety-icapp.com/api/exec أو /api/exec');
         }
 
         // سقف زمني إجمالي للمصادقة يشمل كل إعادات الإرسال والمحاولات.

@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1642',
+    appVersion: '1.0.1643',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4461,15 +4461,14 @@ const AppState = {
         lastSyncTime: 0, // آخر مرة تم فيها التحميل الكامل
         userEmail: null // البريد الإلكتروني للمستخدم الحالي
     },
-    /** إعدادات خادم SQL و قاعدة SQL (الاسم التاريخي googleConfig) */
+    /** إعدادات خادم SQL / Oracle (الاسم التاريخي googleConfig — ليس Google Sheets) */
     googleConfig: {
         appsScript: {
             enabled: true,
-            // ✅ v1.0.85 — ترقية المحرك إلى SQL السريع مع المزامنة الخلفية لشيت جوجل (Hybrid Dual-Write)
             scriptUrl: 'https://www.safety-icapp.com/api/exec'
         },
         sheets: {
-            // يُفعَّل تلقائياً عند ضبط spreadsheetId من الإعدادات المحفوظة؛ المعرف الرسمي يُفضَّل في Script Properties بالخادم
+            // متوقف نهائياً — مصدر الحقيقة Oracle عبر /api/exec
             enabled: false,
             spreadsheetId: '',
             apiKey: ''
@@ -4573,13 +4572,15 @@ const AppState = {
                     if (parsed.sheets && typeof parsed.sheets === 'object') {
                         const currentSheets = AppState.googleConfig.sheets || {};
                         const parsedSheets = parsed.sheets || {};
-                        const parsedSheetId = String(parsedSheets.spreadsheetId || '').trim();
                         AppState.googleConfig.sheets = {
                             ...currentSheets,
                             ...parsedSheets,
-                            spreadsheetId: parsedSheetId || String(currentSheets.spreadsheetId || '').trim(),
-                            enabled: parsedSheetId ? true : !!(parsedSheets.enabled ?? currentSheets.enabled)
+                            spreadsheetId: '',
+                            enabled: false
                         };
+                    } else if (AppState.googleConfig.sheets) {
+                        AppState.googleConfig.sheets.enabled = false;
+                        AppState.googleConfig.sheets.spreadsheetId = '';
                     }
                     if (parsed.maps && typeof parsed.maps === 'object') {
                         AppState.googleConfig.maps = {

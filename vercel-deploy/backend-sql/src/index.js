@@ -39,11 +39,22 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
+    let dbEngine = config.dbType || 'unknown';
+    let persistent = config.dbType === 'oracle' || !!(config.turso && config.turso.enabled);
+    try {
+        const { getDatabase } = require('./db/database');
+        const db = getDatabase();
+        if (db && db.engineType) dbEngine = db.engineType;
+        if (db && typeof db.persistent === 'boolean') persistent = db.persistent;
+        else if (dbEngine === 'oracle' || dbEngine === 'libsql-turso') persistent = true;
+    } catch (_e) { /* keep config fallback */ }
     res.json({
         status: 'ok',
         server: 'HSE SQL Backend',
         buildTag: config.buildTag,
         dbType: config.dbType,
+        dbEngine,
+        persistent,
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
@@ -84,10 +95,15 @@ app.post('/api/rpc', rpcHandler);
 // Start server if executed directly
 if (require.main === module) {
     const server = app.listen(config.port, config.host, () => {
+        const dbLabel = config.dbType === 'oracle'
+            ? `Oracle (${config.oracle.connectString || 'ADB'})`
+            : (config.turso && config.turso.enabled)
+                ? `Turso (${config.turso.url})`
+                : `SQLite (${config.sqlitePath})`;
         console.log(`====================================================`);
         console.log(`🚀 HSE SQL Backend running at: http://${config.host}:${config.port}`);
         console.log(`📊 Protocol: 100% Google Apps Script RPC Parity`);
-        console.log(`🗄️  Database: SQLite (${config.sqlitePath})`);
+        console.log(`🗄️  Database: ${dbLabel}`);
         console.log(`====================================================`);
     });
 

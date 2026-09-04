@@ -244,5 +244,6 @@ const genericSheetOps = {
 genericSheetOps['batchReadFromSheets'] = genericSheetOps['batchReadSheets'];
 genericSheetOps['readFromSheets'] = genericSheetOps['batchReadSheets'];
 genericSheetOps['batchRead'] = genericSheetOps['batchReadSheets'];
+genericSheetOps['deleteFromSheet'] = genericSheetOps['deleteRow'];
 
 module.exports = genericSheetOps;

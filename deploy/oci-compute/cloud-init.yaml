@@ -1,0 +1,41 @@
+#cloud-config
+# Paste into OCI Console → Create Instance → Advanced → Cloud-init
+# Shape: VM.Standard.A1.Flex (Always Free) 1–2 OCPU / 6–12 GB  OR  VM.Standard.E2.1.Micro
+
+package_update: true
+packages:
+  - docker.io
+  - docker-compose-v2
+  - nginx
+  - git
+  - curl
+  - unzip
+  - ca-certificates
+
+users:
+  - default
+  - name: hse
+    groups: [sudo, docker]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+
+write_files:
+  - path: /opt/hse/bootstrap.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      mkdir -p /opt/hse/{app,wallet,deploy}
+      systemctl enable --now docker || true
+      usermod -aG docker hse || true
+      echo "HSE bootstrap ready. Copy repo + wallet + .env then: cd /opt/hse/deploy && docker compose up -d --build"
+
+runcmd:
+  - bash /opt/hse/bootstrap.sh
+  - |
+    # Open OS firewall (OCI NSG/Security List must ALSO allow 22/80/443)
+    if command -v ufw >/dev/null 2>&1; then
+      ufw allow 22/tcp || true
+      ufw allow 80/tcp || true
+      ufw allow 443/tcp || true
+    fi

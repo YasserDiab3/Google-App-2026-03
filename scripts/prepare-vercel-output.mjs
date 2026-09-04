@@ -50,6 +50,7 @@ function setupNodeFunction(routeName, entryFile, opts = {}) {
     let code = fs.readFileSync(entry, 'utf8');
     if (entryFile.includes('exec.js') || entryFile.includes('health.js')) {
         code = code.replaceAll("require('../backend-sql/", "require('./backend-sql/");
+        code = code.replaceAll("require('./_oci-proxy')", "require('./Frontend/api/_oci-proxy')");
     }
     fs.writeFileSync(path.join(funcDir, 'index.js'), code);
 
@@ -111,9 +112,10 @@ if (!fs.existsSync(distDir)) {
 rmrf(outRoot);
 cpDir(distDir, staticRoot);
 
-setupNodeFunction('api/health', 'api/health.js', {
+setupNodeFunction('api/health', 'Frontend/api/health.js', {
     maxDuration: 30,
     includeDirs: ['backend-sql/src'],
+    includeFiles: ['Frontend/api/_oci-proxy.js'],
     includeNodeModules: ['oracledb']
 });
 
@@ -121,7 +123,8 @@ setupNodeFunction('api/exec', 'Frontend/api/exec.js', {
     maxDuration: 60,
     includeDirs: ['backend-sql/src'],
     includeFiles: [
-        'backend-sql/data/clinic_hse.db.gz'
+        'backend-sql/data/clinic_hse.db.gz',
+        'Frontend/api/_oci-proxy.js'
     ],
     includeNodeModules: ['oracledb']
 });

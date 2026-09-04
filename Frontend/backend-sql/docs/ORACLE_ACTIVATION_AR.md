@@ -136,3 +136,11 @@ npx vercel --prod
 ```
 
 فحص: `https://www.safety-icapp.com/api/health` يجب أن يظهر `dbEngine:"oracle"` و `persistent:true`.
+
+> **ملاحظة:** تفعيل `DB_TYPE=oracle` على Vercel Serverless فشل (504). المسار المعتمد للإنتاج المباشر: **OCI Compute** — انظر `deploy/oci-compute/README_AR.md`.
+
+
+## ???? OCI Compute
+
+???? ?????? ??????: `deploy/oci-compute/README_AR.md`.
+

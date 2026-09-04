@@ -829,33 +829,26 @@ const Settings = {
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
                                                 ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بالخادم الخلفي</span>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بخادم SQL (Oracle)</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
                                             <i class="fas fa-link ml-2"></i>
-                                            رابط API للخادم (مطلوب للمزامنة)
+                                            رابط API للخادم (SQL / Oracle)
                                         </label>
                                         <input type="url" id="google-apps-script-url" class="form-input"
                                             value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
                                             placeholder="https://www.safety-icapp.com/api/exec">
+                                        <p class="text-xs text-gray-500 mt-1">المسار المعتمد: نفس الموقع عبر /api/exec → Oracle على OCI. لا تستخدم Google Apps Script.</p>
                                     </div>
-                                    <div>
+                                    <div class="hidden" aria-hidden="true">
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-sheets-enabled" class="rounded border-gray-300 text-blue-600"
-                                                ${AppState.googleConfig.sheets.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل مزامنة الجداول (إن يطلبها الخادم)</span>
+                                                ${false ? 'checked' : ''}>
+                                            <span class="mr-2 text-sm text-gray-700">مزامنة Google Sheets (متوقف)</span>
                                         </label>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-table ml-2"></i>
-                                            معرف الجدول / المشروع (اختياري)
-                                        </label>
-                                        <input type="text" id="google-sheets-id" class="form-input"
-                                            value="${AppState.googleConfig.sheets.spreadsheetId || ''}"
-                                            placeholder="إن وُجد في إعدادات الخادم">
+                                        <input type="text" id="google-sheets-id" class="form-input" value="" placeholder="">
                                     </div>
                                     <div class="flex items-center justify-end gap-4 pt-4 border-t">
                                         <button type="button" id="test-connection-btn" class="btn-secondary">
@@ -880,11 +873,11 @@ const Settings = {
                                 <div>
                                     <p class="text-sm text-gray-600 mb-4">
                                         <i class="fas fa-info-circle ml-2"></i>
-                                        سيتم إنشاء جميع الأوراق المطلوبة (Users, Incidents, NearMiss, PTW, Training, Clinic, Fire Equipment, PPE, ViolationTypes, Violations, Contractors) تلقائياً مع الرؤوس الافتراضية
+                                        سيتم إنشاء/التحقق من جداول SQL على Oracle تلقائياً عند الحاجة (Users, Incidents, PTW, …) — بدون Google Sheets
                                     </p>
                                     <button id="initialize-sheets-btn" class="btn-primary w-full">
-                                        <i class="fas fa-magic ml-2"></i>
-                                        إنشاء جميع الأوراق تلقائياً
+                                        <i class="fas fa-database ml-2"></i>
+                                        التحقق من جاهزية جداول SQL / Oracle
                                     </button>
                                 </div>
                                 <div class="border-t pt-4">
@@ -5510,26 +5503,15 @@ const Settings = {
             return;
         }
 
-        if (!AppState.googleConfig.sheets.spreadsheetId) {
-            Notification.error('يرجى إدخال معرف الجدول أولاً إذا كان مطلوباً');
-            return;
-        }
-
-        const sheetsList = 'Users, Incidents, NearMiss, PTW, Training, ClinicVisits, Medications, SickLeave, ClinicInventory, FireEquipment, FireEquipmentAssets, FireEquipmentInspections, PPE, Violations, Contractors, Employees, BehaviorMonitoring, ChemicalSafety, DailyObservations, ISODocuments, ISOProcedures, ISOForms, EmergencyAlerts, EmergencyPlans';
-
-        if (!confirm(`هل تريد إنشاء جميع الأوراق المطلوبة تلقائياً؟\n\nسيتم إنشاء:\n${sheetsList.split(', ').map(s => `- ${s}`).join('\n')}`)) {
-            return;
-        }
-
         try {
             Loading.show();
-            await GoogleIntegration.initializeSheets();
+            const result = await GoogleIntegration.initializeSheets();
             Loading.hide();
-            Notification.success('تم إنشاء جميع الأوراق بنجاح');
+            Notification.success(result?.message || 'قاعدة SQL/Oracle جاهزة — لا حاجة لجداول Google');
         } catch (error) {
             Loading.hide();
-            Utils.safeError('فشل إنشاء الأوراق:', error);
-            Notification.error('فشل إنشاء الأوراق: ' + error.message);
+            Utils.safeError('فشل تهيئة الجداول:', error);
+            Notification.error('فشل التهيئة: ' + error.message);
         }
     },
 

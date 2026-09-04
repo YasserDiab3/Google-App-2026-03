@@ -1,0 +1,44 @@
+services:
+  hse-api:
+    build:
+      context: ../..
+      dockerfile: deploy/oci-compute/Dockerfile
+    image: hse-sql-api:oracle
+    container_name: hse-sql-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_TYPE: oracle
+      HOST: 0.0.0.0
+      PORT: 3001
+      ORACLE_WALLET_DIR: /run/oracle-wallet
+    volumes:
+      - oracle-wallet:/run/oracle-wallet:ro
+    ports:
+      - "3001:3001"
+    networks:
+      - hse
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: hse-api-nginx
+    restart: unless-stopped
+    depends_on:
+      - hse-api
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    networks:
+      - hse
+
+volumes:
+  oracle-wallet:
+    # Populate with: docker run --rm -v deploy_oci-compute_oracle-wallet:/w -v /opt/hse/wallet:/src alpine sh -c 'cp -a /src/. /w/'
+
+networks:
+  hse:
+    driver: bridge

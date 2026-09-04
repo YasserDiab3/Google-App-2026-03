@@ -5,11 +5,12 @@
   "functions": {
     "api/exec.js": {
       "maxDuration": 60,
-      "includeFiles": "{backend-sql/data/clinic_hse.db.gz,node_modules/oracledb/**,node_modules/deasync/**}",
+      "includeFiles": "{api/_oci-proxy.js,backend-sql/data/clinic_hse.db.gz,node_modules/oracledb/**,node_modules/deasync/**}",
       "excludeFiles": "{**/*.db,**/*.db-wal,**/*.db-shm,**/*.rebuilt.db,**/backups/**}"
     },
     "api/health.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "api/_oci-proxy.js"
     }
   },
   "redirects": [

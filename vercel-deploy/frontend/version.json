@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1642",
+  "version": "1.0.1643",
   "highlights": {
     "ar": [
-      "مطابقة عدد تصاريح PTW مع الشيت (بدون قطع صفوف).",
-      "جلب قائمة/سجل التصاريح بأعمدة خفيفة كاملة تحت حد الاستجابة.",
-      "إجمالي التصاريح من ورقة PTW بدل مصدر مقطوع."
+      "الواجهة تتصل بـ Oracle عبر خادم OCI (ربط مباشر مستقر).",
+      "إيقاف إعدادات Google Sheets من الواجهة والاعتماد على SQL/Oracle.",
+      "قراءة وإضافة وتعديل وحذف تعمل على قاعدة Oracle الحية."
     ],
     "en": [
-      "Match PTW permit counts with the sheet (no silent row truncation).",
-      "Fetch full PTW/Registry lists via slim columns under response limit.",
-      "Total permits KPI uses PTW sheet, not a truncated source."
+      "UI connects to Oracle via OCI Compute (stable direct path).",
+      "Disable Google Sheets settings; SQL/Oracle is the source of truth.",
+      "Full read/create/update/delete verified on live Oracle."
     ]
   }
 }
