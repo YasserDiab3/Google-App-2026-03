@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1628",
+  "version": "1.0.1631",
   "highlights": {
     "ar": [
-      "إصلاح تسجيل الدخول: التحقق من كلمة المرور يعمل مع الحسابات الصحيحة ورسائل الخطأ أوضح.",
-      "زر اللغة في شاشة الدخول يبدّل العربية والإنجليزية بنقرة واحدة.",
-      "عودة قوائم التصاريح والموظفين والحوادث بتحميل خفيف دون فراغ الشاشة."
+      "نشر أسرع: تخطي فحص npm البطيء أثناء البناء على Vercel.",
+      "إزالة تحذيرات الذاكرة وسكربت esbuild من سجل النشر.",
+      "إشعار التحديث يظهر أسرع بعد اكتمال النشر — بدون كاش قديم لـ version.json."
     ],
     "en": [
-      "Login fixed: correct passwords are accepted and error messages are clearer.",
-      "Login language toggles Arabic and English with a single click.",
-      "Permits, employees, and incidents lists load again without an empty screen."
+      "Faster deploys: skip slow npm audit during the Vercel build.",
+      "Removed memory and esbuild script warnings from the deploy log.",
+      "Update notice appears sooner after deploy — version.json is no longer cached."
     ]
   }
 }
