@@ -329,6 +329,24 @@ async function main() {
     } else {
         console.log('💡 للنشر: أضف --deploy-bundle');
     }
+
+    const skipOracle = process.env.ORACLE_MIRROR === '0' || process.argv.includes('--skip-oracle');
+    const sheetsTouched = reports.filter((r) => (r.newCount || 0) + (r.changedCount || 0) > 0).map((r) => r.sheet);
+    if (!skipOracle && apply && sheetsTouched.length) {
+        const migrateScript = path.join(__dirname, 'migrate-sqlite-to-oracle.js');
+        if (require('fs').existsSync(migrateScript)) {
+            console.log('☁ مزامنة Oracle Cloud للجداول المحدّثة...');
+            try {
+                require('child_process').execFileSync(
+                    process.execPath,
+                    [migrateScript, `--tables=${sheetsTouched.join(',')}`],
+                    { stdio: 'inherit', cwd: path.join(__dirname, '..') }
+                );
+            } catch (e) {
+                console.warn('⚠️ مزامنة Oracle فشلت (SQLite محفوظ):', e && e.message ? e.message : e);
+            }
+        }
+    }
 }
 
 main().catch((err) => {

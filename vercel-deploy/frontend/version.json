@@ -1,15 +1,17 @@
 {
-  "version": "1.0.1640",
+  "version": "1.0.1641",
   "highlights": {
     "ar": [
-      "إصلاح Oracle على Vercel: oracledb داخل العملية بدل Worker.",
-      "تفعيل الدخول على قاعدة Oracle الدائمة.",
-      "تضمين حزم oracledb/deasync في نشر Frontend."
+      "بيانات الإنتاج من الإكسل على SQLite + حزمة clinic_hse.db.gz.",
+      "مرآة تلقائية: أي تحديث SQLite يُزامَن إلى Oracle Cloud.",
+      "إلغاء شاشة «جاري تحميل البيانات» المعطّلة داخل التطبيق.",
+      "سجل الملاحظات يُحمَّل فوراً بدل «سيُحمَّل هذا التبويب عند فتحه»."
     ],
     "en": [
-      "Fix Vercel Oracle: in-process oracledb instead of worker.",
-      "Enable login on persistent Oracle database.",
-      "Bundle oracledb/deasync into Frontend deploy."
+      "Production Excel data on SQLite + clinic_hse.db.gz bundle.",
+      "Auto-mirror: SQLite writes sync to Oracle Cloud.",
+      "No blocking «Loading data» overlay inside the app.",
+      "Notes registry loads immediately instead of lazy placeholder."
     ]
   }
 }

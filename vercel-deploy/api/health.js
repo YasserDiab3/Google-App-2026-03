@@ -22,6 +22,7 @@ module.exports = (req, res) => {
         dbEngine,
         persistent,
         dbType: process.env.DB_TYPE || 'sqlite',
+        oracleMirror: process.env.ORACLE_MIRROR === '1' || process.env.ORACLE_MIRROR === 'true',
         oracleWalletB64Len: String(process.env.ORACLE_WALLET_FILES_B64 || '').length,
         oracleUserSet: !!(process.env.ORACLE_USER || '').trim(),
         timestamp: new Date().toISOString()

@@ -14,10 +14,23 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { headersMap } = require('../src/db/headers-schema');
-const { createPool, qIdent, formatValue, awaitSync } = require('../src/db/oracle-engine');
+const { createPool, qIdent, formatValue, sanitizeIdentifier, awaitSync } = require('../src/db/oracle-engine');
 const config = require('../src/config/config');
 
 const BATCH = 200;
+
+function needsJsonRowStorage(columns) {
+    if (!Array.isArray(columns) || columns.length > 1000) return true;
+    for (const c of columns) {
+        if (typeof c !== 'string') return true;
+        try {
+            sanitizeIdentifier(c);
+        } catch (_e) {
+            return true;
+        }
+    }
+    return false;
+}
 
 function parseArgs(argv) {
     const out = { dryRun: false, tables: null, applyDdl: process.env.APPLY_DDL === '1' };
@@ -127,8 +140,8 @@ async function mainAsync() {
         walletLocation: process.env.ORACLE_WALLET_DIR || config.oracle.walletLocation,
         walletPassword: process.env.ORACLE_WALLET_PASSWORD || config.oracle.walletPassword
     };
-    if ((!oracleCfg.enabled && !args.dryRun) || !oracleCfg.user || !oracleCfg.password || !oracleCfg.connectString) {
-        console.error('Set DB_TYPE=oracle and ORACLE_USER / ORACLE_PASSWORD / ORACLE_CONNECT_STRING');
+    if ((!oracleCfg.user || !oracleCfg.password || !oracleCfg.connectString) && !args.dryRun) {
+        console.error('Set ORACLE_USER / ORACLE_PASSWORD / ORACLE_CONNECT_STRING (DB_TYPE=oracle optional for migrate)');
         process.exit(1);
     }
 
@@ -178,7 +191,7 @@ async function mainAsync() {
         }
 
         const columns = cols.filter((c) => typeof c === 'string');
-        const useJsonRows = columns.length > 1000;
+        const useJsonRows = needsJsonRowStorage(columns);
         let insertSql;
         let bindRows;
         if (useJsonRows) {

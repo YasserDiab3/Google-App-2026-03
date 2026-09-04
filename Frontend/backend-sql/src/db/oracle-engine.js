@@ -283,27 +283,49 @@ function buildOracleWrapperFromWorker(bridge) {
 
         saveToSheet(sheetName, rows) {
             if (!Array.isArray(rows) || !rows.length) return 0;
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
             const tableName = qIdent(sheetName);
-            const columns = (headersMap[sheetName] || Object.keys(rows[0])).map(sanitizeIdentifier);
+            const columns = (headersMap[sheetName] || Object.keys(rows[0])).filter((c) => typeof c === 'string');
             this.exec(`DELETE FROM ${tableName}`);
-            const colNames = columns.map(qIdent).join(', ');
-            const placeholders = columns.map(() => '?').join(', ');
+            if (needsJsonRowStorage(columns)) {
+                const insertSql = `INSERT INTO ${tableName} (${qIdent('id')}, ${qIdent('_rowJson')}) VALUES (?, ?)`;
+                let count = 0;
+                for (const row of rows) {
+                    const id = row.id != null ? formatValue(row.id) : formatValue(row[columns[0]]);
+                    this.run(insertSql, [id, JSON.stringify(row)]);
+                    count += 1;
+                }
+                return count;
+            }
+            const safeCols = columns.map(sanitizeIdentifier);
+            const colNames = safeCols.map(qIdent).join(', ');
+            const placeholders = safeCols.map(() => '?').join(', ');
             const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
             let count = 0;
             for (const row of rows) {
-                this.run(insertSql, columns.map((c) => formatValue(row[c])));
+                this.run(insertSql, safeCols.map((c) => formatValue(row[c])));
                 count += 1;
             }
             return count;
         },
 
         appendToSheet(sheetName, row) {
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
             const tableName = qIdent(sheetName);
-            const columns = (headersMap[sheetName] || Object.keys(row)).map(sanitizeIdentifier);
-            const colNames = columns.map(qIdent).join(', ');
-            const placeholders = columns.map(() => '?').join(', ');
+            const columns = (headersMap[sheetName] || Object.keys(row)).filter((c) => typeof c === 'string');
+            if (needsJsonRowStorage(columns)) {
+                const id = row.id != null ? formatValue(row.id) : formatValue(row[columns[0]]);
+                this.run(
+                    `INSERT INTO ${tableName} (${qIdent('id')}, ${qIdent('_rowJson')}) VALUES (?, ?)`,
+                    [id, JSON.stringify(row)]
+                );
+                return row;
+            }
+            const safeCols = columns.map(sanitizeIdentifier);
+            const colNames = safeCols.map(qIdent).join(', ');
+            const placeholders = safeCols.map(() => '?').join(', ');
             const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
-            this.run(insertSql, columns.map((c) => formatValue(row[c])));
+            this.run(insertSql, safeCols.map((c) => formatValue(row[c])));
             return row;
         },
 
@@ -327,6 +349,15 @@ function buildOracleWrapperFromWorker(bridge) {
             } else {
                 [sheetName, keyVal, updatedFields] = args;
                 keyCol = 'id';
+            }
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
+            const columns = (headersMap[sheetName] || []).filter((c) => typeof c === 'string');
+            if (needsJsonRowStorage(columns)) {
+                const existing = this.findRow(sheetName, keyVal);
+                const merged = { ...(existing || {}), ...(updatedFields || {}), [keyCol]: keyVal };
+                this.deleteRow(sheetName, keyCol, keyVal);
+                this.appendToSheet(sheetName, merged);
+                return 1;
             }
             const tableName = qIdent(sheetName);
             const setClauses = [];
@@ -458,26 +489,48 @@ function buildOracleWrapperInProcess(pool, oracledb) {
         },
         saveToSheet(sheetName, rows) {
             if (!Array.isArray(rows) || !rows.length) return 0;
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
             const tableName = qIdent(sheetName);
-            const columns = (headersMap[sheetName] || Object.keys(rows[0])).map(sanitizeIdentifier);
+            const columns = (headersMap[sheetName] || Object.keys(rows[0])).filter((c) => typeof c === 'string');
             this.exec(`DELETE FROM ${tableName}`);
-            const colNames = columns.map(qIdent).join(', ');
-            const placeholders = columns.map(() => '?').join(', ');
+            if (needsJsonRowStorage(columns)) {
+                const insertSql = `INSERT INTO ${tableName} (${qIdent('id')}, ${qIdent('_rowJson')}) VALUES (?, ?)`;
+                let count = 0;
+                for (const row of rows) {
+                    const id = row.id != null ? formatValue(row.id) : formatValue(row[columns[0]]);
+                    this.run(insertSql, [id, JSON.stringify(row)]);
+                    count += 1;
+                }
+                return count;
+            }
+            const safeCols = columns.map(sanitizeIdentifier);
+            const colNames = safeCols.map(qIdent).join(', ');
+            const placeholders = safeCols.map(() => '?').join(', ');
             const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
             let count = 0;
             for (const row of rows) {
-                this.run(insertSql, columns.map((c) => formatValue(row[c])));
+                this.run(insertSql, safeCols.map((c) => formatValue(row[c])));
                 count += 1;
             }
             return count;
         },
         appendToSheet(sheetName, row) {
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
             const tableName = qIdent(sheetName);
-            const columns = (headersMap[sheetName] || Object.keys(row)).map(sanitizeIdentifier);
-            const colNames = columns.map(qIdent).join(', ');
-            const placeholders = columns.map(() => '?').join(', ');
+            const columns = (headersMap[sheetName] || Object.keys(row)).filter((c) => typeof c === 'string');
+            if (needsJsonRowStorage(columns)) {
+                const id = row.id != null ? formatValue(row.id) : formatValue(row[columns[0]]);
+                this.run(
+                    `INSERT INTO ${tableName} (${qIdent('id')}, ${qIdent('_rowJson')}) VALUES (?, ?)`,
+                    [id, JSON.stringify(row)]
+                );
+                return row;
+            }
+            const safeCols = columns.map(sanitizeIdentifier);
+            const colNames = safeCols.map(qIdent).join(', ');
+            const placeholders = safeCols.map(() => '?').join(', ');
             const insertSql = `INSERT INTO ${tableName} (${colNames}) VALUES (${placeholders})`;
-            this.run(insertSql, columns.map((c) => formatValue(row[c])));
+            this.run(insertSql, safeCols.map((c) => formatValue(row[c])));
             return row;
         },
         insertRow(sheetName, row) {
@@ -498,6 +551,15 @@ function buildOracleWrapperInProcess(pool, oracledb) {
             } else {
                 [sheetName, keyVal, updatedFields] = args;
                 keyCol = 'id';
+            }
+            const { needsJsonRowStorage } = require('./oracle-sheet-sync');
+            const columns = (headersMap[sheetName] || []).filter((c) => typeof c === 'string');
+            if (needsJsonRowStorage(columns)) {
+                const existing = this.findRow(sheetName, keyVal);
+                const merged = { ...(existing || {}), ...(updatedFields || {}), [keyCol]: keyVal };
+                this.deleteRow(sheetName, keyCol, keyVal);
+                this.appendToSheet(sheetName, merged);
+                return 1;
             }
             const tableName = qIdent(sheetName);
             const setClauses = [];

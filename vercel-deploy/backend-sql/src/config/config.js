@@ -34,6 +34,11 @@ try {
 } catch (_e) { /* optional until engine loads */ }
 const dbTypeRaw = (process.env.DB_TYPE || 'sqlite').trim().toLowerCase();
 const oracleEnabled = dbTypeRaw === 'oracle';
+const oracleCredsReady = !!(oracleUser && oraclePassword && oracleConnectString);
+// مرآة SQLite → Oracle: ORACLE_MIRROR=1 (أو auto محلياً عند وجود بيانات اتصال وDB_TYPE≠oracle)
+const oracleMirrorFlag = (process.env.ORACLE_MIRROR || '').trim().toLowerCase();
+const oracleMirrorAuto = !onVercel && oracleCredsReady && !oracleEnabled && oracleMirrorFlag !== '0';
+const oracleMirror = oracleMirrorFlag === '1' || oracleMirrorFlag === 'true' || oracleMirrorAuto;
 
 module.exports = {
     port: parseInt(process.env.PORT || '3001', 10),
@@ -55,9 +60,10 @@ module.exports = {
         // فترة إعادة المزامنة التلقائية للقراءة (ms). 0 = لا مزامنة دورية (نزامن يدوياً بعد الكتابة).
         syncIntervalMs: parseInt(process.env.TURSO_SYNC_INTERVAL_MS || '0', 10)
     },
-    // Oracle Autonomous DB — يُفعَّل فقط بـ DB_TYPE=oracle + بيانات الاتصال
+    // Oracle Autonomous DB — أساسي بـ DB_TYPE=oracle، أو مرآة بـ ORACLE_MIRROR=1
     oracle: {
         enabled: oracleEnabled,
+        mirror: !oracleEnabled && oracleMirror && oracleCredsReady,
         user: oracleUser,
         password: oraclePassword,
         connectString: oracleConnectString,
@@ -65,5 +71,5 @@ module.exports = {
         walletPassword: oracleWalletPassword || '',
         poolMax: parseInt(process.env.ORACLE_POOL_MAX || (onVercel ? '1' : '4'), 10)
     },
-    buildTag: 'HSE_SQL_BACKEND_v1.2.1-oracle-vercel'
+    buildTag: 'HSE_SQL_BACKEND_v1.2.2-oracle-mirror'
 };

@@ -132,23 +132,28 @@ const EnhancedLoader = {
             this.loadingState.currentStep = message;
         }
 
-        // حساب النسبة المئوية
-        const percentage = Math.round((this.loadingState.loaded / this.loadingState.total) * 100);
+        // حساب النسبة المئوية (حماية من القسمة على صفر → NaN)
+        const total = Number(this.loadingState.total) > 0 ? Number(this.loadingState.total) : 100;
+        const loaded = Number(this.loadingState.loaded);
+        const safeLoaded = Number.isFinite(loaded) ? loaded : 0;
+        const percentage = Math.round((safeLoaded / total) * 100);
+        const safePct = Number.isFinite(percentage) ? Math.max(0, Math.min(100, percentage)) : 0;
 
         // تحديث شريط التقدم
         if (this.elements.progressBar) {
-            this.elements.progressBar.style.width = `${percentage}%`;
+            this.elements.progressBar.style.width = `${safePct}%`;
         }
 
         // تحديث نص التقدم
         if (this.elements.progressText) {
-            this.elements.progressText.textContent = `${percentage}%`;
+            this.elements.progressText.textContent = `${safePct}%`;
         }
 
         // تحديث الوقت المنقضي
         if (this.elements.timeText && this.loadingState.startTime) {
             const elapsed = Math.round((Date.now() - this.loadingState.startTime) / 1000);
-            this.elements.timeText.textContent = `${elapsed}s`;
+            const safeElapsed = Number.isFinite(elapsed) ? Math.max(0, elapsed) : 0;
+            this.elements.timeText.textContent = `${safeElapsed}s`;
         }
 
         // تحديث الخطوة الحالية

@@ -4346,7 +4346,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1640',
+    appVersion: '1.0.1641',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -7846,13 +7846,13 @@ const Loading = {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
 
-        // تقليل الإزعاج: داخل التطبيق الرئيسي لا نعرض طبقة التحميل الكاملة
-        // عندما تكون الرسالة عامة فقط (ناتجة غالباً عن تحميلات خلفية/تلقائية).
+        // تقليل الإزعاج: داخل التطبيق لا نعرض طبقة تحميل كاملة لمزامنة/خلفيات
         try {
             const isAppActive = document.body && document.body.classList.contains('app-active');
             const normalizedMessage = String(message || '').trim();
             const isGenericMessage = !normalizedMessage || normalizedMessage === this.defaultMessage;
-            if (isAppActive && isGenericMessage) {
+            const isBackgroundSyncMessage = /جاري تحميل البيانات|تم التحميل بنجاح|تحميل البيانات|مزامنة/i.test(normalizedMessage);
+            if (isAppActive && (isGenericMessage || isBackgroundSyncMessage)) {
                 return;
             }
         } catch (e) { /* ignore */ }
@@ -7878,6 +7878,16 @@ const Loading = {
     setProgress(percentage, message = null) {
         const overlay = document.getElementById('loading-overlay');
         if (!overlay) return;
+
+        // داخل التطبيق: لا تُبقِ/تُحدّث طبقة المزامنة المعطّلة للمستخدم
+        try {
+            const isAppActive = document.body && document.body.classList.contains('app-active');
+            const msg = String(message || this.currentMessage || '').trim();
+            if (isAppActive && /جاري تحميل البيانات|تم التحميل بنجاح|مزامنة/i.test(msg)) {
+                this.hide();
+                return;
+            }
+        } catch (e) { /* ignore */ }
 
         const rawP = parseFloat(percentage);
         this.currentProgress = Number.isFinite(rawP) ? Math.max(0, Math.min(100, rawP)) : 0;

@@ -1,6 +1,35 @@
 # تفعيل Oracle Autonomous DB (HSE)
 
-الإنتاج الحالي يبقى **SQLite** حتى تضبط `DB_TYPE=oracle` وتنجح الترحيل.
+## الوضع الموصى به الآن: مرآة SQLite → Oracle
+
+الإنتاج على Vercel يبقى **SQLite** (مستقر). محلياً وكل كتابة على SQLite تُزامَن تلقائياً إلى **Oracle Cloud**.
+
+```env
+DB_TYPE=sqlite
+ORACLE_MIRROR=1
+ORACLE_USER=ADMIN
+ORACLE_PASSWORD=********
+ORACLE_CONNECT_STRING=mrj8uznak8telasp_high
+ORACLE_WALLET_DIR=D:\secrets\oracle-wallet
+```
+
+- `ORACLE_MIRROR=1` — تفعيل المرآة الحية (بعد كل `append/update/delete/save`)
+- `ORACLE_MIRROR_SYNC=1` — مزامنة فورية بدون debounce (سكربتات)
+- استيراد Excel (`import-from-xlsx` / `upsert-xlsx-delta`) يرحّل الجداول المحدّثة إلى Oracle تلقائياً
+- `--skip-oracle` أو `ORACLE_MIRROR=0` لتعطيل المزامنة لمرة واحدة
+
+ترحيل يدوي كامل:
+
+```bash
+node scripts/migrate-sqlite-to-oracle.js
+node scripts/compare-sqlite-oracle.js
+```
+
+---
+
+## مسار بديل: Oracle كمحرك أساسي (`DB_TYPE=oracle`)
+
+الإنتاج الحالي يبقى **SQLite** حتى تضبط `DB_TYPE=oracle` وتنجح على بيئة دائمة (يفضّل OCI Compute وليس Vercel Serverless).
 
 ## 1) ما يلزم منك في OCI
 
@@ -11,7 +40,7 @@
 
 لا يوجد `~/.oci/config` على هذا الجهاز حالياً — لوحة OCI أو إعداد الملف يدوياً مطلوبان لإنشاء ADB عبر MCP.
 
-## 2) متغيرات البيئة
+## 2) متغيرات البيئة (محرك أساسي)
 
 ```bash
 DB_TYPE=oracle

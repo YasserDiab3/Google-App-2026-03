@@ -2457,11 +2457,10 @@ const DailyObservations = {
             let analysisContent = '';
             let top10Content = '';
             if (firstTab === 'observations-registry') {
-                // ✅ أداء: لا نبني shell السجل الثقيل (تطبيع كامل + 8 مجموعات فلاتر) قبل أول رسم.
-                //   نعرض هيكل + spinner فوراً ثم نملأ التبويب بعد الرسم في runDeferred.
-                listContent = obsLazyPlaceholder;
-            } else if (canRegistry) {
+                // سجل الملاحظات = التبويب الافتراضي: ابنِ القائمة فوراً (لا placeholder «سيُحمَّل عند فتحه»)
                 listContent = (await withTimeout(this.renderList(), listErrorHtml)) || listErrorHtml;
+            } else if (canRegistry) {
+                listContent = obsLazyPlaceholder;
             }
             if (firstTab === 'top-10-observations') {
                 top10Content = (await withTimeout(this.renderTop10Observations(), top10ErrorHtml)) || top10ErrorHtml;
@@ -2606,12 +2605,20 @@ const DailyObservations = {
                     const runDeferred = async () => {
                         try {
                             if (this.state && this.state.activeTab === 'observations-registry') {
-                                // ✅ ملء shell السجل بعد أول رسم (كان يُبنى قبله ويؤخّر الظهور)
+                                // لا تُعد بناء القائمة إن وُجد هيكل السجل؛ فقط حدّث الجدول
                                 try {
                                     const regEl = document.getElementById('tab-observations-registry');
-                                    if (regEl && regEl.querySelector('.empty-state')) {
-                                        regEl.innerHTML = await this.renderList();
-                                        this.applyModuleI18n(regEl);
+                                    const hasTableShell = !!document.getElementById('observations-table-container');
+                                    const stillLazyPlaceholder = !!(regEl && !hasTableShell && regEl.querySelector('.empty-state'));
+                                    if (stillLazyPlaceholder && typeof this.renderList === 'function') {
+                                        const html = await Promise.race([
+                                            this.renderList(),
+                                            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+                                        ]).catch(() => null);
+                                        if (html && regEl) {
+                                            regEl.innerHTML = html;
+                                            this.applyModuleI18n(regEl);
+                                        }
                                     }
                                 } catch (shellErr) {
                                     Utils.safeWarn('⚠️ بناء سجل الملاحظات:', shellErr);
@@ -3875,7 +3882,20 @@ const DailyObservations = {
                         // تحديث سجل الملاحظات فوراً عند فتح التبويب
                         if (tabName === 'observations-registry') {
                             try {
-                                this.loadObservationsList();
+                                const hasTableShell = !!document.getElementById('observations-table-container');
+                                if (!hasTableShell && typeof this.renderList === 'function') {
+                                    void Promise.resolve(this.renderList()).then((html) => {
+                                        if (html && tabContent) {
+                                            tabContent.innerHTML = html;
+                                            this.applyModuleI18n(tabContent);
+                                        }
+                                        try { this.loadObservationsList(); } catch (_e) {}
+                                    }).catch(() => {
+                                        try { this.loadObservationsList(); } catch (_e2) {}
+                                    });
+                                } else {
+                                    this.loadObservationsList();
+                                }
                             } catch (e) {}
                         }
                         

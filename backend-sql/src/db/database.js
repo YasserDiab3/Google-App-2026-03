@@ -470,6 +470,16 @@ function initDatabase(overridePath = null) {
                 return this.deleteRow(...args);
             }
         };
+
+        // مرآة حية: كل كتابة SQLite تُعاد مزامنة الورقة إلى Oracle Cloud
+        if (config.oracle && config.oracle.mirror) {
+            try {
+                const { wrapWithOracleMirror } = require('./oracle-mirror');
+                wrapper = wrapWithOracleMirror(wrapper);
+            } catch (e) {
+                console.warn('[oracle-mirror] wrap skipped:', String(e && e.message || e).slice(0, 120));
+            }
+        }
     } else {
         // Pure-JS JSON File Engine Fallback for Node without native SQLite binaries
         const jsonStore = {};

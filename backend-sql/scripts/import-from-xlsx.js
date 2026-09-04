@@ -293,6 +293,26 @@ async function main() {
     } else {
         console.log('💡 للنشر: أضف --deploy-bundle');
     }
+
+    // ترحيل تلقائي إلى Oracle Cloud بعد تحديث SQLite
+    const skipOracle = process.env.ORACLE_MIRROR === '0' || process.argv.includes('--skip-oracle');
+    if (!skipOracle && targetSheets.length) {
+        const migrateScript = path.join(__dirname, 'migrate-sqlite-to-oracle.js');
+        if (fs.existsSync(migrateScript)) {
+            console.log('☁ مزامنة Oracle Cloud بعد الاستيراد...');
+            const env = { ...process.env, DB_TYPE: process.env.DB_TYPE === 'oracle' ? 'oracle' : (process.env.DB_TYPE || 'sqlite') };
+            // migrate script requires oracle credentials; force connect via existing .env
+            try {
+                require('child_process').execFileSync(
+                    process.execPath,
+                    [migrateScript, `--tables=${targetSheets.join(',')}`],
+                    { stdio: 'inherit', env, cwd: path.join(__dirname, '..') }
+                );
+            } catch (e) {
+                console.warn('⚠️ مزامنة Oracle فشلت (SQLite محفوظ):', e && e.message ? e.message : e);
+            }
+        }
+    }
 }
 
 main().catch((err) => {

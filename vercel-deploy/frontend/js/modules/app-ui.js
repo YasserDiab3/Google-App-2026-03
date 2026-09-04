@@ -9571,7 +9571,7 @@ window.UI = {
                 GoogleIntegration._lastSyncBusy = false;
                 syncResult = await GoogleIntegration.syncData({
                     silent: false,
-                    showLoader: true,
+                    showLoader: false,
                     notifyOnSuccess: false,
                     notifyOnError: false,
                     includeUsersSheet: includeUsersSheet,
