@@ -2736,38 +2736,11 @@ const Users = {
         Loading.show();
 
         try {
-            let deleteSuccess = false;
-
-            // 1) حذف من قاعدة البيانات (قاعدة SQL) أولاً ثم تحديث الواجهة
-            if (AppState.googleConfig.appsScript.enabled) {
-                try {
-                    const result = await GoogleIntegration.sendToAppsScript('deleteUser', { userId });
-                    deleteSuccess = result && result.success === true;
-                    if (!deleteSuccess && result && result.message) {
-                        throw new Error(result.message);
-                    }
-                } catch (error) {
-                    // محاولة بديلة: حفظ قائمة المستخدمين بعد إزالة المستخدم
-                    const filteredUsers = AppState.appData.users.filter(u => u.id !== userId);
-                    try {
-                        await GoogleIntegration.autoSave('Users', filteredUsers);
-                        deleteSuccess = true;
-                    } catch (autoSaveErr) {
-                        Utils.safeWarn('⚠️ فشل الحذف من قاعدة SQL وبديل autoSave:', autoSaveErr);
-                        Loading.hide();
-                        Notification.error('فشل حذف المستخدم من قاعدة البيانات: ' + (error.message || error));
-                        Utils.safeError('خطأ في حذف المستخدم:', error);
-                        return;
-                    }
-                }
-            } else {
-                await GoogleIntegration.autoSave('Users', AppState.appData.users.filter(u => u.id !== userId));
-                deleteSuccess = true;
-            }
-
-            if (!deleteSuccess) {
+            // حذف عبر إجراء الخادم فقط — autoSave على Users محظور ولا يحذف صفوفاً
+            const result = await GoogleIntegration.sendToAppsScript('deleteUser', { userId });
+            if (!result || result.success !== true) {
                 Loading.hide();
-                Notification.error('فشل حذف المستخدم من قاعدة البيانات');
+                Notification.error(result?.message || 'فشل حذف المستخدم من قاعدة البيانات');
                 return;
             }
 

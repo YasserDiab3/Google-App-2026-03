@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1643",
+  "version": "1.0.1644",
   "highlights": {
     "ar": [
-      "الواجهة تتصل بـ Oracle عبر خادم OCI (ربط مباشر مستقر).",
-      "إيقاف إعدادات Google Sheets من الواجهة والاعتماد على SQL/Oracle.",
-      "قراءة وإضافة وتعديل وحذف تعمل على قاعدة Oracle الحية."
+      "إصلاح حذف المستخدم: يثبت في Oracle ولا يعود بعد إعادة التحميل.",
+      "إجراء deleteUser على الخادم بصلاحيات المدير فقط.",
+      "إلغاء النجاح الوهمي عبر الحفظ المحلي لقائمة المستخدمين."
     ],
     "en": [
-      "UI connects to Oracle via OCI Compute (stable direct path).",
-      "Disable Google Sheets settings; SQL/Oracle is the source of truth.",
-      "Full read/create/update/delete verified on live Oracle."
+      "Fix user delete so removals persist in Oracle after reload.",
+      "Server-side deleteUser with admin-only permission checks.",
+      "Stop false success from local Users autoSave fallback."
     ]
   }
 }

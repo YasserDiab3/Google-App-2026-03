@@ -5,7 +5,7 @@
 
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
-const { checkAdminActor, checkAuthenticatedActor, sanitizeUserRecord, sanitizeUserRows, requireAuthenticatedActor, checkAdminPermissionsAuthoritative, sanitizeUserRecordForClient } = require('../middleware/auth-guard');
+const { checkAdminActor, checkAuthenticatedActor, sanitizeUserRecord, sanitizeUserRows, requireAuthenticatedActor, checkAdminPermissionsAuthoritative, sanitizeUserRecordForClient, isAdminUser } = require('../middleware/auth-guard');
 const {
     createMfaChallenge,
     isMfaEnabledForUser,
@@ -324,6 +324,71 @@ const authHandlers = {
         }
 
         return { success: true, message: 'تم تحديث المستخدم بنجاح', id: target.id };
+    },
+
+    'deleteUser': function(payload, postData, action, actorUserData) {
+        const gate = checkAdminActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const data = payload || postData || {};
+        const userId = String(data.userId || data.id || '').trim();
+        if (!userId) {
+            return { success: false, message: 'معرف المستخدم غير محدد', errorCode: 'USER_ID_REQUIRED' };
+        }
+
+        const db = getDatabase();
+        const users = db.readSheet('Users') || [];
+        const target = users.find((u) =>
+            u && (String(u.id || '').trim() === userId
+                || String(u.email || '').trim().toLowerCase() === userId.toLowerCase())
+        );
+        if (!target) {
+            return { success: false, message: 'المستخدم غير موجود', errorCode: 'USER_NOT_FOUND' };
+        }
+
+        const actorEmail = String(gate.sheetUser?.email || actorUserData?.email || '').trim().toLowerCase();
+        const targetEmail = String(target.email || '').trim().toLowerCase();
+        const sameId = String(gate.sheetUser?.id || '') === String(target.id || '');
+        if (sameId || (actorEmail && targetEmail && actorEmail === targetEmail)) {
+            return {
+                success: false,
+                message: 'لا يمكنك حذف حسابك الخاص',
+                errorCode: 'SELF_DELETE_FORBIDDEN'
+            };
+        }
+
+        const activeAdmins = users.filter((u) =>
+            u && isAdminUser(u) && u.active !== false && u.active !== 'false'
+        );
+        if (isAdminUser(target) && activeAdmins.length <= 1) {
+            return {
+                success: false,
+                message: 'لا يمكن حذف آخر مدير في النظام',
+                errorCode: 'LAST_ADMIN'
+            };
+        }
+
+        let changes = 0;
+        try {
+            changes = db.deleteRows('Users', 'id', target.id) || 0;
+        } catch (err) {
+            return {
+                success: false,
+                message: `فشل حذف المستخدم: ${err.message || err}`,
+                errorCode: 'DELETE_USER_ERROR'
+            };
+        }
+
+        if (changes < 1) {
+            return { success: false, message: 'فشل حذف المستخدم', errorCode: 'DELETE_FAILED' };
+        }
+
+        return {
+            success: true,
+            message: 'تم حذف المستخدم بنجاح',
+            id: target.id,
+            changes
+        };
     }
 };
 
