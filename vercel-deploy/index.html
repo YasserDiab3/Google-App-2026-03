@@ -4,30 +4,14 @@
         <meta charset="UTF-8" />
         <meta name="app-version" content="1.0.1700" />
         <!-- إعدادات اتصال الخلفية: Google Apps Script + Sheets فقط -->
-        <script src="js/hse-api-url.js?v=hse-app-v1.0.1700-20260908"></script>
+        <script src="js/hse-api-url.js?v=hse-app-v1.0.1700-20260909"></script>
         <script>
-            // تنظيف أي معامل _force متبقٍ في الرابط لمنع حلقات الإعادة المكررة
-            (function cleanForceParam() {
-                try {
-                    var u = new URL(window.location.href);
-                    if (u.searchParams.has('_force')) {
-                        u.searchParams.delete('_force');
-                        u.searchParams.delete('_bust');
-                        window.history.replaceState(null, '', u.pathname + (u.search ? u.search : '') + (u.hash || ''));
-                    }
-                } catch (e) {}
-            })();
             window.__hseHardReloadForUpdate = function (ver, opts) {
                 return (async function () {
                     var force = !!(opts && opts.force);
                     var lockKey = "hse_hard_reload_for";
                     var lockVal = String(ver || "") || "1";
                     try {
-                        // كبح زمني: يمنع أي ريلود مكرر إذا تم تنفيذه خلال 10 ثوانٍ سبقت
-                        var lastReload = Number(sessionStorage.getItem('hse_last_hard_reload_time') || 0);
-                        if (Date.now() - lastReload < 10000) return;
-                        sessionStorage.setItem('hse_last_hard_reload_time', String(Date.now()));
-
                         // القفل يمنع حلقة ريلود تلقائية فقط — زر المستخدم يتجاوزه دائماً
                         if (!force && sessionStorage.getItem(lockKey) === lockVal) return;
                         sessionStorage.setItem(lockKey, lockVal);
@@ -36,6 +20,7 @@
                         sessionStorage.setItem("hse_keep_local_data", "1");
                     } catch (e) {}
                     try {
+                        // لا تمسح last_seen عند force من الزر إن كان التحميل مطابقاً — تُدار من app-ui
                         if (!force) localStorage.removeItem("hse_last_seen_version");
                     } catch (e) {}
                     try {
@@ -62,6 +47,7 @@
                         var u = new URL(window.location.href);
                         if (ver) u.searchParams.set("_v", String(ver));
                         u.searchParams.set("_bust", String(Date.now()));
+                        // force: أضف nonce إضافي لكسر أي كاش وسيط
                         if (force) u.searchParams.set("_force", "1");
                         window.location.replace(u.toString());
                     } catch (e) {
@@ -70,7 +56,6 @@
                 })();
             };
         </script>
-
         <!-- تعطيل قمع console: أضف ?debug=1 للرابط أو localStorage.setItem('HSE_DEBUG_CONSOLE','1') -->
         <script>
             (function () {
@@ -4819,7 +4804,7 @@
 
         <!-- Main App - Refactored Modules -->
         <!-- 1. Utils and Constants (must be loaded first) -->
-        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1700-20260909" defer></script>
 
         <!-- 1.1 DOM Safety Utilities (safe DOM access functions) -->
         <script src="js/modules/dom-safety-utils.js" defer></script>
@@ -4834,7 +4819,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -4852,12 +4837,12 @@
             defer
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
-        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/services/stable-loader.js" defer></script>
-        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/services/data-repository.js" defer></script>
         <script src="js/modules/services/smart-cache.js" defer></script>
         <script src="js/modules/services/offline-banner.js" defer></script>
@@ -4870,23 +4855,23 @@
             defer
         ></script>
         <script src="js/modules/services/issue-tracking.js" defer></script>
-        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <!-- Main services loader (ensures all services are available and adds helper functions) -->
         <script src="js/modules/app-services.js" defer></script>
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
-        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
-        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1700-20260909" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
         <!-- تم تقسيم الملف لتحسين الأداء -->
         <!-- تحميل Auth و Dashboard من ملفات منفصلة أولاً -->
-        <script src="js/modules/auth.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/auth.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1700-20260909" defer></script>
         
         <!-- تحميل جميع الموديولات مباشرة (بدلاً من modules-loader.js) -->
         <script src="js/modules/modules/users.js" defer></script>
@@ -4894,34 +4879,34 @@
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
         <script src="js/modules/modules/client-errors-admin.js" defer></script>
         <script src="js/modules/modules/investigation-rca.js" defer></script>
-        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
-        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
-        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/gatesecurity.js" defer></script>
-        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
         <script src="js/modules/modules/chemicalsafety.js" defer></script>
-        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1698-20260908" defer></script>
-        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1700-20260909" defer></script>
+        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/safetybudget.js" defer></script>
         <script src="js/modules/modules/actiontrackingregister.js" defer></script>
         <script src="js/modules/modules/hse.js" defer></script>
         <script src="js/modules/modules/safetyperformancekpis.js" defer></script>
-        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1700-20260909" defer></script>
         <script src="js/modules/modules/riskassessment.js" defer></script>
         <script src="js/modules/modules/riskmatrix.js" defer></script>
         <script src="js/modules/modules/legaldocuments.js" defer></script>
@@ -5068,8 +5053,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1700-20260908";
-
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1700-20260909";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

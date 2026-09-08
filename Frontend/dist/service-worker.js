@@ -1,1 +1,893 @@
-const SW_DEV_EXTRA_HOSTS=[],SW_DEV_HOST_SUFFIXES=[];function isSwDev(){try{const t=self.location.hostname,e=String(self.location.search||"");if(t==="localhost"||t==="127.0.0.1"||e.includes("dev=true")||SW_DEV_EXTRA_HOSTS.length&&SW_DEV_EXTRA_HOSTS.includes(t))return!0;for(let s=0;s<SW_DEV_HOST_SUFFIXES.length;s++){const n=SW_DEV_HOST_SUFFIXES[s];if(n&&(t===n||t.endsWith("."+n)||n.startsWith(".")&&t.endsWith(n)))return!0}return!!(t.endsWith(".vercel.app")&&t.includes("-git-"))}catch{return!1}}(function(){if(isSwDev())return;const t=function(){};console.log=t,console.error=t,console.warn=t,console.info=t,console.debug=t,console.trace=t})();const CACHE_VERSION="hse-app-v1.0.1698-20260908",CACHE_NAME=`hse-cache-${CACHE_VERSION}`,MAX_CACHE_ENTRY_BYTES=1.25*1024*1024;function responseOkToCache(t){if(!t||!t.ok||t.status!==200)return!1;const e=t.headers.get("content-length");if(e!=null){const s=parseInt(e,10);if(!Number.isNaN(s)&&s>MAX_CACHE_ENTRY_BYTES)return!1}return!0}async function safeCachePut(t,e,s){if(responseOkToCache(s))try{await t.put(e,s.clone())}catch{}}const BASE_PATH=self.location.pathname.includes("/Frontend/")?"/Frontend":"",CORE_CACHE_FILES=[`${BASE_PATH}/styles.css`,`${BASE_PATH}/manifest.json`,`${BASE_PATH}/manifest-hub.json`,`${BASE_PATH}/manifest-observation.json`,`${BASE_PATH}/manifest-near-miss.json`,`${BASE_PATH}/manifest-fire-inspection.json`,`${BASE_PATH}/manifest-daily-safety.json`,`${BASE_PATH}/manifest-visitor.json`,`${BASE_PATH}/icons/icon-192x192.png`,`${BASE_PATH}/icons/icon-384x384.png`,`${BASE_PATH}/icons/icon-512x512.png`,`${BASE_PATH}/js/modules/lazy-loader.js`,`${BASE_PATH}/js/modules/enhanced-loader.js`],MODULE_CACHE_FILES=[`${BASE_PATH}/js/modules/modules-loader.js`,`${BASE_PATH}/js/modules/sync-improvements.js`,`${BASE_PATH}/js/modules/error-handling.js`,`${BASE_PATH}/js/modules/dynamic-module-loader.js`],CACHE_STRATEGIES={CACHE_FIRST:"cache-first",NETWORK_FIRST:"network-first",CACHE_ONLY:"cache-only",NETWORK_ONLY:"network-only"};self.addEventListener("install",t=>{isSwDev(),t.waitUntil((async()=>{try{const e=await caches.open(CACHE_NAME);isSwDev(),await Promise.all(CORE_CACHE_FILES.map(s=>e.add(new Request(s,{cache:"reload"})).catch(n=>{isSwDev()}))),isSwDev()}catch{isSwDev()}})())}),self.addEventListener("message",t=>{t.data&&t.data.type==="SKIP_WAITING"&&self.skipWaiting()}),self.addEventListener("activate",t=>{t.waitUntil(caches.keys().then(e=>Promise.all(e.filter(s=>s.startsWith("hse-cache-")&&s!==CACHE_NAME).map(s=>caches.delete(s)))).then(()=>self.clients.claim()))}),self.addEventListener("fetch",t=>{const{request:e}=t;try{const s=new URL(e.url);if(!e.url.startsWith("http"))return;if(s.hostname.includes("vercel.live")||s.pathname.includes("_next-live")||s.pathname.includes("feedback.js")){t.respondWith(new Response("/* vercel feedback disabled */",{status:200,headers:{"Content-Type":"application/javascript"}}));return}if(e.destination==="image"&&(s.protocol==="file:"||s.hostname==="")||s.protocol==="file:"||e.method!=="GET"&&e.method!=="HEAD"||e.headers.get("X-Skip-Service-Worker")==="true")return;if(isCDNResource(s)){const a=s.pathname.includes("chart.js")||s.pathname.includes("chartjs")||s.pathname.includes("Chart.js");t.respondWith((async()=>{try{if(!a)try{const c=await caches.open(CACHE_NAME),r=await c.match(e);if(r)return fetch(e).then(o=>{o&&o.ok&&responseOkToCache(o)&&c.put(e,o.clone()).catch(()=>{})}).catch(()=>{}),r}catch{}try{const r=await fetch(e,{mode:"cors",credentials:"omit",cache:a?"no-cache":"default"});if(r&&r.ok){if(!a)try{const o=await caches.open(CACHE_NAME);await safeCachePut(o,e,r)}catch{}return r}}catch{}const i=getCDNFallbackUrls(e.url);for(const c of i)try{const r=await fetch(c,{mode:"cors",credentials:"omit",cache:"no-cache"});if(r&&r.ok){if(!a)try{const o=await caches.open(CACHE_NAME);await safeCachePut(o,e,r)}catch{}return r}}catch{continue}try{return await fetch(e,{mode:"cors",credentials:"omit",cache:"no-cache"})}catch{return a?fetch(e.clone(),{mode:"cors",credentials:"omit",cache:"no-cache"}).catch(()=>new Response(null,{status:503,statusText:"Service Unavailable"})):new Response(null,{status:503,statusText:"Service Unavailable"})}}catch{try{return await fetch(e,{mode:"cors",credentials:"omit",cache:"no-cache"})}catch{return new Response(null,{status:503,statusText:"Service Unavailable"})}}})());return}let n;isNeverCacheFile(s.pathname)||e.destination==="document"?n=CACHE_STRATEGIES.NETWORK_ONLY:isShellOrCriticalFile(s.pathname)||isModuleFile(s.pathname)?n=CACHE_STRATEGIES.NETWORK_FIRST:isCoreFile(s.pathname)?n=CACHE_STRATEGIES.CACHE_FIRST:isAPIRequest(s)?n=CACHE_STRATEGIES.NETWORK_ONLY:n=CACHE_STRATEGIES.NETWORK_FIRST,t.respondWith(handleRequest(e,n).catch(a=>e.destination==="document"?new Response("\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",{headers:{"Content-Type":"text/html; charset=utf-8"},status:500,statusText:"Internal Server Error"}):new Response(null,{status:500,statusText:"Internal Server Error"})))}catch{t.respondWith(new Response(null,{status:500,statusText:"Internal Server Error"}))}});async function handleRequest(t,e){try{switch(e){case CACHE_STRATEGIES.CACHE_FIRST:return await cacheFirst(t);case CACHE_STRATEGIES.NETWORK_FIRST:return await networkFirst(t);case CACHE_STRATEGIES.CACHE_ONLY:return await cacheOnly(t);case CACHE_STRATEGIES.NETWORK_ONLY:return await networkOnly(t);default:return await networkFirst(t)}}catch{return t.destination==="document"?new Response("\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",{headers:{"Content-Type":"text/html; charset=utf-8"},status:500,statusText:"Internal Server Error"}):new Response(null,{status:500,statusText:"Internal Server Error"})}}async function cacheFirst(t){if(t.method!=="GET"&&t.method!=="HEAD")try{return await fetch(t)}catch{return new Response(null,{status:500,statusText:"Network Error"})}try{const e=await caches.open(CACHE_NAME),s=await e.match(t);if(s)return isCDNResource(new URL(t.url))&&fetch(t).then(n=>{n&&n.ok&&responseOkToCache(n)&&e.put(t,n.clone()).catch(()=>{})}).catch(()=>{}),s}catch{}try{const e=await fetch(t);if(e&&e.ok){if(e.status===200&&(t.method==="GET"||t.method==="HEAD")&&(e.type==="basic"||e.type==="cors"))try{const s=await caches.open(CACHE_NAME);await safeCachePut(s,t,e)}catch{}return e}try{const n=await(await caches.open(CACHE_NAME)).match(t);if(n)return n}catch{}return t.destination==="document"?new Response("\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",{headers:{"Content-Type":"text/html; charset=utf-8"},status:e?.status||500}):e||new Response(null,{status:404,statusText:"Not Found"})}catch{try{const a=await(await caches.open(CACHE_NAME)).match(t);if(a)return a}catch{}const s=new URL(t.url);if(isCDNResource(s)){const n=getCDNFallbackUrls(t.url);for(const a of n)try{const i=new Request(a,t),c=await fetch(i);if(c&&c.ok){try{const r=await caches.open(CACHE_NAME);await safeCachePut(r,t,c)}catch{}return c}}catch{continue}try{const a=await fetch(t,{cache:"no-cache"});if(a&&a.ok)return a}catch{}}return new Response(null,{status:404,statusText:"Not Found"})}}async function networkFirst(t){if(t.method!=="GET"&&t.method!=="HEAD")return fetch(t);const e=new URL(t.url),s=isModuleFile(e.pathname),n=e.origin===self.location.origin&&(e.pathname.endsWith(".js")||e.pathname.endsWith(".mjs")),a=e.origin===self.location.origin&&e.pathname.endsWith(".css"),i=s||n||a?{cache:"no-cache",headers:{"Cache-Control":"no-cache"}}:{};try{const c=await fetch(t,i);if(c&&c.ok&&c.status===200){if((t.method==="GET"||t.method==="HEAD")&&(c.type==="basic"||c.type==="cors"))try{const r=await caches.open(CACHE_NAME);await safeCachePut(r,t,c)}catch{}return c}else throw new Error("Network response not OK")}catch{try{const o=await(await caches.open(CACHE_NAME)).match(t);if(o)return o}catch{}return new Response(null,{status:503,statusText:"Service Unavailable"})}}async function cacheOnly(t){try{const s=await(await caches.open(CACHE_NAME)).match(t);return s||new Response(null,{status:404,statusText:"Not Found in Cache"})}catch{return new Response(null,{status:500,statusText:"Cache Error"})}}async function networkOnly(t){try{return await fetch(t,{cache:"reload"})}catch{return t.destination==="document"?new Response("\u0627\u0644\u062A\u0637\u0628\u064A\u0642 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D \u062D\u0627\u0644\u064A\u0627\u064B. \u064A\u064F\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0644\u0627\u062D\u0642\u0627\u064B.",{headers:{"Content-Type":"text/html; charset=utf-8"},status:503,statusText:"Service Unavailable"}):new Response(null,{status:500,statusText:"Network Error"})}}function isNeverCacheFile(t){const e=t.replace(BASE_PATH,"")||t;return!!(e==="/"||e==="/index.html"||e.endsWith("/index.html")||e.endsWith(".html")||e.endsWith("/version.json")||e.endsWith("version.json")||/\/js\/modules\/app-utils\.js$/i.test(e)||/\/js\/modules\/app-ui\.js$/i.test(e)||e.endsWith("/service-worker.js"))}function isShellOrCriticalFile(t){const e=t.replace(BASE_PATH,"")||t;return e==="/"||e==="/index.html"||e.endsWith("/index.html")||e.endsWith(".html")||e.includes("forms-hub")||e.includes("forms")||e.includes("gate")||e.includes("visitors")||e.includes("observation")||e.includes("near-miss")||e.includes("fire-inspection")||e.includes("daily-safety")||e.includes("patrol")||e.endsWith(".css")||e.endsWith("/js/app-bootstrap.js")||/\/js\/modules\/app-ui\.js$/i.test(e)||/\/js\/modules\/app-utils\.js$/i.test(e)||/\/js\/modules\/i18n-core\.js$/i.test(e)||/\/js\/modules\/services\/data-manager\.js$/i.test(e)||/\/js\/modules\/modules\/settings\.js$/i.test(e)?!0:e.endsWith("/js/app-ui.js")||e.endsWith("/js/app-bootstrap.js")||e.endsWith("/js/app-utils.js")}function isCoreFile(t){return CORE_CACHE_FILES.some(e=>{const s=e.replace(BASE_PATH,"");return t.endsWith(s)||t.endsWith(e)})}function isModuleFile(t){return MODULE_CACHE_FILES.some(e=>{const s=e.replace(BASE_PATH,"");return t.endsWith(s)||t.endsWith(e)})||t.includes("/js/modules/")}function isAPIRequest(t){return t.hostname.includes("script.google.com")||t.hostname.includes("googleapis.com")||t.pathname.includes("/api/")}function getCDNFallbackUrls(t){const e=[],s=new URL(t);if(s.hostname.includes("cdnjs")&&s.pathname.includes("font-awesome")?(e.push("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"),e.push("https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css")):s.hostname.includes("jsdelivr")&&s.pathname.includes("font-awesome")?(e.push("https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"),e.push("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css")):s.hostname.includes("unpkg")&&s.pathname.includes("font-awesome")&&(e.push("https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css"),e.push("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css")),s.pathname.includes("chart.js")||s.pathname.includes("chartjs")||s.pathname.includes("Chart.js")){let n="4.4.1";const a=s.pathname.match(/chart\.js[@\/]([\d.]+)/i)||s.pathname.match(/Chart\.js\/([\d.]+)/i);a&&a[1]&&(n=a[1]),s.hostname.includes("jsdelivr")?e.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${n}/chart.umd.min.js`):s.hostname.includes("unpkg")?(e.push(`https://cdn.jsdelivr.net/npm/chart.js@${n}/dist/chart.umd.min.js`),e.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${n}/chart.umd.min.js`)):s.hostname.includes("cdnjs")?e.push(`https://cdn.jsdelivr.net/npm/chart.js@${n}/dist/chart.umd.min.js`):(e.push(`https://cdn.jsdelivr.net/npm/chart.js@${n}/dist/chart.umd.min.js`),e.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${n}/chart.umd.min.js`))}return s.hostname.includes("fonts.googleapis.com"),e}function isCDNResource(t){return t.hostname.includes("cdn.")||t.hostname.includes("cdnjs.")||t.hostname.includes("jsdelivr.net")||t.hostname.includes("unpkg.com")||t.hostname.includes("fonts.googleapis.com")||t.hostname.includes("fonts.gstatic.com")}self.addEventListener("message",t=>{t.data&&t.data.type==="SKIP_WAITING"&&self.skipWaiting(),t.data&&t.data.type==="CLEAR_CACHE"&&t.waitUntil(caches.delete(CACHE_NAME).then(()=>self.clients.matchAll()).then(e=>{e.forEach(s=>s.postMessage({type:"CACHE_CLEARED"}))}).catch(e=>{}))}),self.addEventListener("error",t=>{t.preventDefault()}),self.addEventListener("unhandledrejection",t=>{t.preventDefault()});
+/**
+ * Service Worker for SafetyHub | ICAPP
+ * يدير التخزين المؤقت للملفات لتحسين الأداء
+ */
+
+/**
+ * مضيفات إضافية تُفعّل سجلات تشخيص Service Worker (إلى جانب localhost)
+ * ضع هنا نطاق المعاينة/الاختبار الثابت، مثال: 'preview.example.com'
+ */
+const SW_DEV_EXTRA_HOSTS = [
+    // 'preview.example.com',
+    // 'staging.example.com',
+];
+
+/**
+ * لاحقات مضيف: يُطابق إن كان المضيف يساوي اللاحقة أو ينتهي بـ .لاحقة
+ * مثال: '.internal' يطابق 'app.internal' و 'x.y.internal'
+ */
+const SW_DEV_HOST_SUFFIXES = [
+    // 'pages.dev',
+    // 'staging.example.com',
+];
+
+function isSwDev() {
+    try {
+        const h = self.location.hostname;
+        const q = String(self.location.search || '');
+        if (h === 'localhost' || h === '127.0.0.1') return true;
+        if (q.includes('dev=true')) return true;
+        if (SW_DEV_EXTRA_HOSTS.length && SW_DEV_EXTRA_HOSTS.includes(h)) return true;
+        for (let i = 0; i < SW_DEV_HOST_SUFFIXES.length; i++) {
+            const s = SW_DEV_HOST_SUFFIXES[i];
+            if (!s) continue;
+            if (h === s || h.endsWith('.' + s) || (s.startsWith('.') && h.endsWith(s))) {
+                return true;
+            }
+        }
+        // معاينات Vercel: غالباً يحتوي المضيف على -git- ضمن *.vercel.app (ليس نشر الإنتاج الافتراضي)
+        if (h.endsWith('.vercel.app') && h.includes('-git-')) return true;
+        return false;
+    } catch (_) {
+        return false;
+    }
+}
+
+// في الإنتاج: كتم console لتقليل الضوضاء؛ في التطوير المحلي تبقى السجلات للتشخيص
+(function () {
+    if (isSwDev()) return;
+    const noop = function () {};
+    console.log = noop;
+    console.error = noop;
+    console.warn = noop;
+    console.info = noop;
+    console.debug = noop;
+    console.trace = noop;
+})();
+
+// Bump cache version to force clients to pick up latest JS/CSS updates (زيادة عند كل نشر لظهور التحديثات)
+// يجب تحديث __SW_REGISTER_QUERY في index.html بنفس اللاحقة عند تغيير الإصدار لتسريع اكتشاف service-worker.js
+// Service Worker Version: 20260501 — isSwDev: مضيفات إضافية + معاينة Vercel
+const CACHE_VERSION = 'hse-app-v1.0.1700-20260909';
+const CACHE_NAME = `hse-cache-${CACHE_VERSION}`;
+
+/** أقصى حجم لعنصر في الكاش (بايت) — يحدّ تخزين ملفات CDN الضخمة */
+const MAX_CACHE_ENTRY_BYTES = 1.25 * 1024 * 1024;
+
+function responseOkToCache(response) {
+    if (!response || !response.ok || response.status !== 200) return false;
+    const len = response.headers.get('content-length');
+    if (len != null) {
+        const n = parseInt(len, 10);
+        if (!Number.isNaN(n) && n > MAX_CACHE_ENTRY_BYTES) return false;
+    }
+    return true;
+}
+
+async function safeCachePut(cache, request, response) {
+    if (!responseOkToCache(response)) return;
+    try {
+        await cache.put(request, response.clone());
+    } catch (e) {}
+}
+
+// تحديد المسار الأساسي بناءً على موقع Service Worker
+const BASE_PATH = self.location.pathname.includes('/Frontend/') ? '/Frontend' : '';
+
+console.log('[Service Worker] المسار الأساسي:', BASE_PATH);
+
+// عند تثبيت SW فقط — قائمة مختصرة؛ الموديولات الأخرى تُحمَّل عند الطلب (شبكة أولاً) دون دفعة تحميل ضخمة
+// الحد الأدنى للتثبيت السريع؛ app-utils والموديولات تُحمَّل عند الطلب (شبكة أولاً) لتفادي كاش قديم في precache
+const CORE_CACHE_FILES = [
+    `${BASE_PATH}/styles.css`,
+    `${BASE_PATH}/manifest.json`,
+    `${BASE_PATH}/manifest-hub.json`,
+    `${BASE_PATH}/manifest-observation.json`,
+    `${BASE_PATH}/manifest-near-miss.json`,
+    `${BASE_PATH}/manifest-fire-inspection.json`,
+    `${BASE_PATH}/manifest-daily-safety.json`,
+    `${BASE_PATH}/manifest-visitor.json`,
+    `${BASE_PATH}/icons/icon-192x192.png`,
+    `${BASE_PATH}/icons/icon-384x384.png`,
+    `${BASE_PATH}/icons/icon-512x512.png`,
+    `${BASE_PATH}/js/modules/lazy-loader.js`,
+    `${BASE_PATH}/js/modules/enhanced-loader.js`
+];
+
+// الموديولات التي سيتم تخزينها مؤقتاً عند الطلب
+const MODULE_CACHE_FILES = [
+    `${BASE_PATH}/js/modules/modules-loader.js`,
+    `${BASE_PATH}/js/modules/sync-improvements.js`,
+    `${BASE_PATH}/js/modules/error-handling.js`,
+    `${BASE_PATH}/js/modules/dynamic-module-loader.js`
+];
+
+// استراتيجيات التخزين المؤقت
+const CACHE_STRATEGIES = {
+    CACHE_FIRST: 'cache-first',      // التخزين المؤقت أولاً
+    NETWORK_FIRST: 'network-first',  // الشبكة أولاً
+    CACHE_ONLY: 'cache-only',        // التخزين المؤقت فقط
+    NETWORK_ONLY: 'network-only'     // الشبكة فقط
+};
+
+/**
+ * حدث التثبيت
+ */
+self.addEventListener('install', (event) => {
+    if (isSwDev()) console.log('[Service Worker] تثبيت Service Worker...');
+
+    event.waitUntil(
+        (async () => {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                if (isSwDev()) console.log('[Service Worker] تخزين الملفات الأساسية...');
+                await Promise.all(
+                    CORE_CACHE_FILES.map((url) =>
+                        cache
+                            .add(new Request(url, { cache: 'reload' }))
+                            .catch((err) => {
+                                if (isSwDev()) {
+                                    console.warn('[Service Worker] تخطّي ملف precache:', url, err);
+                                }
+                            })
+                    )
+                );
+                if (isSwDev()) console.log('[Service Worker] انتهى التثبيت (قد يكون precache جزئياً)');
+            } catch (error) {
+                if (isSwDev()) console.error('[Service Worker] فشل فتح الكاش أثناء التثبيت:', error);
+            }
+            // لا يتم استدعاء skipWaiting() تلقائياً — SW الجديد ينتظر رسالة SKIP_WAITING من العميل
+        })()
+    );
+});
+
+/**
+ * استقبال رسائل من العميل — SKIP_WAITING يُفعّل SW الجديد فوراً
+ * يُرسَل فقط عندما يضغط المستخدم «تحديث الصفحة الآن»
+ */
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
+/**
+ * حدث التنشيط
+ */
+self.addEventListener('activate', (event) => {
+    console.log('[Service Worker] تنشيط Service Worker...');
+    
+    event.waitUntil(
+        caches.keys()
+            .then((cacheNames) => {
+                // حذف التخزينات المؤقتة القديمة
+                return Promise.all(
+                    cacheNames
+                        .filter((name) => name.startsWith('hse-cache-') && name !== CACHE_NAME)
+                        .map((name) => {
+                            console.log('[Service Worker] حذف التخزين المؤقت القديم:', name);
+                            return caches.delete(name);
+                        })
+                );
+            })
+            .then(() => {
+                console.log('[Service Worker] تم التنشيط بنجاح');
+                return self.clients.claim();
+            })
+    );
+});
+
+/**
+ * حدث الطلب (Fetch)
+ */
+self.addEventListener('fetch', (event) => {
+    const { request } = event;
+    
+    try {
+        const url = new URL(request.url);
+        
+        // تجاهل الطلبات غير HTTP/HTTPS (مثل file://)
+        if (!request.url.startsWith('http')) {
+            return;
+        }
+
+        // كتم ومنع أخطاء شريط أدوات Vercel Live المعطل
+        if (url.hostname.includes('vercel.live') || url.pathname.includes('_next-live') || url.pathname.includes('feedback.js')) {
+            event.respondWith(new Response('/* vercel feedback disabled */', {
+                status: 200,
+                headers: { 'Content-Type': 'application/javascript' }
+            }));
+            return;
+        }
+        
+        // تجاهل الصور المحلية (file://) لتجنب OpaqueResponseBlocking
+        if (request.destination === 'image' && (url.protocol === 'file:' || url.hostname === '')) {
+            return;
+        }
+        
+        // تجاهل أي طلبات من file:// protocol لتجنب OpaqueResponseBlocking
+        if (url.protocol === 'file:') {
+            return;
+        }
+        
+        // تجاهل طلبات POST, PUT, DELETE وغيرها - تمريرها مباشرة للشبكة
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+            return;
+        }
+        
+        // تجاهل الطلبات التي تحتوي على headers خاصة بالمصادقة
+        // للتأكد من عدم التداخل مع بيانات الجلسة
+        if (request.headers.get('X-Skip-Service-Worker') === 'true') {
+            return;
+        }
+        
+        // للـ CDN resources، السماح بالمرور مباشرة إذا فشل Service Worker
+        // هذا يمنع حجب الموارد المهمة مثل Font Awesome و Tailwind CSS و Chart.js
+        if (isCDNResource(url)) {
+            // معالجة خاصة لـ Chart.js - السماح بالمرور مباشرة إذا فشل Service Worker
+            const isChartJS = url.pathname.includes('chart.js') || 
+                             url.pathname.includes('chartjs') || 
+                             url.pathname.includes('Chart.js');
+            
+            // استخدام fetch مباشرة مع fallback للكاش
+            event.respondWith(
+                (async () => {
+                    try {
+                        // محاولة من الكاش أولاً (فقط إذا لم يكن Chart.js - لتجنب مشاكل CORS)
+                        if (!isChartJS) {
+                            try {
+                                const cache = await caches.open(CACHE_NAME);
+                                const cached = await cache.match(request);
+                                
+                                if (cached) {
+                                    // تحديث في الخلفية
+                                    fetch(request).then(response => {
+                                        if (response && response.ok && responseOkToCache(response)) {
+                                            cache.put(request, response.clone()).catch(() => {});
+                                        }
+                                    }).catch(() => {});
+                                    return cached;
+                                }
+                            } catch (cacheError) {
+                                // تجاهل أخطاء الكاش، نتابع مع الشبكة
+                            }
+                        }
+                        
+                        // محاولة من الشبكة
+                        try {
+                            const fetchOptions = {
+                                mode: 'cors',
+                                credentials: 'omit',
+                                cache: isChartJS ? 'no-cache' : 'default'
+                            };
+                            
+                            const response = await fetch(request, fetchOptions);
+                            if (response && response.ok) {
+                                // تخزين في الكاش (فقط إذا لم يكن Chart.js)
+                                if (!isChartJS) {
+                                    try {
+                                        const cache = await caches.open(CACHE_NAME);
+                                        await safeCachePut(cache, request, response);
+                                    } catch (e) {}
+                                }
+                                return response;
+                            }
+                        } catch (networkError) {
+                            // تجاهل خطأ الشبكة، نتابع مع fallback
+                        }
+                        
+                        // محاولة fallback URLs (مهم جداً لـ Chart.js)
+                        const fallbackUrls = getCDNFallbackUrls(request.url);
+                        for (const fallbackUrl of fallbackUrls) {
+                            try {
+                                const fallbackResponse = await fetch(fallbackUrl, {
+                                    mode: 'cors',
+                                    credentials: 'omit',
+                                    cache: 'no-cache'
+                                });
+                                if (fallbackResponse && fallbackResponse.ok) {
+                                    // لا نخزن Chart.js في الكاش لتجنب مشاكل CORS
+                                    if (!isChartJS) {
+                                        try {
+                                            const cache = await caches.open(CACHE_NAME);
+                                            await safeCachePut(cache, request, fallbackResponse);
+                                        } catch (e) {}
+                                    }
+                                    return fallbackResponse;
+                                }
+                            } catch (e) {
+                                continue;
+                            }
+                        }
+                        
+                        // إذا فشل كل شيء، محاولة أخيرة بدون service worker
+                        // خاصة مهمة لـ Chart.js
+                        try {
+                            return await fetch(request, { 
+                                mode: 'cors',
+                                credentials: 'omit',
+                                cache: 'no-cache'
+                            });
+                        } catch (finalError) {
+                            // إذا فشل كل شيء، إرجاع استجابة خطأ بدلاً من رفض الوعد
+                            // هذا يمنع "ServiceWorker passed a promise that rejected"
+                            // لكن لـ Chart.js، نفضل عدم إرجاع خطأ بل السماح للمتصفح بالتعامل معه
+                            if (isChartJS) {
+                                // لـ Chart.js، نعيد محاولة مباشرة بدون service worker
+                                // هذا يسمح للمتصفح بالتعامل مع الخطأ بشكل طبيعي
+                                return fetch(request.clone(), { 
+                                    mode: 'cors',
+                                    credentials: 'omit',
+                                    cache: 'no-cache'
+                                }).catch(() => {
+                                    // إذا فشل كل شيء، نعيد استجابة فارغة بدلاً من رفض الوعد
+                                    return new Response(null, {
+                                        status: 503,
+                                        statusText: 'Service Unavailable'
+                                    });
+                                });
+                            }
+                            return new Response(null, {
+                                status: 503,
+                                statusText: 'Service Unavailable'
+                            });
+                        }
+                    } catch (error) {
+                        // معالجة أي أخطاء غير متوقعة - إرجاع استجابة بدلاً من رفض الوعد
+                        try {
+                            return await fetch(request, { 
+                                mode: 'cors',
+                                credentials: 'omit',
+                                cache: 'no-cache'
+                            });
+                        } catch (fetchError) {
+                            return new Response(null, {
+                                status: 503,
+                                statusText: 'Service Unavailable'
+                            });
+                        }
+                    }
+                })()
+            );
+            return;
+        }
+        
+        // تحديد الاستراتيجية بناءً على نوع الملف
+        let strategy;
+        // HTML + version.json + ملفات الإصدار: شبكة فقط — لا كاش SW يثبّت إصداراً قديماً
+        if (isNeverCacheFile(url.pathname) || request.destination === 'document') {
+            strategy = CACHE_STRATEGIES.NETWORK_ONLY;
+        } else if (isShellOrCriticalFile(url.pathname)) {
+            strategy = CACHE_STRATEGIES.NETWORK_FIRST;
+        } else if (isModuleFile(url.pathname)) {
+            // الموديولات ومسار js/modules أولاً (قبل isCoreFile) — كثير من الملفات مدرجة في CORE_CACHE_FILES
+            // وإلا تُخدم CACHE_FIRST وتبقى نسخ قديمة رغم وجود ?v= على index
+            strategy = CACHE_STRATEGIES.NETWORK_FIRST;
+        } else if (isCoreFile(url.pathname)) {
+            // الملفات الأساسية الأخرى: التخزين المؤقت أولاً
+            strategy = CACHE_STRATEGIES.CACHE_FIRST;
+        } else if (isAPIRequest(url)) {
+            // طلبات API: الشبكة أولاً (لكن لا نخزنها في Cache)
+            strategy = CACHE_STRATEGIES.NETWORK_ONLY;
+        } else {
+            // ملاحظة: CDN resources يتم معالجتها في البداية (السطر 147-200)
+            // لذلك لا نحتاج لمعالجتها هنا
+            // افتراضي: الشبكة أولاً
+            strategy = CACHE_STRATEGIES.NETWORK_FIRST;
+        }
+        
+        // استخدام respondWith مع معالجة الأخطاء
+        event.respondWith(
+            handleRequest(request, strategy).catch((error) => {
+                // معالجة أي أخطاء غير متوقعة
+                if (request.destination === 'document') {
+                    return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
+                        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                        status: 500,
+                        statusText: 'Internal Server Error'
+                    });
+                }
+                
+                return new Response(null, { 
+                    status: 500,
+                    statusText: 'Internal Server Error'
+                });
+            })
+        );
+    } catch (error) {
+        // معالجة أخطاء URL parsing أو أي أخطاء أخرى
+        event.respondWith(
+            new Response(null, { 
+                status: 500,
+                statusText: 'Internal Server Error'
+            })
+        );
+    }
+});
+
+/**
+ * معالجة الطلب حسب الاستراتيجية
+ */
+async function handleRequest(request, strategy) {
+    try {
+        switch (strategy) {
+            case CACHE_STRATEGIES.CACHE_FIRST:
+                return await cacheFirst(request);
+            
+            case CACHE_STRATEGIES.NETWORK_FIRST:
+                return await networkFirst(request);
+            
+            case CACHE_STRATEGIES.CACHE_ONLY:
+                return await cacheOnly(request);
+            
+            case CACHE_STRATEGIES.NETWORK_ONLY:
+                return await networkOnly(request);
+            
+            default:
+                return await networkFirst(request);
+        }
+    } catch (error) {
+        // معالجة أي أخطاء غير متوقعة
+        if (request.destination === 'document') {
+            return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                status: 500,
+                statusText: 'Internal Server Error'
+            });
+        }
+        
+        return new Response(null, { 
+            status: 500,
+            statusText: 'Internal Server Error'
+        });
+    }
+}
+
+/**
+ * استراتيجية: التخزين المؤقت أولاً
+ */
+async function cacheFirst(request) {
+    // تجاهل طلبات POST, PUT, DELETE وغيرها - لا يمكن تخزينها في Cache
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+        try {
+            return await fetch(request);
+        } catch (error) {
+            // إرجاع استجابة خطأ بدلاً من رمي الخطأ
+            return new Response(null, { status: 500, statusText: 'Network Error' });
+        }
+    }
+    
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(request);
+        
+        if (cached) {
+            // إرجاع من التخزين المؤقت
+            // للـ CDN resources، تحديث الكاش في الخلفية
+            if (isCDNResource(new URL(request.url))) {
+                // تحديث في الخلفية بدون انتظار
+                fetch(request).then(response => {
+                    if (response && response.ok && responseOkToCache(response)) {
+                        cache.put(request, response.clone()).catch(() => {});
+                    }
+                }).catch(() => {
+                    // تجاهل أخطاء التحديث في الخلفية
+                });
+            }
+            return cached;
+        }
+    } catch (cacheError) {
+        // تجاهل أخطاء فتح Cache، سنحاول من الشبكة
+    }
+    
+    // محاولة الحصول من الشبكة
+    try {
+        const response = await fetch(request);
+        
+        // التحقق من نجاح الاستجابة
+        if (response && response.ok) {
+            // تخزين الاستجابة فقط إذا كانت GET/HEAD وناجحة
+            if (response.status === 200 && (request.method === 'GET' || request.method === 'HEAD')) {
+                // التأكد من أن الاستجابة قابلة للتخزين
+                if (response.type === 'basic' || response.type === 'cors') {
+                    try {
+                        const cache = await caches.open(CACHE_NAME);
+                        await safeCachePut(cache, request, response);
+                    } catch (cacheError) {}
+                }
+            }
+            return response;
+        }
+
+        // إذا كانت الاستجابة غير ناجحة، محاولة الكاش أولاً
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
+            if (cached) return cached;
+        } catch (_) {}
+
+        if (request.destination === 'document') {
+            return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                status: response?.status || 500
+            });
+        }
+        return response || new Response(null, { 
+            status: 404,
+            statusText: 'Not Found'
+        });
+    } catch (error) {
+        // محاولة جلب النسخة المخزنة في الكاش عند فشل الاتصال بالشبكة
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
+            if (cached) return cached;
+        } catch (_) {}
+
+        // للـ CDN resources، محاولة fallback URLs قبل إرجاع الخطأ
+        const url = new URL(request.url);
+        if (isCDNResource(url)) {
+            const fallbackUrls = getCDNFallbackUrls(request.url);
+            for (const fallbackUrl of fallbackUrls) {
+                try {
+                    const fallbackRequest = new Request(fallbackUrl, request);
+                    const fallbackResponse = await fetch(fallbackRequest);
+                    
+                    if (fallbackResponse && fallbackResponse.ok) {
+                        // تخزين الاستجابة من fallback
+                        try {
+                            const cache = await caches.open(CACHE_NAME);
+                            await safeCachePut(cache, request, fallbackResponse);
+                        } catch (cacheError) {
+                            // تجاهل أخطاء التخزين المؤقت
+                        }
+                        
+                        return fallbackResponse;
+                    }
+                } catch (fallbackError) {
+                    // تجاهل أخطاء fallback، ننتقل للـ fallback التالي
+                    continue;
+                }
+            }
+            
+            // إذا فشل كل شيء، السماح للطلب بالمرور مباشرة للشبكة
+            // هذا يمنع حجب الموارد
+            try {
+                const directResponse = await fetch(request, { cache: 'no-cache' });
+                if (directResponse && directResponse.ok) {
+                    return directResponse;
+                }
+            } catch (directError) {
+                // تجاهل الأخطاء
+            }
+        }
+        
+        // للخطوط والموارد الأخرى، إرجاع استجابة 404 بدلاً من رمي الخطأ
+        // هذا يمنع uncaught promise rejections
+        return new Response(null, { 
+            status: 404,
+            statusText: 'Not Found'
+        });
+    }
+}
+
+/**
+ * استراتيجية: الشبكة أولاً (محسّنة للموديولات)
+ */
+async function networkFirst(request) {
+    // تجاهل طلبات POST, PUT, DELETE وغيرها - لا يمكن تخزينها في Cache
+    if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return fetch(request);
+    }
+    
+    const url = new URL(request.url);
+    const isModule = isModuleFile(url.pathname);
+    const isLocalScript =
+        url.origin === self.location.origin &&
+        (url.pathname.endsWith('.js') || url.pathname.endsWith('.mjs'));
+    const isLocalCss =
+        url.origin === self.location.origin && url.pathname.endsWith('.css');
+    
+    // للموديولات وأي سكربت/نمط محلي: التحقق من الخادم (تجاوز كاش المتصفح/الوسيط)
+    const fetchOptions = isModule || isLocalScript || isLocalCss ? {
+        cache: 'no-cache',
+        headers: {
+            'Cache-Control': 'no-cache'
+        }
+    } : {};
+    
+    try {
+        // محاولة الحصول من الشبكة أولاً
+        const response = await fetch(request, fetchOptions);
+        
+        // التحقق من نجاح الاستجابة
+        if (response && response.ok && response.status === 200) {
+            // تخزين الاستجابة فقط إذا كانت GET/HEAD وناجحة
+            if (request.method === 'GET' || request.method === 'HEAD') {
+                // التأكد من أن الاستجابة قابلة للتخزين
+                if (response.type === 'basic' || response.type === 'cors') {
+                    try {
+                        const cache = await caches.open(CACHE_NAME);
+                        await safeCachePut(cache, request, response);
+                    } catch (cacheError) {
+                        // تجاهل أخطاء التخزين المؤقت
+                    }
+                }
+            }
+            
+            return response;
+        } else {
+            // إذا كانت الاستجابة غير ناجحة، نتحقق من الكاش
+            throw new Error('Network response not OK');
+        }
+    } catch (error) {
+        // الرجوع إلى التخزين المؤقت عند الفشل (فقط للطلبات GET/HEAD)
+        try {
+            const cache = await caches.open(CACHE_NAME);
+            const cached = await cache.match(request);
+            
+            if (cached) {
+                return cached;
+            }
+        } catch (cacheError) {
+            // تجاهل أخطاء Cache
+        }
+        
+        // ملاحظة: CDN resources يتم معالجتها في البداية (السطر 147-200)
+        // لذلك لن تصل CDN resources إلى هنا أبداً
+        // هذا الكود للطلبات الأخرى فقط
+        
+        // إرجاع استجابة خطأ
+        return new Response(null, { 
+            status: 503,
+            statusText: 'Service Unavailable'
+        });
+    }
+}
+
+/**
+ * استراتيجية: التخزين المؤقت فقط
+ */
+async function cacheOnly(request) {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(request);
+        
+        if (cached) {
+            return cached;
+        }
+        
+        // إرجاع استجابة 404 بدلاً من رمي خطأ
+        return new Response(null, { 
+            status: 404,
+            statusText: 'Not Found in Cache'
+        });
+    } catch (error) {
+        // معالجة أخطاء فتح Cache
+        return new Response(null, { 
+            status: 500,
+            statusText: 'Cache Error'
+        });
+    }
+}
+
+/**
+ * استراتيجية: الشبكة فقط
+ */
+async function networkOnly(request) {
+    try {
+        return await fetch(request, { cache: 'reload' });
+    } catch (error) {
+        // إرجاع استجابة خطأ بدلاً من رمي الخطأ
+        if (request.destination === 'document') {
+            return new Response('التطبيق غير متاح حالياً. يُرجى المحاولة لاحقاً.', {
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                status: 503,
+                statusText: 'Service Unavailable'
+            });
+        }
+        
+        return new Response(null, { 
+            status: 500,
+            statusText: 'Network Error'
+        });
+    }
+}
+
+/**
+ * ملفات يجب ألا تدخل كاش Service Worker أبداً — وإلا يبقى رقم الإصدار المعروض قديماً
+ */
+function isNeverCacheFile(pathname) {
+    const p = pathname.replace(BASE_PATH, '') || pathname;
+    if (
+        p === '/' ||
+        p === '/index.html' ||
+        p.endsWith('/index.html') ||
+        p.endsWith('.html') ||
+        p.endsWith('/version.json') ||
+        p.endsWith('version.json')
+    ) return true;
+    if (/\/js\/modules\/app-utils\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/app-ui\.js$/i.test(p)) return true;
+    if (p.endsWith('/service-worker.js')) return true;
+    return false;
+}
+
+/**
+ * التحقق من أن الملف من نوع shell/حرج (index.html أو JS الأساسي) لاستخدام الشبكة أولاً لظهور التحديثات
+ */
+function isShellOrCriticalFile(pathname) {
+    const p = pathname.replace(BASE_PATH, '') || pathname;
+    if (
+        p === '/' ||
+        p === '/index.html' ||
+        p.endsWith('/index.html') ||
+        p.endsWith('.html') ||
+        p.includes('forms-hub') ||
+        p.includes('forms') ||
+        p.includes('gate') ||
+        p.includes('visitors') ||
+        p.includes('observation') ||
+        p.includes('near-miss') ||
+        p.includes('fire-inspection') ||
+        p.includes('daily-safety') ||
+        p.includes('patrol')
+    ) return true;
+    // Vercel يخدم الواجهة من الجذر: الملفات الحرجة تحت js/modules وليس js/app-ui.js مباشرة
+    if (p.endsWith('.css')) return true;
+    if (p.endsWith('/js/app-bootstrap.js')) return true;
+    if (/\/js\/modules\/app-ui\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/app-utils\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/i18n-core\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/services\/data-manager\.js$/i.test(p)) return true;
+    if (/\/js\/modules\/modules\/settings\.js$/i.test(p)) return true;
+    return p.endsWith('/js/app-ui.js') || p.endsWith('/js/app-bootstrap.js') || p.endsWith('/js/app-utils.js');
+}
+
+/**
+ * التحقق من أن الملف أساسي
+ */
+function isCoreFile(pathname) {
+    return CORE_CACHE_FILES.some(file => {
+        // إزالة BASE_PATH من file للمقارنة
+        const fileWithoutBase = file.replace(BASE_PATH, '');
+        return pathname.endsWith(fileWithoutBase) || pathname.endsWith(file);
+    });
+}
+
+/**
+ * التحقق من أن الملف موديول
+ */
+function isModuleFile(pathname) {
+    return MODULE_CACHE_FILES.some(file => {
+        const fileWithoutBase = file.replace(BASE_PATH, '');
+        return pathname.endsWith(fileWithoutBase) || pathname.endsWith(file);
+    }) || pathname.includes('/js/modules/');
+}
+
+/**
+ * التحقق من أن الطلب API
+ */
+function isAPIRequest(url) {
+    return url.hostname.includes('script.google.com') ||
+           url.hostname.includes('googleapis.com') ||
+           url.pathname.includes('/api/');
+}
+
+/**
+ * الحصول على روابط Fallback لموارد CDN
+ */
+function getCDNFallbackUrls(originalUrl) {
+    const fallbackUrls = [];
+    const url = new URL(originalUrl);
+    
+    // Font Awesome fallbacks
+    if (url.hostname.includes('cdnjs') && url.pathname.includes('font-awesome')) {
+        // jsDelivr fallback
+        fallbackUrls.push('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css');
+        // unpkg fallback
+        fallbackUrls.push('https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css');
+    } else if (url.hostname.includes('jsdelivr') && url.pathname.includes('font-awesome')) {
+        // unpkg fallback
+        fallbackUrls.push('https://unpkg.com/@fortawesome/fontawesome-free@6.5.1/css/all.min.css');
+        // cdnjs fallback
+        fallbackUrls.push('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
+    } else if (url.hostname.includes('unpkg') && url.pathname.includes('font-awesome')) {
+        // jsDelivr fallback
+        fallbackUrls.push('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css');
+        // cdnjs fallback
+        fallbackUrls.push('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
+    }
+    
+    // Chart.js fallbacks
+    if (url.pathname.includes('chart.js') || url.pathname.includes('chartjs') || url.pathname.includes('Chart.js')) {
+        // استخراج الإصدار من URL بشكل أكثر دقة
+        let version = '4.4.1'; // الإصدار الافتراضي
+        const versionMatch = url.pathname.match(/chart\.js[@\/]([\d.]+)/i) || 
+                            url.pathname.match(/Chart\.js\/([\d.]+)/i);
+        if (versionMatch && versionMatch[1]) {
+            version = versionMatch[1];
+        }
+        
+        if (url.hostname.includes('jsdelivr')) {
+            // cdnjs fallback
+            fallbackUrls.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${version}/chart.umd.min.js`);
+        } else if (url.hostname.includes('unpkg')) {
+            // jsDelivr fallback
+            fallbackUrls.push(`https://cdn.jsdelivr.net/npm/chart.js@${version}/dist/chart.umd.min.js`);
+            // cdnjs fallback
+            fallbackUrls.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${version}/chart.umd.min.js`);
+        } else if (url.hostname.includes('cdnjs')) {
+            // jsDelivr fallback
+            fallbackUrls.push(`https://cdn.jsdelivr.net/npm/chart.js@${version}/dist/chart.umd.min.js`);
+        } else {
+            // إذا كان من مصدر آخر، إضافة fallbacks (بدون unpkg بسبب مشاكل CORS)
+            fallbackUrls.push(`https://cdn.jsdelivr.net/npm/chart.js@${version}/dist/chart.umd.min.js`);
+            fallbackUrls.push(`https://cdnjs.cloudflare.com/ajax/libs/Chart.js/${version}/chart.umd.min.js`);
+        }
+    }
+    
+    // Google Fonts fallbacks (عادة لا تحتاج fallback، لكن يمكن إضافتها)
+    if (url.hostname.includes('fonts.googleapis.com')) {
+        // Google Fonts عادة موثوقة، لكن يمكن إضافة fallback محلي إذا لزم الأمر
+    }
+    
+    return fallbackUrls;
+}
+
+/**
+ * التحقق من أن المورد من CDN
+ */
+function isCDNResource(url) {
+    return url.hostname.includes('cdn.') ||
+           url.hostname.includes('cdnjs.') ||
+           url.hostname.includes('jsdelivr.net') ||
+           url.hostname.includes('unpkg.com') ||
+           url.hostname.includes('fonts.googleapis.com') ||
+           url.hostname.includes('fonts.gstatic.com');
+}
+
+/**
+ * حدث الرسالة (Message)
+ */
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+    
+    if (event.data && event.data.type === 'CLEAR_CACHE') {
+        event.waitUntil(
+            caches.delete(CACHE_NAME).then(() => {
+                console.log('[Service Worker] تم مسح التخزين المؤقت');
+                return self.clients.matchAll();
+            }).then((clients) => {
+                clients.forEach(client => client.postMessage({ type: 'CACHE_CLEARED' }));
+            }).catch((error) => {
+                // معالجة أخطاء مسح Cache
+            })
+        );
+    }
+});
+
+/**
+ * معالجة الأخطاء غير المعالجة ورفض الوعود
+ */
+self.addEventListener('error', (event) => {
+    // منع عرض الأخطاء في Console
+    event.preventDefault();
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+    // منع عرض رفض الوعود غير المعالجة في Console
+    event.preventDefault();
+});
