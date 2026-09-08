@@ -26,6 +26,47 @@ window.UI = {
     _loginScreenRetryCount: 0, // عداد محاولات استعادة الجلسة
     _backgroundSyncInterval: null, // ✅ مزامنة تلقائية دورية في الخلفية
     _backgroundSyncIntervalTime: 2 * 60 * 1000, // 2 دقيقة (120000 مللي ثانية) - محسّن ليتناسب مع عمليات التسجيل والحفظ والاستدعاء
+
+    /**
+     * تبديل لغة الواجهة وتحديث الاتجاه والنصوص
+     */
+    setLanguage(lang) {
+        try {
+            const selectedLang = (lang === 'en') ? 'en' : 'ar';
+            localStorage.setItem('language', selectedLang);
+            if (typeof window.AppState !== 'undefined') {
+                window.AppState.currentLanguage = selectedLang;
+            }
+            const isRTL = selectedLang === 'ar';
+            if (document.documentElement) {
+                document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
+                document.documentElement.lang = selectedLang;
+            }
+            if (document.body) {
+                document.body.dir = isRTL ? 'rtl' : 'ltr';
+            }
+            const currentLangText = document.getElementById('current-lang-text');
+            if (currentLangText) {
+                currentLangText.textContent = selectedLang === 'ar' ? 'العربية' : 'English';
+            }
+            if (typeof applyLoginLanguage === 'function') {
+                applyLoginLanguage(selectedLang);
+            }
+            const i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === 'function')
+                ? window.AppI18n
+                : ((window.I18n && typeof window.I18n.applyI18n === 'function') ? window.I18n : null);
+            if (i18nCore) {
+                i18nCore.applyI18n(document, selectedLang);
+                i18nCore.applyLiteralTranslations(document, selectedLang);
+            }
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: selectedLang } }));
+            return selectedLang;
+        } catch (err) {
+            console.warn('UI.setLanguage error:', err);
+            return lang;
+        }
+    },
+
     /**
      * عرض شاشة تسجيل الدخول
      */
