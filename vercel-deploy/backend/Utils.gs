@@ -5307,7 +5307,23 @@ function generateNextObservationIdentity(sheetName, spreadsheetId, skipLock) {
             }
         }
         
+        var props = null;
+        try { props = PropertiesService.getScriptProperties(); } catch (pEx) {}
+        var cachedMax = 0;
+        if (props) {
+            var cachedStr = props.getProperty('LAST_OBS_MAX_NUM');
+            if (cachedStr) cachedMax = parseInt(cachedStr, 10) || 0;
+        }
+
+        if (maxNum < cachedMax) {
+            maxNum = cachedMax;
+        }
+        
         var nextNum = maxNum + 1;
+        if (props) {
+            try { props.setProperty('LAST_OBS_MAX_NUM', nextNum.toString()); } catch (pEx2) {}
+        }
+
         var numStr = nextNum.toString();
         while (numStr.length < 4) numStr = '0' + numStr;
         var id = 'DOB-' + numStr;

@@ -537,11 +537,14 @@ Yasser.diab@icapp.com.eg`;
         return true;
     }
 
+    // تهيئة زر اللغة في شاشة تسجيل الدخول (يتخطى إذا ربَط السكربت المضمن في index.html)
     function setupLanguageToggle() {
+        if (window._loginLangDirectBound) {
+            return true;
+        }
         const langToggleBtn = document.getElementById('login-language-toggle-btn');
         const langDropdown = document.getElementById('login-language-dropdown');
-        const currentLangText = langToggleBtn ? (document.getElementById('current-lang-text') || langToggleBtn.querySelector('#current-lang-text, span[id*="lang-text"]')) : null;
-
+        const currentLangText = langToggleBtn ? langToggleBtn.querySelector('#current-lang-text, span[id*="lang-text"]') : null;
         
         if (!langToggleBtn || !langDropdown || !currentLangText) {
             log('⚠️ لم يتم العثور على عناصر تبديل اللغة');

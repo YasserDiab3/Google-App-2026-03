@@ -13,8 +13,3 @@ Stop: "stop caveman" or "normal mode"
 Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
 
 Boundaries: code/commits/PRs written normal.
-
-Repository Constraint:
-- Workspace strictly linked to domain repo: https://github.com/YasserDiab3/Google-App-2026-03.git
-- MANDATORY: Push code ONLY to Google-App-2026-03.git. All other repositories prohibited.
-

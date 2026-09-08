@@ -1493,66 +1493,26 @@
                     var lang = getLoginLang();
                     applyLoginLanguage(lang);
                     var btn = document.getElementById("login-language-toggle-btn");
-                    var dd = document.getElementById("login-language-dropdown");
                     if (!btn) return;
-
-                    var doSetLang = function(next) {
+                    window._loginLangDirectBound = true;
+                    btn.dataset.handlerBound = "true";
+                    btn.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var current = getLoginLang();
+                        var next = current === "ar" ? "en" : "ar";
                         try { localStorage.setItem("language", next); } catch (err) {}
                         if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = next;
                         if (typeof window.UI !== "undefined" && typeof window.UI.setLanguage === "function") {
                             window.UI.setLanguage(next);
                         } else {
                             applyLoginLanguage(next);
-                            var i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === "function")
-                                ? window.AppI18n
-                                : ((window.I18n && typeof window.I18n.applyI18n === "function") ? window.I18n : null);
-                            if (i18nCore) {
-                                i18nCore.applyI18n(document, next);
-                                i18nCore.applyLiteralTranslations(document, next);
-                            }
                         }
                         var t = document.getElementById("current-lang-text");
                         if (t) t.textContent = next === "ar" ? "العربية" : "English";
-                        closeLoginLanguageDropdown();
-                    };
-
-                    if (!btn.dataset.initBound) {
-                        btn.dataset.initBound = "true";
-                        btn.addEventListener("click", function (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (dd) {
-                                if (isLoginLanguageDropdownOpen()) {
-                                    closeLoginLanguageDropdown();
-                                } else {
-                                    openLoginLanguageDropdown();
-                                }
-                            } else {
-                                var current = getLoginLang();
-                                var next = current === "ar" ? "en" : "ar";
-                                doSetLang(next);
-                            }
-                        });
-                    }
-
-                    if (dd && !dd.dataset.initBound) {
-                        dd.dataset.initBound = "true";
-                        dd.querySelectorAll("[data-lang]").forEach(function(item) {
-                            item.addEventListener("click", function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                var selected = this.getAttribute("data-lang");
-                                if (selected) doSetLang(selected);
-                            });
-                        });
-                        document.addEventListener("click", function(e) {
-                            if (btn && !btn.contains(e.target) && dd && !dd.contains(e.target)) {
-                                closeLoginLanguageDropdown();
-                            }
-                        });
-                    }
+                        btn.setAttribute("aria-expanded", "false");
+                    });
                 }
-
                 if (document.readyState === "loading") {
                     document.addEventListener(
                         "DOMContentLoaded",

@@ -4238,4 +4238,41 @@ function saveHseEmergencyContacts(payload) {
     }
 }
 
+/**
+ * ============================================
+ * المزامنة اللحظية التلقائية من Google Sheets إلى SQL (Webhook Event)
+ * ============================================
+ * تُستدعى أوتوماتيكياً بواسطة Trigger (onChange / onEdit) أو عند تحديث الملاحظات
+ */
+function onSheetChangeSyncToSql(e) {
+    try {
+        var sheetName = 'DailyObservations';
+        var sqlEndpoint = 'https://www.safety-icapp.com/api/exec';
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) return;
+
+        var freshData = readFromSheet(sheetName, spreadsheetId, true);
+        if (!freshData || !freshData.length) return;
+
+        var recentRows = freshData.slice(-50);
+        var payload = {
+            action: 'saveToSheet',
+            sheetName: sheetName,
+            data: recentRows,
+            spreadsheetId: spreadsheetId,
+            timestamp: new Date().toISOString()
+        };
+
+        UrlFetchApp.fetch(sqlEndpoint, {
+            method: 'post',
+            contentType: 'application/json',
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+        });
+        Logger.log('onSheetChangeSyncToSql: Synced ' + recentRows.length + ' rows to SQL backend.');
+    } catch (err) {
+        Logger.log('onSheetChangeSyncToSql error: ' + err.toString());
+    }
+}
+
 

@@ -57,5 +57,4 @@
 
 ## الرفع إلى GitHub
 
-اتبع سياسة المستودع في `.cursor/rules/` (الرفع إلى `origin` = `https://github.com/YasserDiab3/Google-App-2026-03.git` فقط والمرتبط بالدومين `safety-icapp.com`).
-
+اتبع سياسة المستودع في `.cursor/rules/` (الرفع إلى `origin` = `https://github.com/YasserDiab3/ICAPP-V092026.git` فقط).

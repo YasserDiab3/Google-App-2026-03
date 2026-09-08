@@ -21,22 +21,46 @@ function isHoneypot(data) {
     return !!(data._hp_field || data.website || data.hp);
 }
 
+let cachedMaxSeq = 0;
+
 function generateObservationCodes(db, instantRefCode) {
     const ref = String(instantRefCode || '').trim();
     if (ref) return { id: ref, isoCode: ref };
 
-    const rows = db.readSheet('DailyObservations') || [];
-    const ym = new Date().toISOString().slice(0, 7).replace('-', '');
-    let maxSeq = 0;
-    for (const r of rows) {
-        const code = String(r.isoCode || r.id || '');
-        const m = code.match(/^OBS-(\d{6})-(\d+)/i);
-        if (m && m[1] === ym) maxSeq = Math.max(maxSeq, parseInt(m[2], 10) || 0);
+    if (cachedMaxSeq <= 0) {
+        const rows = db.readSheet('DailyObservations') || [];
+        let maxSeq = 0;
+        for (const r of rows) {
+            const candidates = [String(r.id || '').trim(), String(r.isoCode || '').trim()];
+            for (const code of candidates) {
+                if (!code) continue;
+                let num = 0;
+                const mObs = code.match(/^OBS-(\d{6})-(\d+)/i);
+                if (mObs) {
+                    num = parseInt(mObs[2], 10);
+                } else {
+                    const mDob = code.match(/^DOB-(\d+)$/i);
+                    if (mDob) {
+                        num = parseInt(mDob[1], 10);
+                    } else {
+                        const mTrail = code.match(/(\d+)$/);
+                        if (mTrail) num = parseInt(mTrail[1], 10);
+                    }
+                }
+                if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+        }
+        cachedMaxSeq = maxSeq;
     }
-    const seq = String(Math.max(maxSeq + 1, Math.floor(1000 + Math.random() * 9000))).padStart(4, '0');
-    const obsId = `OBS-${ym}-${seq}`;
-    return { id: obsId, isoCode: obsId };
+
+    cachedMaxSeq += 1;
+    const ym = new Date().toISOString().slice(0, 7).replace('-', '');
+    const seq = String(cachedMaxSeq).padStart(4, '0');
+    const obsId = `DOB-${seq}`;
+    const isoCode = `OBS-${ym}-${seq}`;
+    return { id: obsId, isoCode: isoCode };
 }
+
 
 async function uploadFormPhotos(obsId, photos, moduleName) {
     const attachments = [];
