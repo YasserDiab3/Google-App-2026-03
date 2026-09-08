@@ -2,16 +2,32 @@
 <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8" />
-        <meta name="app-version" content="1.0.1698" />
+        <meta name="app-version" content="1.0.1700" />
         <!-- إعدادات اتصال الخلفية: Google Apps Script + Sheets فقط -->
-        <script src="js/hse-api-url.js?v=hse-app-v1.0.1698-20260908"></script>
+        <script src="js/hse-api-url.js?v=hse-app-v1.0.1700-20260908"></script>
         <script>
+            // تنظيف أي معامل _force متبقٍ في الرابط لمنع حلقات الإعادة المكررة
+            (function cleanForceParam() {
+                try {
+                    var u = new URL(window.location.href);
+                    if (u.searchParams.has('_force')) {
+                        u.searchParams.delete('_force');
+                        u.searchParams.delete('_bust');
+                        window.history.replaceState(null, '', u.pathname + (u.search ? u.search : '') + (u.hash || ''));
+                    }
+                } catch (e) {}
+            })();
             window.__hseHardReloadForUpdate = function (ver, opts) {
                 return (async function () {
                     var force = !!(opts && opts.force);
                     var lockKey = "hse_hard_reload_for";
                     var lockVal = String(ver || "") || "1";
                     try {
+                        // كبح زمني: يمنع أي ريلود مكرر إذا تم تنفيذه خلال 10 ثوانٍ سبقت
+                        var lastReload = Number(sessionStorage.getItem('hse_last_hard_reload_time') || 0);
+                        if (Date.now() - lastReload < 10000) return;
+                        sessionStorage.setItem('hse_last_hard_reload_time', String(Date.now()));
+
                         // القفل يمنع حلقة ريلود تلقائية فقط — زر المستخدم يتجاوزه دائماً
                         if (!force && sessionStorage.getItem(lockKey) === lockVal) return;
                         sessionStorage.setItem(lockKey, lockVal);
@@ -20,7 +36,6 @@
                         sessionStorage.setItem("hse_keep_local_data", "1");
                     } catch (e) {}
                     try {
-                        // لا تمسح last_seen عند force من الزر إن كان التحميل مطابقاً — تُدار من app-ui
                         if (!force) localStorage.removeItem("hse_last_seen_version");
                     } catch (e) {}
                     try {
@@ -47,7 +62,6 @@
                         var u = new URL(window.location.href);
                         if (ver) u.searchParams.set("_v", String(ver));
                         u.searchParams.set("_bust", String(Date.now()));
-                        // force: أضف nonce إضافي لكسر أي كاش وسيط
                         if (force) u.searchParams.set("_force", "1");
                         window.location.replace(u.toString());
                     } catch (e) {
@@ -56,6 +70,7 @@
                 })();
             };
         </script>
+
         <!-- تعطيل قمع console: أضف ?debug=1 للرابط أو localStorage.setItem('HSE_DEBUG_CONSOLE','1') -->
         <script>
             (function () {
@@ -1493,66 +1508,26 @@
                     var lang = getLoginLang();
                     applyLoginLanguage(lang);
                     var btn = document.getElementById("login-language-toggle-btn");
-                    var dd = document.getElementById("login-language-dropdown");
                     if (!btn) return;
-
-                    var doSetLang = function(next) {
+                    window._loginLangDirectBound = true;
+                    btn.dataset.handlerBound = "true";
+                    btn.addEventListener("click", function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var current = getLoginLang();
+                        var next = current === "ar" ? "en" : "ar";
                         try { localStorage.setItem("language", next); } catch (err) {}
                         if (typeof window.AppState !== "undefined") window.AppState.currentLanguage = next;
                         if (typeof window.UI !== "undefined" && typeof window.UI.setLanguage === "function") {
                             window.UI.setLanguage(next);
                         } else {
                             applyLoginLanguage(next);
-                            var i18nCore = (window.AppI18n && typeof window.AppI18n.applyI18n === "function")
-                                ? window.AppI18n
-                                : ((window.I18n && typeof window.I18n.applyI18n === "function") ? window.I18n : null);
-                            if (i18nCore) {
-                                i18nCore.applyI18n(document, next);
-                                i18nCore.applyLiteralTranslations(document, next);
-                            }
                         }
                         var t = document.getElementById("current-lang-text");
                         if (t) t.textContent = next === "ar" ? "العربية" : "English";
-                        closeLoginLanguageDropdown();
-                    };
-
-                    if (!btn.dataset.initBound) {
-                        btn.dataset.initBound = "true";
-                        btn.addEventListener("click", function (e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (dd) {
-                                if (isLoginLanguageDropdownOpen()) {
-                                    closeLoginLanguageDropdown();
-                                } else {
-                                    openLoginLanguageDropdown();
-                                }
-                            } else {
-                                var current = getLoginLang();
-                                var next = current === "ar" ? "en" : "ar";
-                                doSetLang(next);
-                            }
-                        });
-                    }
-
-                    if (dd && !dd.dataset.initBound) {
-                        dd.dataset.initBound = "true";
-                        dd.querySelectorAll("[data-lang]").forEach(function(item) {
-                            item.addEventListener("click", function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                var selected = this.getAttribute("data-lang");
-                                if (selected) doSetLang(selected);
-                            });
-                        });
-                        document.addEventListener("click", function(e) {
-                            if (btn && !btn.contains(e.target) && dd && !dd.contains(e.target)) {
-                                closeLoginLanguageDropdown();
-                            }
-                        });
-                    }
+                        btn.setAttribute("aria-expanded", "false");
+                    });
                 }
-
                 if (document.readyState === "loading") {
                     document.addEventListener(
                         "DOMContentLoaded",
@@ -5093,7 +5068,8 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1698-20260908";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1700-20260908";
+
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

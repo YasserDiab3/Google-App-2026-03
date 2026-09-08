@@ -16,9 +16,15 @@ const genericSheetOps = {
         const readGate = checkSheetReadAccess(sheetName, actorUserData, action);
         if (!readGate.ok) return readGate;
 
+        const limit = payload?.limit || postData?.limit ? parseInt(payload?.limit || postData?.limit, 10) : undefined;
+        const page = payload?.page || postData?.page ? parseInt(payload?.page || postData?.page, 10) : undefined;
+        const options = { listMode: true };
+        if (limit && !isNaN(limit)) options.limit = limit;
+        if (page && !isNaN(page)) options.page = page;
+
         const db = getDatabase();
         try {
-            let rows = db.readSheet(sheetName, null, { listMode: true });
+            let rows = db.readSheet(sheetName, null, options);
             if (sheetName === 'Users') rows = sanitizeUserRows(rows);
             return {
                 success: true,
@@ -45,6 +51,12 @@ const genericSheetOps = {
         if (sheetNames.length === 0) {
             return { success: false, message: 'قائمة الأوراق مطلوبة', errorCode: 'SHEET_NAMES_REQUIRED' };
         }
+
+        const limit = payload?.limit || postData?.limit ? parseInt(payload?.limit || postData?.limit, 10) : undefined;
+        const page = payload?.page || postData?.page ? parseInt(payload?.page || postData?.page, 10) : undefined;
+        const readOptions = { listMode: true };
+        if (limit && !isNaN(limit)) readOptions.limit = limit;
+        if (page && !isNaN(page)) readOptions.page = page;
 
         const db = getDatabase();
         const result = {};
@@ -74,10 +86,10 @@ const genericSheetOps = {
                 continue;
             }
             try {
-                let rows = db.readSheet(name, null, { listMode: true });
+                let rows = db.readSheet(name, null, readOptions);
                 if ((!rows || rows.length === 0) && aliases[name.toLowerCase()]) {
                     const aliasTarget = aliases[name.toLowerCase()];
-                    const aliasRows = db.readSheet(aliasTarget, null, { listMode: true });
+                    const aliasRows = db.readSheet(aliasTarget, null, readOptions);
                     if (aliasRows && aliasRows.length > 0) {
                         rows = aliasRows;
                     }
