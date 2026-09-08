@@ -1,0 +1,29 @@
+---
+description: Enforce MCP-first tool selection before executing tasks
+alwaysApply: true
+---
+
+# MCP-First Execution Rule
+
+Before doing any substantial action, always check whether an available MCP tool or MCP resource can handle the request directly.
+
+## Required behavior
+
+- Start with an MCP capability check for the current request.
+- If an MCP can do the job safely and directly, use MCP first.
+- If no suitable MCP exists, continue with local tools and state that MCP is not applicable.
+- For MCP tool calls, read the MCP tool descriptor/schema first, then call it with valid arguments.
+- If authentication is required and an `mcp_auth` tool exists, perform auth before using that server.
+- Prefer MCP for external systems (GitHub, deployments, tickets, docs, cloud resources) instead of ad-hoc shell/API work.
+
+## Decision order
+
+1. Can an MCP server solve this request?
+2. If yes, use MCP flow (schema -> auth if needed -> call).
+3. If no, use standard local workflow.
+
+## Response transparency
+
+When relevant, briefly mention:
+- MCP server/tool used, or
+- why MCP was not suitable for this request.

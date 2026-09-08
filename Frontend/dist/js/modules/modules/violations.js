@@ -1,0 +1,2482 @@
+const Violations={_t(e,t){return window.AppI18n&&typeof window.AppI18n.t=="function"?window.AppI18n.t(e,t):window.I18n&&typeof window.I18n.t=="function"?window.I18n.t(e,t):t},applyModuleI18n(e){const t=window.AppI18n&&typeof window.AppI18n.applyI18n=="function"?window.AppI18n:window.I18n&&typeof window.I18n.applyI18n=="function"?window.I18n:null;if(!t)return;const i=e||document.getElementById("viol-analytics-root");i&&(typeof t.applyI18n=="function"&&t.applyI18n(i),typeof t.applyLiteralTranslations=="function"&&t.applyLiteralTranslations(i))},currentFilters:{search:"",personType:"",violationType:"",severity:"",status:""},parseFineAmount(e){if(e==null||e==="")return 0;if(typeof e=="number")return Number.isFinite(e)&&e>=0?e:0;const t="\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669",i="\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9",o=r=>String(r||"").replace(/[٠-٩۰-۹]/g,c=>{const l=t.indexOf(c);if(l>=0)return String(l);const d=i.indexOf(c);return d>=0?String(d):c}),a=String(e).trim(),n=o(a).replace(/[,\u066C]/g,"").replace(/\u066B/g,".").replace(/[^\d.\-]/g,""),s=Number(n);return Number.isFinite(s)&&s>=0?s:0},_VIOL_CURRENCY_KEY:"viol_currency",_VIOL_RATE_KEY:"viol_exchange_rate",_VIOL_DEFAULT_RATE:50,getCurrentCurrency(){try{return localStorage.getItem(this._VIOL_CURRENCY_KEY)==="USD"?"USD":"EGP"}catch{return"EGP"}},setCurrentCurrency(e){const t=e==="USD"?"USD":"EGP";try{localStorage.setItem(this._VIOL_CURRENCY_KEY,t)}catch{}return t},getExchangeRate(){try{const e=parseFloat(localStorage.getItem(this._VIOL_RATE_KEY));return Number.isFinite(e)&&e>0?e:this._VIOL_DEFAULT_RATE}catch{return this._VIOL_DEFAULT_RATE}},setExchangeRate(e){const t=parseFloat(e);if(!Number.isFinite(t)||t<=0)return!1;try{localStorage.setItem(this._VIOL_RATE_KEY,String(t))}catch{}return!0},convertFineAmount(e,t){const i=t||this.getCurrentCurrency(),o=Number(e)||0;if(i==="USD"){const a=this.getExchangeRate();return a>0?o/a:0}return o},formatFineAmount(e,t={}){const i=t.currency||this.getCurrentCurrency(),o=i==="USD"?"$":"\u062C.\u0645",a=this.convertFineAmount(e,i),n=i==="USD"?a.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2}):a.toLocaleString("en-US",{maximumFractionDigits:0});return i==="USD"?`${n} $`:`${n} ${o}`},getCurrencyLabel(e="short"){return this.getCurrentCurrency()==="USD"?e==="long"?this._t("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"):"$":e==="long"?this._t("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"):this._t("module.violations.analytics.currency.egp_short","\u062C.\u0645")},normalizeViolationRecord(e){if(!e||typeof e!="object")return null;const t=e.fineAmount??e.defaultFineAmount??e.fine_amount??e.fine??e.amount??e["\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629"]??e["\u0642\u064A\u0645\u0629 \u0645\u0627\u0644\u064A\u0629"]??0,i=this.parseFineAmount(t),o=e.personType||(e.contractorName?"contractor":"employee");return{...e,personType:o,fineAmount:i}},_escapeIdForHandler(e){return JSON.stringify(e==null?"":String(e))},getEffectiveFineAmount(e){const t=this.normalizeViolationRecord(e);if(!t)return 0;const i=this.parseFineAmount(t.fineAmount);if(i>0)return i;let o=[];try{typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll&&(ViolationTypesManager.ensureInitialized(),o=ViolationTypesManager.getAll()||[])}catch{o=[]}!o.length&&typeof AppState<"u"&&Array.isArray(AppState?.appData?.violationTypes)&&(o=AppState.appData.violationTypes);const a=String(t.violationTypeId||"").trim(),n=String(t.violationType||"").trim().toLowerCase();let s=0;if(a){const r=o.find(c=>c&&String(c.id)===a);r&&(s=this.parseFineAmount(r.fineAmount))}if(s<=0&&n){const r=o.find(c=>c&&String(c.name||"").trim().toLowerCase()===n);r&&(s=this.parseFineAmount(r.fineAmount))}return s>0?s:i},_normKeyStr(e){if(e==null)return"";let t=String(e).trim().toLowerCase();return t=t.replace(/[\u064B-\u065F\u0670]/g,""),t=t.replace(/[أإآ]/g,"\u0627"),t=t.replace(/ة/g,"\u0647"),t=t.replace(/[ى]/g,"\u064A"),t=t.replace(/\s+/g," "),t=t.replace(/[^\w\s\u0600-\u06FF]/g,""),t.trim()},sameViolationPersonForSequence(e,t){const i=this._normKeyStr(e.personType)||"employee",o=this._normKeyStr(t.personType)||"employee";if(i!==o)return!1;if(i==="contractor"){const c=this._normKeyStr(e.contractorId),l=this._normKeyStr(t.contractorId);if(c&&l&&c===l){const y=this._normKeyStr(e.contractorWorker),u=this._normKeyStr(t.contractorWorker);return!y&&!u?!0:!y||!u||y===u}const d=this._normKeyStr(e.contractorName),p=this._normKeyStr(t.contractorName);if(!d||!p||d!==p)return!1;const f=this._normKeyStr(e.contractorWorker),m=this._normKeyStr(t.contractorWorker);return!f&&!m?!0:f===m}const a=this._normKeyStr(e.employeeCode||e.employeeNumber),n=this._normKeyStr(t.employeeCode||t.employeeNumber);if(a&&n)return a===n;const s=this._normKeyStr(e.employeeName),r=this._normKeyStr(t.employeeName);return!!s&&s===r},getViolationYearMonthKey(e){const t=new Date(e);return isNaN(t.getTime())?null:t.getFullYear()*12+t.getMonth()},_recentViolationDupKeys:[],_violationSubmitLock:!1,_violationInflightDupKey:"",_violationDateKey(e){const t=e&&e.violationDate;if(t==null||t==="")return"";const i=String(t).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(i))return i;const o=new Date(i);if(!isNaN(o.getTime())){const n=o.getFullYear(),s=String(o.getMonth()+1).padStart(2,"0"),r=String(o.getDate()).padStart(2,"0");return`${n}-${s}-${r}`}const a=i.match(/^(\d{4}-\d{2}-\d{2})/);return a?a[1]:""},_violationTimeKey(e){const i=String(e&&e.violationTime||"").trim().match(/(\d{1,2}):(\d{2})/);if(i)return`${String(Number(i[1])).padStart(2,"0")}:${i[2]}`;const o=new Date(e&&e.violationDate);return isNaN(o.getTime())?"":`${String(o.getHours()).padStart(2,"0")}:${String(o.getMinutes()).padStart(2,"0")}`},_sameViolationTextField(e,t){const i=this._normKeyStr(e),o=this._normKeyStr(t);return!i&&!o?!0:!!i&&i===o},isDuplicateViolationRecord(e,t){if(!e||!t||!this.sameViolationPersonForSequence(e,t)||this._violationDateKey(e)!==this._violationDateKey(t)||this._violationTimeKey(e)!==this._violationTimeKey(t))return!1;const i=this._normKeyStr(e.violationTypeId||e.violationType),o=this._normKeyStr(t.violationTypeId||t.violationType);if(i!==o)return!1;const a=this._normKeyStr(e.violationLocationId),n=this._normKeyStr(t.violationLocationId);if(a&&n){if(a!==n)return!1}else if(!this._sameViolationTextField(e.violationLocation,t.violationLocation))return!1;const s=this._normKeyStr(e.violationPlaceId),r=this._normKeyStr(t.violationPlaceId);if(s&&r){if(s!==r)return!1}else if(!this._sameViolationTextField(e.violationPlace,t.violationPlace))return!1;return!0},_buildViolationDupKey(e){const t=this._normKeyStr(e&&e.personType)||"employee",i=t==="contractor"?`${this._normKeyStr(e.contractorName)}|${this._normKeyStr(e.contractorWorker)}`:this._normKeyStr(e&&(e.employeeCode||e.employeeNumber)||"");return[t,i,this._violationDateKey(e),this._violationTimeKey(e),this._normKeyStr(e&&(e.violationTypeId||e.violationType)||""),this._normKeyStr(e&&(e.violationLocationId||e.violationLocation)||""),this._normKeyStr(e&&(e.violationPlaceId||e.violationPlace)||""),this._normKeyStr(e&&e.violationDetails||"")].join("||")},_rememberViolationDupKey(e){Array.isArray(this._recentViolationDupKeys)||(this._recentViolationDupKeys=[]);const t=this._buildViolationDupKey(e);if(!t)return;const i=Date.now();this._recentViolationDupKeys=this._recentViolationDupKeys.filter(o=>o&&i-o.at<6e5),this._recentViolationDupKeys.some(o=>o.key===t)||this._recentViolationDupKeys.push({key:t,at:i})},findDuplicateViolation(e,t={}){if(!e)return null;const i=t.excludeId?String(t.excludeId):"",o=typeof AppState<"u"&&AppState.appData&&AppState.appData.violations||[];for(let r=0;r<o.length;r++){const c=o[r];if(c&&!(i&&String(c.id)===i)&&this.isDuplicateViolationRecord(e,c))return{source:"saved",record:c}}const a=this._violApprovalRequestsCache||[];for(let r=0;r<a.length;r++){const c=a[r];if(!c||String(c.status||"").toLowerCase()!=="pending")continue;const d=c.violationData||{};if(!(i&&(String(d.id||"")===i||String(c.originalViolationId||"")===i))&&this.isDuplicateViolationRecord(e,d))return{source:"pending",record:d,request:c}}const n=Date.now();Array.isArray(this._recentViolationDupKeys)||(this._recentViolationDupKeys=[]),this._recentViolationDupKeys=this._recentViolationDupKeys.filter(r=>r&&n-r.at<6e5);const s=this._buildViolationDupKey(e);return s&&this._violationInflightDupKey&&s===this._violationInflightDupKey?{source:"inflight"}:s&&this._recentViolationDupKeys.some(r=>r.key===s)?{source:"recent"}:null},_violApprovalSettingsCache:null,_violApprovalSettingsCacheAt:0,_violApprovalRequestsCache:null,_violApprovalRequestsCacheAt:0,_violApprovalRequestsCacheKey:"",async getViolationApprovalSettings(){const e=Date.now();if(this._violApprovalSettingsCache&&e-this._violApprovalSettingsCacheAt<3e5)return this._violApprovalSettingsCache;try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest){const t=await GoogleIntegration.sendRequest({action:"getViolationApprovalSettings",data:{__timeoutMs:2e4}});if(t&&t.success&&t.data)return this._violApprovalSettingsCache={requireApproval:t.data.requireApproval===!0,defaultApprovers:Array.isArray(t.data.defaultApprovers)?t.data.defaultApprovers:[],bypassRoles:Array.isArray(t.data.bypassRoles)?t.data.bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]},this._violApprovalSettingsCacheAt=e,this._violApprovalSettingsCache}}catch(t){AppState.debugMode&&Utils.safeWarn("getViolationApprovalSettings:",t)}return{requireApproval:!1,defaultApprovers:[],bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},isCurrentUserBypassApproval(e){try{if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin())return!0;const t=AppState.currentUser?.role||"";if(Array.isArray(e)&&e.length>0){const i=String(t).toLowerCase();return e.some(o=>String(o).toLowerCase()===i||String(o)===t)}}catch{}return!1},async checkViolationApprovalGate(e,t={}){const i=await this.getViolationApprovalSettings();return!i||!i.requireApproval?{requiresApproval:!1,settings:i}:this.isCurrentUserBypassApproval(i.bypassRoles)?{requiresApproval:!1,settings:i,bypassed:!0}:!Array.isArray(i.defaultApprovers)||i.defaultApprovers.length===0?(AppState.debugMode&&Utils.safeWarn("approval required but no approvers configured \u2014 allowing direct save"),{requiresApproval:!1,settings:i,reason:"no_approvers"}):{requiresApproval:!0,settings:i}},async submitViolationForApproval(e,t={}){try{const o=((await this.getViolationApprovalSettings()).defaultApprovers||[]).slice(),a=AppState.currentUser||{},n={requestType:t.isEdit?"update":"add",violationData:e,originalViolationId:t.originalId||"",approvers:o,createdBy:a.id||a.email||"",createdByName:a.name||a.email||"",notes:t.notes||""};return await GoogleIntegration.sendRequest({action:"addViolationApprovalRequest",data:{...n,__timeoutMs:3e4}})||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645"}}catch(i){return{success:!1,message:i?.message||String(i)}}},async fetchViolationApprovalRequests(e={}){try{const t=await GoogleIntegration.sendRequest({action:"getAllViolationApprovalRequests",data:{...e,__timeoutMs:25e3}});return t&&t.success&&Array.isArray(t.data)?t.data:[]}catch(t){return AppState.debugMode&&Utils.safeWarn("fetchViolationApprovalRequests:",t),[]}},async approveViolationRequest(e,t={}){const i=AppState.currentUser||{},o={userId:i.id||i.email||"",userName:i.name||"",userEmail:i.email||""};try{const a=await GoogleIntegration.sendRequest({action:"approveViolationApprovalRequest",data:{requestId:e,approver:o,notes:t.notes||"",force:t.force===!0,__timeoutMs:3e4}});return this._violApprovalSettingsCache=null,this._invalidateViolationApprovalRequestsCache(),a||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(a){return{success:!1,message:a?.message||String(a)}}},async rejectViolationRequest(e,t){const i=AppState.currentUser||{},o={userId:i.id||i.email||"",userName:i.name||"",userEmail:i.email||""};try{const a=await GoogleIntegration.sendRequest({action:"rejectViolationApprovalRequest",data:{requestId:e,approver:o,reason:String(t||"").trim(),__timeoutMs:3e4}});return this._invalidateViolationApprovalRequestsCache(),a||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(a){return{success:!1,message:a?.message||String(a)}}},async saveViolationApprovalSettings(e){const t=AppState.currentUser||{};try{const i=await GoogleIntegration.sendRequest({action:"updateViolationApprovalSettings",data:{requireApproval:e.requireApproval===!0,defaultApprovers:Array.isArray(e.defaultApprovers)?e.defaultApprovers:[],bypassRoles:Array.isArray(e.bypassRoles)?e.bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"],updatedBy:t.id||t.email||"",updatedByName:t.name||"",__timeoutMs:25e3}});return this._violApprovalSettingsCache=null,this._invalidateViolationApprovalRequestsCache(),i||{success:!1,message:"\u0644\u0627 \u062A\u0648\u062C\u062F \u0627\u0633\u062A\u062C\u0627\u0628\u0629"}}catch(i){return{success:!1,message:i?.message||String(i)}}},_getViolationApprovalRequestsCacheKey(e,t){return e?"admin":String(t?.email||t?.id||"user")},_getCachedViolationApprovalRequests(e,t){const i=this._getViolationApprovalRequestsCacheKey(e,t),o=Date.now();return this._violApprovalRequestsCache&&this._violApprovalRequestsCacheKey===i&&o-this._violApprovalRequestsCacheAt<12e4?this._violApprovalRequestsCache:null},_setCachedViolationApprovalRequests(e,t,i){this._violApprovalRequestsCache=Array.isArray(e)?e:[],this._violApprovalRequestsCacheKey=this._getViolationApprovalRequestsCacheKey(t,i),this._violApprovalRequestsCacheAt=Date.now()},_invalidateViolationApprovalRequestsCache(){this._violApprovalRequestsCache=null,this._violApprovalRequestsCacheAt=0,this._violApprovalRequestsCacheKey=""},_cloneViolationApprovalSettings(e){const t=e||{};return{requireApproval:t.requireApproval===!0,defaultApprovers:Array.isArray(t.defaultApprovers)?t.defaultApprovers.map(i=>({...i})):[],bypassRoles:Array.isArray(t.bypassRoles)?[...t.bypassRoles]:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},_getViolationApprovalSettingsSnapshot(){const e=Date.now();return this._violApprovalSettingsCache&&e-this._violApprovalSettingsCacheAt<3e5?this._cloneViolationApprovalSettings(this._violApprovalSettingsCache):{requireApproval:!1,defaultApprovers:[],bypassRoles:["admin","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645"]}},_prefetchViolationApprovalPanelData(){const e=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"?Permissions.isCurrentUserEffectiveAdmin():!1,t=AppState.currentUser||{},i={userEmail:e?"":t.email||"",userId:e?"":t.id||""};Promise.all([this.getViolationApprovalSettings(),this.fetchViolationApprovalRequests(i)]).then(([,o])=>{this._setCachedViolationApprovalRequests(o,e,t),this._updateViolationApprovalsHeaderBadge(o)}).catch(()=>{})},_updateViolationApprovalsHeaderBadge(e){const t=document.getElementById("viol-approvals-pending-badge");if(!t)return;const o=(Array.isArray(e)?e:this._violApprovalRequestsCache||[]).filter(a=>a&&String(a.status||"").toLowerCase()==="pending").length;o>0?(t.hidden=!1,t.textContent=String(o),t.setAttribute("aria-label",String(o))):(t.hidden=!0,t.textContent="")},_sameViolationApproverIdentity(e,t){const i=s=>String(s||"").trim().toLowerCase(),o=s=>[i(s?.userId),i(s?.id),i(s?.email),i(s?.userEmail)].filter(Boolean),a=o(e),n=o(t);return a.some(s=>n.includes(s))},_isCurrentViolationApprover(e){if(!e||String(e.status||"").toLowerCase()!=="pending")return!1;const t=Array.isArray(e.approvers)?e.approvers:[],i=parseInt(e.currentApproverIndex,10)||0,o=t[i];return o?this._sameViolationApproverIdentity(o,AppState.currentUser||{}):!1},_canActOnViolationApproval(e,t){return!!(e&&String(e.status||"").toLowerCase()==="pending"&&(t||this._isCurrentViolationApprover(e)))},_filterViolationApprovalRequests(e){const t=e&&e.filter||"pending",i=String(e&&e.query||"").trim().toLowerCase();let o=Array.isArray(e?.requests)?e.requests.slice():[];return t==="approved"?o=o.filter(a=>["approved","committed"].includes(String(a.status||"").toLowerCase())):t!=="all"&&(o=o.filter(a=>String(a.status||"").toLowerCase()===t)),i&&(o=o.filter(a=>{const n=a.violationData||{};return[a.id,a.createdByName,a.createdBy,n.employeeName,n.contractorName,n.contractorWorker,n.violationType,n.violationLocation,n.violationPlace,n.violationDetails].join(" ").toLowerCase().includes(i)})),o.sort((a,n)=>{const s=this._isCurrentViolationApprover(a)?0:1,r=this._isCurrentViolationApprover(n)?0:1;return s!==r?s-r:new Date(n.createdAt||0).getTime()-new Date(a.createdAt||0).getTime()}),o},_countViolationApprovalsByFilter(e,t){const i=Array.isArray(e)?e:[];return t==="all"?i.length:t==="approved"?i.filter(o=>["approved","committed"].includes(String(o.status||"").toLowerCase())).length:i.filter(o=>String(o.status||"").toLowerCase()===t).length},_ensureViolationApprovalsStyles(){if(document.getElementById("viol-approvals-ux-css"))return;const e=document.createElement("style");e.id="viol-approvals-ux-css",e.textContent=`
+            .vap-nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:1.35rem;height:1.35rem;padding:0 .35rem;margin-inline-start:.4rem;border-radius:999px;background:#fff;color:#b91c1c;font-size:.72rem;font-weight:800;line-height:1;}
+            .vap-shell{background:var(--vap-bg,#fff);color:var(--vap-fg,#0f172a);border-radius:18px;max-width:1080px;width:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 48px rgba(15,23,42,.28);}
+            .vap-head{background:linear-gradient(135deg,#b91c1c,#7f1d1d);color:#fff;padding:18px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;}
+            .vap-head h3{margin:0;font-size:1.2rem;font-weight:800;letter-spacing:-.01em;}
+            .vap-head p{margin:.28rem 0 0;font-size:.82rem;opacity:.88;line-height:1.45;max-width:42rem;}
+            .vap-close{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);border-radius:10px;color:#fff;width:40px;height:40px;cursor:pointer;font-size:1.25rem;flex-shrink:0;}
+            .vap-close:hover,.vap-close:focus-visible{background:rgba(255,255,255,.28);outline:none;}
+            .vap-tabs{display:flex;gap:6px;padding:10px 16px 0;background:inherit;}
+            .vap-tab{border:none;background:transparent;color:inherit;opacity:.55;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;font-weight:700;font-size:.9rem;}
+            .vap-tab.is-active{opacity:1;background:rgba(127,29,29,.08);}
+            .vap-body{padding:16px 18px 20px;overflow:auto;flex:1;}
+            .vap-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;}
+            .vap-filters{display:flex;flex-wrap:wrap;gap:6px;}
+            .vap-chip{border:1px solid #e2e8f0;background:#f8fafc;color:#334155;padding:7px 12px;border-radius:999px;cursor:pointer;font-size:.82rem;font-weight:650;}
+            .vap-chip .vap-n{margin-inline-start:.35rem;opacity:.7;font-variant-numeric:tabular-nums;}
+            .vap-chip.is-active{background:#0f172a;color:#fff;border-color:#0f172a;}
+            .vap-search{flex:1;min-width:180px;position:relative;}
+            .vap-search input{width:100%;border:1px solid #e2e8f0;border-radius:12px;padding:9px 12px;padding-inline-start:36px;font-size:.9rem;background:#fff;}
+            .vap-search i{position:absolute;inset-inline-start:12px;top:50%;transform:translateY(-50%);color:#94a3b8;pointer-events:none;}
+            .vap-card{background:#fff;border:1px solid #e8edf4;border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 8px 18px rgba(15,23,42,.05);}
+            .vap-card.is-mine{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.18);}
+            .vap-mine-flag{display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;border:1px solid #fcd34d;border-radius:999px;padding:4px 10px;font-size:.75rem;font-weight:800;margin-bottom:8px;}
+            .vap-summary{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:.88rem;font-weight:700;display:flex;align-items:center;gap:8px;}
+            .vap-summary[hidden]{display:none;}
+            .vap-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+            .vap-person{font-weight:800;font-size:.98rem;color:#0f172a;}
+            .vap-meta{font-size:.78rem;color:#64748b;margin-top:4px;line-height:1.5;}
+            .vap-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:800;}
+            .vap-badge-pending{background:#fef3c7;color:#92400e;}
+            .vap-badge-ok{background:#dcfce7;color:#166534;}
+            .vap-badge-no{background:#fee2e2;color:#991b1b;}
+            .vap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;font-size:.8rem;color:#475569;background:#f8fafc;padding:10px 12px;border-radius:12px;margin:10px 0;}
+            .vap-grid strong{color:#0f172a;}
+            .vap-steps{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:0 0 10px;padding:0;}
+            .vap-step{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:#f1f5f9;color:#64748b;font-size:.78rem;max-width:100%;}
+            .vap-step-num{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:.72rem;background:#cbd5e1;color:#0f172a;flex-shrink:0;}
+            .vap-step.is-done{background:#ecfdf5;color:#166534;}
+            .vap-step.is-done .vap-step-num{background:#16a34a;color:#fff;}
+            .vap-step.is-current{background:#fffbeb;color:#92400e;box-shadow:inset 0 0 0 1px #fcd34d;}
+            .vap-step.is-current .vap-step-num{background:#d97706;color:#fff;}
+            .vap-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
+            .vap-btn{border:none;border-radius:11px;padding:9px 16px;cursor:pointer;font-weight:750;font-size:.86rem;min-height:40px;}
+            .vap-btn:focus-visible{outline:2px solid #b91c1c;outline-offset:2px;}
+            .vap-btn-ok{background:#15803d;color:#fff;}
+            .vap-btn-no{background:#fff;color:#b91c1c;border:1px solid #fecaca;}
+            .vap-btn:disabled{opacity:.65;cursor:wait;}
+            .vap-empty{text-align:center;padding:40px 16px;color:#64748b;background:#f8fafc;border-radius:16px;}
+            .vap-empty i{font-size:1.8rem;color:#cbd5e1;margin-bottom:10px;display:block;}
+            .vap-settings{background:#fff7ed;border:1px solid #fed7aa;border-radius:16px;padding:16px;}
+            .vap-toggle{display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin:12px 0 16px;}
+            .vap-toggle input{width:18px;height:18px;margin-top:2px;}
+            .vap-approver-row{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:8px 10px;margin-bottom:6px;}
+            .vap-approver-row .ord{width:26px;height:26px;border-radius:8px;background:#0f172a;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;flex-shrink:0;}
+            .vap-icon-btn{border:none;background:#f1f5f9;color:#334155;width:32px;height:32px;border-radius:8px;cursor:pointer;}
+            .vap-icon-btn:hover{background:#e2e8f0;}
+            .vap-sheet{position:absolute;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px;z-index:2;}
+            .vap-sheet[hidden]{display:none;}
+            .vap-sheet-card{background:#fff;border-radius:16px 16px 12px 12px;padding:18px;width:min(520px,100%);box-shadow:0 16px 40px rgba(0,0,0,.2);}
+            .vap-sheet textarea{width:100%;min-height:96px;border:1px solid #e2e8f0;border-radius:12px;padding:10px;font:inherit;resize:vertical;}
+            .vap-shell{position:relative;}
+            [data-theme="dark"] .vap-shell{--vap-bg:#0f172a;--vap-fg:#e2e8f0;}
+            [data-theme="dark"] .vap-card,[data-theme="dark"] .vap-sheet-card,[data-theme="dark"] .vap-search input,[data-theme="dark"] .vap-settings,[data-theme="dark"] .vap-approver-row{background:#1e293b;border-color:#334155;color:#e2e8f0;}
+            [data-theme="dark"] .vap-grid,[data-theme="dark"] .vap-empty,[data-theme="dark"] .vap-chip{background:#0f172a;border-color:#334155;color:#cbd5e1;}
+            [data-theme="dark"] .vap-chip.is-active{background:#f8fafc;color:#0f172a;}
+            [data-theme="dark"] .vap-person,[data-theme="dark"] .vap-grid strong{color:#f8fafc;}
+            [data-theme="dark"] .vap-tab.is-active{background:rgba(255,255,255,.08);}
+            @media (max-width:640px){
+                .vap-head{padding:14px 14px;}
+                .vap-body{padding:12px;}
+                .vap-actions{justify-content:stretch;}
+                .vap-btn{flex:1;}
+            }
+        `,document.head.appendChild(e)},_buildViolationApprovalsSettingsHtml(e,t,i){if(!t)return"";const o=(s,r)=>this._t(s,r),a=e||{requireApproval:!1,defaultApprovers:[]},n=Array.isArray(a.defaultApprovers)?a.defaultApprovers:[];return`
+                    <div id="viol-approvals-settings-panel" class="vap-settings">
+                        <h4 style="margin:0;font-size:1rem;font-weight:800;">${o("module.violations.approvals.settingsTitle","\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0648\u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646")}</h4>
+                        <p style="margin:6px 0 0;font-size:.82rem;color:#9a3412;line-height:1.5;">${o("module.violations.approvals.settingsLead","\u0627\u0644\u062A\u0631\u062A\u064A\u0628 \u0647\u0648 \u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F. \u0627\u0644\u0645\u062F\u064A\u0631 \u064A\u062A\u062C\u0627\u0648\u0632 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0639\u0646\u062F \u0627\u0644\u062D\u0641\u0638.")}</p>
+                        <label class="vap-toggle">
+                            <input type="checkbox" id="viol-require-approval" ${a.requireApproval?"checked":""}>
+                            <span style="font-weight:700;">${o("module.violations.approvals.enable","\u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0642\u0628\u0644 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")}</span>
+                        </label>
+                        <div style="font-weight:700;margin-bottom:8px;">${o("module.violations.approvals.approvers","\u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0648\u0646 \u0627\u0644\u0645\u0639\u064A\u0651\u064E\u0646\u0648\u0646")}</div>
+                        <div id="viol-approvers-list">
+                            ${n.length?n.map((s,r)=>`
+                                <div class="vap-approver-row" data-approver-idx="${r}">
+                                    <span class="ord">${r+1}</span>
+                                    <span style="flex:1;font-weight:650;">${Utils.escapeHTML(s.userName||s.userEmail||s.userId||"?")}</span>
+                                    <button type="button" class="vap-icon-btn viol-approver-up" data-idx="${r}" title="${o("module.violations.approvals.moveUp","\u062A\u0642\u062F\u064A\u0645")}" ${r===0?"disabled":""}><i class="fas fa-arrow-up"></i></button>
+                                    <button type="button" class="vap-icon-btn viol-approver-down" data-idx="${r}" title="${o("module.violations.approvals.moveDown","\u062A\u0623\u062E\u064A\u0631")}" ${r===n.length-1?"disabled":""}><i class="fas fa-arrow-down"></i></button>
+                                    <button type="button" class="vap-icon-btn viol-remove-approver" data-idx="${r}" title="${o("module.violations.approvals.remove","\u0625\u0632\u0627\u0644\u0629")}" style="color:#b91c1c;"><i class="fas fa-times"></i></button>
+                                </div>
+                            `).join(""):`<div class="vap-empty" style="padding:16px;">${o("module.violations.approvals.noApprovers","\u0623\u0636\u0641 \u0645\u0639\u062A\u0645\u062F\u0627\u064B \u0648\u0627\u062D\u062F\u0627\u064B \u0639\u0644\u0649 \u0627\u0644\u0623\u0642\u0644 \u062D\u062A\u0649 \u062A\u0639\u0645\u0644 \u0627\u0644\u062F\u0627\u0626\u0631\u0629")}</div>`}
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:flex-end;margin-top:12px;flex-wrap:wrap;">
+                            <div style="flex:1;min-width:200px;">
+                                <label style="display:block;font-size:.8rem;margin-bottom:4px;">${o("module.violations.approvals.addApprover","\u0625\u0636\u0627\u0641\u0629 \u0645\u0639\u062A\u0645\u062F")}</label>
+                                <select id="viol-add-approver-select" class="form-input" style="width:100%;padding:9px;border:1px solid #d1d5db;border-radius:10px;">
+                                    <option value="">${o("module.violations.approvals.chooseUser","\u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B")}</option>
+                                    ${(i||[]).map(s=>`
+                                        <option value="${Utils.escapeHTML(String(s.id||s.email||""))}"
+                                                data-name="${Utils.escapeHTML(String(s.name||""))}"
+                                                data-email="${Utils.escapeHTML(String(s.email||""))}"
+                                                data-role="${Utils.escapeHTML(String(s.role||""))}">
+                                            ${Utils.escapeHTML(s.name||s.email||s.id)} ${s.role?"("+Utils.escapeHTML(s.role)+")":""}
+                                        </option>
+                                    `).join("")}
+                                </select>
+                            </div>
+                            <button type="button" id="viol-add-approver-btn" class="vap-btn" style="background:#1e3a8a;color:#fff;">
+                                <i class="fas fa-plus"></i> ${o("module.violations.approvals.add","\u0625\u0636\u0627\u0641\u0629")}
+                            </button>
+                        </div>
+                        <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                            <button type="button" id="viol-save-settings-btn" class="vap-btn vap-btn-ok">
+                                <i class="fas fa-save"></i> ${o("module.violations.approvals.save","\u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A")}
+                            </button>
+                        </div>
+                    </div>`},_buildViolationApprovalsRequestsHtml(e){const t=(o,a)=>this._t(o,a);if(e.loading)return`<div class="vap-empty">
+                <i class="fas fa-spinner fa-spin"></i>
+                ${t("module.violations.approvals.loading","\u062C\u0627\u0631\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062A\u2026")}
+            </div>`;const i=this._filterViolationApprovalRequests(e);return this._renderViolationApprovalRequests(i,{isAdmin:e.isAdmin})},_renderViolationApprovalFilterBar(e){const t=(a,n)=>this._t(a,n),i=e&&e.filter||"pending";return[["pending","module.violations.approvals.filter.pending","\u0645\u0639\u0644\u0651\u0642\u0629"],["approved","module.violations.approvals.filter.approved","\u0645\u0639\u062A\u0645\u062F\u0629"],["rejected","module.violations.approvals.filter.rejected","\u0645\u0631\u0641\u0648\u0636\u0629"],["all","module.violations.approvals.filter.all","\u0627\u0644\u0643\u0644"]].map(([a,n,s])=>{const r=this._countViolationApprovalsByFilter(e.requests,a);return`<button type="button" class="vap-chip viol-req-filter${i===a?" is-active viol-req-filter-active":""}" data-filter="${a}">
+                ${t(n,s)}<span class="vap-n">${r}</span>
+            </button>`}).join("")},_refreshViolationApprovalsModalBody(e,t,i={}){const o=this._countViolationApprovalsByFilter(t.requests,"pending"),a=e.querySelector("#viol-approval-pending-count");a&&(a.textContent=t.loading?"\u2026":String(o)),this._updateViolationApprovalsHeaderBadge(t.requests);const n=e.querySelector("#vap-filters");n&&(n.innerHTML=this._renderViolationApprovalFilterBar(t));const s=e.querySelector("#vap-mine-summary");if(s){const l=(t.requests||[]).filter(d=>this._isCurrentViolationApprover(d)).length;l>0&&(t.filter==="pending"||t.filter==="all")?(s.hidden=!1,s.innerHTML=`<i class="fas fa-bell"></i> \u0644\u062F\u064A\u0643 ${l} \u0637\u0644\u0628 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F\u0643 \u2014 \u0638\u0627\u0647\u0631\u0629 \u0623\u0648\u0644\u0627\u064B \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629`):(s.hidden=!0,s.textContent="")}const r=e.querySelector("#vap-search-input");if(r&&r.value!==(t.query||"")&&(r.value=t.query||""),i.settings!==!1){const l=e.querySelector("#viol-approvals-settings-panel");if(l&&t.isAdmin){const d=document.createElement("div");d.innerHTML=this._buildViolationApprovalsSettingsHtml(t.settings,!0,t.allUsers);const p=d.firstElementChild;p&&l.replaceWith(p)}}const c=e.querySelector("#viol-approval-requests-list");c&&(c.innerHTML=this._buildViolationApprovalsRequestsHtml(t),this._wireViolationApprovalActions(e,t.isAdmin))},async _loadViolationApprovalsPanelData(e,t){try{const[i,o]=await Promise.all([this.fetchViolationApprovalRequests(t.filters),this.getViolationApprovalSettings()]);if(!e.isConnected)return;t.requests=Array.isArray(i)?i:[],t.settings=this._cloneViolationApprovalSettings(o),t.loading=!1,this._setCachedViolationApprovalRequests(t.requests,t.isAdmin,AppState.currentUser||{}),this._refreshViolationApprovalsModalBody(e,t)}catch(i){if(!e.isConnected)return;t.loading=!1;const o=e.querySelector("#viol-approval-requests-list");o&&(o.innerHTML=`<div class="vap-empty" style="color:#b91c1c;background:#fef2f2;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    ${this._t("module.violations.approvals.loadError","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u2014 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}
+                    <div style="margin-top:12px;"><button type="button" class="vap-btn" id="vap-retry-load" style="background:#0f172a;color:#fff;">${this._t("module.violations.approvals.retry","\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629")}</button></div>
+                </div>`),AppState.debugMode&&Utils.safeWarn("_loadViolationApprovalsPanelData:",i)}},_bindViolationApprovalsModalEvents(e){if(e._violApprovalsEventsBound)return;e._violApprovalsEventsBound=!0;const t=()=>e._violApprovalState,i=(a,n)=>this._t(a,n),o=()=>{document.removeEventListener("keydown",e._vapEsc),e.remove()};e._vapEsc=a=>{if(a.key==="Escape"){const n=e.querySelector("#vap-reject-sheet");if(n&&!n.hidden){n.hidden=!0;return}o()}},document.addEventListener("keydown",e._vapEsc),e.addEventListener("click",a=>{if(a.target===e){o();return}if(a.target.closest("#viol-approvals-close")){o();return}const n=a.target.closest("[data-vap-tab]");if(n){const d=n.getAttribute("data-vap-tab");e.querySelectorAll("[data-vap-tab]").forEach(p=>p.classList.toggle("is-active",p===n)),e.querySelectorAll("[data-vap-pane]").forEach(p=>{p.hidden=p.getAttribute("data-vap-pane")!==d});return}if(a.target.closest("#vap-retry-load")){const d=t();if(!d)return;d.loading=!0,this._refreshViolationApprovalsModalBody(e,d),this._loadViolationApprovalsPanelData(e,d);return}const s=a.target.closest(".viol-approver-up");if(s){const d=parseInt(s.getAttribute("data-idx"),10),p=t();if(!p||isNaN(d)||d<=0)return;const f=p.settings.defaultApprovers;[f[d-1],f[d]]=[f[d],f[d-1]],this._refreshViolationApprovalsModalBody(e,p);return}const r=a.target.closest(".viol-approver-down");if(r){const d=parseInt(r.getAttribute("data-idx"),10),p=t();if(!p||isNaN(d))return;const f=p.settings.defaultApprovers;if(d>=f.length-1)return;[f[d+1],f[d]]=[f[d],f[d+1]],this._refreshViolationApprovalsModalBody(e,p);return}const c=a.target.closest(".viol-remove-approver");if(c){const d=parseInt(c.getAttribute("data-idx"),10),p=t();if(!p||isNaN(d))return;p.settings.defaultApprovers.splice(d,1),this._refreshViolationApprovalsModalBody(e,p);return}const l=a.target.closest(".viol-req-filter");if(l){const d=t();if(!d)return;d.filter=l.getAttribute("data-filter")||"pending",this._refreshViolationApprovalsModalBody(e,d,{settings:!1});return}if(a.target.closest("#viol-add-approver-btn")){const d=t();if(!d)return;const p=e.querySelector("#viol-add-approver-select"),f=p?.value;if(!f){Notification.warning(i("module.violations.approvals.pickUser","\u0627\u062E\u062A\u0631 \u0645\u0633\u062A\u062E\u062F\u0645\u0627\u064B \u0623\u0648\u0644\u0627\u064B"));return}const m=p.options[p.selectedIndex],y={userId:f,userName:m?.dataset?.name||"",userEmail:m?.dataset?.email||"",role:m?.dataset?.role||""};if(d.settings.defaultApprovers.some(u=>u.userId===y.userId)){Notification.warning(i("module.violations.approvals.alreadyAdded","\u0647\u0630\u0627 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u0645\u0636\u0627\u0641 \u0628\u0627\u0644\u0641\u0639\u0644"));return}d.settings.defaultApprovers.push(y),this._refreshViolationApprovalsModalBody(e,d);return}if(a.target.closest("#viol-save-settings-btn")){const d=t();if(!d)return;const p=a.target.closest("#viol-save-settings-btn");if(p.disabled)return;p.disabled=!0;const m={requireApproval:e.querySelector("#viol-require-approval")?.checked===!0,defaultApprovers:d.settings.defaultApprovers,bypassRoles:d.settings.bypassRoles};this.saveViolationApprovalSettings(m).then(y=>{p.disabled=!1,y&&y.success?(d.settings=this._cloneViolationApprovalSettings(m),Notification.success(i("module.violations.approvals.saved","\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0628\u0646\u062C\u0627\u062D"))):Notification.error(y&&y.message||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A")}).catch(()=>{p.disabled=!1})}if(a.target.closest("#vap-reject-cancel")){const d=e.querySelector("#vap-reject-sheet");d&&(d.hidden=!0);return}}),e.addEventListener("input",a=>{if(a.target&&a.target.id==="vap-search-input"){const n=t();if(!n)return;n.query=a.target.value||"";const s=e.querySelector("#viol-approval-requests-list");s&&(s.innerHTML=this._buildViolationApprovalsRequestsHtml(n),this._wireViolationApprovalActions(e,n.isAdmin))}})},showViolationApprovalsManager(){this._ensureViolationApprovalsStyles();const e=(d,p)=>this._t(d,p),t=typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"?Permissions.isCurrentUserEffectiveAdmin():!1,i=AppState.currentUser||{},o=(AppState.appData?.users||[]).filter(d=>d&&(d.email||d.id||d.name)),a={userEmail:t?"":i.email||"",userId:t?"":i.id||""},n=this._getCachedViolationApprovalRequests(t,i),s={settings:this._getViolationApprovalSettingsSnapshot(),requests:n||[],isAdmin:t,allUsers:o,filters:a,loading:!n,filter:"pending",query:""},r=document.getElementById("viol-approvals-manager-modal");r&&(r._vapEsc&&document.removeEventListener("keydown",r._vapEsc),r.remove());const c=document.createElement("div");c.id="viol-approvals-manager-modal",c.className="modal modal-open",c.setAttribute("role","dialog"),c.setAttribute("aria-modal","true"),c.setAttribute("aria-labelledby","vap-title"),c.style.cssText="position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;";const l=s.loading?"\u2026":String(this._countViolationApprovalsByFilter(s.requests,"pending"));c.innerHTML=`
+            <div class="vap-shell" data-no-literal-translate>
+                <div class="vap-head">
+                    <div>
+                        <h3 id="vap-title">${e("module.violations.approvals.title","\u062F\u0627\u0626\u0631\u0629 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}</h3>
+                        <p>${e("module.violations.approvals.subtitle","\u0631\u0627\u062C\u0639 \u0627\u0644\u0637\u0644\u0628\u0627\u062A \u0628\u0627\u0644\u062A\u0631\u062A\u064A\u0628\u060C \u062B\u0645 \u0627\u0639\u062A\u0645\u062F \u0623\u0648 \u0627\u0631\u0641\u0636 \u0628\u0648\u0636\u0648\u062D")}</p>
+                    </div>
+                    <button type="button" id="viol-approvals-close" class="vap-close" aria-label="${e("module.violations.approvals.close","\u0625\u063A\u0644\u0627\u0642")}">\xD7</button>
+                </div>
+                ${t?`
+                <div class="vap-tabs" role="tablist">
+                    <button type="button" class="vap-tab is-active" data-vap-tab="inbox" role="tab">
+                        ${e("module.violations.approvals.tab.inbox","\u0627\u0644\u0637\u0644\u0628\u0627\u062A")}
+                        <span id="viol-approval-pending-count" class="vap-n" style="margin-inline-start:.35rem;opacity:.8;">${l}</span>
+                    </button>
+                    <button type="button" class="vap-tab" data-vap-tab="settings" role="tab">${e("module.violations.approvals.tab.settings","\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A")}</button>
+                </div>`:`<div class="vap-tabs"><span id="viol-approval-pending-count" hidden>${l}</span></div>`}
+                <div class="vap-body">
+                    <div data-vap-pane="inbox">
+                        <div class="vap-toolbar">
+                            <div class="vap-filters" id="vap-filters">${this._renderViolationApprovalFilterBar(s)}</div>
+                            <div class="vap-search">
+                                <i class="fas fa-search"></i>
+                                <input type="search" id="vap-search-input" placeholder="${e("module.violations.approvals.search","\u0628\u062D\u062B \u0628\u0627\u0644\u0627\u0633\u0645 \u0623\u0648 \u0627\u0644\u0646\u0648\u0639 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628\u2026")}" autocomplete="off">
+                            </div>
+                        </div>
+                        <div id="vap-mine-summary" class="vap-summary" hidden></div>
+                        <div id="viol-approval-requests-list">
+                            ${this._buildViolationApprovalsRequestsHtml(s)}
+                        </div>
+                    </div>
+                    ${t?`<div data-vap-pane="settings" hidden>${this._buildViolationApprovalsSettingsHtml(s.settings,t,o)}</div>`:""}
+                </div>
+                <div id="vap-reject-sheet" class="vap-sheet" hidden>
+                    <div class="vap-sheet-card">
+                        <h4 style="margin:0 0 6px;font-size:1rem;">${e("module.violations.approvals.rejectTitle","\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636")}</h4>
+                        <p style="margin:0 0 10px;font-size:.82rem;color:#64748b;">${e("module.violations.approvals.rejectHint","\u0627\u0643\u062A\u0628 \u0633\u0628\u0628\u0627\u064B \u0648\u0627\u0636\u062D\u0627\u064B \u064A\u0635\u0644 \u0644\u0645\u064F\u0633\u062C\u0651\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629.")}</p>
+                        <textarea id="vap-reject-reason" placeholder="${e("module.violations.approvals.rejectPlaceholder","\u0645\u062B\u0627\u0644: \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0646\u0627\u0642\u0635\u0629 \u0623\u0648 \u0627\u0644\u063A\u0631\u0627\u0645\u0629 \u063A\u064A\u0631 \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0644\u0627\u0626\u062D\u0629\u2026")}"></textarea>
+                        <div class="vap-actions" style="margin-top:12px;">
+                            <button type="button" id="vap-reject-cancel" class="vap-btn vap-btn-no">${e("module.violations.approvals.cancel","\u0625\u0644\u063A\u0627\u0621")}</button>
+                            <button type="button" id="vap-reject-confirm" class="vap-btn" style="background:#b91c1c;color:#fff;">${e("module.violations.approvals.rejectConfirm","\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0631\u0641\u0636")}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,document.body.appendChild(c),c._violApprovalState=s,c._violApprovalsEventsBound=!1,this._bindViolationApprovalsModalEvents(c),s.loading||this._wireViolationApprovalActions(c,t),this._loadViolationApprovalsPanelData(c,s)},_renderViolationApprovalRequests(e,t={}){const i=(o,a)=>this._t(o,a);return!e||e.length===0?`<div class="vap-empty">
+                <i class="fas fa-inbox"></i>
+                <div style="font-weight:800;color:#334155;">${i("module.violations.approvals.empty","\u0644\u0627 \u062A\u0648\u062C\u062F \u0637\u0644\u0628\u0627\u062A \u0641\u064A \u0647\u0630\u0627 \u0627\u0644\u062A\u0628\u0648\u064A\u0628")}</div>
+                <div style="margin-top:6px;font-size:.85rem;">${i("module.violations.approvals.emptyHint","\u0639\u0646\u062F \u062A\u0641\u0639\u064A\u0644 \u0627\u0644\u062F\u0627\u0626\u0631\u0629 \u0633\u062A\u0638\u0647\u0631 \u0647\u0646\u0627 \u0637\u0644\u0628\u0627\u062A \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0648\u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F\u0643.")}</div>
+            </div>`:e.map(o=>{const a=o.violationData||{},n=a.employeeName||a.contractorWorker||a.contractorName||"\u2014",s=String(o.status||"").toLowerCase(),r=s==="rejected"?"vap-badge-no":s==="pending"?"vap-badge-pending":"vap-badge-ok",l=i("module.violations.approvals.status."+(s==="committed"?"committed":s==="approved"?"approved":s==="rejected"?"rejected":"pending"),s),d=o.createdAt?typeof Utils.formatDateTime=="function"?Utils.formatDateTime(o.createdAt):String(o.createdAt):"\u2014",p=Array.isArray(o.approvers)?o.approvers:[],f=parseInt(o.currentApproverIndex,10)||0,m=this._isCurrentViolationApprover(o),y=this._canActOnViolationApproval(o,t.isAdmin),u=String(a.violationDetails||"").trim(),x=u.length>140?u.slice(0,140)+"\u2026":u,v=p.length>0?`
+                        <div style="font-size:.75rem;font-weight:700;color:#64748b;margin-bottom:6px;">${i("module.violations.approvals.circuit","\u0645\u0633\u0627\u0631 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F")}</div>
+                        <ol class="vap-steps">
+                            ${p.map((I,B)=>{const k=!!I.approved,_=!k&&B===f&&s==="pending",N=k?"is-done":_?"is-current":"is-wait",A=k?i("module.violations.approvals.doneStep","\u062A\u0645"):_?m?i("module.violations.approvals.yourTurn","\u062F\u0648\u0631\u0643 \u0627\u0644\u0622\u0646"):i("module.violations.approvals.waiting","\u0628\u0627\u0646\u062A\u0638\u0627\u0631 \u0627\u0639\u062A\u0645\u0627\u062F\u0647"):i("module.violations.approvals.queued","\u0627\u0644\u062A\u0627\u0644\u064A");return`<li class="vap-step ${N}">
+                                    <span class="vap-step-num">${k?"\u2713":B+1}</span>
+                                    <span>${Utils.escapeHTML(I.userName||I.userEmail||"?")} \xB7 ${A}</span>
+                                </li>`}).join("")}
+                        </ol>
+                    `:"";return`
+                <article class="vap-card${m?" is-mine":""}" data-request-id="${Utils.escapeHTML(String(o.id))}">
+                    ${m?`<div class="vap-mine-flag"><i class="fas fa-user-check"></i> ${i("module.violations.approvals.yourTurn","\u062F\u0648\u0631\u0643 \u0627\u0644\u0622\u0646 \u2014 \u0627\u0639\u062A\u0645\u062F \u0623\u0648 \u0627\u0631\u0641\u0636")}</div>`:""}
+                    <div class="vap-card-top">
+                        <div>
+                            <div class="vap-person">${Utils.escapeHTML(n)} \u2014 ${Utils.escapeHTML(a.violationType||"\u2014")}</div>
+                            <div class="vap-meta">${i("module.violations.approvals.requestNo","\u0631\u0642\u0645 \u0627\u0644\u0637\u0644\u0628")}: ${Utils.escapeHTML(String(o.id))} \xB7 ${i("module.violations.approvals.createdAt","\u0623\u064F\u0646\u0634\u0626")}: ${d} \xB7 ${i("module.violations.approvals.createdBy","\u0628\u0648\u0627\u0633\u0637\u0629")}: ${Utils.escapeHTML(o.createdByName||o.createdBy||"\u2014")}</div>
+                        </div>
+                        <span class="vap-badge ${r}">${l}</span>
+                    </div>
+                    <div class="vap-grid">
+                        <div><strong>${i("module.violations.approvals.site","\u0627\u0644\u0645\u0648\u0642\u0639")}:</strong> ${Utils.escapeHTML(a.violationLocation||"\u2014")}</div>
+                        <div><strong>${i("module.violations.approvals.place","\u0627\u0644\u0645\u0643\u0627\u0646")}:</strong> ${Utils.escapeHTML(a.violationPlace||"\u2014")}</div>
+                        <div><strong>${i("module.violations.approvals.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E")}:</strong> ${a.violationDate?new Date(a.violationDate).toLocaleDateString("ar-EG-u-nu-latn"):"\u2014"}</div>
+                        <div><strong>${i("module.violations.approvals.time","\u0627\u0644\u0648\u0642\u062A")}:</strong> ${Utils.escapeHTML(a.violationTime||"\u2014")}</div>
+                        <div><strong>${i("module.violations.approvals.severity","\u0627\u0644\u0634\u062F\u0629")}:</strong> ${Utils.escapeHTML(a.severity||"\u2014")}</div>
+                        <div><strong>${i("module.violations.approvals.fine","\u0627\u0644\u063A\u0631\u0627\u0645\u0629")}:</strong> ${a.fineAmount?Number(a.fineAmount).toLocaleString("en-US")+" \u062C.\u0645":"\u2014"}</div>
+                    </div>
+                    ${x?`<div style="font-size:.82rem;color:#475569;margin-bottom:10px;line-height:1.5;"><strong>${i("module.violations.approvals.details","\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644")}:</strong> ${Utils.escapeHTML(x)}</div>`:""}
+                    ${v}
+                    ${o.rejectionReason?`<div style="background:#fef2f2;border-inline-start:3px solid #dc2626;padding:8px 10px;border-radius:8px;font-size:.82rem;color:#7f1d1d;margin-bottom:8px;"><strong>${i("module.violations.approvals.rejectionReason","\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636")}:</strong> ${Utils.escapeHTML(o.rejectionReason)}</div>`:""}
+                    ${y?`
+                        <div class="vap-actions">
+                            <button type="button" class="vap-btn vap-btn-no viol-req-reject-btn" data-id="${Utils.escapeHTML(String(o.id))}">
+                                <i class="fas fa-times"></i> ${i("module.violations.approvals.reject","\u0631\u0641\u0636")}
+                            </button>
+                            <button type="button" class="vap-btn vap-btn-ok viol-req-approve-btn" data-id="${Utils.escapeHTML(String(o.id))}">
+                                <i class="fas fa-check"></i> ${i("module.violations.approvals.approve","\u0627\u0639\u062A\u0645\u0627\u062F")}
+                            </button>
+                        </div>
+                    `:""}
+                </article>
+            `}).join("")},_reloadViolationApprovalsInPlace(e){const t=e&&e._violApprovalState;if(t){this._invalidateViolationApprovalRequestsCache(),t.loading=!0,this._refreshViolationApprovalsModalBody(e,t,{settings:!1}),this._loadViolationApprovalsPanelData(e,t);try{this.load&&this.load()}catch{}}},_wireViolationApprovalActions(e,t){const i=(s,r)=>this._t(s,r),o=e.querySelector("#vap-reject-sheet"),a=e.querySelector("#vap-reject-reason"),n=e.querySelector("#vap-reject-confirm");e.querySelectorAll(".viol-req-approve-btn").forEach(s=>{s.addEventListener("click",async()=>{const r=s.getAttribute("data-id");if(!r)return;const l=(e._violApprovalState?.requests||[]).find(f=>String(f.id)===String(r)),d=!!(t&&l&&!this._isCurrentViolationApprover(l));s.disabled=!0,s.innerHTML='<i class="fas fa-spinner fa-spin"></i> '+i("module.violations.approvals.approving","\u062C\u0627\u0631\u064A \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u2026");const p=await this.approveViolationRequest(r,{force:d});p&&p.success?(Notification.success(p.message||i("module.violations.approvals.approve","\u0627\u0639\u062A\u0645\u0627\u062F")),this._reloadViolationApprovalsInPlace(e)):(Notification.error(p&&p.message||"\u0641\u0634\u0644 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F"),s.disabled=!1,s.innerHTML='<i class="fas fa-check"></i> '+i("module.violations.approvals.approve","\u0627\u0639\u062A\u0645\u0627\u062F"))})}),e.querySelectorAll(".viol-req-reject-btn").forEach(s=>{s.addEventListener("click",()=>{const r=s.getAttribute("data-id");!r||!o||(o.hidden=!1,o.dataset.requestId=r,a&&(a.value="",setTimeout(()=>a.focus(),30)))})}),n&&!n.dataset.bound&&(n.dataset.bound="1",n.addEventListener("click",async()=>{const s=o&&o.dataset.requestId,r=String(a?.value||"").trim();if(!s)return;if(!r){Notification.warning(i("module.violations.approvals.rejectRequired","\u0633\u0628\u0628 \u0627\u0644\u0631\u0641\u0636 \u0625\u0644\u0632\u0627\u0645\u064A")),a?.focus();return}n.disabled=!0;const c=await this.rejectViolationRequest(s,r);n.disabled=!1,c&&c.success?(o&&(o.hidden=!0),Notification.success(c.message||i("module.violations.approvals.reject","\u0631\u0641\u0636")),this._reloadViolationApprovalsInPlace(e)):Notification.error(c&&c.message||"\u0641\u0634\u0644 \u0627\u0644\u0631\u0641\u0636")}))},countPriorViolationsSamePersonMonth(e,t){const i=this.getViolationYearMonthKey(e.violationDate);if(i==null)return 0;const o=AppState.appData.violations||[];let a=0;for(let n=0;n<o.length;n++){const s=o[n];!s||t&&String(s.id)===String(t)||this.getViolationYearMonthKey(s.violationDate)===i&&this.sameViolationPersonForSequence(e,s)&&a++}return a},refreshViolationSequenceBadgeInModal(e,t){const i=e&&e.querySelector?e.querySelector("#violation-sequence-info"):null,o=e&&e.querySelector?e.querySelector("#violation-sequence-text"):null;if(!i||!o)return;const a=document.getElementById("violation-person-type")?.value,n=document.getElementById("violation-date")?.value;if(!a||!n){i.classList.add("hidden");return}const s={personType:a,violationDate:`${n}T12:00:00`};if(a==="employee"){if(s.employeeCode=document.getElementById("violation-employee-code")?.value.trim()||"",!s.employeeCode){i.classList.add("hidden");return}}else{const l=document.getElementById("violation-contractor-select");if(s.contractorName=(l?.value||"").trim(),s.contractorWorker=document.getElementById("violation-contractor-worker")?.value.trim()||"",!s.contractorName){i.classList.add("hidden");return}}const c=this.countPriorViolationsSamePersonMonth(s,t)+1;o.textContent=c<=1?"\u0623\u0648\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u0634\u0647\u0631 \u0644\u0647\u0630\u0627 \u0627\u0644\u0634\u062E\u0635 (\u064A\u064F\u062D\u0633\u0628 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0645\u0646 \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0646\u0641\u0633 \u0627\u0644\u0634\u062E\u0635 \u0648\u0646\u0641\u0633 \u0627\u0644\u0634\u0647\u0631).":`\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0631\u0642\u0645 ${c} \u0641\u064A \u0627\u0644\u0634\u0647\u0631 \u0644\u0646\u0641\u0633 \u0627\u0644\u0634\u062E\u0635.`,i.classList.remove("hidden")},_violationsImportNormalizeHeaderKey(e){return String(e??"").trim().replace(/\s+/g,"_").replace(/[^\w\u0600-\u06FF]/g,"").toLowerCase()},_violationsImportPick(e,t){const i={};Object.keys(e||{}).forEach(o=>{i[this._violationsImportNormalizeHeaderKey(o)]=e[o]});for(let o=0;o<t.length;o++){const a=this._violationsImportNormalizeHeaderKey(t[o]);if(i[a]!==void 0&&i[a]!==null&&String(i[a]).trim()!=="")return i[a]}return""},downloadViolationsImportTemplate(){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.");return}const e=["\u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635","\u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0633\u0645_\u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u062A\u0627\u0631\u064A\u062E_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0648\u0642\u062A_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0627\u0644\u0645\u0648\u0642\u0639","\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0627\u0644\u0634\u062F\u0629","\u0627\u0644\u062D\u0627\u0644\u0629","\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644","\u0627\u0644\u0627\u062C\u0631\u0627\u0621_\u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u063A\u0631\u0627\u0645\u0629"],t=["\u0645\u0648\u0638\u0641","12345","","","","\u062A\u0623\u062E\u0631 \u0639\u0646 \u0627\u0644\u0639\u0645\u0644","2026-05-01","08:30","\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A","\u062E\u0637 \u0627\u0644\u0625\u0646\u062A\u0627\u062C 1","\u0645\u062A\u0648\u0633\u0637\u0629","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629","\u0648\u0635\u0641 \u0645\u062E\u062A\u0635\u0631","\u0625\u0646\u0630\u0627\u0631 \u0634\u0641\u0647\u064A","100"],i=XLSX.utils.book_new(),o=XLSX.utils.aoa_to_sheet([e,t]);o["!cols"]=e.map(()=>({wch:18})),XLSX.utils.book_append_sheet(i,o,"\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A");const a=[["\u062A\u0639\u0644\u064A\u0645\u0627\u062A:"],['\u2022 \u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635: \u0627\u0643\u062A\u0628 "\u0645\u0648\u0638\u0641" \u0623\u0648 "\u0645\u0642\u0627\u0648\u0644".'],["\u2022 \u0644\u0644\u0645\u0648\u0638\u0641: \u0639\u0628\u0651\u0626 \u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0648\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A \u0648\u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629."],["\u2022 \u0644\u0644\u0645\u0642\u0627\u0648\u0644: \u0639\u0628\u0651\u0626 \u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0643\u0645\u0627 \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629 \u0648\u064A\u0645\u0643\u0646 \u062A\u0639\u0628\u0626\u0629 \u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644."],["\u2022 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0628\u0635\u064A\u063A\u0629 YYYY-MM-DD \u0623\u0648 \u062A\u0646\u0633\u064A\u0642 \u062A\u0627\u0631\u064A\u062E \u0625\u0643\u0633\u0644."]],n=XLSX.utils.aoa_to_sheet(a);XLSX.utils.book_append_sheet(i,n,"\u062A\u0639\u0644\u064A\u0645\u0627\u062A"),XLSX.writeFile(i,`\u0642\u0627\u0644\u0628_\u0627\u0633\u062A\u064A\u0631\u0627\u062F_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A_${new Date().toISOString().slice(0,10)}.xlsx`)},showViolationsImportModal(){const e=document.createElement("div");e.className="modal-overlay",e.innerHTML=`
+            <div class="modal-content" style="max-width: 720px;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2 text-green-600"></i>\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0646 Excel</h2>
+                    <button type="button" class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-900">
+                        <p class="m-0 mb-2"><i class="fas fa-download ml-2"></i>\u062D\u0645\u0651\u0644 \u0627\u0644\u0642\u0627\u0644\u0628 \u0627\u0644\u0641\u0627\u0631\u063A (\u0635\u0641 \u0639\u0646\u0627\u0648\u064A\u0646 + \u0635\u0641 \u0645\u062B\u0627\u0644)\u060C \u0639\u0628\u0651\u0626 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062B\u0645 \u0627\u0631\u0641\u0639 \u0627\u0644\u0645\u0644\u0641.</p>
+                        <button type="button" id="violations-import-download-template" class="btn-secondary btn-sm">
+                            <i class="fas fa-file-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0644\u0628 Excel
+                        </button>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0644\u0641 Excel (.xlsx)</label>
+                        <input type="file" id="violations-import-file" accept=".xlsx,.xls" class="form-input">
+                    </div>
+                    <div id="violations-import-preview" class="hidden text-sm text-gray-600 max-h-48 overflow-auto border rounded p-2 bg-gray-50"></div>
+                    <div class="flex justify-end gap-2 pt-2 border-t">
+                        <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">\u0625\u0644\u063A\u0627\u0621</button>
+                        <button type="button" id="violations-import-confirm" class="btn-primary" disabled>
+                            <i class="fas fa-upload ml-2"></i>\u062A\u0623\u0643\u064A\u062F \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F
+                        </button>
+                    </div>
+                </div>
+            </div>`,document.body.appendChild(e);let t=[];const i=e.querySelector("#violations-import-file"),o=e.querySelector("#violations-import-preview"),a=e.querySelector("#violations-import-confirm");e.querySelector("#violations-import-download-template")?.addEventListener("click",()=>this.downloadViolationsImportTemplate()),i?.addEventListener("change",async n=>{const s=n.target.files&&n.target.files[0];if(t=[],a.disabled=!0,o.classList.add("hidden"),!!s){if(typeof XLSX>"u"){Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629.");return}try{const r=await s.arrayBuffer(),c=XLSX.read(r,{type:"array"}),l=c.Sheets[c.SheetNames[0]],d=XLSX.utils.sheet_to_json(l,{defval:""});t=Array.isArray(d)?d:[],o.innerHTML=`<p>\u062A\u0645 \u0642\u0631\u0627\u0621\u0629 <strong>${t.length}</strong> \u0635\u0641\u0627\u064B \u0645\u0646 \u0627\u0644\u0648\u0631\u0642\u0629 \u0627\u0644\u0623\u0648\u0644\u0649 \xAB${Utils.escapeHTML(c.SheetNames[0]||"")}\xBB.</p>`,o.classList.remove("hidden"),a.disabled=t.length===0}catch(r){Utils.safeError("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A:",r),Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0645\u0644\u0641: "+(r.message||""))}}}),a?.addEventListener("click",async()=>{t.length&&(a.disabled=!0,await this.processViolationsImportRows(t,e))}),e.addEventListener("click",n=>{n.target===e&&e.remove()})},async processViolationsImportRows(e,t){let i=0,o=0;const a=[];Array.isArray(AppState.appData.violations)||(AppState.appData.violations=[]);let n=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),n=ViolationTypesManager.getAll()}catch{n=AppState.appData.violationTypes||[]}else n=AppState.appData.violationTypes||[];const s=new Map((n||[]).map(c=>[String(c.name||"").trim().toLowerCase(),c])),r=new Set;for(let c=0;c<e.length;c++){const l=e[c]||{},d=String(this._violationsImportPick(l,["\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationType"])||"").trim();d&&!s.has(d.toLowerCase())&&r.add(d)}if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.addType&&ViolationTypesManager.getTypeByName)try{ViolationTypesManager.ensureInitialized(),r.forEach(c=>{const l=c.toLowerCase();try{const d=ViolationTypesManager.addType({name:c,description:"",fineAmount:0});s.set(l,d)}catch{const p=ViolationTypesManager.getTypeByName(c);p&&s.set(l,p)}})}catch(c){Utils.safeWarn("\u0627\u0633\u062A\u064A\u0631\u0627\u062F: \u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0623\u0646\u0648\u0627\u0639 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062C\u062F\u064A\u062F\u0629 \u0645\u0646 \u0627\u0644\u0645\u0644\u0641:",c)}for(let c=0;c<e.length;c++){const l=e[c]||{};try{const p=String(this._violationsImportPick(l,["\u0646\u0648\u0639_\u0627\u0644\u0634\u062E\u0635","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635","personType","persontype"])||"").trim().toLowerCase(),f=p.includes("\u0645\u0642\u0627\u0648\u0644")||p==="contractor"?"contractor":"employee",m=String(this._violationsImportPick(l,["\u0627\u0644\u0643\u0648\u062F_\u0627\u0644\u0648\u0638\u064A\u0641\u064A","\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A","employeeCode","employeenumber","employeeNumber"])||"").trim(),y=String(this._violationsImportPick(l,["\u0627\u0633\u0645_\u0627\u0644\u0645\u0648\u0638\u0641","\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641","employeeName"])||"").trim(),u=String(this._violationsImportPick(l,["\u0627\u0633\u0645_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644","contractorName"])||"").trim(),x=String(this._violationsImportPick(l,["\u0639\u0627\u0645\u0644_\u0627\u0644\u0645\u0642\u0627\u0648\u0644","\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644","contractorWorker"])||"").trim(),v=String(this._violationsImportPick(l,["\u0646\u0648\u0639_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationType"])||"").trim(),I=this._violationsImportPick(l,["\u062A\u0627\u0631\u064A\u062E_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationDate","date"]),B=String(this._violationsImportPick(l,["\u0648\u0642\u062A_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationTime","time"])||"08:00"),k=String(this._violationsImportPick(l,["\u0627\u0644\u0645\u0648\u0642\u0639","violationLocation","location"])||"").trim(),_=String(this._violationsImportPick(l,["\u0645\u0643\u0627\u0646_\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629","violationPlace","place"])||"").trim(),N=String(this._violationsImportPick(l,["\u0627\u0644\u0634\u062F\u0629","severity"])||"\u0645\u062A\u0648\u0633\u0637\u0629").trim(),A=String(this._violationsImportPick(l,["\u0627\u0644\u062D\u0627\u0644\u0629","status"])||"\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629").trim(),S=String(this._violationsImportPick(l,["\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644","violationDetails","details"])||"").trim(),V=String(this._violationsImportPick(l,["\u0627\u0644\u0627\u062C\u0631\u0627\u0621_\u0627\u0644\u0645\u062A\u062E\u0630","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630","actionTaken","action"])||"").trim(),O=this._violationsImportPick(l,["\u0627\u0644\u063A\u0631\u0627\u0645\u0629","fineAmount","fine"]);if(!v||!I){o++,a.push(`\u0635\u0641 ${c+2}: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0623\u0648 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0646\u0627\u0642\u0635`);continue}if(f==="employee"&&!m){o++,a.push(`\u0635\u0641 ${c+2}: \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0645\u0637\u0644\u0648\u0628 \u0644\u0644\u0645\u0648\u0638\u0641`);continue}if(f==="contractor"&&!u){o++,a.push(`\u0635\u0641 ${c+2}: \u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0645\u0637\u0644\u0648\u0628`);continue}let H=I;if(typeof H=="number"&&typeof XLSX<"u"&&XLSX.SSF)try{const K=XLSX.SSF.parse_date_code(H);K&&(H=new Date(Date.UTC(K.y,K.m-1,K.d)).toISOString())}catch{}else if(typeof H=="string"&&/^\d{4}-\d{2}-\d{2}/.test(H.trim()))H=new Date(H.trim().slice(0,10)+"T12:00:00").toISOString();else{const K=new Date(H);H=isNaN(K.getTime())?new Date().toISOString():K.toISOString()}const R=s.get(v.toLowerCase()),h=R?String(R.id||""):"",C=this.parseFineAmount(O!==""&&O!==void 0?O:R?R.fineAmount:0),W={personType:f,violationDate:H,employeeCode:m,employeeNumber:m,employeeName:y,contractorName:u,contractorWorker:x},ot=this.countPriorViolationsSamePersonMonth(W,null)+1,at={id:Utils.generateId("VIOLATION"),isoCode:typeof generateISOCode=="function"?generateISOCode("VIOL",AppState.appData.violations):"VIOL-"+Date.now()+"-"+c,personType:f,employeeId:f==="employee"?Utils.generateId("EMP"):"",employeeName:f==="employee"?y:"",employeeCode:f==="employee"?m:"",employeeNumber:f==="employee"?m:"",employeePosition:"",employeeDepartment:"",contractorId:"",contractorName:f==="contractor"?u:"",contractorWorker:f==="contractor"?x:"",contractorPosition:"",contractorDepartment:"",violationTypeId:h,violationType:v,fineAmount:C,violationDate:H,violationTime:B.length>=5?B.slice(0,5):"08:00",violationLocation:k,violationLocationId:k,violationPlace:_,violationPlaceId:_,violationDetails:S,severity:N||"\u0645\u062A\u0648\u0633\u0637\u0629",actionTaken:V,status:A||"\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629",photo:"",violationSequenceInMonth:ot,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};AppState.appData.violations.push(this.normalizeViolationRecord(at)),i++}catch(d){o++,a.push(`\u0635\u0641 ${c+2}: ${d.message||d}`)}}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}if(GoogleIntegration.autoSave("Violations",AppState.appData.violations).catch(()=>{Notification.warning("\u062A\u0645 \u0627\u0644\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062D\u0644\u064A\u0627\u064B. \u0631\u0627\u062C\u0639 \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 \u0627\u0644\u0634\u064A\u062A \u0644\u0627\u062D\u0642\u0627\u064B.")}),typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureViolationsTypeIds)try{ViolationTypesManager.ensureViolationsTypeIds()}catch{}t&&t.parentNode&&t.remove(),Notification.success(`\u062A\u0645 \u0627\u0633\u062A\u064A\u0631\u0627\u062F ${i} \u0645\u062E\u0627\u0644\u0641\u0629${o?` (\u062A\u062E\u0637\u064A ${o})`:""}.`),a.length&&a.length<=5?a.forEach(c=>Utils.safeWarn(c)):a.length&&Utils.safeWarn("\u0627\u0633\u062A\u064A\u0631\u0627\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A: "+a.slice(0,5).join(" | ")+" ..."),this.load()},async load(){if(this._languageChangeListenerAdded||(document.addEventListener("language-changed",()=>{typeof AppState<"u"&&AppState._languageRefresh||this.load()}),this._languageChangeListenerAdded=!0),typeof Utils>"u"){const t=document.getElementById("violations-section");t&&(t.innerHTML=`
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
+                                <p class="text-gray-500 mb-4">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
+                                <button onclick="location.reload()" class="btn-primary">
+                                    <i class="fas fa-redo ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `);return}const e=document.getElementById("violations-section");if(!e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0642\u0633\u0645 violations-section \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}try{if(typeof AppState>"u"){Utils.safeError("\u274C AppState \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631. \u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629."),e.innerHTML=`
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-4xl text-red-400 mb-3"></i>
+                                <h3 class="text-lg font-semibold text-gray-800 mb-2">\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u062F\u064A\u0648\u0644</h3>
+                                <p class="text-gray-500 mb-4">\u064A\u0631\u062C\u0649 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629</p>
+                                <button onclick="location.reload()" class="btn-primary">
+                                    <i class="fas fa-redo ml-2"></i>\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0635\u0641\u062D\u0629
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;return}if(AppState.appData||(AppState.appData={}),AppState.appData.violations||(AppState.appData.violations=[]),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized)try{ViolationTypesManager.ensureInitialized()}catch(l){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u0647\u064A\u0626\u0629 ViolationTypesManager:",l)}else(!AppState.appData.violationTypes||!Array.isArray(AppState.appData.violationTypes))&&(AppState.appData.violationTypes=[]);const t=Array.isArray(AppState.appData.violations)&&AppState.appData.violations.length>0,i=(()=>{try{return localStorage.getItem("violations_last_sync")}catch{return null}})(),o=i?Date.now()-parseInt(i,10):1/0,a=600*1e3,n=o>=a,s=typeof GoogleIntegration<"u"&&GoogleIntegration.readFromSheets,r=AppState?.googleConfig?.appsScript?.enabled&&AppState?.googleConfig?.appsScript?.scriptUrl;if(!t&&s&&r)try{await this.ensureViolationsCoreDataLoaded({force:!0})}catch{}else n&&t&&s&&r&&this.ensureViolationsCoreDataLoaded({force:!0}).then(()=>{try{const l=document.getElementById("violations-stats-cards");l&&(l.outerHTML=this.renderAllViolationsStats());const d=document.getElementById("violations-list");d&&(d.innerHTML=this.renderViolationsList());const p=document.getElementById("violations-filters-container");p&&(p.innerHTML=this.renderFilters()),this.bindFilters()}catch{}});const c=(l,d)=>this._t(l,d);e.innerHTML=`
+            <div class="section-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); border-radius: 16px; padding: 24px 32px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div class="text-center w-full" style="flex-grow: 1; min-width: 200px;">
+                        <h1 class="section-title" style="color: white; font-size: 2rem; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.2); margin-bottom: 8px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-exclamation-triangle ml-3" style="font-size: 1.8rem;"></i>
+                            ${c("module.violations.title","\u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}
+                        </h1>
+                        <p class="section-subtitle" style="color: rgba(255,255,255,0.9); font-size: 1rem; margin: 0;">${c("module.violations.subtitle","\u062A\u0633\u062C\u064A\u0644 \u0648\u0645\u062A\u0627\u0628\u0639\u0629 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646")}</p>
+                    </div>
+                    <div class="flex flex-shrink-0 flex-wrap gap-2 justify-center">
+                        <button type="button" id="add-violation-btn" class="btn-primary" style="background: white; color: #dc2626; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.15); transition: all 0.3s ease;">
+                            <i class="fas fa-plus ml-2"></i>
+                            ${c("module.violations.btn.new","\u062A\u0633\u062C\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F\u0629")}
+                        </button>
+                        <button type="button" id="viol-approvals-btn" onclick="Violations.showViolationApprovalsManager()" style="background: rgba(255,255,255,0.18); color: #fff; border: 2px solid rgba(255,255,255,0.4); padding: 12px 18px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; position: relative;" title="${c("module.violations.btn.approvals","\u062F\u0627\u0626\u0631\u0629 \u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}">
+                            <i class="fas fa-clipboard-check ml-2"></i>
+                            ${c("module.violations.btn.approvals","\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F")}
+                            <span id="viol-approvals-pending-badge" class="vap-nav-badge" hidden></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6">
+                <!-- Tabs Navigation -->
+                <div class="tabs-container mb-4">
+                    <div class="tabs-nav" style="flex-wrap: nowrap; overflow-x: auto; overflow-y: visible; min-width: 0; width: 100%; max-width: 100%; box-sizing: border-box;">
+                        <button class="tab-btn active" data-tab="all" onclick="Violations.switchTab('all')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-list ml-2"></i>${c("module.violations.tab.all","\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}
+                        </button>
+                        <button class="tab-btn" data-tab="employees" onclick="Violations.switchTab('employees')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-user-tie ml-2"></i>${c("module.violations.tab.employees","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646")}
+                        </button>
+                        <button class="tab-btn" data-tab="contractors" onclick="Violations.switchTab('contractors')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-users-cog ml-2"></i>${c("module.violations.tab.contractors","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646")}
+                        </button>
+                        <button class="tab-btn" data-tab="analytics" onclick="Violations.switchTab('analytics')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-chart-bar ml-2"></i>${c("module.violations.tab.analytics","\u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}
+                        </button>
+                        <button class="tab-btn" data-tab="blacklist" onclick="Violations.switchTabAsync('blacklist')" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-user-slash ml-2"></i>${c("module.violations.tab.blacklist","\u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u2013 Blacklist")}
+                        </button>
+                        <button id="violations-btn-refresh" type="button" class="tab-btn" onclick="Violations.refreshModule()" title="${c("module.common.refresh","\u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}" style="flex-shrink: 0; min-width: fit-content; white-space: nowrap; width: auto; max-width: none;">
+                            <i class="fas fa-sync-alt ml-2"></i>${c("module.common.refresh","\u062A\u062D\u062F\u064A\u062B")}
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Tab Content -->
+                <div id="violations-tab-content">
+                    <div class="content-card" id="violations-list-tab">
+                    <div class="card-header">
+                        <h2 class="card-title"><i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h2>
+                    </div>
+                    <div class="card-body">
+                        ${this.renderAllViolationsStats()}
+                        <div id="violations-filters-container" class="mb-4">
+                            ${this.renderFilters()}
+                        </div>
+                        <div id="violations-list" class="violations-list-scroll">
+                            ${this.renderViolationsList()}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,this.setupEventListeners(),this._ensureViolationApprovalsStyles(),this._prefetchViolationApprovalPanelData(),Promise.resolve(this.ensureViolationsCoreDataLoaded({force:!1})).then(()=>{try{const l=document.getElementById("violations-stats-cards");l&&(l.outerHTML=this.renderAllViolationsStats());const d=document.getElementById("violations-list");d&&(d.innerHTML=this.renderViolationsList());const p=document.getElementById("violations-filters-container");p&&(p.innerHTML=this.renderFilters())}catch{}}).catch(()=>{})}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",t),e.innerHTML=`
+                <div class="section-header">
+                    <div>
+                        <h1 class="section-title">
+                            <i class="fas fa-exclamation-circle ml-3"></i>
+                            \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A
+                        </h1>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                <p class="text-gray-500 mb-4">\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p>
+                                <button onclick="Violations.load()" class="btn-primary">
+                                    <i class="fas fa-redo ml-2"></i>
+                                    \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `}},async ensureViolationsCoreDataLoaded({force:e=!1}={}){return this._violationsCoreLoadPromise&&!e?this._violationsCoreLoadPromise:(this._violationsCoreLoadPromise=(async()=>{if(typeof GoogleIntegration>"u"||!GoogleIntegration.readFromSheets||!(AppState?.googleConfig?.appsScript?.enabled&&AppState?.googleConfig?.appsScript?.scriptUrl))return;const[i,o]=await Promise.all([GoogleIntegration.readFromSheets("Violations").catch(()=>null),GoogleIntegration.readFromSheets("ViolationTypes").catch(()=>null)]);if(Array.isArray(i)){const a=i.map(s=>this.normalizeViolationRecord(s)).filter(Boolean),n=Array.isArray(AppState.appData.violations)?AppState.appData.violations:[];if(a.length===0&&n.length>0)Utils.safeWarn(`\u26A0\uFE0F \u062A\u062C\u0627\u0647\u0644 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0641\u0627\u0631\u063A\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645 \u2014 \u0627\u0644\u0625\u0628\u0642\u0627\u0621 \u0639\u0644\u0649 ${n.length} \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u062D\u0644\u064A\u0629`);else{const s=new Set(a.map(l=>l&&l.id).filter(Boolean)),r=Date.now()-300*1e3,c=n.filter(l=>!l||!l.id||s.has(l.id)?!1:new Date(l.createdAt||l.timestamp||0).getTime()>=r);AppState.appData.violations=c.length>0?[...c,...a]:a}}if(Array.isArray(o)){const a=Array.isArray(AppState.appData.violationTypes)?AppState.appData.violationTypes:[];if(o.length>0?AppState.appData.violationTypes=o:a.length===0&&(AppState.appData.violationTypes=[]),o.length>0||o.length===0&&a.length===0)try{AppState.syncMeta||(AppState.syncMeta={sheets:{},users:0,lastSyncTime:0,userEmail:null}),AppState.syncMeta.sheets||(AppState.syncMeta.sheets={}),AppState.syncMeta.sheets.ViolationTypes=Date.now()}catch{}}try{typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.ensureInitialized()}catch{}try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}if(typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch{}})().finally(()=>{this._violationsCoreLoadPromise=null}),this._violationsCoreLoadPromise)},renderViolationsList(){try{const e=this.getFilteredViolations();return!e||e.length===0?`<div class="empty-state"><p class="text-gray-500">${this.hasActiveFilters()?"\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0637\u0627\u0628\u0642\u0629 \u0644\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062D\u0627\u0644\u064A\u0629":"\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0633\u062C\u0644\u0629"}</p></div>`:`
+                <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641/\u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.85rem;">\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0634\u0647\u0631</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                                <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${e.map((t,i)=>`
+                                <tr style="background: ${i%2===0?"#ffffff":"#fef2f2"}; transition: all 0.2s ease;" onmouseover="this.style.background='#fee2e2'" onmouseout="this.style.background='${i%2===0?"#ffffff":"#fef2f2"}'">
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 500;">
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <i class="fas ${t.employeeName?"fa-user-tie":"fa-hard-hat"}" style="color: ${t.employeeName?"#3b82f6":"#f59e0b"};"></i>
+                                            ${Utils.escapeHTML(t.employeeName||t.contractorName||"-")}
+                                        </div>
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
+                                        ${Utils.escapeHTML(t.violationType||"-")}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-weight: 600; color: #166534;">
+                                        ${this.formatFineAmount(Number(t.fineAmount||0))}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #6b7280;">
+                                        ${Utils.escapeHTML(t.violationLocation||"-")}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
+                                        ${t.violationDate?Utils.formatDate(t.violationDate):"-"}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca; font-size: 0.85rem; color: #92400e;">
+                                        ${t.violationSequenceInMonth!=null&&t.violationSequenceInMonth!==""?Utils.escapeHTML(String(t.violationSequenceInMonth)):"\u2014"}
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
+                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"linear-gradient(135deg, #ef4444, #dc2626)":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"linear-gradient(135deg, #f59e0b, #d97706)":"linear-gradient(135deg, #3b82f6, #2563eb)"}; color: white; box-shadow: 0 2px 6px ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"rgba(239,68,68,0.3)":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"rgba(245,158,11,0.3)":"rgba(59,130,246,0.3)"};">
+                                            ${t.severity||"-"}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
+                                        <span style="display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background: ${t.status==="\u0645\u062D\u0644\u0648\u0644"?"linear-gradient(135deg, #10b981, #059669)":t.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"linear-gradient(135deg, #6366f1, #4f46e5)":"linear-gradient(135deg, #f59e0b, #d97706)"}; color: white;">
+                                            ${t.status||"-"}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 14px 12px; text-align: center; border-bottom: 1px solid #fecaca;">
+                                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(59,130,246,0.3);" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="\u062A\u0639\u062F\u064A\u0644">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(t.id)}, this)' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0645\u0628\u0627\u0634\u0631\u0629" aria-label="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF">
+                                                <i class="fas fa-file-download"></i>
+                                            </button>
+                                            <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(239,68,68,0.3);" title="\u062D\u0630\u0641">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            `}catch(e){return typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A renderViolationsList:",e),'<div class="empty-state"><p class="text-gray-500">\u062D\u062F\u062B \u062E\u0637\u0623 \u0641\u064A \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</p></div>'}},updateAllViolationsStats(){try{const e=document.getElementById("violations-stats-cards");if(!e)return;const t=document.createElement("div");t.innerHTML=this.renderAllViolationsStats();const i=t.querySelector("#violations-stats-cards");i&&e.replaceWith(i)}catch(e){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062A\u062D\u062F\u064A\u062B \u0643\u0631\u0648\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0641\u0648\u0631\u064A:",e)}},renderAllViolationsStats(){const e=this.getFilteredViolations(),t=e.length,i=e.filter(n=>n&&(n.personType==="employee"||!!n.employeeName&&!n.contractorName)).length,o=e.filter(n=>n&&(n.personType==="contractor"||!!n.contractorName)).length,a=e.reduce((n,s)=>{const r=Number(s?.fineAmount||0);return n+(Number.isFinite(r)&&r>0?r:0)},0);return`
+            <div id="violations-stats-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+                <div class="stat-card" style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 1px solid #fca5a5;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</p>
+                            <p class="text-2xl font-bold text-red-700">${t}</p>
+                        </div>
+                        <i class="fas fa-list text-red-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); border: 1px solid #86efac;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629</p>
+                            <p class="text-2xl font-bold text-green-700">${this.formatFineAmount(a)}</p>
+                        </div>
+                        <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border: 1px solid #93c5fd;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646</p>
+                            <p class="text-2xl font-bold text-blue-700">${i}</p>
+                        </div>
+                        <i class="fas fa-user-tie text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%); border: 1px solid #fdba74;">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="stat-label">\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</p>
+                            <p class="text-2xl font-bold text-orange-700">${o}</p>
+                        </div>
+                        <i class="fas fa-users-cog text-orange-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        `},hasActiveFilters(){const e=this.currentFilters||{};return!!(e.search||e.personType||e.violationType||e.severity||e.status)},getViolationsPermissions(e=AppState.currentUser){if(!e)return{viewDepartmentOnly:!0,viewAll:!1};if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin(e))return{viewDepartmentOnly:!1,viewAll:!0};const t=e.permissions||{},i=typeof Permissions<"u"&&typeof Permissions.normalizePermissions=="function"?Permissions.normalizePermissions(t):t,a=(i&&i.violationsPermissions||{})["violations-view-all"]===!0;return{viewDepartmentOnly:!a,viewAll:a}},isDepartmentMatch(e,t){if(!e||!t)return!1;const i=n=>String(n).trim().toLowerCase().replace(/^(إدارة|قسم)\s+/,"").replace(/\s+/g," "),o=i(e),a=i(t);return o===a||o.includes(a)||a.includes(o)},isViolationVisibleToCurrentUser(e){if(!e)return!1;const t=this.normalizeViolationRecord(e);if(!t)return!1;if(typeof Permissions<"u"&&typeof Permissions.isCurrentUserEffectiveAdmin=="function"&&Permissions.isCurrentUserEffectiveAdmin()||this.getViolationsPermissions().viewAll)return!0;if(t.personType==="employee"||!!String(t.employeeName||"").trim()){const a=String(AppState.currentUser?.department||"").trim();let n=String(t.employeeDepartment||"").trim();if(!n&&(t.employeeId||t.employeeCode||t.employeeName)){const s=AppState.appData?.employees||[],r=String(t.employeeId||t.employeeCode||t.employeeName).trim().toLowerCase(),c=s.find(l=>{if(!l)return!1;const d=String(l.id||l.employeeId||l.code||"").trim().toLowerCase(),p=String(l.name||l.employeeName||"").trim().toLowerCase();return d&&d===r||p&&p===r});c&&(n=String(c.department||c.section||"").trim())}return!a||!n?!1:this.isDepartmentMatch(a,n)}return!0},getFilteredViolations(){try{if(typeof AppState>"u"||!AppState.appData)return[];const e=(AppState.appData.violations||[]).map(c=>{const l=this.normalizeViolationRecord(c);if(!l)return null;const d=this.getEffectiveFineAmount(l);return d===l.fineAmount?l:{...l,fineAmount:d}}).filter(Boolean).filter(c=>this.isViolationVisibleToCurrentUser(c)),t=this.currentFilters||{},i=String(t.search||"").trim().toLowerCase(),o=t.personType||"",a=(t.violationType||"").toLowerCase(),n=t.severity||"",s=t.status||"";let r=[];if(i&&typeof Utils<"u"&&typeof Utils.findApprovedContractorByTerm=="function"){const c=[...AppState?.appData?.approvedContractors||[],...AppState?.appData?.contractors||[]].filter(Boolean),l=Utils.findApprovedContractorByTerm(i,c);r=(l.matches&&l.matches.length>0?l.matches:l.contractor?[l.contractor]:[]).map(p=>Utils.buildContractorIdentityMatcher(p,i))}return e.filter(c=>{if(!c||o==="employee"&&!c.employeeName&&c.personType!=="employee"||o==="contractor"&&!c.contractorName&&!c.contractorCode&&!c.contractorId&&c.personType!=="contractor"||a&&(c.violationType||"").trim().toLowerCase()!==a||n&&(c.severity||"")!==n||s&&(c.status||"")!==s)return!1;if(i){let l=!1;if(r.length>0&&r.some(d=>d.violationBelongsToContractor(c))&&(l=!0),l||(l=Object.values(c||{}).map(p=>String(p??"").toLowerCase()).join(" ").includes(i)),!l)return!1}return!0})}catch(e){return typeof Utils<"u"&&Utils.safeError&&Utils.safeError("\u062E\u0637\u0623 \u0641\u064A getFilteredViolations:",e),[]}},renderFilters(e=""){const t=this.currentFilters||{};e&&(t.personType=e);let i=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),i=ViolationTypesManager.getAll()}catch(a){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",a),i=[]}else i=typeof AppState<"u"&&AppState?.appData?.violationTypes?AppState.appData.violationTypes:[];const o=i.map(a=>`
+            <option value="${Utils.escapeHTML(a.name)}" ${t.violationType===a.name?"selected":""}>
+                ${Utils.escapeHTML(a.name)}
+            </option>
+        `).join("");return`
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 12px;">
+                <div style="display:grid; grid-template-columns: minmax(170px, 0.9fr) repeat(4, minmax(140px, 1fr)) minmax(150px, 0.9fr); gap: 10px; align-items:end;">
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-search" style="font-size:12px; font-weight:700; color:#4a5568;">\u0628\u062D\u062B</label>
+                        <div class="relative">
+                            <input type="text" id="violations-filter-search" class="form-input pr-10" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;" placeholder="\u0628\u062D\u062B..." value="${Utils.escapeHTML(t.search||"")}">
+                            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 pointer-events-none"></i>
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-person" style="font-size:12px; font-weight:700; color:#4a5568;">\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635</label>
+                        <select id="violations-filter-person" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${t.personType===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0634\u062E\u0627\u0635</option>
+                            <option value="employee" ${t.personType==="employee"?"selected":""}>\u0627\u0644\u0645\u0648\u0638\u0641\u0648\u0646</option>
+                            <option value="contractor" ${t.personType==="contractor"?"selected":""}>\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u0648\u0646</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-type" style="font-size:12px; font-weight:700; color:#4a5568;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</label>
+                        <select id="violations-filter-type" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${t.violationType===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u0623\u0646\u0648\u0627\u0639</option>
+                            ${o}
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-severity" style="font-size:12px; font-weight:700; color:#4a5568;">\u0627\u0644\u0634\u062F\u0629</label>
+                        <select id="violations-filter-severity" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${t.severity===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u062F\u0631\u062C\u0627\u062A</option>
+                            <option value="\u0639\u0627\u0644\u064A\u0629" ${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                            <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                            <option value="\u0645\u0646\u062E\u0636\u0629" ${t.severity==="\u0645\u0646\u062E\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label for="violations-filter-status" style="font-size:12px; font-weight:700; color:#4a5568;">\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                        <select id="violations-filter-status" class="form-input" style="width:100%; font-size:13px; border:1px solid #d1d5db; border-radius:8px;">
+                            <option value="" ${t.status===""?"selected":""}>\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0627\u0644\u0627\u062A</option>
+                            <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${t.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                            <option value="\u0645\u062D\u0644\u0648\u0644" ${t.status==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                            <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${t.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <label style="font-size:12px; font-weight:700; color:#4a5568;">&nbsp;</label>
+                        <button type="button" id="violations-filter-reset" style="width:100%; height:42px; border:none; border-radius:8px; background:linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; font-size:13px; font-weight:700; cursor:pointer;">
+                            <i class="fas fa-undo ml-2"></i>\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u062A\u0639\u064A\u064A\u0646
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `},bindFilters(){const e=document.getElementById("violations-filter-search"),t=document.getElementById("violations-filter-person"),i=document.getElementById("violations-filter-type"),o=document.getElementById("violations-filter-severity"),a=document.getElementById("violations-filter-status"),n=document.getElementById("violations-filter-reset");e&&(e.value=this.currentFilters.search||"",e.oninput=()=>{this.currentFilters.search=e.value||"",this.refreshViolationsView({skipFilterRerender:!0})}),t&&(t.value=this.currentFilters.personType||"",t.onchange=()=>{this.currentFilters.personType=t.value,this.refreshViolationsView()}),i&&(i.value=this.currentFilters.violationType||"",i.onchange=()=>{this.currentFilters.violationType=i.value,this.refreshViolationsView()}),o&&(o.value=this.currentFilters.severity||"",o.onchange=()=>{this.currentFilters.severity=o.value,this.refreshViolationsView()}),a&&(a.value=this.currentFilters.status||"",a.onchange=()=>{this.currentFilters.status=a.value,this.refreshViolationsView()}),n&&(n.onclick=()=>{this.currentFilters={search:"",personType:"",violationType:"",severity:"",status:""},this.refreshViolationsView()})},refreshViolationsView(e={}){const t=!!e.skipFilterRerender,i=document.getElementById("violations-list");if(i)switch(document.querySelector(".tab-btn.active")?.dataset.tab||"all"){case"employees":i.innerHTML=this.renderEmployeeViolationsList();break;case"contractors":i.innerHTML=this.renderContractorViolationsList();break;case"analytics":return;default:i.innerHTML=this.renderViolationsList()}const o=document.getElementById("violations-stats-cards");o&&(o.outerHTML=this.renderAllViolationsStats());const a=document.getElementById("violations-filters-container");if(a&&!t){const n=document.querySelector(".tab-btn.active")?.dataset.tab||"all",s=n==="employees"?"employee":n==="contractors"?"contractor":"";a.innerHTML=this.renderFilters(s)}t||this.bindFilters()},setupEventListeners(){setTimeout(()=>{const e=document.getElementById("add-violation-btn");e&&e.addEventListener("click",()=>this.showViolationForm()),this.bindFilters()},100)},async switchTab(e){document.querySelectorAll(".tab-btn").forEach(a=>{a.classList.remove("active"),a.dataset.tab===e&&a.classList.add("active"),a.style.flexShrink||(a.style.setProperty("flex-shrink","0","important"),a.style.setProperty("min-width","fit-content","important"),a.style.setProperty("white-space","nowrap","important"),a.style.setProperty("width","auto","important"),a.style.setProperty("max-width","none","important"))});const i=document.querySelector(".tabs-nav");i&&!i.style.flexWrap&&(i.style.setProperty("flex-wrap","nowrap","important"),i.style.setProperty("overflow-x","auto","important"),i.style.setProperty("overflow-y","visible","important"));const o=document.getElementById("violations-tab-content");if(o)switch(e){case"all":o.innerHTML=`
+                    <div class="content-card" id="violations-list-tab">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h2>
+                        </div>
+                        <div class="card-body">
+                            ${this.renderAllViolationsStats()}
+                            <div id="violations-filters-container" class="mb-4">
+                                ${this.renderFilters()}
+                            </div>
+                            <div id="violations-list">
+                                ${this.renderViolationsList()}
+                            </div>
+                        </div>
+                    </div>
+                `,this.bindFilters();break;case"employees":o.innerHTML=`
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-user-tie ml-2"></i>\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646</h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="violations-filters-container" class="mb-4">
+                                ${this.renderFilters("employee")}
+                            </div>
+                            <div id="violations-list">
+                                ${this.renderEmployeeViolationsList()}
+                            </div>
+                        </div>
+                    </div>
+                `,this.bindFilters();break;case"contractors":o.innerHTML=`
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</h2>
+                        </div>
+                        <div class="card-body">
+                            <div id="violations-filters-container" class="mb-4">
+                                ${this.renderFilters("contractor")}
+                            </div>
+                            <div class="mb-4 flex items-center justify-end">
+                                <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
+                                    <i class="fas fa-file-export ml-2"></i>\u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
+                                </button>
+                            </div>
+                            <div id="violations-list">
+                                ${this.renderContractorViolationsList()}
+                            </div>
+                        </div>
+                    </div>
+                `,this.bindFilters();break;case"analytics":o.innerHTML=this.renderAnalyticsTab(),setTimeout(()=>{this.updateViolationAnalytics(),this._vBindAnalyticsEvents()},80);break;case"blacklist":o.innerHTML=this.renderBlacklistTab(),this.setupBlacklistEventListeners(),this.loadBlacklistDataAsync().then(()=>{this.refreshBlacklistDisplay()}).catch(a=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist:",a)});break}},async switchTabAsync(e){try{await this.switchTab(e)}catch(t){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062A\u0628\u062F\u064A\u0644 \u0625\u0644\u0649 \u0627\u0644\u062A\u0628\u0648\u064A\u0628:",t)}},refreshModule(){const e=document.getElementById("violations-btn-refresh");if(e){e.disabled=!0;const i=e.querySelector("i.fa-sync-alt");i&&i.classList.add("fa-spin")}const t=typeof this.load=="function"?this.load():Promise.resolve();Promise.resolve(t).finally(()=>{const i=document.getElementById("violations-btn-refresh");if(i){i.disabled=!1;const o=i.querySelector("i.fa-sync-alt");o&&o.classList.remove("fa-spin")}})},renderEmployeeViolationsList(){const e=this.getFilteredViolations().filter(t=>t.employeeName||t.personType==="employee"||!t.contractorName&&t.employeeName);return e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0644\u0645\u0648\u0638\u0641\u064A\u0646</p></div>':`
+            <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${e.map(t=>`
+                        <tr>
+                            <td>${Utils.escapeHTML(t.employeeName||"")}</td>
+                            <td>${Utils.escapeHTML(t.employeeCode||t.employeeNumber||"-")}</td>
+                            <td>${Utils.escapeHTML(t.violationType||"")}</td>
+                            <td>${t.violationDate?Utils.formatDate(t.violationDate):"-"}</td>
+                            <td>
+                                <span class="badge badge-${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"warning":"info"}">
+                                    ${t.severity||"-"}
+                                </span>
+                            </td>
+                            <td>${Utils.escapeHTML(t.actionTaken||"")}</td>
+                            <td>
+                                <span class="badge badge-${t.status==="\u0645\u062D\u0644\u0648\u0644"?"success":"warning"}">
+                                    ${t.status||"-"}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+            </div>
+        `},renderContractorViolationsList(){const e=this.getFilteredViolations().filter(t=>t.contractorName||t.contractorCode||t.contractorId||t.personType==="contractor");return e.length===0?'<div class="empty-state"><p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0644\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</p></div>':`
+            <div class="table-responsive" style="border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);">
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0634\u062F\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                        <th style="color: white; font-weight: 600; padding: 16px 12px; text-align: center; font-size: 0.9rem;">\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${e.map(t=>`
+                        <tr>
+                            <td>${Utils.escapeHTML(t.contractorName||"")}</td>
+                            <td>${Utils.escapeHTML(t.violationType||"")}</td>
+                            <td>${t.violationDate?Utils.formatDate(t.violationDate):"-"}</td>
+                            <td>
+                                <span class="badge badge-${t.severity==="\u0639\u0627\u0644\u064A\u0629"?"danger":t.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"warning":"info"}">
+                                    ${t.severity||"-"}
+                                </span>
+                            </td>
+                            <td>${Utils.escapeHTML(t.actionTaken||"")}</td>
+                            <td>
+                                <span class="badge badge-${t.status==="\u0645\u062D\u0644\u0648\u0644"?"success":"warning"}">
+                                    ${t.status||"-"}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick='Violations.viewViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-primary" title="\u0639\u0631\u0636">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(t.id)}, this)' class="btn-icon violation-report-download-btn" title="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0645\u0628\u0627\u0634\u0631\u0629" aria-label="\u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 PDF" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;border:1px solid rgba(4,120,87,.25);box-shadow:0 4px 10px rgba(5,150,105,.24);">
+                                        <i class="fas fa-file-download"></i>
+                                    </button>
+                                    <button type="button" onclick='Violations.deleteViolation(${this._escapeIdForHandler(t.id)})' class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join("")}
+                </tbody>
+            </table>
+            </div>
+        `},getContractorViolationsExportOptions(){const e=new Map,t=(i,o,a="")=>{const n=String(o||"").replace(/\s+/g," ").trim();if(!n)return;const s=this._normalizeContractorExportName(n);!s||e.has(s)||e.set(s,{id:String(i||a||n).trim(),name:n,code:String(a||"").trim()})};return typeof Contractors<"u"&&typeof Contractors.getContractorOptionsForModules=="function"?Contractors.getContractorOptionsForModules({includeSuppliers:!0,approvedOnly:!1}).forEach(i=>t(i.id,i.name,i.code)):((AppState.appData?.contractors||[]).forEach(i=>{t(i.id||i.contractorId,i.name||i.companyName,i.code||i.contractorCode||i.isoCode)}),(AppState.appData?.approvedContractors||[]).forEach(i=>{t(i.id||i.contractorId,i.companyName||i.name,i.code||i.contractorCode)})),(AppState.appData?.violations||[]).forEach(i=>{i?.contractorName&&t(i.contractorId,i.contractorName,i.contractorCode||i.code||i.isoCode)}),Array.from(e.values()).sort((i,o)=>i.name.localeCompare(o.name,"ar",{sensitivity:"base"}))},_normalizeContractorExportName(e){const t=String(e||"").replace(/\s+/g," ").trim();if(!t)return"";const i=t.indexOf(" - "),o=i>0?t.slice(0,i).trim():t;return this._normKeyStr(o)},_buildContractorExportMatcher(e="",t="",i=""){const o=String(e||"").trim(),a=String(t||"").trim(),n=String(i||"").trim();if(!o&&!a&&!n)return null;let s=null;typeof Contractors<"u"&&typeof Contractors.resolveContractorForAnalytics=="function"&&(s=Contractors.resolveContractorForAnalytics(o||n,a));const r=o||n||a,c=s||{id:o,name:a,companyName:a,code:n,contractorCode:n};if(typeof Utils<"u"&&typeof Utils.buildContractorIdentityMatcher=="function")return Utils.buildContractorIdentityMatcher(c,r);if(typeof Contractors<"u"&&typeof Contractors.buildContractorAnalyticsMatchers=="function")return Contractors.buildContractorAnalyticsMatchers(c,r);const l=this._normalizeContractorExportName(a||o),d=new Set([o,n].filter(Boolean).map(p=>String(p).trim().toLowerCase()));return{violationBelongsToContractor:p=>{if(!p||!(p.personType==="contractor"||!!String(p.contractorName||"").trim()))return!1;const m=this._normalizeContractorExportName(p.contractorName),y=String(p.contractorId||p.contractorCode||p.code||"").trim().toLowerCase();return y&&d.has(y)?!0:!!l&&m===l}}},showContractorViolationsReportDialog(){const e=this.getContractorViolationsExportOptions(),t=new Date,i=t.getFullYear(),o=[];for(let p=0;p<24;p++){const f=new Date(i,t.getMonth()-p,1),m=f.getFullYear(),y=f.getMonth()+1,u=`${m}-${String(y).padStart(2,"0")}`,x=f.toLocaleDateString("ar-SA-u-nu-latn",{year:"numeric",month:"long"});o.push({value:u,label:x})}const a=document.createElement("div");a.className="modal-overlay",a.innerHTML=`
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-file-export ml-2"></i>
+                        \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
+                    </h2>
+                    <button class="modal-close" title="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-building ml-2"></i>
+                            \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644
+                        </label>
+                        <select id="contractor-violations-report-select" class="form-input">
+                            <option value="">\u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</option>
+                            ${e.map(p=>`
+                                <option value="${Utils.escapeHTML(String(p.id??"").trim())}" data-contractor-name="${Utils.escapeHTML(p.name||"")}" data-contractor-code="${Utils.escapeHTML(p.code||"")}">
+                                    ${Utils.escapeHTML(p.name||"\u0628\u062F\u0648\u0646 \u0627\u0633\u0645")}
+                                </option>
+                            `).join("")}
+                        </select>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            \u0627\u062E\u062A\u0631 \u0645\u0642\u0627\u0648\u0644\u0627\u064B \u0645\u062D\u062F\u062F\u0627\u064B \u0644\u0639\u0631\u0636 \u062A\u0642\u0631\u064A\u0631\u0647 \u0641\u0642\u0637\u060C \u0623\u0648 \u0627\u062A\u0631\u0643\u0647 \u0641\u0627\u0631\u063A\u0627\u064B \u0644\u0639\u0631\u0636 \u062C\u0645\u064A\u0639 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646
+                        </p>
+                    </div>
+
+                    <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-calendar-alt ml-2"></i>
+                            \u0641\u062A\u0631\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631
+                        </label>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-all" name="contractor-violations-range-type" value="all" class="ml-2" checked>
+                                <label for="contractor-violations-range-all" class="text-sm text-gray-700 cursor-pointer">\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-month" name="contractor-violations-range-type" value="month" class="ml-2">
+                                <label for="contractor-violations-range-month" class="text-sm text-gray-700 cursor-pointer mr-2">\u0634\u0647\u0631 \u0645\u062D\u062F\u062F</label>
+                                <select id="contractor-violations-report-month" class="form-input flex-1" disabled style="max-width: 300px;">
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0634\u0647\u0631</option>
+                                    ${o.map(p=>`<option value="${p.value}">${p.label}</option>`).join("")}
+                                </select>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-range-custom" name="contractor-violations-range-type" value="custom" class="ml-2">
+                                <label for="contractor-violations-range-custom" class="text-sm text-gray-700 cursor-pointer mr-2">\u0641\u062A\u0631\u0629 \u0645\u062D\u062F\u062F\u0629</label>
+                                <div class="flex items-center gap-2 flex-1" style="max-width: 400px;">
+                                    <input type="date" id="contractor-violations-report-from-date" class="form-input flex-1" disabled>
+                                    <span class="text-sm text-gray-600">\u0625\u0644\u0649</span>
+                                    <input type="date" id="contractor-violations-report-to-date" class="form-input flex-1" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="border-top: 1px solid #E5E7EB; padding-top: 16px; margin-top: 16px;">
+                        <label class="block text-sm font-semibold text-gray-700 mb-3">
+                            <i class="fas fa-file ml-2"></i>
+                            \u0635\u064A\u063A\u0629 \u0627\u0644\u062A\u0635\u062F\u064A\u0631
+                        </label>
+                        <div class="flex flex-wrap items-center gap-4">
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-format-pdf" name="contractor-violations-export-format" value="pdf" class="ml-2" checked>
+                                <label for="contractor-violations-format-pdf" class="text-sm text-gray-700 cursor-pointer">
+                                    <i class="fas fa-file-pdf text-red-600 ml-1"></i>PDF
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="radio" id="contractor-violations-format-excel" name="contractor-violations-export-format" value="excel" class="ml-2">
+                                <label for="contractor-violations-format-excel" class="text-sm text-gray-700 cursor-pointer">
+                                    <i class="fas fa-file-excel text-green-600 ml-1"></i>Excel (.xlsx)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" data-action="close">\u0625\u0644\u063A\u0627\u0621</button>
+                    <button type="button" class="btn-primary" id="generate-contractor-violations-report-btn">
+                        <i class="fas fa-file-export ml-2"></i>
+                        \u0625\u0646\u0634\u0627\u0621 \u0627\u0644\u062A\u0642\u0631\u064A\u0631
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(a);const n=()=>a.remove();a.querySelector(".modal-close")?.addEventListener("click",n),a.querySelector('[data-action="close"]')?.addEventListener("click",n),a.addEventListener("click",p=>{p.target===a&&n()});const s=a.querySelectorAll('input[name="contractor-violations-range-type"]'),r=a.querySelector("#contractor-violations-report-month"),c=a.querySelector("#contractor-violations-report-from-date"),l=a.querySelector("#contractor-violations-report-to-date"),d=()=>{const p=a.querySelector('input[name="contractor-violations-range-type"]:checked')?.value||"all";r.disabled=p!=="month",r.required=p==="month",c.disabled=p!=="custom",c.required=p==="custom",l.disabled=p!=="custom",l.required=p==="custom"};s.forEach(p=>p.addEventListener("change",d)),a.querySelector("#generate-contractor-violations-report-btn")?.addEventListener("click",async()=>{const p=a.querySelector("#contractor-violations-report-select"),f=p&&p.selectedIndex>=0?p.options[p.selectedIndex]:null,m=p?.selectedIndex===0,y=!m&&f?.value?String(f.value).trim():"",u=!m&&f?.dataset?.contractorName?String(f.dataset.contractorName).trim():"",x=!m&&f?.dataset?.contractorCode?String(f.dataset.contractorCode).trim():"",v=a.querySelector('input[name="contractor-violations-range-type"]:checked')?.value||"all",I=a.querySelector("#contractor-violations-report-month")?.value||"",B=a.querySelector("#contractor-violations-report-from-date")?.value||"",k=a.querySelector("#contractor-violations-report-to-date")?.value||"",_=a.querySelector('input[name="contractor-violations-export-format"]:checked')?.value||"pdf";if(v==="month"&&!I){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0634\u0647\u0631 \u0627\u0644\u0645\u0637\u0644\u0648\u0628");return}if(v==="custom"){if(!B||!k){Notification.warning("\u064A\u0631\u062C\u0649 \u0627\u062E\u062A\u064A\u0627\u0631 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u0648\u0627\u0644\u0646\u0647\u0627\u064A\u0629 \u0644\u0644\u0641\u062A\u0631\u0629");return}if(new Date(B)>new Date(k)){Notification.warning("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0628\u062F\u0627\u064A\u0629 \u064A\u062C\u0628 \u0623\u0646 \u064A\u0643\u0648\u0646 \u0642\u0628\u0644 \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0646\u0647\u0627\u064A\u0629");return}}n(),await this.generateContractorViolationsReport(y,{dateRangeType:v,month:I,fromDate:B,toDate:k,exportFormat:_},u,x)})},_collectContractorViolationsForExport_(e="",t={},i="",o=""){const a=this._buildContractorExportMatcher(e,i,o);let n=(AppState.appData.violations||[]).map(p=>this.normalizeViolationRecord(p)).filter(Boolean).filter(p=>p?.personType==="contractor"||!!String(p?.contractorName||"").trim());a&&(n=n.filter(p=>a.violationBelongsToContractor(p)));const{dateRangeType:s="all",month:r="",fromDate:c="",toDate:l=""}=t||{};if(s==="month"&&r){const[p,f]=r.split("-");n=n.filter(m=>{if(!m.violationDate)return!1;const y=new Date(m.violationDate);return y.getFullYear()===parseInt(p,10)&&y.getMonth()+1===parseInt(f,10)})}else if(s==="custom"&&c&&l){const p=new Date(c);p.setHours(0,0,0,0);const f=new Date(l);f.setHours(23,59,59,999),n=n.filter(m=>{if(!m.violationDate)return!1;const y=new Date(m.violationDate);return y>=p&&y<=f})}let d="";if(s==="month"&&r){const[p,f]=r.split("-");d=new Date(parseInt(p,10),parseInt(f,10)-1,1).toLocaleDateString("ar-SA-u-nu-latn",{year:"numeric",month:"long"})}else s==="custom"&&c&&l&&(d=`\u0645\u0646 ${Utils.formatDate(c)} \u0625\u0644\u0649 ${Utils.formatDate(l)}`);return{violations:n,periodInfo:d,dateRangeType:s}},exportContractorViolationsToExcel_(e,t="",i=""){if(typeof XLSX>"u")return Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062D\u0645\u0651\u0644\u0629. \u062D\u062F\u0651\u062B \u0627\u0644\u0635\u0641\u062D\u0629 \u0648\u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."),!1;const o=e.map((l,d)=>({"#":d+1,"\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644":l.contractorName||"","\u0643\u0648\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644":l.contractorCode||"","\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644":l.contractorWorker||"","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629":l.violationType||"",\u0627\u0644\u062A\u0627\u0631\u064A\u062E:l.violationDate?Utils.formatDate(l.violationDate):"",\u0627\u0644\u0634\u062F\u0629:l.severity||"","\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630":l.actionTaken||"",\u0627\u0644\u062D\u0627\u0644\u0629:l.status||"","\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629":Number(this.getEffectiveFineAmount(l))||0,\u0627\u0644\u0645\u0648\u0642\u0639:l.location||l.site||"",\u0627\u0644\u0648\u0635\u0641:l.description||l.notes||"",\u0627\u0644\u0641\u062A\u0631\u0629:i||""})),a=XLSX.utils.book_new(),n=XLSX.utils.json_to_sheet(o);n["!cols"]=[{wch:6},{wch:28},{wch:14},{wch:18},{wch:22},{wch:14},{wch:12},{wch:24},{wch:12},{wch:14},{wch:18},{wch:36},{wch:22}],XLSX.utils.book_append_sheet(a,n,"\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646");const s=t?`\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0627\u062A_\u0627\u0644\u0645\u0642\u0627\u0648\u0644_${t}`:"\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0627\u062A_\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646",c=`${String(s).replace(/[\\/:*?"<>|]/g,"_").slice(0,80)}_${new Date().toISOString().slice(0,10)}.xlsx`;return XLSX.writeFile(a,c),!0},async generateContractorViolationsReport(e="",t={},i="",o=""){const a=String(t?.exportFormat||"pdf").toLowerCase()==="excel"?"excel":"pdf",{violations:n,periodInfo:s}=this._collectContractorViolationsForExport_(e,t,i,o);if(!n.length){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0648\u0641\u0642 \u0627\u0644\u0645\u062D\u062F\u062F\u0627\u062A \u0627\u0644\u0645\u062E\u062A\u0627\u0631\u0629");return}if(a==="excel"){try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 Excel \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646...");const r=this.exportContractorViolationsToExcel_(n,i,s);Loading.hide(),r&&Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0628\u0635\u064A\u063A\u0629 Excel \u0628\u0646\u062C\u0627\u062D")}catch(r){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel \u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",r),Notification.error("\u062A\u0639\u0630\u0631 \u062A\u0635\u062F\u064A\u0631 Excel: "+(r.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}return}try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646...");const r=n.filter(S=>String(S.severity||"").trim()==="\u0639\u0627\u0644\u064A\u0629").length,c=n.filter(S=>String(S.severity||"").trim()==="\u0645\u062A\u0648\u0633\u0637\u0629").length,l=n.filter(S=>String(S.severity||"").trim()==="\u0645\u0646\u062E\u0636\u0629").length,d=n.filter(S=>String(S.status||"").trim()==="\u0645\u062D\u0644\u0648\u0644").length,p=Math.max(0,n.length-d),f=n.length>0?Math.round(d/n.length*100):0,m=new Set(n.map(S=>String(S.contractorName||"").trim()).filter(Boolean)).size,y=n.reduce((S,V)=>S+(Number(this.getEffectiveFineAmount(V))||0),0),u=this._AR_PDF_TEXT_STYLE_,x=n.map((S,V)=>`
+                <tr>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${u}">${V+1}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${u}">${Utils.escapeHTML(S.contractorName||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${u}">${Utils.escapeHTML(S.violationType||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${u}">${S.violationDate?Utils.formatDate(S.violationDate):"-"}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${u}">${Utils.escapeHTML(S.severity||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${u}">${Utils.escapeHTML(S.actionTaken||"-")}</td>
+                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${u}">${Utils.escapeHTML(S.status||"-")}</td>
+                </tr>
+            `).join(""),v=i?` - ${Utils.escapeHTML(i)}`:"",I=`
+                <div style="margin-bottom: 24px; direction: rtl;">
+                    <h2 dir="rtl" style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700; ${u}">\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646${v}</h2>
+                    ${s?`<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">\u0627\u0644\u0641\u062A\u0631\u0629:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(s)}</span></div>`:""}
+                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${n.length}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">\u0639\u062F\u062F \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${m}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${this.formatFineAmount(Number(y))}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">\u0639\u0627\u0644\u064A\u0629 / \u0645\u062A\u0648\u0633\u0637\u0629 / \u0645\u0646\u062E\u0641\u0636\u0629</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${r} / ${c} / ${l}</div></div>
+                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">\u0645\u0639\u062F\u0644 \u0627\u0644\u062D\u0644</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${f}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">\u0645\u062D\u0644\u0648\u0644: ${d} | \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644: ${p}</div></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 16px; direction: rtl;">
+                    <h3 dir="rtl" style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px; ${u}">\u062C\u062F\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A</h3>
+                </div>
+                <div style="overflow-x: auto; direction: rtl;">
+                    <table dir="rtl" style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; ${u}">
+                        <thead>
+                            <tr style="background: #B91C1C; color: #FFFFFF;">
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">#</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0627\u0644\u062A\u0627\u0631\u064A\u062E</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0627\u0644\u0634\u062F\u0629</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</th>
+                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${u}">\u0627\u0644\u062D\u0627\u0644\u0629</th>
+                            </tr>
+                        </thead>
+                        <tbody>${x}</tbody>
+                    </table>
+                </div>
+            `,B=`CONTRACTOR-VIOL-${new Date().toISOString().slice(0,10)}`,k=i?`\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644: ${i}`:"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646",_=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(B,k,I,!1,!1,{source:"ContractorViolationsTab",contractorId:e||"",contractorName:i||"",titleAr:k,includeQRCode:!1},new Date().toISOString(),new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(k)}</title></head><body>${I}</body></html>`,N=`${String(k).replace(/[\\/:*?"<>|]/g,"_")}.pdf`;if(!await this._downloadHtmlReportAsPdf(_,N))throw new Error("\u062A\u0639\u0630\u0651\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF \u2014 \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u062B\u0645 \u0623\u0639\u062F \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629");Loading.hide(),Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0628\u0635\u064A\u063A\u0629 PDF \u0628\u0646\u062C\u0627\u062D")}catch(r){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",r),Notification.error("\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646: "+(r.message||"\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"))}},async deleteViolation(e){if(!e){typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F","error");return}const t=(AppState.appData?.violations||[]).find(i=>i.id===e);if(t&&!this.isViolationVisibleToCurrentUser(t)){typeof Notification<"u"?Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062D\u0630\u0641 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649"):typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u062D\u0630\u0641 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649","error");return}if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0647 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629\u061F \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.")){typeof Loading<"u"&&Loading.show&&Loading.show("\u062C\u0627\u0631\u064A \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629...");try{const i=(AppState.appData?.violations||[]).find(l=>l.id===e),o=i?.contractorId||"",a=i?.contractorName||"",n=i?.employeeId||"",s=i?.employeeCode||i?.employeeNumber||"",r=i?.employeeName||"";let c;if(typeof GoogleIntegration<"u"&&GoogleIntegration.callBackend)c=await GoogleIntegration.callBackend("deleteViolationFromSheet",{id:e});else throw new Error("\u062E\u062F\u0645\u0629 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u063A\u064A\u0631 \u0645\u062A\u0648\u0641\u0631\u0629");if(c&&c.success){AppState.appData&&AppState.appData.violations&&(AppState.appData.violations=AppState.appData.violations.filter(l=>l.id!==e)),(o||a)&&(AppState.appData?.contractors||[]).forEach(d=>{d&&(d.id===o||d.name===a||d.contractorName===a)&&(Array.isArray(d.violations)&&(d.violations=d.violations.filter(p=>p.id!==e)),d.violationIds&&Array.isArray(d.violationIds)&&(d.violationIds=d.violationIds.filter(p=>p!==e)))}),(n||s||r)&&(AppState.appData?.employees||[]).forEach(d=>{d&&(d.id===n||d.employeeNumber===s||d.employeeCode===s||d.name===r)&&(Array.isArray(d.violations)&&(d.violations=d.violations.filter(p=>p.id!==e)),d.violationIds&&Array.isArray(d.violationIds)&&(d.violationIds=d.violationIds.filter(p=>p!==e)))}),typeof DataManager<"u"&&DataManager.save&&DataManager.save();try{this.updateAllViolationsStats()}catch{}if(this.refreshViolationsView(),typeof Contractors<"u"&&Contractors.load)try{(AppState?.currentSection||"")==="contractors"&&!Contractors._isLoading&&Contractors.load()}catch{}if(typeof Employees<"u"&&Employees.loadEmployeesList)try{(AppState?.currentSection||"")==="employees"&&Employees.loadEmployeesList()}catch{}typeof Utils<"u"&&Utils.showToast&&Utils.showToast("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0648\u062C\u0645\u064A\u0639 \u0627\u0644\u0633\u062C\u0644\u0627\u062A \u0627\u0644\u0645\u0631\u062A\u0628\u0637\u0629","success")}else throw new Error(c?.message||"\u0641\u0634\u0644 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A")}catch(i){typeof Utils<"u"&&Utils.showToast?Utils.showToast("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+i.message,"error"):alert("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u062D\u0630\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+i.message)}finally{typeof Loading<"u"&&Loading.hide&&Loading.hide()}}},renderAnalyticsTab(){this._vEnsureChartJS().catch(()=>{});const e=(i,o)=>this._t(i,o),t=this.getCurrentCurrency();return`
+        <div id="viol-analytics-root" style="font-family:'Cairo','Inter',sans-serif !important;">
+
+            <!-- \u2500\u2500 \u0634\u0631\u064A\u0637 \u0627\u0644\u0623\u062F\u0648\u0627\u062A \u0627\u0644\u0631\u0626\u064A\u0633\u064A (\u064A\u064F\u062E\u0641\u0649 \u0639\u0646\u062F \u062A\u0635\u062F\u064A\u0631 PDF) \u2500\u2500 -->
+            <div id="viol-analytics-toolbar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;padding:16px 20px;background:linear-gradient(135deg,#7f1d1d 0%,#dc2626 100%);border-radius:14px;color:#fff;box-shadow:0 4px 20px rgba(220,38,38,0.35);">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-chart-bar" style="font-size:20px;"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin:0;font-size:1.3rem;font-weight:800;">${e("module.violations.analytics.title","\u0644\u0648\u062D\u0629 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A")}</h2>
+                        <p style="margin:4px 0 0 0;font-size:0.9rem;font-weight:500;opacity:0.95;">${e("module.violations.analytics.subtitle","\u062A\u062D\u0644\u064A\u0644 \u0634\u0627\u0645\u0644 \u0648\u0641\u0648\u0631\u064A \u2022 \u0641\u0644\u0627\u062A\u0631 \u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u2022 \u062A\u0635\u062F\u064A\u0631 PDF")}</p>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:0.85rem;font-weight:700;opacity:0.95;margin-left:2px;">${e("module.violations.analytics.period","\u0627\u0644\u0641\u062A\u0631\u0629:")}</span>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                        ${["30","90","180","365","0"].map((i,o)=>{const a=[e("module.violations.analytics.period.30d","30 \u064A\u0648\u0645"),e("module.violations.analytics.period.3m","3 \u0623\u0634\u0647\u0631"),e("module.violations.analytics.period.6m","6 \u0623\u0634\u0647\u0631"),e("module.violations.analytics.period.1y","\u0633\u0646\u0629"),e("module.violations.analytics.period.all","\u0627\u0644\u0643\u0644")],n=(this._violPeriod||"0")===i;return`<button class="viol-period-btn" data-period="${i}" style="padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:0.85rem;font-weight:700;transition:all .2s;background:${n?"#fff":"rgba(255,255,255,0.18)"};color:${n?"#991b1b":"#fff"};">${a[o]}</button>`}).join("")}
+                    </div>
+                    <button id="viol-toggle-filters-btn" style="padding:7px 14px;border-radius:8px;border:1px solid rgba(255,255,255,0.4);cursor:pointer;background:rgba(255,255,255,0.15);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                        <i class="fas fa-sliders-h"></i><span>${e("module.violations.analytics.filters","\u0641\u0644\u0627\u062A\u0631")}</span><span id="viol-filter-badge" style="display:none;background:#fbbf24;color:#78350f;font-size:0.72rem;padding:2px 6px;border-radius:10px;margin-right:2px;">\u25CF</span>
+                    </button>
+                    <!-- \u2705 \u062A\u0628\u062F\u064A\u0644 \u0627\u0644\u0639\u0645\u0644\u0629 EGP \u21C4 USD -->
+                    <div style="display:inline-flex;align-items:center;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.4);border-radius:8px;overflow:hidden;">
+                        <button id="viol-curr-egp" data-curr="EGP" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${t==="EGP"?"#fff":"transparent"};color:${t==="EGP"?"#991b1b":"#fff"};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${e("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A")}">${e("module.violations.analytics.currency.egp_short","\u062C.\u0645")}</button>
+                        <button id="viol-curr-usd" data-curr="USD" class="viol-curr-btn" style="padding:7px 12px;border:none;cursor:pointer;background:${t==="USD"?"#fff":"transparent"};color:${t==="USD"?"#991b1b":"#fff"};font-size:0.85rem;font-weight:800;transition:all .15s;" title="${e("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A")}">$</button>
+                        <button id="viol-curr-rate-btn" style="padding:7px 10px;border:none;border-right:1px solid rgba(255,255,255,0.25);cursor:pointer;background:transparent;color:#fff;font-size:0.85rem;transition:all .15s;" title="${e("module.violations.analytics.currency.rate_edit","\u062A\u0639\u062F\u064A\u0644 \u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641")}" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='transparent'"><i class="fas fa-cog"></i></button>
+                    </div>
+                    <button id="viol-export-pdf-btn" style="padding:7px 16px;border-radius:8px;border:none;cursor:pointer;background:rgba(0,0,0,0.35);color:#fff;font-size:0.85rem;font-weight:700;transition:all .2s;display:flex;align-items:center;gap:6px;" onmouseover="this.style.background='rgba(0,0,0,0.55)'" onmouseout="this.style.background='rgba(0,0,0,0.35)'">
+                        <i class="fas fa-file-pdf"></i><span>PDF</span>
+                    </button>
+                    <button id="viol-analytics-refresh" style="padding:7px 12px;border-radius:8px;border:none;cursor:pointer;background:rgba(255,255,255,0.18);color:#fff;font-size:0.85rem;transition:all .2s;" onmouseover="this.style.background='rgba(255,255,255,0.35)'" onmouseout="this.style.background='rgba(255,255,255,0.18)'" title="${e("module.common.refresh","\u062A\u062D\u062F\u064A\u062B")}">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="viol-analytics-capture">
+            <div id="viol-filter-panel" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:12px;padding:18px 20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-sliders-h" style="color:#dc2626;font-size:16px;"></i>
+                        <span style="font-weight:800;font-size:1.05rem;color:#7f1d1d;">${e("module.violations.analytics.filters.interactive","\u0627\u0644\u0641\u0644\u0627\u062A\u0631 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629")}</span>
+                        <span id="viol-filter-count" style="background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                    </div>
+                    <button id="viol-filter-reset-btn" style="padding:6px 14px;border-radius:8px;border:1px solid #fecaca;background:#fff;color:#475569;font-size:0.82rem;font-weight:700;cursor:pointer;" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='#fff';this.style.color='#475569'">
+                        <i class="fas fa-times ml-1"></i>${e("module.common.reset","\u0645\u0633\u062D \u0627\u0644\u0643\u0644")}
+                    </button>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+                    ${[{id:"viol-af-factory",icon:"fas fa-industry",color:"#ec4899",label:e("module.violations.analytics.filter.factory","\u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A")},{id:"viol-af-ptype",icon:"fas fa-id-badge",color:"#6366f1",label:e("module.violations.analytics.filter.personType","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635")},{id:"viol-af-type",icon:"fas fa-tag",color:"#dc2626",label:e("module.violations.analytics.filter.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")},{id:"viol-af-sev",icon:"fas fa-exclamation-circle",color:"#f59e0b",label:e("module.violations.analytics.filter.severity","\u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629")},{id:"viol-af-status",icon:"fas fa-circle",color:"#10b981",label:e("module.violations.analytics.filter.status","\u0627\u0644\u062D\u0627\u0644\u0629")},{id:"viol-af-loc",icon:"fas fa-map-marker-alt",color:"#3b82f6",label:e("module.violations.analytics.filter.location","\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0641\u0631\u0639\u064A")}].map(i=>`
+                        <div>
+                            <label style="font-size:0.85rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">
+                                <i class="${i.icon}" style="color:${i.color};margin-left:5px;"></i>${i.label}
+                            </label>
+                            <select id="${i.id}" style="width:100%;padding:8px 12px;border:1.5px solid #fecaca;border-radius:8px;font-size:0.92rem;font-weight:600;background:#fff;color:#1e293b;cursor:pointer;" onfocus="this.style.borderColor='#dc2626'" onblur="this.style.borderColor='#fecaca'">
+                                <option value="">${e("module.common.all","\u0627\u0644\u0643\u0644")}</option>
+                            </select>
+                        </div>
+                    `).join("")}
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 KPI Cards (\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u0639\u0646\u062F \u0627\u0644\u0646\u0642\u0631) \u2500\u2500 -->
+            <div id="viol-kpi-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:20px;">
+                <div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div>
+            </div>
+
+            <!-- \u2500\u2500 \u0627\u0644\u0645\u0635\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A (\u062A\u0648\u0632\u064A\u0639 \u0648\u0646\u0633\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A) \u2500\u2500 -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-industry" style="color:#ec4899;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byFactory","\u062A\u0648\u0632\u064A\u0639 \u0648\u0646\u0633\u0628 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062D\u0633\u0628 \u0627\u0644\u0645\u0635\u0627\u0646\u0639 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629")}</span>
+                    </div>
+                    <span id="viol-factory-total-badge" style="background:#fdf2f8;color:#be185d;padding:4px 12px;border-radius:12px;font-size:0.85rem;font-weight:700;"></span>
+                </div>
+                <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:24px;align-items:center;">
+                    <div style="position:relative;height:260px;">
+                        <canvas id="viol-chart-factory"></canvas>
+                        <div id="viol-chart-factory-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                    </div>
+                    <div id="viol-factory-breakdown-list" style="display:flex;flex-direction:column;gap:12px;max-height:260px;overflow-y:auto;padding-left:4px;">
+                        <!-- dynamic factory breakdown items -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 Row 1: \u0627\u0644\u062D\u0627\u0644\u0629 + \u0627\u0644\u0634\u062F\u0629 \u2500\u2500 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-tasks" style="color:#3b82f6;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.status","\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u0627\u0644\u062D\u0627\u0644\u0629")}</span>
+                    </div>
+                    <div style="padding:14px;position:relative;height:250px;">
+                        <canvas id="viol-chart-status"></canvas>
+                        <div id="viol-chart-status-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-exclamation-circle" style="color:#ef4444;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.severity","\u0627\u0644\u062A\u0648\u0632\u064A\u0639 \u062D\u0633\u0628 \u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629")}</span>
+                    </div>
+                    <div style="padding:14px;position:relative;height:250px;">
+                        <canvas id="viol-chart-sev"></canvas>
+                        <div id="viol-chart-sev-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 \u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u2500\u2500 -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-chart-area" style="color:#8b5cf6;font-size:1.15rem;"></i>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.trend","\u0627\u0644\u0627\u062A\u062C\u0627\u0647 \u0627\u0644\u0632\u0645\u0646\u064A \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (\u0622\u062E\u0631 12 \u0634\u0647\u0631)")}</span>
+                </div>
+                <div style="padding:14px;position:relative;height:270px;">
+                    <canvas id="viol-chart-trend"></canvas>
+                    <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 Row 2: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 + \u0627\u0644\u0645\u0648\u0642\u0639 \u2500\u2500 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-tag" style="color:#dc2626;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byType","\u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0623\u0639\u0644\u0649 10)")}</span>
+                        </div>
+                        <span id="viol-type-total-badge" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                    </div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:240px;">
+                            <canvas id="viol-chart-type"></canvas>
+                            <div id="viol-chart-type-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                        </div>
+                        <div id="viol-type-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;padding-left:4px;">
+                        </div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-map-marker-alt" style="color:#f59e0b;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.byLocation","\u062D\u0633\u0628 \u0627\u0644\u0645\u0648\u0642\u0639 (\u0623\u0639\u0644\u0649 8)")}</span>
+                        </div>
+                        <span id="viol-loc-total-badge" style="background:#fffbeb;color:#92400e;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                    </div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-loc"></canvas>
+                            <div id="viol-chart-loc-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>
+                        </div>
+                        <div id="viol-loc-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 Row 3: \u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 + \u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u2500\u2500 -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:18px;margin-bottom:18px;">
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-user-tie" style="color:#6366f1;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.topEmployees","\u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0645\u062E\u0627\u0644\u0641\u0629\u064B (\u0623\u0639\u0644\u0649 10)")}</span>
+                        </div>
+                        <span id="viol-emp-total-badge" style="background:#eef2ff;color:#4338ca;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                    </div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-emp"></canvas>
+                            <div id="viol-chart-emp-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noEmpViolations","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0648\u0638\u0641\u064A\u0646")}</div>
+                        </div>
+                        <div id="viol-emp-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
+                    </div>
+                </div>
+                <div class="content-card" style="padding:0;overflow:hidden;">
+                    <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fas fa-users-cog" style="color:#f97316;font-size:1.15rem;"></i>
+                            <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.topContractors","\u0623\u0643\u062B\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u062E\u0627\u0644\u0641\u0629\u064B (\u0623\u0639\u0644\u0649 10)")}</span>
+                        </div>
+                        <span id="viol-con-total-badge" style="background:#fff7ed;color:#c2410c;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                    </div>
+                    <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;align-items:center;">
+                        <div style="position:relative;height:220px;">
+                            <canvas id="viol-chart-con"></canvas>
+                            <div id="viol-chart-con-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noConViolations","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0645\u0642\u0627\u0648\u0644\u064A\u0646")}</div>
+                        </div>
+                        <div id="viol-con-breakdown-list" style="display:flex;flex-direction:column;gap:9px;max-height:240px;overflow-y:auto;padding-left:4px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 \u0645\u062E\u0637\u0637 \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u2500\u2500 -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+                    <i class="fas fa-coins" style="color:#d97706;font-size:1.15rem;"></i>
+                    <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.chart.finesByType","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 ({currency})").replace("{currency}",this.getCurrencyLabel("long")==="\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"?e("module.violations.analytics.currency.usd_long","\u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A"):e("module.violations.analytics.currency.egp_long","\u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A"))}</span>
+                    <span style="font-size:0.82rem;font-weight:600;color:#64748b;margin-right:auto;">${e("module.violations.analytics.top10Types","(\u0623\u0639\u0644\u0649 10 \u0623\u0646\u0648\u0627\u0639)")}</span>
+                </div>
+                <div style="padding:14px;position:relative;height:270px;">
+                    <canvas id="viol-chart-fines"></canvas>
+                    <div id="viol-chart-fines-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.violations.analytics.chart.noFinesData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u063A\u0631\u0627\u0645\u0627\u062A")}</div>
+                </div>
+            </div>
+
+            <!-- \u2500\u2500 \u062C\u062F\u0648\u0644 \u0623\u0634\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u2500\u2500 -->
+            <div class="content-card" style="padding:0;overflow:hidden;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-fire" style="color:#dc2626;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${e("module.violations.analytics.table.criticalTitle","\u0623\u0634\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A (\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u0634\u062F\u0629 \u2014 \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629)")}</span>
+                    </div>
+                    <span id="viol-critical-count" style="background:#fef2f2;color:#b91c1c;padding:4px 12px;border-radius:20px;font-size:0.85rem;font-weight:700;"></span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                        <thead>
+                            <tr style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.date","\u0627\u0644\u062A\u0627\u0631\u064A\u062E")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.name","\u0627\u0644\u0627\u0633\u0645")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.personType","\u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.type","\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.location","\u0627\u0644\u0645\u0648\u0642\u0639")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.severity","\u0627\u0644\u0634\u062F\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:right;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.status","\u0627\u0644\u062D\u0627\u0644\u0629")}</th>
+                                <th style="padding:12px 14px;text-align:center;font-weight:800;color:#0f172a;white-space:nowrap;">${e("module.violations.analytics.table.fine","\u0627\u0644\u063A\u0631\u0627\u0645\u0629 ({currency})").replace("{currency}",this.getCurrencyLabel("short"))}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="viol-critical-tbody">
+                            <tr><td colspan="8" style="padding:20px;text-align:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${e("module.common.loading","\u062C\u0627\u0631\u064D \u0627\u0644\u062A\u062D\u0645\u064A\u0644\u2026")}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+        </div>`},async updateViolationAnalytics(){const e=document.getElementById("viol-analytics-root");if(!e)return;const t=(h,C)=>this._t(h,C),o=(window.AppI18n&&typeof window.AppI18n.getCurrentLang=="function"?window.AppI18n.getCurrentLang():"ar")==="en"?"en-US":"ar-SA-u-nu-latn",a=parseInt(this._violPeriod||"0",10),s=(AppState.appData.violations||[]).map(h=>this.normalizeViolationRecord(h)).filter(h=>h&&this.isViolationVisibleToCurrentUser(h)),r=this._vFilterByPeriod(s,a);this._vPopulateFilters(r);const c=this._vApplyFilters(r),l=c.length,d=document.getElementById("viol-filter-count");d&&(d.textContent=`${l} ${t("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const p=c.filter(h=>h.personType==="employee"),f=c.filter(h=>h.personType==="contractor"),m=c.filter(h=>h.severity==="\u0639\u0627\u0644\u064A\u0629").length,y=c.filter(h=>h.status==="\u0645\u062D\u0644\u0648\u0644").length,u=c.filter(h=>h.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644").length,x=c.filter(h=>h.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629").length,v=l>0?Math.round(y/l*100):0,I=c.reduce((h,C)=>h+(Number(C.fineAmount)||0),0),B=c.filter(h=>{if(!h.violationDate)return!1;const C=new Date(h.violationDate),W=new Date;return C.getFullYear()===W.getFullYear()&&C.getMonth()===W.getMonth()}).length,k=document.getElementById("viol-kpi-strip");if(k){const h=[{id:"total",label:t("module.violations.analytics.kpi.total","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A"),value:l.toLocaleString("en-US"),icon:"fas fa-exclamation-circle",color:"#dc2626",bg:"#fef2f2",border:"#fecaca"},{id:"employees",label:t("module.violations.analytics.kpi.employees","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641\u064A\u0646"),value:p.length.toLocaleString("en-US"),icon:"fas fa-user-tie",color:"#6366f1",bg:"#eef2ff",border:"#c7d2fe"},{id:"contractors",label:t("module.violations.analytics.kpi.contractors","\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646"),value:f.length.toLocaleString("en-US"),icon:"fas fa-users-cog",color:"#f97316",bg:"#fff7ed",border:"#fed7aa"},{id:"highSev",label:t("module.violations.analytics.kpi.highSeverity","\u0639\u0627\u0644\u064A\u0629 \u0627\u0644\u0634\u062F\u0629"),value:m.toLocaleString("en-US"),icon:"fas fa-bomb",color:"#b91c1c",bg:"#fef2f2",border:"#fca5a5"},{id:"resolved",label:t("module.violations.analytics.kpi.resolved","\u0645\u062D\u0644\u0648\u0644\u0629"),value:y.toLocaleString("en-US"),icon:"fas fa-check-circle",color:"#10b981",bg:"#ecfdf5",border:"#a7f3d0"},{id:"unresolved",label:t("module.violations.analytics.kpi.unresolved","\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629"),value:u.toLocaleString("en-US"),icon:"fas fa-times-circle",color:"#f59e0b",bg:"#fffbeb",border:"#fde68a"},{id:"resolRate",label:t("module.violations.analytics.kpi.resolRate","\u0645\u0639\u062F\u0644 \u0627\u0644\u062D\u0644"),value:v.toLocaleString("en-US")+"%",icon:"fas fa-chart-pie",color:"#0ea5e9",bg:"#f0f9ff",border:"#bae6fd"},{id:"totalFines",label:t("module.violations.analytics.kpi.totalFines","\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u063A\u0631\u0627\u0645\u0627\u062A"),value:I>0?this.formatFineAmount(I):"\u2014",icon:"fas fa-coins",color:"#d97706",bg:"#fffbeb",border:"#fde68a"},{id:"thisMonth",label:t("module.violations.analytics.kpi.thisMonth","\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631"),value:B.toLocaleString("en-US"),icon:"fas fa-calendar-day",color:"#8b5cf6",bg:"#f5f3ff",border:"#ddd6fe"}];k.innerHTML=h.map(C=>`
+                <div class="viol-kpi-card" data-kpi="${C.id}" title="\u0627\u0646\u0642\u0631 \u0644\u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062A\u0641\u0627\u0639\u0644\u064A\u0629 \u062D\u0633\u0628 \u0647\u0630\u0627 \u0627\u0644\u0645\u0639\u064A\u0627\u0631" style="background:${C.bg};border:1.5px solid ${C.border};border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer;" onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(0,0,0,0.09)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                    <div style="width:42px;height:42px;background:${C.color};border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="${C.icon}" style="color:#fff;font-size:17px;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:800;color:${C.color};line-height:1.1;">${C.value}</div>
+                        <div style="font-size:0.82rem;font-weight:700;color:#475569;margin-top:4px;white-space:nowrap;">${C.label}</div>
+                    </div>
+                </div>`).join("")}if(!await this._vEnsureChartJS()||typeof Chart>"u"){e.insertAdjacentHTML("afterbegin",`<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px;"><i class="fas fa-exclamation-triangle" style="color:#d97706;"></i><span style="font-size:0.85rem;color:#92400e;">${t("module.violations.analytics.chartError","\u062A\u0639\u0630\u0651\u0631 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u064A\u0629. \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 \u0645\u062A\u0627\u062D\u0629 \u0641\u064A \u0627\u0644\u0623\u0631\u0642\u0627\u0645 \u0623\u0639\u0644\u0627\u0647.")}</span></div>`);return}this._vDrawFactoryBreakdown("viol-chart-factory","viol-factory-breakdown-list",c);const N=this._vGroupBy(c,"status"),A={\u0645\u062D\u0644\u0648\u0644:"rgba(16,185,129,0.85)",resolved:"rgba(16,185,129,0.85)","\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644":"rgba(239,68,68,0.85)",unresolved:"rgba(239,68,68,0.85)",open:"rgba(239,68,68,0.85)","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629":"rgba(245,158,11,0.85)","in progress":"rgba(245,158,11,0.85)","under review":"rgba(245,158,11,0.85)"};this._vDrawDoughnut("viol-chart-status",N.labels.map(h=>t("module.violations.status."+h,h)),N.data,N.labels.map(h=>A[h.toLowerCase()]||A[h]||"rgba(148,163,184,0.8)"));const S=this._vGroupBy(c,"severity"),V={\u0639\u0627\u0644\u064A\u0629:"rgba(239,68,68,0.85)",high:"rgba(239,68,68,0.85)",\u0645\u062A\u0648\u0633\u0637\u0629:"rgba(245,158,11,0.85)",medium:"rgba(245,158,11,0.85)",moderate:"rgba(245,158,11,0.85)",\u0645\u0646\u062E\u0641\u0636\u0629:"rgba(16,185,129,0.85)",low:"rgba(16,185,129,0.85)",\u0645\u0646\u062E\u0636\u0629:"rgba(16,185,129,0.85)"};this._vDrawDoughnut("viol-chart-sev",S.labels.map(h=>t("module.violations.severity."+h,h)),S.data,S.labels.map(h=>V[h.toLowerCase()]||V[h]||"rgba(148,163,184,0.8)")),this._vDrawTrend("viol-chart-trend",r),this._vDrawTypeBreakdown("viol-chart-type","viol-type-breakdown-list",c,10),this._vDrawListBreakdown("viol-chart-loc","viol-loc-breakdown-list",c,"violationLocation",8,["rgba(245,158,11,0.85)","rgba(234,179,8,0.85)","rgba(202,138,4,0.85)","rgba(161,98,7,0.85)","rgba(120,53,15,0.85)","rgba(234,88,12,0.85)","rgba(194,65,12,0.85)","rgba(154,52,18,0.85)"],"#fffbeb","#92400e","viol-loc-total-badge","viol-af-loc",null),this._vDrawListBreakdown("viol-chart-emp","viol-emp-breakdown-list",p,"employeeName",10,["rgba(99,102,241,0.85)","rgba(79,70,229,0.85)","rgba(67,56,202,0.85)","rgba(55,48,163,0.85)","rgba(109,40,217,0.85)","rgba(124,58,237,0.85)","rgba(139,92,246,0.85)","rgba(167,139,250,0.85)","rgba(196,181,253,0.9)","rgba(76,29,149,0.85)"],"#eef2ff","#4338ca","viol-emp-total-badge",null,null),this._vDrawListBreakdown("viol-chart-con","viol-con-breakdown-list",f,"contractorName",10,["rgba(249,115,22,0.85)","rgba(234,88,12,0.85)","rgba(194,65,12,0.85)","rgba(154,52,18,0.85)","rgba(180,83,9,0.85)","rgba(217,119,6,0.85)","rgba(245,158,11,0.85)","rgba(202,138,4,0.85)","rgba(161,98,7,0.85)","rgba(120,53,15,0.85)"],"#fff7ed","#c2410c","viol-con-total-badge",null,null),this._vDrawFinesByType("viol-chart-fines",c);const O=c.filter(h=>{const C=String(h.severity||"").trim().toLowerCase(),W=String(h.status||"").trim().toLowerCase();return(C==="\u0639\u0627\u0644\u064A\u0629"||C==="high")&&!(W==="\u0645\u062D\u0644\u0648\u0644"||W==="resolved")}).sort((h,C)=>(C.fineAmount||0)-(h.fineAmount||0)).slice(0,20),H=document.getElementById("viol-critical-count"),R=document.getElementById("viol-critical-tbody");H&&(H.textContent=`${O.length} ${t("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`),R&&(O.length===0?R.innerHTML=`<tr><td colspan="8" style="padding:24px;text-align:center;color:#10b981;"><i class="fas fa-check-circle ml-2"></i>${t("module.violations.analytics.table.noCritical","\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062D\u0631\u062C\u0629 \u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644\u0629")}</td></tr>`:R.innerHTML=O.map((h,C)=>{const W=Utils.escapeHTML(h.employeeName||h.contractorName||"\u2014"),ot=h.personType==="contractor"?`<span style="background:#fff7ed;color:#c2410c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.person.contractor","\u0645\u0642\u0627\u0648\u0644")}</span>`:`<span style="background:#eef2ff;color:#4338ca;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.person.employee","\u0645\u0648\u0638\u0641")}</span>`,at=`<span style="background:#fef2f2;color:#b91c1c;padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;">${t("module.violations.analytics.severity.high","\u0639\u0627\u0644\u064A\u0629")}</span>`,K={"\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644":"background:#fef3c7;color:#92400e;","\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629":"background:#ede9fe;color:#5b21b6;"}[h.status]||"background:#f1f5f9;color:#374151;",Q=Number(h.fineAmount)||0,Y=C%2===0?"#fff":"#fafafa";return`<tr style="border-bottom:1px solid #f8fafc;background:${Y};" onmouseover="this.style.background='#fff5f5'" onmouseout="this.style.background='${Y}'">
+                        <td style="padding:9px 12px;white-space:nowrap;color:#374151;">${h.violationDate?new Date(h.violationDate).toLocaleDateString(o,{year:"numeric",month:"short",day:"numeric"}):"\u2014"}</td>
+                        <td style="padding:9px 12px;font-weight:600;color:#1e40af;">${W}</td>
+                        <td style="padding:9px 12px;">${ot}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(h.violationType||"\u2014")}</td>
+                        <td style="padding:9px 12px;color:#374151;">${Utils.escapeHTML(h.violationLocation||"\u2014")}</td>
+                        <td style="padding:9px 12px;">${at}</td>
+                        <td style="padding:9px 12px;"><span style="padding:2px 7px;border-radius:12px;font-size:0.7rem;font-weight:700;${K}">${t("module.violations.status."+h.status,h.status)}</span></td>
+                        <td style="padding:9px 12px;text-align:center;font-weight:700;color:${Q>0?"#dc2626":"#94a3b8"};">${Q>0?this.formatFineAmount(Q):"\u2014"}</td>
+                    </tr>`}).join(""))},_vFilterByPeriod(e,t){if(!t||t===0)return e;const i=new Date;return i.setDate(i.getDate()-t),e.filter(o=>{if(!o.violationDate)return!0;const a=new Date(o.violationDate);return!isNaN(a.getTime())&&a>=i})},_vGroupBy(e,t,i=0){const o=this._t?this._t("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",a={};e.forEach(s=>{const r=String(s[t]||o).trim()||o;a[r]=(a[r]||0)+1});let n=Object.entries(a).sort((s,r)=>r[1]-s[1]);return i>0&&(n=n.slice(0,i)),{labels:n.map(s=>s[0]),data:n.map(s=>s[1])}},_vGetFactoryName(e){const t=this._t?this._t("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"):"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";return!e||typeof e!="object"?t:String(e.factory||e.violationLocation||e.violationPlace||t).trim()||t},_vApplyFilters(e){const t=d=>{const p=document.getElementById(d);return p?p.value.trim():""},i=t("viol-af-factory"),o=t("viol-af-ptype"),a=t("viol-af-type"),n=t("viol-af-sev"),s=t("viol-af-status"),r=t("viol-af-loc"),c=[i,o,a,n,s,r].some(d=>d!==""),l=document.getElementById("viol-filter-badge");return l&&(l.style.display=c?"inline":"none"),e.filter(d=>!(i&&this._vGetFactoryName(d)!==i||o&&String(d.personType||"").trim()!==o||a&&String(d.violationType||"").trim()!==a||n&&String(d.severity||"").trim()!==n||s&&String(d.status||"").trim()!==s||r&&String(d.violationLocation||"").trim()!==r))},_vPopulateFilters(e){const t=(n,s)=>this._t(n,s),i=n=>[...new Set(e.map(n).filter(Boolean))].sort(),o=(n,s,r)=>{const c=document.getElementById(n);if(!c)return;const l=c.value;c.innerHTML=`<option value="">${t("module.common.all","\u0627\u0644\u0643\u0644")}</option>`+s.map(d=>{const p=r?t(r+d,d):d;return`<option value="${d}"${d===l?" selected":""}>${p}</option>`}).join("")},a=document.getElementById("viol-af-ptype");if(a){const n=a.value;a.innerHTML=`
+                <option value="">${t("module.common.all","\u0627\u0644\u0643\u0644")}</option>
+                <option value="employee"${n==="employee"?" selected":""}>${t("module.violations.analytics.person.employee","\u0645\u0648\u0638\u0641")}</option>
+                <option value="contractor"${n==="contractor"?" selected":""}>${t("module.violations.analytics.person.contractor","\u0645\u0642\u0627\u0648\u0644")}</option>
+            `}o("viol-af-factory",i(n=>this._vGetFactoryName(n))),o("viol-af-type",i(n=>String(n.violationType||"").trim())),o("viol-af-sev",i(n=>String(n.severity||"").trim()),"module.violations.severity."),o("viol-af-status",i(n=>String(n.status||"").trim()),"module.violations.status."),o("viol-af-loc",i(n=>String(n.violationLocation||"").trim()))},_vDrawListBreakdown(e,t,i,o,a,n,s,r,c,l,d){const p=document.getElementById(e),f=document.getElementById(e+"-empty"),m=document.getElementById(t),y=c?document.getElementById(c):null;if(!p)return;const u=(A,S)=>this._t(A,S),x=u("module.violations.analytics.undefined","\u063A\u064A\u0631 \u0645\u062D\u062F\u062F"),v={};i.forEach(A=>{const S=String(A[o]||x).trim()||x;v[S]=(v[S]||0)+1});let I=Object.entries(v).sort((A,S)=>S[1]-A[1]);a>0&&(I=I.slice(0,a));const B=I.map(A=>A[0]),k=I.map(A=>A[1]),_=i.length;if(y&&(y.textContent=`${_.toLocaleString("en-US")} ${u("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`,s&&(y.style.background=s),r&&(y.style.color=r)),!k.length||_===0){p.style.display="none",f&&(f.style.display="flex"),m&&(m.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${u("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}f&&(f.style.display="none"),p.style.display="",this._violCharts||(this._violCharts={});const N=this._violCharts[e];if(N)try{N.destroy()}catch{}this._violCharts[e]=new Chart(p,{type:"doughnut",data:{labels:B,datasets:[{data:k,backgroundColor:B.map((A,S)=>n[S%n.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"60%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:A=>{const S=A.parsed,V=_>0?(S/_*100).toFixed(1):"0";return` ${A.label}: ${S.toLocaleString("en-US")} (${V}%)`}}}}}}),m&&(m.innerHTML=I.map((A,S)=>{const V=A[0],O=A[1],H=_>0?(O/_*100).toFixed(1):0,R=n[S%n.length],h=S+1,C=d?u(d+V,V):V;return`
+                <div class="viol-list-item" data-filter-val="${Utils.escapeHTML(V)}" data-filter-id="${l||""}" title="${Utils.escapeHTML(C)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:10px;padding:9px 12px;cursor:${l?"pointer":"default"};transition:all 0.2s;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+                        <div style="display:flex;align-items:center;gap:7px;">
+                            <span style="width:20px;height:20px;border-radius:50%;background:${R};color:#fff;font-size:0.68rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${h}</span>
+                            <span style="font-weight:800;font-size:0.85rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:155px;">${Utils.escapeHTML(C)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap;">
+                            <span style="font-weight:800;font-size:0.95rem;color:${R.replace("0.85","1")};">${O.toLocaleString("en-US")}</span>
+                            <span style="font-size:0.78rem;font-weight:700;color:#64748b;">(${H}%)</span>
+                        </div>
+                    </div>
+                    <div style="height:6px;background:#f1f5f9;border-radius:3px;overflow:hidden;">
+                        <div style="width:${H}%;height:100%;background:${R};border-radius:3px;transition:width 0.6s ease;"></div>
+                    </div>
+                </div>`}).join(""),l&&m.querySelectorAll(".viol-list-item").forEach(A=>{A.addEventListener("mouseover",()=>{A.style.background="#f8fafc",A.style.borderColor="#cbd5e1"}),A.addEventListener("mouseout",()=>{A.style.background="#fff",A.style.borderColor="#f1f5f9"}),A.addEventListener("click",()=>{const S=A.getAttribute("data-filter-val"),V=document.getElementById(l);V&&(V.value=V.value===S?"":S,this.updateViolationAnalytics())})}))},_vDrawTypeBreakdown(e,t,i,o){const a=document.getElementById(e),n=document.getElementById(e+"-empty"),s=document.getElementById(t),r=document.getElementById("viol-type-total-badge");if(!a)return;const c=(x,v)=>this._t(x,v),l=i.length;r&&(r.textContent=`${l.toLocaleString("en-US")} ${c("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const d={};i.forEach(x=>{const v=String(x.violationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim()||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F";d[v]||(d[v]=0),d[v]++});let p=Object.entries(d).sort((x,v)=>v[1]-x[1]);o>0&&(p=p.slice(0,o));const f=p.map(x=>x[0]),m=p.map(x=>x[1]),y=["rgba(220,38,38,0.85)","rgba(234,88,12,0.85)","rgba(202,138,4,0.85)","rgba(22,163,74,0.85)","rgba(2,132,199,0.85)","rgba(99,102,241,0.85)","rgba(168,85,247,0.85)","rgba(236,72,153,0.85)","rgba(20,184,166,0.85)","rgba(107,114,128,0.85)"];if(!m.length||l===0){a.style.display="none",n&&(n.style.display="flex"),s&&(s.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.92rem;padding:20px;">${c("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}n&&(n.style.display="none"),a.style.display="",this._violCharts||(this._violCharts={});const u=this._violCharts[e];if(u)try{u.destroy()}catch{}this._violCharts[e]=new Chart(a,{type:"doughnut",data:{labels:f,datasets:[{data:m,backgroundColor:f.map((x,v)=>y[v%y.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"60%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:x=>{const v=x.parsed,I=l>0?(v/l*100).toFixed(1):"0";return` ${x.label}: ${v.toLocaleString("en-US")} (${I}%)`}}}}}}),s&&(s.innerHTML=p.map((x,v)=>{const I=x[0],B=x[1],k=l>0?(B/l*100).toFixed(1):0,_=y[v%y.length],N=v+1;return`
+                <div class="viol-type-item" data-vtype="${Utils.escapeHTML(I)}" title="\u0627\u0646\u0642\u0631 \u0644\u062A\u0635\u0641\u064A\u0629 \u062D\u0633\u0628 \u0646\u0648\u0639 ${Utils.escapeHTML(I)}" style="background:#fff;border:1.5px solid #f1f5f9;border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.background='#fef2f2';this.style.borderColor='#fca5a5';" onmouseout="this.style.background='#fff';this.style.borderColor='#f1f5f9';">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="width:22px;height:22px;border-radius:50%;background:${_};color:#fff;font-size:0.72rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${N}</span>
+                            <span style="font-weight:800;font-size:0.88rem;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;" title="${Utils.escapeHTML(I)}">${Utils.escapeHTML(I)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;white-space:nowrap;">
+                            <span style="font-weight:800;font-size:1.0rem;color:${_.replace("0.85","1")};">${B.toLocaleString("en-US")}</span>
+                            <span style="font-size:0.82rem;font-weight:700;color:#64748b;">(${k}%)</span>
+                        </div>
+                    </div>
+                    <div style="height:7px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                        <div style="width:${k}%;height:100%;background:${_};border-radius:4px;transition:width 0.6s ease;"></div>
+                    </div>
+                </div>`}).join(""),s.querySelectorAll(".viol-type-item").forEach(x=>{x.addEventListener("click",()=>{const v=x.getAttribute("data-vtype"),I=document.getElementById("viol-af-type");I&&(I.value=I.value===v?"":v,this.updateViolationAnalytics())})}))},_vDrawFactoryBreakdown(e,t,i){const o=document.getElementById(e),a=document.getElementById(e+"-empty"),n=document.getElementById(t),s=document.getElementById("viol-factory-total-badge");if(!o)return;const r=(u,x)=>this._t(u,x),c=i.length;s&&(s.textContent=`${c.toLocaleString("en-US")} ${r("module.violations.analytics.violationUnit","\u0645\u062E\u0627\u0644\u0641\u0629")}`);const l={};i.forEach(u=>{const x=this._vGetFactoryName(u);l[x]||(l[x]={count:0,fineSum:0}),l[x].count+=1,l[x].fineSum+=Number(u.fineAmount)||0});const d=Object.entries(l).sort((u,x)=>x[1].count-u[1].count),p=d.map(u=>u[0]),f=d.map(u=>u[1].count),m=["rgba(236,72,153,0.85)","rgba(99,102,241,0.85)","rgba(245,158,11,0.85)","rgba(16,185,129,0.85)","rgba(59,130,246,0.85)","rgba(139,92,246,0.85)","rgba(239,68,68,0.85)","rgba(20,184,166,0.85)","rgba(107,114,128,0.85)"];if(!f.length||c===0){o.style.display="none",a&&(a.style.display="flex"),n&&(n.innerHTML=`<div style="text-align:center;color:#94a3b8;font-size:0.85rem;padding:20px;">${r("module.violations.analytics.noData","\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A")}</div>`);return}a&&(a.style.display="none"),o.style.display="",this._violCharts||(this._violCharts={});const y=this._violCharts[e];if(y)try{y.destroy()}catch{}this._violCharts[e]=new Chart(o,{type:"doughnut",data:{labels:p,datasets:[{data:f,backgroundColor:p.map((u,x)=>m[x%m.length]),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"65%",plugins:{legend:{display:!1},tooltip:{callbacks:{label:u=>{const x=u.parsed,v=c>0?(x/c*100).toFixed(1):"0";return` ${u.label}: ${x.toLocaleString("en-US")} (${v}%)`}}}}}}),n&&(n.innerHTML=d.map((u,x)=>{const v=u[0],I=u[1].count,B=u[1].fineSum,k=c>0?(I/c*100).toFixed(1):0,_=m[x%m.length],N=B>0?this.formatFineAmount(B):"";return`
+                <div class="viol-factory-item" data-factory="${Utils.escapeHTML(v)}" title="\u0627\u0646\u0642\u0631 \u0644\u062A\u0635\u0641\u064A\u0629 \u0627\u0644\u062A\u062D\u0644\u064A\u0644\u0627\u062A \u062D\u0633\u0628 \u0645\u0635\u0646\u0639 ${Utils.escapeHTML(v)}" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:12px;padding:11px 14px;cursor:pointer;transition:all 0.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.03);" onmouseover="this.style.background='#fdf2f8';this.style.borderColor='#fbcfe8';" onmouseout="this.style.background='#ffffff';this.style.borderColor='#e2e8f0';">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:0.95rem;color:#0f172a;">
+                            <span style="width:12px;height:12px;border-radius:50%;background:${_};display:inline-block;flex-shrink:0;box-shadow:0 0 6px ${_};"></span>
+                            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;" title="${Utils.escapeHTML(v)}">${Utils.escapeHTML(v)}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;font-size:0.88rem;">
+                            <span style="font-weight:800;color:#be185d;font-size:1.05rem;">${I.toLocaleString("en-US")}</span>
+                            <span style="color:#64748b;font-size:0.85rem;font-weight:700;">(${k}%)</span>
+                            ${N?`<span style="background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:8px;font-weight:700;font-size:0.8rem;">${N}</span>`:""}
+                        </div>
+                    </div>
+                    <div style="height:8px;background:#f1f5f9;border-radius:4px;overflow:hidden;">
+                        <div style="width:${k}%;height:100%;background:${_};border-radius:4px;transition:width 0.5s ease;"></div>
+                    </div>
+                </div>`}).join(""),n.querySelectorAll(".viol-factory-item").forEach(u=>{u.addEventListener("click",()=>{const x=u.getAttribute("data-factory"),v=document.getElementById("viol-af-factory");v&&(v.value=v.value===x?"":x,this.updateViolationAnalytics())})}))},_vDrawDoughnut(e,t,i,o){const a=document.getElementById(e),n=document.getElementById(e+"-empty");if(!a)return;if(!i.length||i.reduce((c,l)=>c+l,0)===0){a.style.display="none",n&&(n.style.display="flex");return}n&&(n.style.display="none"),a.style.display="";const s=i.reduce((c,l)=>c+l,0);this._violCharts||(this._violCharts={});const r=this._violCharts[e];if(r)try{r.destroy()}catch{}this._violCharts[e]=new Chart(a,{type:"doughnut",data:{labels:t,datasets:[{data:i,backgroundColor:o||this._vChartColors(i.length),borderWidth:2,borderColor:"#fff",hoverOffset:6}]},options:{responsive:!0,maintainAspectRatio:!1,cutout:"62%",plugins:{legend:{position:"bottom",labels:{padding:12,font:{size:13,weight:"bold",family:"'Cairo', sans-serif"},usePointStyle:!0,boxWidth:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${c.parsed.toLocaleString("en-US")} (${s>0?(c.parsed/s*100).toFixed(1):0}%)`}}}}})},_vDrawHBar(e,t,i,o){const a=document.getElementById(e),n=document.getElementById(e+"-empty");if(!a)return;if(!i.length||i.reduce((r,c)=>r+c,0)===0){a.style.display="none",n&&(n.style.display="flex");return}n&&(n.style.display="none"),a.style.display="",this._violCharts||(this._violCharts={});const s=this._violCharts[e];if(s)try{s.destroy()}catch{}this._violCharts[e]=new Chart(a,{type:"bar",data:{labels:t,datasets:[{data:i,backgroundColor:o||"rgba(220,38,38,0.75)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:r=>` ${r.parsed.x.toLocaleString("en-US")}`}}},scales:{x:{beginAtZero:!0,ticks:{precision:0,font:{size:12,weight:"bold"}},grid:{color:"#f1f5f9"}},y:{ticks:{font:{size:12,weight:"bold",family:"'Cairo', sans-serif"},callback:r=>String(t[r]).length>22?String(t[r]).slice(0,21)+"\u2026":t[r]}}}}})},_vDrawTrend(e,t){const i=document.getElementById(e),o=document.getElementById(e+"-empty");if(!i)return;const a=(p,f)=>this._t(p,f),s=(window.AppI18n&&typeof window.AppI18n.getCurrentLang=="function"?window.AppI18n.getCurrentLang():"ar")==="en"?"en-US":"ar-SA-u-nu-latn",r=new Date,c=[];for(let p=11;p>=0;p--){const f=new Date(r.getFullYear(),r.getMonth()-p,1),m=f.toLocaleDateString(s,{month:"long"});c.push({year:f.getFullYear(),month:f.getMonth(),label:`${m} ${f.getFullYear()}`})}const l=c.map(p=>t.filter(f=>{if(!f.violationDate)return!1;const m=new Date(f.violationDate);return!isNaN(m.getTime())&&m.getFullYear()===p.year&&m.getMonth()===p.month}).length);if(l.reduce((p,f)=>p+f,0)===0){i.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none"),i.style.display="",this._violCharts||(this._violCharts={});const d=this._violCharts[e];if(d)try{d.destroy()}catch{}this._violCharts[e]=new Chart(i,{type:"bar",data:{labels:c.map(p=>p.label),datasets:[{label:a("module.violations.analytics.chart.violationCount","\u0639\u062F\u062F \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A"),data:l,backgroundColor:l.map(p=>p===Math.max(...l)?"rgba(220,38,38,0.85)":"rgba(220,38,38,0.5)"),borderRadius:6,borderSkipped:!1,order:1},{label:a("module.violations.analytics.chart.trendLine","\u0627\u0644\u0627\u062A\u062C\u0627\u0647"),data:l,type:"line",borderColor:"rgba(139,92,246,0.9)",backgroundColor:"rgba(139,92,246,0.08)",borderWidth:2.5,pointRadius:4,pointBackgroundColor:"#8b5cf6",tension:.4,fill:!0,order:0}]},options:{responsive:!0,maintainAspectRatio:!1,plugins:{legend:{position:"top",labels:{usePointStyle:!0,font:{size:11}}},tooltip:{mode:"index",intersect:!1}},scales:{x:{grid:{display:!1},ticks:{font:{size:10},maxRotation:45}},y:{beginAtZero:!0,ticks:{precision:0,font:{size:11}},grid:{color:"#f8fafc"}}}}})},_vDrawFinesByType(e,t){const i=document.getElementById(e),o=document.getElementById(e+"-empty");if(!i)return;const a=t.filter(m=>(Number(m.fineAmount)||0)>0);if(!a.length){i.style.display="none",o&&(o.style.display="flex");return}o&&(o.style.display="none"),i.style.display="";const n={};a.forEach(m=>{const y=String(m.violationType||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F").trim();n[y]=(n[y]||0)+(Number(m.fineAmount)||0)});const s=Object.entries(n).sort((m,y)=>y[1]-m[1]).slice(0,10),r=s.map(m=>m[0]),c=this.getCurrentCurrency(),l=this.getCurrencyLabel("long"),d=s.map(m=>{const y=this.convertFineAmount(m[1],c);return c==="USD"?Number(y.toFixed(2)):Math.round(y)});this._violCharts||(this._violCharts={});const p=this._violCharts[e];if(p)try{p.destroy()}catch{}const f=m=>c==="USD"?m.toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:2}):m.toLocaleString("en-US",{maximumFractionDigits:0});this._violCharts[e]=new Chart(i,{type:"bar",data:{labels:r,datasets:[{data:d,backgroundColor:"rgba(217,119,6,0.75)",borderRadius:5,borderSkipped:!1}]},options:{indexAxis:"y",responsive:!0,maintainAspectRatio:!1,plugins:{legend:{display:!1},tooltip:{callbacks:{label:m=>` ${f(m.parsed.x)} ${l}`}}},scales:{x:{beginAtZero:!0,ticks:{font:{size:11},callback:m=>f(m)},grid:{color:"#f1f5f9"},title:{display:!0,text:`\u0627\u0644\u063A\u0631\u0627\u0645\u0629 \u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A\u0629 (${l})`,font:{size:11}}},y:{ticks:{font:{size:11},callback:m=>String(r[m]).length>18?String(r[m]).slice(0,17)+"\u2026":r[m]}}}}})},async _vEnsureChartJS(){return typeof Chart<"u"?!0:document.querySelector('script[src*="chart.js"],script[src*="chartjs"]')?new Promise(t=>{const i=setInterval(()=>{typeof Chart<"u"&&(clearInterval(i),t(!0))},100);setTimeout(()=>{clearInterval(i),t(!1)},5e3)}):new Promise(t=>{const i=document.createElement("script");i.src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js",i.onload=()=>t(!0),i.onerror=()=>{const o=document.createElement("script");o.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js",o.onload=()=>t(!0),o.onerror=()=>t(!1),document.head.appendChild(o)},document.head.appendChild(i)})},_vChartColors(e){const t=["rgba(220,38,38,0.8)","rgba(245,158,11,0.8)","rgba(16,185,129,0.8)","rgba(99,102,241,0.8)","rgba(249,115,22,0.8)","rgba(139,92,246,0.8)","rgba(59,130,246,0.8)","rgba(236,72,153,0.8)","rgba(20,184,166,0.8)","rgba(168,85,247,0.8)"];return Array.from({length:e},(i,o)=>t[o%t.length])},async _loadReportPdfLib_(e,t){return t()?!0:new Promise(i=>{const o=Array.from(document.querySelectorAll("script[src]")).find(n=>String(n.src||"").includes(e));if(o){const n=()=>i(!!t());o.addEventListener("load",n,{once:!0}),setTimeout(n,4e3);return}const a=document.createElement("script");a.src=e,a.async=!0,a.onload=()=>i(!!t()),a.onerror=()=>i(!1),document.head.appendChild(a)})},async _ensureReportPdfLibs_(){const e=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js",()=>typeof html2canvas<"u"),t=await this._loadReportPdfLib_("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>typeof window.jspdf<"u");return e&&t},_AR_PDF_TEXT_STYLE_:"font-family:'Cairo','Tahoma','Segoe UI',sans-serif;direction:rtl;unicode-bidi:embed;letter-spacing:0;word-spacing:normal;",_stripScriptsFromHtml_(e){return String(e||"").replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,"")},async _preloadCairoFontForPdf_(){if(!document.getElementById("viol-cairo-font-link")){const e=document.createElement("link");e.id="viol-cairo-font-link",e.rel="stylesheet",e.href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap",document.head.appendChild(e)}try{document.fonts&&typeof document.fonts.load=="function"&&(await document.fonts.load("400 14px Cairo"),await document.fonts.load("700 20px Cairo"),await document.fonts.ready)}catch{}},_prepareArabicPdfHtml_(e){const t=`
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style id="violations-arabic-pdf-fix">
+    html, body {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+    }
+    body *, .report-wrapper, .report-wrapper * {
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', 'Arial', sans-serif !important;
+        letter-spacing: 0 !important;
+        word-spacing: normal !important;
+    }
+    h1, h2, h3, .header-title-ar, .company-name, .company-name-secondary,
+    .footer-bottom-text, .footer-bottom-text span, .footer-meta-item,
+    th, td, .meta-label, .meta-value {
+        direction: rtl !important;
+        unicode-bidi: embed;
+        letter-spacing: 0 !important;
+        word-break: normal !important;
+        font-family: 'Cairo', 'Tahoma', 'Segoe UI', sans-serif !important;
+    }
+    .report-header .company-brand .company-name,
+    .export-header .company-name,
+    .att-report-brand-name,
+    .ptw-paper-header-company,
+    .card-header .company-name {
+        white-space: nowrap !important;
+        word-break: keep-all !important;
+        overflow-wrap: normal !important;
+    }
+    .report-header {
+        grid-template-columns: minmax(240px, 1.45fr) minmax(280px, 1.75fr) minmax(88px, 120px) !important;
+        gap: 14px !important;
+    }
+    table, thead, tbody, tr, th, td { direction: rtl !important; }
+    .header-info h1 { letter-spacing: 0 !important; }
+</style>`,i=this._stripScriptsFromHtml_(e);return i?i.includes("</head>")?i.replace("</head>",`${t}</head>`):`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">${t}</head><body>${i}</body></html>`:t},async _waitArabicPdfFontsReady_(e){if(!(!e||!e.fonts||typeof e.fonts.load!="function"))try{await Promise.all([e.fonts.load("400 12px Cairo"),e.fonts.load("600 14px Cairo"),e.fonts.load("700 18px Cairo"),e.fonts.load("800 24px Cairo")]),await e.fonts.ready}catch{}},async _captureHtmlToCanvas_(e,t={}){const i={scale:2.5,backgroundColor:"#ffffff",logging:!1,windowWidth:Math.max(e.scrollWidth,900),windowHeight:Math.max(e.scrollHeight,1),scrollX:0,scrollY:0},o=[{...i,useCORS:!0,allowTaint:!1},{...i,useCORS:!0,allowTaint:!0},{...i,useCORS:!1,allowTaint:!0}];let a=null;for(let n=0;n<o.length;n++)try{const s=await html2canvas(e,o[n]);if(s&&s.width>0&&s.height>0)return s}catch(s){a=s}if(a)throw a;return null},async _downloadHtmlReportAsPdf(e,t="report.pdf"){if(!await this._ensureReportPdfLibs_()||typeof html2canvas>"u"||!window.jspdf)return!1;await this._preloadCairoFontForPdf_();const o=this._prepareArabicPdfHtml_(e),a=String(t||"report.pdf").toLowerCase().endsWith(".pdf")?String(t):`${String(t)}.pdf`,n=document.createElement("iframe");n.setAttribute("aria-hidden","true"),n.style.cssText="position:fixed;left:-100000px;top:0;width:900px;height:1200px;border:0;visibility:hidden;",document.body.appendChild(n);try{n.srcdoc=o,await new Promise(p=>{n.onload=p,n.onerror=p,setTimeout(p,6e3)});const s=n.contentDocument||n.contentWindow?.document;if(!s)return!1;await this._waitArabicPdfFontsReady_(s);const r=Array.from(s.images||[]);await Promise.all(r.map(p=>new Promise(f=>{if(p.complete)return f();p.onload=f,p.onerror=f,setTimeout(f,3e3)})));const c=s.querySelector(".report-wrapper")||s.body;if(!c)return!1;const l=await this._captureHtmlToCanvas_(c);if(!l)return!1;const d=Utils.PdfExport.createPdf({orientation:"portrait",unit:"mm",format:"a4"});return d?(Utils.PdfExport.appendCanvasAsPdfPages(d,l,{marginMm:8}),Utils.PdfExport.savePdf(d,a),!0):!1}catch(s){return Utils.safeWarn("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 PDF:",s),!1}finally{n.remove()}},_getViolAnalyticsPeriodLabel_(){return{30:"30 \u064A\u0648\u0645",90:"3 \u0623\u0634\u0647\u0631",180:"6 \u0623\u0634\u0647\u0631",365:"\u0633\u0646\u0629",0:"\u0627\u0644\u0643\u0644"}[String(this._violPeriod||"0")]||"\u0627\u0644\u0643\u0644"},_buildViolAnalyticsExportLegend_(){const e=a=>typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML(a):String(a??""),t=e(this._getViolAnalyticsPeriodLabel_()),i=e(document.getElementById("viol-filter-count")?.textContent?.trim()||""),o=e(new Date().toLocaleString("ar-SA-u-nu-latn",{hour:"2-digit",minute:"2-digit",year:"numeric",month:"long",day:"numeric"}));return`
+        <div class="ia-export-legend" dir="rtl" style="margin-top:12px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+            <div style="font-weight:700;font-size:12px;color:#475569;margin-bottom:10px;">\u0645\u0644\u062E\u0635 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px 18px;font-size:11px;line-height:1.55;color:#334155;">
+                <div><strong style="color:#64748b;">\u0627\u0644\u0641\u062A\u0631\u0629:</strong> ${t}</div>
+                ${i?`<div><strong style="color:#64748b;">\u0627\u0644\u0633\u062C\u0644\u0627\u062A:</strong> ${i}</div>`:""}
+                <div><strong style="color:#64748b;">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631:</strong> ${o}</div>
+            </div>
+        </div>`},async _vExportPDF(){const e=document.getElementById("viol-analytics-capture");if(!e)return;const t=document.getElementById("viol-export-pdf-btn"),i=t?t.innerHTML:"";t&&(t.disabled=!0,t.innerHTML='<i class="fas fa-spinner fa-spin"></i>');try{if(await this._ensureReportPdfLibs_(),typeof html2canvas>"u")throw new Error("html2canvas unavailable");const o=document.getElementById("viol-filter-panel"),a=o&&o.style.display!=="none";a&&(o.style.display="none");const n=Utils.PdfExport.getOptimalCaptureScale(e.scrollWidth,e.scrollHeight,Utils.PdfExport.DEFAULT_CAPTURE_SCALE),s=await html2canvas(e,{scale:n,useCORS:!0,backgroundColor:"#f8fafc",scrollX:0,scrollY:0,logging:!1});a&&(o.style.display="");const{dataUrl:r}=Utils.PdfExport.compressCanvasToJpegDataUrl(s,Utils.PdfExport.TARGET_MAX_BYTES),c=`
+                <div style="margin:0 auto;max-width:100%;">
+                    <img src="${r}" alt="Violations Analytics Dashboard" style="width:100%;max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0;">
+                </div>`,l=`VIOL-ANALYTICS-${new Date().toISOString().slice(0,10)}`,d="\u0644\u0648\u062D\u0629 \u062A\u062D\u0644\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A",p="Violations Analysis Report",f=new Date().toISOString(),m=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(l,d,c,!1,!1,{source:"ViolationsAnalytics",titleEn:p,titleAr:d,version:AppState?.companySettings?.formVersion||"1.0",includeQRCode:!1,compactPdfFooter:!0,headerLayoutLtr:!0,footerLegendHtml:this._buildViolAnalyticsExportLegend_()},f,f):`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${d}</title></head><body>${c}</body></html>`,y=`Violations-Analysis-${new Date().toISOString().slice(0,10)}.pdf`;if(!await this._downloadHtmlReportAsPdf(m,y))throw new Error("PDF generation failed");typeof Notification<"u"&&Notification.success&&Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A PDF \u0628\u0646\u062C\u0627\u062D")}catch{typeof Notification<"u"&&Notification.error&&Notification.error("\u062A\u0639\u0630\u0651\u0631 \u062A\u0635\u062F\u064A\u0631 PDF \u2014 \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A")}finally{t&&(t.disabled=!1,t.innerHTML=i)}},_vBindAnalyticsEvents(){const e=document.getElementById("viol-analytics-root");if(!e)return;e.querySelectorAll(".viol-period-btn").forEach(r=>{r.addEventListener("click",()=>{this._violPeriod=r.getAttribute("data-period"),e.querySelectorAll(".viol-period-btn").forEach(c=>{const l=c===r;c.style.background=l?"#fff":"rgba(255,255,255,0.15)",c.style.color=l?"#991b1b":"#fff"}),this.updateViolationAnalytics()})});const t=document.getElementById("viol-analytics-refresh");t&&t.addEventListener("click",()=>this.updateViolationAnalytics());const i=document.getElementById("viol-export-pdf-btn");i&&i.addEventListener("click",()=>this._vExportPDF());const o=document.getElementById("viol-toggle-filters-btn"),a=document.getElementById("viol-filter-panel");o&&a&&o.addEventListener("click",()=>{const r=a.style.display!=="none";a.style.display=r?"none":"block",o.style.background=r?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.35)"});const n=document.getElementById("viol-filter-reset-btn");n&&n.addEventListener("click",()=>{["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(r=>{const c=document.getElementById(r);c&&(c.value="")}),this.updateViolationAnalytics()}),["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(r=>{const c=document.getElementById(r);c&&c.addEventListener("change",()=>this.updateViolationAnalytics())}),e.querySelectorAll(".viol-kpi-card").forEach(r=>{r.addEventListener("click",()=>{const c=r.getAttribute("data-kpi");if(c==="total")["viol-af-factory","viol-af-ptype","viol-af-type","viol-af-sev","viol-af-status","viol-af-loc"].forEach(l=>{const d=document.getElementById(l);d&&(d.value="")});else if(c==="employees"){const l=document.getElementById("viol-af-ptype");l&&(l.value=l.value==="employee"?"":"employee")}else if(c==="contractors"){const l=document.getElementById("viol-af-ptype");l&&(l.value=l.value==="contractor"?"":"contractor")}else if(c==="highSev"){const l=document.getElementById("viol-af-sev");l&&(l.value=l.value==="\u0639\u0627\u0644\u064A\u0629"?"":"\u0639\u0627\u0644\u064A\u0629")}else if(c==="resolved"){const l=document.getElementById("viol-af-status");l&&(l.value=l.value==="\u0645\u062D\u0644\u0648\u0644"?"":"\u0645\u062D\u0644\u0648\u0644")}else if(c==="unresolved"){const l=document.getElementById("viol-af-status");l&&(l.value=l.value==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"":"\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644")}this.updateViolationAnalytics()})}),e.querySelectorAll(".viol-curr-btn").forEach(r=>{r.addEventListener("click",()=>{const c=r.getAttribute("data-curr");this.setCurrentCurrency(c),e.querySelectorAll(".viol-curr-btn").forEach(l=>{const d=l.getAttribute("data-curr")===c;l.style.background=d?"#fff":"transparent",l.style.color=d?"#991b1b":"#fff"}),this.updateViolationAnalytics()})});const s=document.getElementById("viol-curr-rate-btn");s&&s.addEventListener("click",()=>{const r=this.getExchangeRate(),c=window.prompt(`\u0623\u062F\u062E\u0644 \u0633\u0639\u0631 \u0635\u0631\u0641 \u0627\u0644\u062F\u0648\u0644\u0627\u0631 (\u0643\u0645 \u062C\u0646\u064A\u0647 \u0645\u0635\u0631\u064A \u064A\u0633\u0627\u0648\u064A 1 \u062F\u0648\u0644\u0627\u0631 \u0623\u0645\u0631\u064A\u0643\u064A):
+
+\u0627\u0644\u0633\u0639\u0631 \u0627\u0644\u062D\u0627\u0644\u064A: ${r} \u062C\u0646\u064A\u0647 = 1 \u062F\u0648\u0644\u0627\u0631`,String(r));if(c===null)return;const l=parseFloat(String(c).trim());if(!Number.isFinite(l)||l<=0){typeof Notification<"u"&&Notification.error?Notification.error("\u0633\u0639\u0631 \u0635\u0631\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D"):alert("\u0633\u0639\u0631 \u0635\u0631\u0641 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}this.setExchangeRate(l),typeof Notification<"u"&&Notification.success&&Notification.success(`\u062A\u0645 \u062A\u062D\u062F\u064A\u062B \u0633\u0639\u0631 \u0627\u0644\u0635\u0631\u0641 \u0625\u0644\u0649 ${l} \u062C\u0646\u064A\u0647 = 1 \u062F\u0648\u0644\u0627\u0631`),this.updateViolationAnalytics()})},loadContractorsIntoSelect(e,t="",i=""){if(!e||e.tagName!=="SELECT"){Utils.safeWarn("\u26A0\uFE0F loadContractorsIntoSelect: \u0639\u0646\u0635\u0631 select \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}if(typeof Contractors<"u"&&typeof Contractors.populateContractorSelect=="function"){Contractors.populateContractorSelect(e,{placeholder:"-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --",selectedValue:t,selectedContractorId:i,valueMode:"name",showServiceType:!0,includeSuppliers:!0,approvedOnly:!1});return}let o=[];if(typeof Contractors<"u"&&typeof Contractors.getAllContractorsForModules=="function")try{const s=Contractors.getAllContractorsForModules();if(s&&s.length>0){const r=new Map;s.forEach(c=>{const l=(c.name||"").trim();if(!l||l==="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641")return;const d=((c.code||c.isoCode||"")+"").trim().toUpperCase(),p=((c.licenseNumber||"")+"").trim(),f=/^CON-\d+$/i.test(d)?`CODE:${d}`:p?`LIC:${p}`:c.id?`ID:${c.id}`:`NAME:${l.toLowerCase()}`;r.has(f)||r.set(f,{id:c.id||"",name:l,serviceType:(c.serviceType||"").trim(),licenseNumber:(c.licenseNumber||"").trim()})}),o=Array.from(r.values()).sort((c,l)=>{const d=c.name.toLowerCase(),p=l.name.toLowerCase();return d.localeCompare(p,"ar",{sensitivity:"base"})})}}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0645\u0646 getAllContractorsForModules:",s)}if(o.length===0&&typeof Contractors<"u"&&typeof Contractors.getApprovedOptions=="function")try{const s=Contractors.getApprovedOptions(!1);s&&s.length>0&&(o=s.map(r=>({id:r.id||r.contractorId||"",name:(r.name||"").trim(),serviceType:(r.serviceType||"").trim(),licenseNumber:(r.licenseNumber||"").trim()})).filter(r=>r.name))}catch(s){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629:",s)}if(o.length===0){const s=AppState.appData.approvedContractors||[],r=new Map;s.filter(c=>c&&(c.companyName||c.name)&&c.isActive!=="inactive"&&c.isActive!==!1&&c.isActive!=="false"&&c.isActive!=="FALSE").forEach(c=>{const l=(c.companyName||c.name||"").trim();!l||l==="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641"||r.has(l)||r.set(l,{id:c.id||"",name:l,serviceType:(c.serviceType||"").trim(),licenseNumber:(c.licenseNumber||c.contractNumber||"").trim()})}),o=Array.from(r.values()).sort((c,l)=>{const d=c.name.toLowerCase(),p=l.name.toLowerCase();return d.localeCompare(p,"ar",{sensitivity:"base"})})}e.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --</option>';const a=document.createDocumentFragment();let n=null;if(o.forEach(s=>{if(!s||!s.name)return;const r=document.createElement("option");r.value=s.name,r.textContent=s.name,s.serviceType&&(r.textContent+=` - ${s.serviceType}`),r.dataset.contractorId=s.id||"",(t&&s.name===t||i&&s.id===i)&&(r.selected=!0,n=r),a.appendChild(r)}),e.appendChild(a),t&&!n&&e.value!==t)try{e.value=t}catch{Utils.safeWarn("\u26A0\uFE0F \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0627\u0644\u0645\u062D\u062F\u062F \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0627\u0644\u0642\u0627\u0626\u0645\u0629:",t)}},async showViolationForm(e=null){let t=null;if(typeof e=="string"?t=AppState.appData.violations?.find(g=>g.id===e)||null:typeof e=="object"&&(t=e),t=this.normalizeViolationRecord(t),t&&!this.isViolationVisibleToCurrentUser(t)){typeof Notification<"u"&&Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0645\u0634\u0627\u0647\u062F\u0629 \u0623\u0648 \u062A\u0639\u062F\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0627\u062A \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649");return}const i=t?this.getEffectiveFineAmount(t):0,o=!!t,n=String(t?.personType||"").trim().toLowerCase()==="contractor"||!!t?.contractorName&&!t?.employeeName,s=!n,r=String(t?.violationLocationId||t?.violationLocation||"").trim(),c=String(t?.violationPlaceId||t?.violationPlace||"").trim();let l=[];if(typeof ViolationTypesManager<"u"&&ViolationTypesManager.ensureInitialized&&ViolationTypesManager.getAll)try{ViolationTypesManager.ensureInitialized(),l=ViolationTypesManager.getAll()}catch(g){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0623\u0646\u0648\u0627\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A:",g),l=AppState?.appData?.violationTypes||[]}else l=AppState?.appData?.violationTypes||[];const d=t?.violationTypeId||"",p=(t?.violationType||"").trim(),f=(AppState?.currentUser?.role||"").toString().trim().toLowerCase(),m=["admin","manager","\u0645\u062F\u064A\u0631","\u0645\u062F\u064A\u0631 \u0627\u0644\u0646\u0638\u0627\u0645","system-manager","system_admin"].includes(f),y=l.map(g=>{const T=d?g.id===d:g.name===p,L=Number(g?.fineAmount||0);return`
+                <option value="${Utils.escapeHTML(g.name)}" data-type-id="${Utils.escapeHTML(g.id)}" data-fine-amount="${L}" ${T?"selected":""}>
+                    ${Utils.escapeHTML(g.name)}
+                </option>
+            `}).join(""),x=!l.some(g=>d?g.id===d:g.name===p)&&p?`
+                <option value="${Utils.escapeHTML(p)}" data-type-id="${Utils.escapeHTML(d)}" data-fine-amount="${Number(i)}" selected>
+                    ${Utils.escapeHTML(p)} (\u063A\u064A\u0631 \u0645\u0639\u0631\u0641)
+                </option>
+            `:"",v=document.createElement("div");v.className="modal-overlay",v.innerHTML=`
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-exclamation-triangle ml-2 text-yellow-600"></i>
+                        ${o?"\u062A\u0639\u062F\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629":"\u062A\u0633\u062C\u064A\u0644 \u0645\u062E\u0627\u0644\u0641\u0629 \u062C\u062F\u064A\u062F\u0629"}
+                    </h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- \u2705 \u0634\u0631\u064A\u0637 \u062A\u0646\u0628\u064A\u0647 \u062F\u0627\u062E\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C (\u064A\u0638\u0647\u0631 \u0623\u0639\u0644\u0649 \u0627\u0644\u062D\u0642\u0648\u0644) -->
+                    <div id="violation-form-banner" class="hidden mb-4 rounded-lg border p-3 flex items-start gap-2.5" role="alert" style="font-size: 0.9rem;">
+                        <i id="violation-form-banner-icon" class="fas fa-circle-info text-lg mt-0.5"></i>
+                        <div class="flex-1 min-w-0">
+                            <div id="violation-form-banner-title" class="font-bold mb-0.5"></div>
+                            <div id="violation-form-banner-text" class="leading-relaxed"></div>
+                        </div>
+                        <button type="button" id="violation-form-banner-close" class="text-gray-400 hover:text-gray-700 ms-2" title="\u0625\u062E\u0641\u0627\u0621">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <form id="violation-form" class="space-y-4">
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u0623\u0648\u0644: \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-user-tag ml-2 text-blue-600"></i>
+                                    \u0646\u0648\u0639 \u0627\u0644\u0634\u062E\u0635 *
+                                </label>
+                                <select id="violation-person-type" required class="form-input">
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
+                                    <option value="employee" ${s?"selected":""}>\u0645\u0648\u0638\u0641</option>
+                                    <option value="contractor" ${n?"selected":""}>\u0645\u0642\u0627\u0648\u0644</option>
+                                </select>
+                            </div>
+                            <div id="violation-employee-code-container" style="display: ${s?"block":"none"};">
+                                <label for="violation-employee-code" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-id-card ml-2"></i>
+                                    \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *
+                                </label>
+                                <input type="text" id="violation-employee-code" class="form-input"
+                                    value="${t?.employeeCode||t?.employeeNumber||""}" 
+                                    placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A (\u0633\u064A\u062A\u0645 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B)"
+                                    ${s?"required":""}>
+                            </div>
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0646\u064A: \u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 \u0648\u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 *</label>
+                                <input type="text" id="violation-person-name" required class="form-input"
+                                    value="${t?.employeeName||t?.contractorName||""}" 
+                                    placeholder="${s?"\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B":"\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644"}"
+                                    ${s?"readonly":""}
+                                    style="display: ${n?"none":"block"};">
+                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${n?"block":"none"};">\u0627\u0644\u0645\u0642\u0627\u0648\u0644 *</label>
+                                <select id="violation-contractor-select" class="form-input"
+                                    style="display: ${n?"block":"none"};"
+                                    ${n?"required":""}>
+                                    <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 --</option>
+                                </select>
+                            </div>
+                            <div id="violation-employee-position-container" style="display: ${s?"block":"none"};">
+                                <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
+                                <input type="text" id="violation-employee-position" class="form-input"
+                                    value="${t?.employeePosition||""}" 
+                                    placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
+                            </div>
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062B\u0627\u0644\u062B: \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0648\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div id="violation-employee-department-container" style="display: ${s?"block":"none"};">
+                                <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
+                                <input type="text" id="violation-employee-department" class="form-input"
+                                    value="${t?.employeeDepartment||""}" 
+                                    placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B" readonly>
+                            </div>
+                            <div>
+                                <label for="violation-date" class="block text-sm font-semibold text-gray-700 mb-2">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
+                                <input type="date" id="violation-date" required class="form-input"
+                                    value="${t?.violationDate?new Date(t.violationDate).toISOString().slice(0,10):""}">
+                            </div>
+                        </div>
+                        <div id="violation-sequence-info" class="hidden mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+                            <i class="fas fa-layer-group ml-2 text-amber-700"></i><span id="violation-sequence-text"></span>
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u0631\u0627\u0628\u0639: \u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label for="violation-time" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-clock ml-2 text-purple-600"></i>
+                                    \u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *
+                                </label>
+                                <input type="time" id="violation-time" required class="form-input"
+                                    value="${t?.violationTime||""}">
+                            </div>
+                            <div>
+                                <label for="violation-type" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-exclamation-circle ml-2 text-red-600"></i>
+                                    \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *
+                                </label>
+                                <select id="violation-type" required class="form-input">
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0646\u0648\u0639</option>
+                                    ${x}
+                                    ${y}
+                                </select>
+                            </div>
+                            <div>
+                                <label for="violation-fine-amount" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill-wave ml-2 text-green-600"></i>
+                                    \u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629 (\u062C.\u0645)
+                                </label>
+                                <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
+                                    value="${Number(i)}"
+                                    placeholder="\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629">
+                                <p class="text-xs text-gray-500 mt-1">
+                                    ${m?"\u064A\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u0648\u064A\u0645\u0643\u0646\u0643 \u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0644\u0623\u0646\u0643 \u0645\u062F\u064A\u0631.":"\u064A\u062A\u0645 \u0627\u0644\u062A\u062D\u062F\u064A\u062F \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B \u062D\u0633\u0628 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629\u060C \u0648\u0627\u0644\u062A\u0639\u062F\u064A\u0644 \u0645\u062A\u0627\u062D \u0644\u0644\u0645\u062F\u064A\u0631 \u0641\u0642\u0637."}
+                                </p>
+                            </div>
+                        </div>
+                        <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 (\u062A\u0638\u0647\u0631 \u0641\u0642\u0637 \u0639\u0646\u062F \u0627\u062E\u062A\u064A\u0627\u0631 \u0645\u0642\u0627\u0648\u0644) -->
+                        <div id="violation-contractor-fields-container" style="display: ${n?"block":"none"};">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div id="violation-contractor-worker-container">
+                                    <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0644\u0645\u0642\u0627\u0648\u0644</label>
+                                    <input type="text" id="violation-contractor-worker" class="form-input"
+                                        value="${t?.contractorWorker||""}" 
+                                        placeholder="\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644">
+                                </div>
+                                <div id="violation-contractor-position-container">
+                                    <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
+                                    <input type="text" id="violation-contractor-position" class="form-input"
+                                        value="${t?.contractorPosition||""}" 
+                                        placeholder="\u0648\u0638\u064A\u0641\u0629 \u0627\u0644\u0639\u0627\u0645\u0644">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div id="violation-contractor-department-container">
+                                    <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
+                                    <input type="text" id="violation-contractor-department" class="form-input"
+                                        value="${t?.contractorDepartment||""}" 
+                                        placeholder="\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639\u0629 \u0644\u0647">
+                            </div>
+                            <div>
+                                    <label for="violation-contractor-location" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0648\u0642\u0639 *</label>
+                                    <select id="violation-contractor-location" required class="form-input">
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
+                                    </select>
+                            </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 mt-4">
+                                <div>
+                                    <label for="violation-contractor-place" class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
+                                    <select id="violation-contractor-place" required class="form-input">
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- \u062D\u0642\u0648\u0644 \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0644\u0644\u0645\u0648\u0638\u0641) -->
+                        <div id="violation-location-fields-container" style="display: ${s?"block":"none"};">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">\u0627\u0644\u0645\u0648\u0642\u0639 *</label>
+                                    <select id="violation-employee-location" required class="form-input">
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="violation-employee-place" class="block text-sm font-semibold text-gray-700 mb-2">\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 *</label>
+                                    <select id="violation-employee-place" required class="form-input">
+                                        <option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0635\u0641 \u0627\u0644\u062E\u0627\u0645\u0633: \u0627\u0644\u0634\u062F\u0629 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-signal ml-2 text-orange-600"></i>
+                                    \u0627\u0644\u0634\u062F\u0629 *
+                                </label>
+                                <select id="violation-severity" required class="form-input">
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0634\u062F\u0629</option>
+                                    <option value="\u0639\u0627\u0644\u064A\u0629" ${t?.severity==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                                    <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${t?.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                                    <option value="\u0645\u0646\u062E\u0636\u0629" ${t?.severity==="\u0645\u0646\u062E\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="violation-status" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-info-circle ml-2 text-blue-600"></i>
+                                    \u0627\u0644\u062D\u0627\u0644\u0629 *
+                                </label>
+                                <select id="violation-status" required class="form-input">
+                                    <option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u062D\u0627\u0644\u0629</option>
+                                    <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${t?.status==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                                    <option value="\u0645\u062D\u0644\u0648\u0644" ${t?.status==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                                    <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${t?.status==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- \u0627\u0644\u0635\u0648\u0631\u0629 \u0648\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 -->
+                            <div class="col-span-2">
+                                <label for="violation-photo-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-image ml-2"></i>
+                                    \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u063A\u064A\u0631 \u0625\u0644\u0632\u0627\u0645\u064A)
+                                </label>
+                                <input type="file" id="violation-photo-input" accept="image/*" class="form-input">
+                                <div id="violation-photo-preview" class="mt-2 ${t?.photo?"":"hidden"}">
+                                    <img src="${t?.photo||""}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629" class="w-48 h-48 object-cover rounded border" id="violation-photo-img">
+                                <button type="button" onclick="const photoInput = document.getElementById('violation-photo-input'); if (photoInput) photoInput.value=''; const photoPreview = document.getElementById('violation-photo-preview'); if (photoPreview) photoPreview.classList.add('hidden');" class="mt-1 text-xs text-red-600">\u062D\u0630\u0641 \u0627\u0644\u0635\u0648\u0631\u0629</button>
+                                </div>
+                            </div>
+                            <div class="col-span-2">
+                                <label for="violation-details" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-file-alt ml-2 text-amber-600"></i>
+                                    \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
+                                </label>
+                                <textarea id="violation-details" class="form-input" rows="3"
+                                    placeholder="\u0627\u0643\u062A\u0628 \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0648\u0635\u0641\u0647\u0627 \u0627\u0644\u0643\u0627\u0645\u0644...">${t?.violationDetails||""}</textarea>
+                            </div>
+                            <div class="col-span-2">
+                                <label for="violation-action" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-tasks ml-2 text-indigo-600"></i>
+                                    \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630
+                                </label>
+                                <textarea id="violation-action" class="form-input" rows="3"
+                                    placeholder="\u0648\u0635\u0641 \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 \u0628\u0634\u0623\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629...">${t?.actionTaken||""}</textarea>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
+                                <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
+                            </button>
+                            <button type="submit" id="violation-submit-btn" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>${o?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `,document.body.appendChild(v);const I=document.getElementById("violation-person-type"),B=document.getElementById("violation-employee-code-container"),k=document.getElementById("violation-employee-code"),_=document.getElementById("violation-person-name"),N=document.getElementById("violation-person-name-label"),A=document.getElementById("violation-contractor-select");if(A){const g=t?.contractorName||"",T=t?.contractorId||"";this.loadContractorsIntoSelect(A,g,T)}const S=document.getElementById("violation-employee-position-container"),V=document.getElementById("violation-employee-department-container"),O=document.getElementById("violation-employee-position"),H=document.getElementById("violation-employee-department"),R=document.getElementById("violation-contractor-fields-container"),h=document.getElementById("violation-contractor-worker-container"),C=document.getElementById("violation-contractor-position-container"),W=document.getElementById("violation-contractor-department-container"),ot=document.getElementById("violation-contractor-worker"),at=document.getElementById("violation-contractor-position"),K=document.getElementById("violation-contractor-department"),Q=document.getElementById("violation-location-fields-container"),Y=document.getElementById("violation-type"),J=document.getElementById("violation-fine-amount"),_t=new Map((l||[]).map(g=>[String(g.id||"").trim(),g])),Ct=new Map((l||[]).map(g=>[String(g.name||"").trim().toLowerCase(),g])),xt=()=>{const g=Y?.selectedOptions?.[0],T=g?.getAttribute("data-type-id")||"",L=(Y?.value||"").trim().toLowerCase(),E=T&&_t.get(T)||L&&Ct.get(L)||null,b=Number(g?.getAttribute("data-fine-amount")||0),D=Number(E?.fineAmount??b??0);return Number.isFinite(D)&&D>=0?D:0},ct=({force:g=!1}={})=>{if(!J)return;const T=xt();(g||!m||J.value==="")&&(J.value=String(T))};J&&(J.readOnly=!m),Y&&(Y.addEventListener("change",()=>ct({force:!0})),Y.addEventListener("input",()=>ct({force:!0}))),J&&m&&t&&t.fineAmount!==void 0&&t.fineAmount!==null?J.value=String(Number(i)):ct({force:!0}),I.addEventListener("change",g=>{if(g.target.value==="employee"){if(B.style.display="block",k.required=!0,k.placeholder="\u0623\u062F\u062E\u0644 \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A (\u0633\u064A\u062A\u0645 \u062A\u0639\u0628\u0626\u0629 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B)",_.style.display="block",_.readOnly=!0,_.placeholder="\u0633\u064A\u062A\u0645 \u0627\u0644\u062A\u0639\u0628\u0626\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627\u064B",_.value="",_.required=!0,A&&(A.style.display="none",A.required=!1),S&&(S.style.display="block"),V&&(V.style.display="block"),R&&(R.style.display="none"),Q&&(Q.style.display="block"),this.loadLocationOptions("employee").then(()=>{const L=document.getElementById("violation-employee-location");if(L){const E=L.cloneNode(!0);L.parentNode.replaceChild(E,L);const b=document.getElementById("violation-employee-location");b&&b.addEventListener("change",D=>{const U=D.target.value;this.loadPlaceOptions(U,"","employee")})}}),N&&(N.textContent="\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641 *"),typeof EmployeeHelper<"u"&&k&&k.parentNode)try{const L=k.cloneNode(!0);k.parentNode.replaceChild(L,k),document.getElementById("violation-employee-code")&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",b=>{if(b){const D=document.getElementById("violation-person-name"),U=document.getElementById("violation-employee-position"),j=document.getElementById("violation-employee-department");D&&(D.value=b.name||""),U&&(U.value=b.position||b.jobTitle||""),j&&(j.value=b.department||b.section||"")}})}catch(L){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",L),k&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",E=>{if(E){const b=document.getElementById("violation-person-name"),D=document.getElementById("violation-employee-position"),U=document.getElementById("violation-employee-department");b&&(b.value=E.name||""),D&&(D.value=E.position||E.jobTitle||""),U&&(U.value=E.department||E.section||"")}})}}else ct({force:!0}),B.style.display="none",k.required=!1,k.value="",_.style.display="none",_.required=!1,_.value="",A&&(A.style.display="block",A.required=!0,this.loadContractorsIntoSelect(A)),S&&(S.style.display="none"),V&&(V.style.display="none"),R&&(R.style.display="block"),this.loadLocationOptions("contractor").then(()=>{const L=document.getElementById("violation-contractor-location");if(L){const E=L.cloneNode(!0);L.parentNode.replaceChild(E,L);const b=document.getElementById("violation-contractor-location");b&&b.addEventListener("change",D=>{const U=D.target.value;this.loadPlaceOptions(U,"","contractor")})}}),Q&&(Q.style.display="none"),N&&(N.textContent="\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 *");dt()});const dt=()=>{clearTimeout(this._violationSeqBadgeTimer),this._violationSeqBadgeTimer=setTimeout(()=>{this.refreshViolationSequenceBadgeInModal(v,o?t?.id:null)},200)};if(v.addEventListener("input",dt),v.addEventListener("change",dt),setTimeout(dt,350),typeof EmployeeHelper<"u"&&t?.employeeName&&k&&k.parentNode)try{const g=k.cloneNode(!0);k.parentNode.replaceChild(g,k),document.getElementById("violation-employee-code")&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",L=>{if(L){const E=document.getElementById("violation-person-name"),b=document.getElementById("violation-employee-position"),D=document.getElementById("violation-employee-department");E&&(E.value=L.name||""),b&&(b.value=L.position||L.jobTitle||""),D&&(D.value=L.department||L.section||"")}})}catch(g){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",g),k&&EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",T=>{if(T){const L=document.getElementById("violation-person-name"),E=document.getElementById("violation-employee-position"),b=document.getElementById("violation-employee-department");L&&(L.value=T.name||""),E&&(E.value=T.position||T.jobTitle||""),b&&(b.value=T.department||T.section||"")}})}const mt=n?"contractor":"employee";setTimeout(async()=>{await this.loadLocationOptions("employee"),await this.loadLocationOptions("contractor");const g=document.getElementById("violation-employee-location"),T=document.getElementById("violation-employee-place");if(g&&T){const b=g.cloneNode(!0);g.parentNode.replaceChild(b,g);const D=T.cloneNode(!0);T.parentNode.replaceChild(D,T);const U=document.getElementById("violation-employee-location"),j=document.getElementById("violation-employee-place");U&&U.addEventListener("change",z=>{const G=z.target.value;this.loadPlaceOptions(G,"","employee")})}const L=document.getElementById("violation-contractor-location"),E=document.getElementById("violation-contractor-place");if(L&&E){const b=L.cloneNode(!0);L.parentNode.replaceChild(b,L);const D=E.cloneNode(!0);E.parentNode.replaceChild(D,E);const U=document.getElementById("violation-contractor-location"),j=document.getElementById("violation-contractor-place");U&&U.addEventListener("change",z=>{const G=z.target.value;this.loadPlaceOptions(G,"","contractor")})}if(mt==="employee"&&I.value==="employee"&&typeof EmployeeHelper<"u"&&document.getElementById("violation-employee-code"))try{EmployeeHelper.setupEmployeeCodeSearch("violation-employee-code","violation-person-name",D=>{if(D){const U=document.getElementById("violation-person-name"),j=document.getElementById("violation-employee-position"),z=document.getElementById("violation-employee-department");U&&(U.value=D.name||""),j&&(j.value=D.position||D.jobTitle||""),z&&(z.value=D.department||D.section||"")}})}catch(D){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0628\u062D\u062B \u0628\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:",D)}},100),r&&setTimeout(()=>{if(mt==="employee"){const g=document.getElementById("violation-employee-location");g&&(g.value=r,r&&this.loadPlaceOptions(r,c,"employee"))}else if(mt==="contractor"){const g=document.getElementById("violation-contractor-location");g&&(g.value=r,r&&this.loadPlaceOptions(r,c,"contractor"))}},200);const ut=document.getElementById("violation-photo-input"),wt=document.getElementById("violation-photo-preview"),St=document.getElementById("violation-photo-img");ut&&wt&&St&&ut.addEventListener("change",async g=>{const T=g.target.files[0];if(T){if(T.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB"),ut.value="";return}const L=new FileReader;L.onload=E=>{St.src=E.target.result,wt.classList.remove("hidden")},L.readAsDataURL(T)}});const Z=v.querySelector("#violation-form"),nt=v.querySelector("#violation-submit-btn")||Z?.querySelector('button[type="submit"]');if(!Z||!nt){AppState.debugMode&&Utils.safeError("\u274C \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0623\u0648 \u0632\u0631 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F"),Notification.error("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u064A\u0631\u062C\u0649 \u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629.");return}if(nt.parentNode){const g=nt.cloneNode(!0);g.disabled=!1,g.removeAttribute("aria-busy"),nt.parentNode.replaceChild(g,nt)}let vt=!1;const gt=()=>v.querySelector("#violation-submit-btn")||Z.querySelector('button[type="submit"]'),Ut=this._t("module.violations.submit.saving","\u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638..."),tt=(g,T,L)=>{const E=v.querySelector("#violation-form-banner"),b=v.querySelector("#violation-form-banner-icon"),D=v.querySelector("#violation-form-banner-title"),U=v.querySelector("#violation-form-banner-text");if(!E||!b||!D||!U)return;const j={error:{bg:"#fef2f2",border:"#fecaca",text:"#991b1b",icon:"fa-circle-xmark text-red-600"},warning:{bg:"#fffbeb",border:"#fde68a",text:"#92400e",icon:"fa-triangle-exclamation text-amber-600"},success:{bg:"#ecfdf5",border:"#a7f3d0",text:"#065f46",icon:"fa-circle-check text-emerald-600"},info:{bg:"#eff6ff",border:"#bfdbfe",text:"#1e40af",icon:"fa-circle-info text-blue-600"}},z=j[g]||j.info;E.style.background=z.bg,E.style.borderColor=z.border,E.style.color=z.text,b.className="fas "+z.icon+" text-lg mt-0.5",D.textContent=T||"",U.textContent=L||"",E.classList.remove("hidden");try{const G=v.querySelector(".modal-body");G&&G.scrollTo({top:0,behavior:"smooth"})}catch{}},kt=()=>{const g=v.querySelector("#violation-form-banner");g&&g.classList.add("hidden")},At=v.querySelector("#violation-form-banner-close");At&&At.addEventListener("click",kt);const $t=async g=>{if(g&&(g.preventDefault(),g.stopPropagation(),g.stopImmediatePropagation()),vt||this._violationSubmitLock||Z.dataset.submitting==="1"){typeof Notification<"u"&&Notification.warning&&Notification.warning(this._t("module.violations.duplicate.click","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0622\u0646. \u0644\u0627 \u062A\u0636\u063A\u0637 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")),AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0642\u064A\u062F \u0627\u0644\u0645\u0639\u0627\u0644\u062C\u0629...");return}vt=!0,this._violationSubmitLock=!0,Z.dataset.submitting="1";const T=gt(),L=T?T.innerHTML:"",E=()=>{vt=!1,this._violationSubmitLock=!1,this._violationInflightDupKey="";try{Z.dataset.submitting=""}catch{}const b=gt();b&&(b.disabled=!1,b.removeAttribute("aria-busy"),b.innerHTML=L)};T&&(T.disabled=!0,T.setAttribute("aria-busy","true"),T.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> '+Ut);try{const b=document.getElementById("violation-person-type")?.value,D=document.getElementById("violation-date")?.value,U=document.getElementById("violation-time")?.value,j=document.getElementById("violation-type")?.value,z=document.getElementById("violation-severity")?.value,G=document.getElementById("violation-status")?.value,Mt=document.getElementById("violation-details")?.value.trim()||"",Bt=document.getElementById("violation-action")?.value.trim()||"",pt=document.getElementById("violation-fine-amount")?.value;let yt="";if(pt!==""&&pt!==null&&pt!==void 0){const w=this.parseFineAmount(pt);Number.isFinite(w)&&w>=0&&(yt=w)}else yt=this.parseFineAmount(xt());const q=[];b||q.push("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 (\u0645\u0648\u0638\u0641/\u0645\u0642\u0627\u0648\u0644)"),D||q.push("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),U||q.push("\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),j||q.push("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),z||q.push("\u0634\u062F\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),G||q.push("\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629");let st="",Et="";if(b==="employee"){const w=document.getElementById("violation-employee-code")?.value.trim();st=document.getElementById("violation-person-name")?.value.trim(),w||q.push("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A"),st||q.push("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641")}else if(b==="contractor"){const w=document.getElementById("violation-contractor-select");if(!w||!w.value)q.push("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644");else{st=w.value;const $=w.options[w.selectedIndex];Et=$?.dataset.contractorCode||$?.dataset.contractorId||""}}let et="",rt="",it="",lt="";if(b==="employee"){const w=document.getElementById("violation-employee-location"),$=document.getElementById("violation-employee-place");et=w?.value||"",rt=w?.options[w?.selectedIndex]?.text||"",it=$?.value||"",lt=$?.options[$?.selectedIndex]?.text||""}else if(b==="contractor"){const w=document.getElementById("violation-contractor-location"),$=document.getElementById("violation-contractor-place");et=w?.value||"",rt=w?.options[w?.selectedIndex]?.text||"",it=$?.value||"",lt=$?.options[$?.selectedIndex]?.text||""}if(et||q.push("\u0627\u0644\u0645\u0648\u0642\u0639"),it||q.push("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),q.length>0){tt("error","\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0632\u0627\u0645\u064A\u0629 \u0646\u0627\u0642\u0635\u0629","\u064A\u0631\u062C\u0649 \u0627\u0633\u062A\u0643\u0645\u0627\u0644: "+q.join("\u060C ")),E(),q.forEach(w=>{let $="";if(w.includes("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A")?$="violation-employee-code":w.includes("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641")?$="violation-person-name":w.includes("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644")?$="violation-contractor-select":w.includes("\u062A\u0627\u0631\u064A\u062E")?$="violation-date":w.includes("\u0648\u0642\u062A")?$="violation-time":w.includes("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")?$="violation-type":w.includes("\u0627\u0644\u0634\u062F\u0629")?$="violation-severity":w.includes("\u0627\u0644\u062D\u0627\u0644\u0629")?$="violation-status":w.includes("\u0627\u0644\u0645\u0648\u0642\u0639")?$=b==="employee"?"violation-employee-location":"violation-contractor-location":w.includes("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629")&&($=b==="employee"?"violation-employee-place":"violation-contractor-place"),$){const X=document.getElementById($);X&&(X.classList.add("border-red-500","ring-2","ring-red-300"),X.scrollIntoView({behavior:"smooth",block:"center"}),setTimeout(()=>{X.classList.remove("border-red-500","ring-2","ring-red-300")},3e3))}});return}let ft=t?.photo||"";const It=document.getElementById("violation-photo-input");if(It?.files.length>0){const w=It.files[0];if(w.size>2*1024*1024){tt("error","\u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631\u0629 \u062C\u062F\u0627\u064B","\u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 \u0644\u0644\u062D\u062C\u0645 2MB. \u0627\u062E\u062A\u0631 \u0635\u0648\u0631\u0629 \u0623\u0635\u063A\u0631."),E();return}try{ft=await Violations.convertImageToBase64(w)}catch($){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629:",$)}}kt();const Vt=Y?.selectedOptions?.[0]?.getAttribute("data-type-id")||"",Dt=D&&U?new Date(`${D}T${U}`).toISOString():new Date().toISOString(),M={id:t?.id||Utils.generateId("VIOLATION"),isoCode:t?.isoCode||generateISOCode("VIOL",AppState.appData.violations||[]),personType:b,employeeId:b==="employee"?t?.employeeId||Utils.generateId("EMP"):"",employeeName:b==="employee"?st:"",employeeCode:b==="employee"&&document.getElementById("violation-employee-code")?.value.trim()||"",employeeNumber:b==="employee"&&document.getElementById("violation-employee-code")?.value.trim()||"",employeePosition:b==="employee"&&document.getElementById("violation-employee-position")?.value.trim()||"",employeeDepartment:b==="employee"&&document.getElementById("violation-employee-department")?.value.trim()||"",contractorId:b==="contractor"?Et:"",contractorName:b==="contractor"?st:"",contractorWorker:b==="contractor"&&document.getElementById("violation-contractor-worker")?.value.trim()||"",contractorPosition:b==="contractor"&&document.getElementById("violation-contractor-position")?.value.trim()||"",contractorDepartment:b==="contractor"&&document.getElementById("violation-contractor-department")?.value.trim()||"",violationTypeId:Vt,violationType:j,fineAmount:this.parseFineAmount(yt),violationDate:Dt,violationTime:U,violationLocation:rt&&rt!=="-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --"?rt:et,violationLocationId:et?String(et).trim():null,violationPlace:lt&&lt!=="-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --"?lt:it,violationPlaceId:it?String(it).trim():null,violationDetails:Mt,severity:z,actionTaken:Bt,status:G,photo:ft,createdAt:t?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),violationDateKey:"",violationTimeKey:""};M.violationDateKey=this._violationDateKey(M),M.violationTimeKey=this._violationTimeKey(M);const Ft={personType:b,violationDate:Dt,employeeCode:M.employeeCode,employeeNumber:M.employeeNumber,contractorName:M.contractorName,contractorWorker:M.contractorWorker},Nt=this.countPriorViolationsSamePersonMonth(Ft,o&&t?.id?t.id:null);M.violationSequenceInMonth=Nt+1;const bt=this.findDuplicateViolation(M,{excludeId:o&&t?.id?t.id:null});if(bt){const w=this._t("module.violations.duplicate.title","\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0633\u0628\u0642\u0627\u064B"),$=bt.source==="pending"?this._t("module.violations.duplicate.pending","\u0637\u0644\u0628 \u0645\u0645\u0627\u062B\u0644 \u0645\u0639\u0644\u0651\u0642 \u0641\u064A \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F. \u0644\u0646 \u064A\u064F\u0639\u0627\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644."):bt.source==="inflight"?this._t("module.violations.duplicate.click","\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0622\u0646. \u0644\u0627 \u062A\u0636\u063A\u0637 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649."):this._t("module.violations.duplicate.text","\u0646\u0641\u0633 \u0627\u0644\u0645\u0648\u0638\u0641 \u0623\u0648 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0648\u0646\u0641\u0633 \u0627\u0644\u062A\u0627\u0631\u064A\u062E \u0648\u0627\u0644\u0648\u0642\u062A \u0648\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0648\u062C\u0648\u062F\u0629 \u0628\u0627\u0644\u0641\u0639\u0644. \u0644\u0646 \u064A\u064F\u0639\u0627\u062F \u0627\u0644\u062A\u0633\u062C\u064A\u0644.");tt("warning",w,$),typeof Notification<"u"&&Notification.warning&&Notification.warning(w),E();return}this._violationInflightDupKey=this._buildViolationDupKey(M);try{const w=await this.checkViolationApprovalGate(M,{isEdit:o});if(w&&w.requiresApproval){let $=ft;if($&&typeof $=="string"&&$.startsWith("data:"))try{T.innerHTML='<i class="fas fa-cloud-upload-alt fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629...';const P=await GoogleIntegration.uploadFileToDrive?.($,`violation_${M.id}_${Date.now()}.jpg`,"image/jpeg","Violations");P&&P.success?$=P.directLink||P.shareableLink||"":($="",tt("warning","\u062A\u0639\u0630\u0651\u0631 \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629","\u0633\u064A\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0628\u062F\u0648\u0646 \u0627\u0644\u0635\u0648\u0631\u0629. \u062A\u062D\u0642\u0642 \u0645\u0646 \u0627\u062A\u0635\u0627\u0644 \u0627\u0644\u0625\u0646\u062A\u0631\u0646\u062A \u0623\u0648 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649 \u0644\u0627\u062D\u0642\u0627\u064B.")),T.innerHTML=L,T.disabled=!0,T.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...'}catch(P){AppState.debugMode&&Utils.safeWarn("Drive upload failed in approval path:",P),$=""}const X={...M,photo:$},F=await this.submitViolationForApproval(X,{isEdit:o,originalId:t?.id});if(F&&F.success){this._rememberViolationDupKey(M),this._violationInflightDupKey="",this._violationSubmitLock=!1,this._invalidateViolationApprovalRequestsCache(),v.remove(),Notification.success(F.message||"\u062A\u0645 \u0625\u0631\u0633\u0627\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0644\u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0628\u0646\u062C\u0627\u062D. \u0633\u062A\u0638\u0647\u0631 \u0628\u0639\u062F \u0627\u0639\u062A\u0645\u0627\u062F\u0647\u0627.");try{document.dispatchEvent(new CustomEvent("violation-approval-request-created",{detail:F.data||{}}))}catch{}return}else if(F&&F.duplicate){E(),tt("warning",this._t("module.violations.duplicate.title","\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0633\u0628\u0642\u0627\u064B"),F.message||this._t("module.violations.duplicate.pending","\u0637\u0644\u0628 \u0645\u0645\u0627\u062B\u0644 \u0645\u0639\u0644\u0651\u0642 \u0641\u064A \u062F\u0627\u0626\u0631\u0629 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F. \u0644\u0646 \u064A\u064F\u0639\u0627\u062F \u0627\u0644\u0625\u0631\u0633\u0627\u0644.")),typeof Notification<"u"&&Notification.warning&&Notification.warning(this._t("module.violations.duplicate.title","\u062A\u0645 \u062A\u0633\u062C\u064A\u0644 \u0647\u0630\u0647 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0633\u0628\u0642\u0627\u064B"));return}else{E();const P=F&&F.message||"\u0641\u0634\u0644 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F. \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.";tt("error","\u062A\u0639\u0630\u0651\u0631 \u0625\u0631\u0633\u0627\u0644 \u0637\u0644\u0628 \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F",P);return}}}catch(w){AppState.debugMode&&Utils.safeWarn("approvalGate error (continuing with direct save):",w)}if(AppState.appData.violations||(AppState.appData.violations=[]),o&&t?.id){const w=AppState.appData.violations.findIndex($=>$.id===t.id);if(w!==-1)AppState.appData.violations[w]={...AppState.appData.violations[w],...M,id:t.id,isoCode:t.isoCode||M.isoCode,createdAt:t.createdAt||M.createdAt,updatedAt:new Date().toISOString()};else throw new Error("\u062A\u0639\u0630\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0633\u062C\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0627\u0644\u0623\u0635\u0644\u064A \u0644\u0644\u062A\u0639\u062F\u064A\u0644. \u0623\u0639\u062F \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0641\u062D\u0629 \u062B\u0645 \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")}else AppState.appData.violations.push(M);this._rememberViolationDupKey(M),this._violationInflightDupKey="",this._violationSubmitLock=!1,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),v.remove(),Notification.success(`\u062A\u0645 ${o?"\u062A\u062D\u062F\u064A\u062B":"\u062A\u0633\u062C\u064A\u0644"} \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0628\u0646\u062C\u0627\u062D \u0648\u062C\u0627\u0631\u064A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629...`);try{this.updateAllViolationsStats()}catch{}try{typeof Dashboard<"u"&&(typeof Dashboard.updateStats=="function"&&Dashboard.updateStats(),typeof Dashboard.updateReportsStatistics=="function"&&Dashboard.updateReportsStatistics())}catch{}try{document.dispatchEvent(new CustomEvent("data-saved",{detail:{module:"violations",action:o?"\u062A\u062D\u062F\u064A\u062B":"\u0625\u0636\u0627\u0641\u0629",data:M}}))}catch{}try{typeof Violations<"u"&&typeof Violations.refreshViolationsView=="function"?Violations.refreshViolationsView():typeof Violations<"u"&&Violations.load&&Violations.load()}catch{}(async w=>{let $=w,X=!1;if(w&&w.startsWith("data:"))try{const F=await GoogleIntegration.uploadFileToDrive?.(w,`violation_${M.id}_${Date.now()}.jpg`,"image/jpeg","Violations");F?.success&&($=F.directLink||F.shareableLink||w,X=!0)}catch(F){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",F)}if(X){const F=AppState.appData.violations||[],P=F.findIndex(ht=>ht.id===M.id);P!==-1&&(F[P].photo=$,M.photo=$,typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save(),typeof Violations<"u"&&Violations.load&&Violations.load())}try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.sendRequest){const F=Object.assign({},M,{photo:$});let P;if(o?P=await GoogleIntegration.sendRequest({action:"updateViolation",data:{violationId:M.id,updateData:F}}):P=await GoogleIntegration.sendRequest({action:"addViolation",data:F}),P&&(P.success===!0||P.duplicate===!0)){try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}AppState.debugMode&&Utils.safeLog("\u2705 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645 \u0628\u0646\u062C\u0627\u062D")}else{AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0627\u062F\u0645:",P&&P.message);try{typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync("Violations",AppState.appData.violations)}catch{}}}}catch(F){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0641\u064A \u0627\u0644\u062E\u0644\u0641\u064A\u0629:",F);try{typeof DataManager<"u"&&DataManager.addToPendingSync&&DataManager.addToPendingSync("Violations",AppState.appData.violations)}catch{}}})(ft).catch(w=>{Utils.safeError("\u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639 \u0641\u064A \u0645\u0632\u0627\u0645\u0646\u0629 \u0627\u0644\u062E\u0644\u0641\u064A\u0629 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",w)})}catch(b){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",b),tt("error","\u062D\u062F\u062B \u062E\u0637\u0623",b&&(b.message||b.toString())||"\u0641\u0634\u0644 \u062D\u0641\u0638 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"),E()}};Z.addEventListener("submit",$t,{once:!1});const Lt=gt();Lt&&Lt.addEventListener("click",g=>{g.preventDefault(),g.stopPropagation(),$t(g)}),v.addEventListener("click",g=>{g.target===v&&v.remove()});const Tt=g=>{g.key==="Escape"&&document.body.contains(v)&&(v.remove(),document.removeEventListener("keydown",Tt))};document.addEventListener("keydown",Tt)},getSiteOptions(){try{return typeof Permissions<"u"&&Permissions.formSettingsState&&Permissions.formSettingsState.sites?Permissions.formSettingsState.sites.map(e=>({id:e.id,name:e.name})):Array.isArray(AppState.appData?.observationSites)&&AppState.appData.observationSites.length>0?AppState.appData.observationSites.map(e=>({id:e.id||e.siteId||Utils.generateId("SITE"),name:e.name||e.title||e.label||"\u0645\u0648\u0642\u0639 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"})):typeof DailyObservations<"u"&&Array.isArray(DailyObservations.DEFAULT_SITES)?DailyObservations.DEFAULT_SITES.map((e,t)=>({id:e.id||e.siteId||Utils.generateId("SITE"),name:e.name||e.title||e.label||`\u0645\u0648\u0642\u0639 ${t+1}`})):[]}catch(e){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0648\u0627\u0642\u0639:",e),[]}},refreshSiteDropdowns(){try{var e=this.getSiteOptions(),t=typeof Utils<"u"&&Utils.escapeHTML?Utils.escapeHTML:function(n){return String(n??"")},i='<option value="">\u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639</option>'+(e||[]).map(function(n){return'<option value="'+t(n.id)+'">'+t(n.name)+"</option>"}).join(""),o=document.getElementById("blacklist-factory");if(o&&o.tagName==="SELECT"){var a=o.value;o.innerHTML=i,a&&(o.value=a)}}catch(n){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u26A0\uFE0F Violations.refreshSiteDropdowns:",n)}},getPlaceOptions(e){try{if(!e)return[];if(!this.getSiteOptions().find(o=>o.id===e))return[];if(typeof Permissions<"u"&&Permissions.formSettingsState&&Permissions.formSettingsState.sites){const o=Permissions.formSettingsState.sites.find(a=>a.id===e);if(o&&Array.isArray(o.places))return o.places.map(a=>({id:a.id||a.placeId||Utils.generateId("PLACE"),name:a.name||a.placeName||"\u0645\u0643\u0627\u0646 \u063A\u064A\u0631 \u0645\u062D\u062F\u062F"}))}if(Array.isArray(AppState.appData?.observationSites)){const o=AppState.appData.observationSites.find(a=>a.id===e||a.siteId===e||a.name===e);if(o)return(Array.isArray(o.places)?o.places:Array.isArray(o.locations)?o.locations:Array.isArray(o.children)?o.children:Array.isArray(o.areas)?o.areas:[]).map((n,s)=>({id:n.id||n.placeId||n.value||Utils.generateId("PLACE"),name:n.name||n.placeName||n.title||n.label||n.locationName||`\u0645\u0643\u0627\u0646 ${s+1}`}))}return[]}catch(t){return Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0635\u0648\u0644 \u0639\u0644\u0649 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",t),[]}},async loadLocationOptions(e="employee"){try{typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function"&&await Permissions.ensureFormSettingsState();const t=this.getSiteOptions(),i=e==="employee"?"violation-employee-location":"violation-contractor-location",o=document.getElementById(i);if(!o)return;o.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>',t&&t.length>0&&t.forEach(a=>{const n=document.createElement("option");n.value=a.id,n.textContent=a.name,o.appendChild(n)})}catch(t){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0648\u0627\u0642\u0639:",t)}},loadPlaceOptions(e,t="",i="employee"){try{const o=i==="employee"?"violation-employee-place":"violation-contractor-place",a=document.getElementById(o);if(!a||(a.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 --</option>',!e))return;const n=this.getPlaceOptions(e);n&&n.length>0&&n.forEach(s=>{const r=document.createElement("option");r.value=s.id,r.textContent=s.name,t&&(s.id===t||s.name===t)&&(r.selected=!0),a.appendChild(r)})}catch(o){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",o)}},async convertImageToBase64(e){return new Promise((t,i)=>{const o=new FileReader;o.onload=()=>t(o.result),o.onerror=i,o.readAsDataURL(e)})},async viewViolation(e){const t=AppState.appData?.violations?.find(s=>s.id===e);if(!t){typeof Notification<"u"&&Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}const i=this.normalizeViolationRecord(t)||t;if(!this.isViolationVisibleToCurrentUser(i)){typeof Notification<"u"&&Notification.error("\u0639\u0630\u0631\u0627\u064B\u060C \u0644\u064A\u0633 \u0644\u062F\u064A\u0643 \u0635\u0644\u0627\u062D\u064A\u0629 \u0644\u0639\u0631\u0636 \u0645\u062E\u0627\u0644\u0641\u0629 \u062A\u0627\u0628\u0639\u0629 \u0644\u0625\u062F\u0627\u0631\u0629 \u0623\u062E\u0631\u0649");return}const o=String(i.severity||"").trim(),a=String(i.status||"").trim(),n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
+            <div class="modal-content" style="max-width: 750px; border-radius: 16px; overflow: hidden;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 20px 24px;">
+                    <h2 class="modal-title" style="color: white; display: flex; align-items: center; gap: 12px; font-size: 1.3rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
+                    </h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" style="color: white; background: rgba(255,255,255,0.2); border-radius: 8px; width: 36px; height: 36px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" style="padding: 24px;">
+                    <div class="space-y-4">
+                        <!-- \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641 (\u0646\u0641\u0633 \u0627\u0644\u062A\u0635\u0645\u064A\u0645 \u0644\u0644\u0645\u0648\u0638\u0641\u064A\u0646 \u0648\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646) -->
+                        <div style="background: #fef2f2; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-weight: 600; color: #991b1b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-user"></i> \u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                ${i.contractorName||i.personType==="contractor"?`
+                                <!-- \u0645\u0642\u0627\u0648\u0644: \u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 (\u0627\u0644\u0639\u0627\u0645\u0644) + \u0627\u0644\u0648\u0638\u064A\u0641\u0629 + \u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 + \u0627\u0644\u0625\u062F\u0627\u0631\u0629 -->
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.contractorWorker||i.employeeName||i.contractorName||"-")}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.contractorPosition||"-")}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.contractorName||"-")}</p>
+                                </div>
+                                ${i.contractorDepartment?`
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.contractorDepartment||"-")}</p>
+                                </div>
+                                `:""}
+                                `:`
+                                <!-- \u0645\u0648\u0638\u0641: \u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641 + \u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A + \u0627\u0644\u0648\u0638\u064A\u0641\u0629 + \u0627\u0644\u0625\u062F\u0627\u0631\u0629 -->
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0633\u0645 \u0627\u0644\u0645\u062E\u0627\u0644\u0641:</label>
+                                    <p class="text-gray-800 font-medium">${Utils.escapeHTML(i.employeeName||"-")}</p>
+                                </div>
+                                ${i.employeeCode?`
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeeCode||i.employeeNumber||"-")}</p>
+                                </div>
+                                `:""}
+                                ${i.employeePosition?`
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeePosition||"-")}</p>
+                                </div>
+                                `:""}
+                                ${i.employeeDepartment?`
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.employeeDepartment||"-")}</p>
+                                </div>
+                                `:""}
+                                `}
+                            </div>
+                        </div>
+
+                        <!-- \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
+                        <div style="background: #fff7ed; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-weight: 600; color: #c2410c; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-info-circle"></i> \u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationType||"-")}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                    <p class="text-gray-800">${i.violationDate?Utils.formatDate(i.violationDate):"-"}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0648\u0642\u0639:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationLocation||"-")}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0643\u0627\u0646:</label>
+                                    <p class="text-gray-800">${Utils.escapeHTML(i.violationPlace||"-")}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0634\u062F\u0629:</label>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#fef2f2":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#fffbeb":"#eff6ff"}; color: ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#dc2626":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#d97706":"#2563eb"}; border: 1px solid ${i.severity==="\u0639\u0627\u0644\u064A\u0629"?"#fecaca":i.severity==="\u0645\u062A\u0648\u0633\u0637\u0629"?"#fde68a":"#bfdbfe"};">
+                                        ${i.severity||"-"}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u062D\u0627\u0644\u0629:</label>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 600; background: ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#ecfdf5":"#fef3c7"}; color: ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#059669":"#d97706"}; border: 1px solid ${i.status==="\u0645\u062D\u0644\u0648\u0644"?"#a7f3d0":"#fde68a"};">
+                                        ${i.status||"-"}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629:</label>
+                                    <p class="text-gray-800 font-semibold">${this.formatFineAmount(Number(this.getEffectiveFineAmount(i)))}</p>
+                                </div>
+                            </div>
+                            ${i.violationDetails?`
+                            <div class="mt-4">
+                                <label class="text-sm font-semibold text-gray-600">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629:</label>
+                                <p class="text-gray-800 mt-1 p-3 bg-white rounded-lg border">${Utils.escapeHTML(i.violationDetails)}</p>
+                            </div>
+                            `:""}
+                        </div>
+
+                        <!-- \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630 -->
+                        ${i.actionTaken?`
+                        <div style="background: #f0fdf4; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-weight: 600; color: #166534; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-tasks"></i> \u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630
+                            </h3>
+                            <p class="text-gray-800 p-3 bg-white rounded-lg border">${Utils.escapeHTML(i.actionTaken)}</p>
+                        </div>
+                        `:""}
+
+                        <!-- \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 -->
+                        ${(()=>{const s=this.processPhoto(i.photo);if(!s)return"";const r=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(s):{canonical:s,displaySrc:s,needsProxy:!1,proxyFileId:""},c=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(r):"";return`
+                        <div style="background: #f8fafc; border-radius: 12px; padding: 16px;">
+                            <h3 style="font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-image"></i> \u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629
+                            </h3>
+                            <img src="${Utils.escapeHTML(r.displaySrc)}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629"${c} class="violation-detail-photo w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
+                        </div>
+                        `})()}
+
+                        <div class="violation-view-quick-edit" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 8px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
+                            <h4 style="font-weight: 700; color: #334155; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-size: 1rem;">
+                                <i class="fas fa-pen-to-square text-indigo-600"></i>
+                                \u062A\u0639\u062F\u064A\u0644 \u0645\u0646 \u0647\u0630\u0647 \u0627\u0644\u0634\u0627\u0634\u0629
+                            </h4>
+                            <p style="font-size: 0.8rem; color: #64748b; margin: 0 0 12px 0;">\u064A\u0645\u0643\u0646\u0643 \u062A\u062D\u062F\u064A\u062B \u0627\u0644\u0634\u062F\u0629 \u0648\u0627\u0644\u062D\u0627\u0644\u0629 \u0648\u0627\u0644\u0646\u0635\u0648\u0635 \u0623\u062F\u0646\u0627\u0647 \u062B\u0645 \u0627\u0644\u062D\u0641\u0638 \u062F\u0648\u0646 \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C \u0627\u0644\u0643\u0627\u0645\u0644.</p>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label for="violation-view-q-severity" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0634\u062F\u0629</label>
+                                    <select id="violation-view-q-severity" class="form-input" style="width:100%;">
+                                        <option value="\u0639\u0627\u0644\u064A\u0629" ${o==="\u0639\u0627\u0644\u064A\u0629"?"selected":""}>\u0639\u0627\u0644\u064A\u0629</option>
+                                        <option value="\u0645\u062A\u0648\u0633\u0637\u0629" ${o==="\u0645\u062A\u0648\u0633\u0637\u0629"?"selected":""}>\u0645\u062A\u0648\u0633\u0637\u0629</option>
+                                        <option value="\u0645\u0646\u062E\u0636\u0629" ${o==="\u0645\u0646\u062E\u0636\u0629"||o==="\u0645\u0646\u062E\u0641\u0636\u0629"?"selected":""}>\u0645\u0646\u062E\u0636\u0629</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="violation-view-q-status" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u062D\u0627\u0644\u0629</label>
+                                    <select id="violation-view-q-status" class="form-input" style="width:100%;">
+                                        <option value="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629" ${a==="\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629"?"selected":""}>\u0642\u064A\u062F \u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629</option>
+                                        <option value="\u0645\u062D\u0644\u0648\u0644" ${a==="\u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u0645\u062D\u0644\u0648\u0644</option>
+                                        <option value="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644" ${a==="\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644"?"selected":""}>\u063A\u064A\u0631 \u0645\u062D\u0644\u0648\u0644</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="violation-view-q-details" class="block text-sm font-semibold text-gray-700 mb-1">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</label>
+                                <textarea id="violation-view-q-details" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(i.violationDetails||"")}</textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="violation-view-q-action" class="block text-sm font-semibold text-gray-700 mb-1">\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</label>
+                                <textarea id="violation-view-q-action" class="form-input" rows="3" style="width:100%; resize: vertical;">${Utils.escapeHTML(i.actionTaken||"")}</textarea>
+                            </div>
+                            <button type="button" id="violation-view-quick-save" class="btn-primary" style="width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-save"></i>
+                                \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer violation-view-actions-footer" style="background: #f8fafc; padding: 16px 24px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="padding: 10px 18px; border-radius: 10px;">\u0625\u063A\u0644\u0627\u0642</button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("violations"):""}
+                    <button type="button" class="btn-primary" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(i.id)})' style="background: linear-gradient(135deg, #0f766e, #0d9488); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-print ml-2"></i>\u0637\u0628\u0627\u0639\u0629 \u0645\u0646\u0633\u0651\u0642\u0629
+                    </button>
+                    <button type="button" class="btn-primary" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(i.id)}, this)' style="background: linear-gradient(135deg, #10b981, #059669); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-file-download ml-2"></i>\u062A\u062D\u0645\u064A\u0644 PDF \u0645\u0628\u0627\u0634\u0631
+                    </button>
+                    <button type="button" class="btn-primary" onclick='Violations.showViolationForm(${this._escapeIdForHandler(i.id)}); this.closest(".modal-overlay").remove();' style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); padding: 10px 18px; border-radius: 10px;">
+                        <i class="fas fa-sliders-h ml-2"></i>\u062A\u0639\u062F\u064A\u0644 \u0643\u0627\u0645\u0644 (\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0644)
+                    </button>
+                </div>
+            </div>
+        `,document.body.appendChild(n),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(n,{moduleKey:"violations",record:i,recordId:i.id}),n.querySelector("#violation-view-quick-save")?.addEventListener("click",async()=>{await this.saveViolationQuickEditsFromView(i.id,n)}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(n,{onFetchFail:s=>{try{s.onerror=null,s.src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E"}catch{}}}),n.addEventListener("click",s=>{s.target===n&&n.remove()})},async saveViolationQuickEditsFromView(e,t){const i=t.querySelector("#violation-view-q-severity")?.value?.trim()||"",o=t.querySelector("#violation-view-q-status")?.value?.trim()||"",a=t.querySelector("#violation-view-q-details")?.value?.trim()||"",n=t.querySelector("#violation-view-q-action")?.value?.trim()||"",s=t.querySelector("#violation-view-quick-save");if(!AppState.appData?.violations){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062E\u0627\u0644\u0641\u0627\u062A.");return}const r=AppState.appData.violations.findIndex(l=>l.id===e);if(r===-1){Notification.error("\u062A\u0639\u0630\u0651\u0631 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629.");return}const c=s?.innerHTML;s&&(s.disabled=!0,s.innerHTML='<i class="fas fa-spinner fa-spin ml-2"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');try{AppState.appData.violations[r]={...AppState.appData.violations[r],severity:i,status:o,violationDetails:a,actionTaken:n,updatedAt:new Date().toISOString()},typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();let l=!0;try{if(typeof GoogleIntegration<"u"&&GoogleIntegration.autoSave){const d=await GoogleIntegration.autoSave("Violations",AppState.appData.violations);d&&d.success===!1&&(l=!1)}}catch(d){l=!1,AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",d)}if(!l)Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL");else try{localStorage.setItem("violations_last_sync",String(Date.now()))}catch{}Notification.success("\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629 \u0628\u0646\u062C\u0627\u062D"),t.remove(),await this.viewViolation(e);try{const d=document.querySelector("#violations-section .tabs-container .tab-btn.active")?.dataset?.tab||"all",p=document.getElementById("violations-list");if(p&&(d==="all"?p.innerHTML=this.renderViolationsList():d==="employees"?p.innerHTML=this.renderEmployeeViolationsList():d==="contractors"&&(p.innerHTML=this.renderContractorViolationsList())),d==="all"){const f=document.getElementById("violations-stats-cards");f&&(f.outerHTML=this.renderAllViolationsStats())}}catch(d){typeof Utils<"u"&&Utils.safeWarn&&Utils.safeWarn("\u062A\u062D\u062F\u064A\u062B \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A \u0628\u0639\u062F \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u0631\u064A\u0639:",d)}}catch(l){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u062D\u0641\u0638 \u0627\u0644\u0633\u0631\u064A\u0639 \u0644\u0644\u0645\u062E\u0627\u0644\u0641\u0629:",l),Notification.error("\u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638: "+(l.message||String(l))),s&&(s.disabled=!1,s.innerHTML=c||'<i class="fas fa-save ml-2"></i> \u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A \u0627\u0644\u0633\u0631\u064A\u0639\u0629')}},_buildViolationReportTableHtml(e){const t=this.normalizeViolationRecord(e)||e,i=(r,c="\u2014")=>Utils.escapeHTML(String(r==null||r===""?c:r)),o=r=>{if(!r)return"\u2014";if(typeof Utils.formatDateTime=="function"){const l=Utils.formatDateTime(r);return l&&l!=="-"?l:"\u2014"}const c=new Date(r);return Number.isNaN(c.getTime())?String(r):c.toLocaleString("ar-EG-u-nu-latn",{year:"numeric",month:"long",day:"numeric",hour:"2-digit",minute:"2-digit"})},a=t.personType==="contractor"||!!t.contractorName,n=(r,c,l={})=>`
+            <div class="vr-info ${l.wide?"vr-info-wide":""}">
+                <span class="vr-label">${i(r,"")}</span>
+                <strong class="vr-value ${l.accent||""}">${i(c)}</strong>
+            </div>`,s=this.processPhoto(t.photo);return`
+            <style>
+                .violation-report{--vr-navy:#102a43;--vr-red:#b91c1c;--vr-gold:#d97706;--vr-ink:#172033;direction:rtl;color:var(--vr-ink);font-family:'Cairo','Tahoma','Segoe UI',sans-serif;letter-spacing:0}
+                .violation-report *{box-sizing:border-box;letter-spacing:0}
+                .vr-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;margin:0 0 7px;border-radius:8px;background:linear-gradient(125deg,var(--vr-navy),#173d6c);color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-banner-title{font-size:14px;font-weight:800}.vr-banner-sub{margin-top:2px;color:#bfdbfe;font-size:9px}
+                .vr-code{min-width:110px;padding:4px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px;text-align:center;background:rgba(255,255,255,.09)}
+                .vr-code small{display:block;color:#bae6fd;font-size:8px}.vr-code strong{display:block;margin-top:1px;font-size:11.5px}
+                .vr-section{margin:0 0 7px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;page-break-inside:avoid;break-inside:avoid;background:#fff}
+                .vr-section-title{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid #cbd5e1;color:var(--vr-navy);background:#f1f5f9;font-size:10px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+                .vr-section-title:before{content:'';width:3px;height:12px;border-radius:3px;background:#0891b2}
+                .vr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
+                .vr-info{min-height:36px;padding:4px 8px;border-bottom:1px solid #edf2f7;border-left:1px solid #edf2f7}.vr-info-wide{grid-column:1/-1}
+                .vr-label{display:block;margin-bottom:2px;color:#64748b;font-size:8px;font-weight:700}.vr-value{display:block;color:#172033;font-size:9.5px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap}
+                .vr-value.vr-danger{color:#b91c1c;font-weight:700}.vr-value.vr-success{color:#047857;font-weight:700}.vr-value.vr-money{color:#166534;font-size:11px;font-weight:700}
+                .vr-photo{padding:4px 8px;text-align:center;background:#f8fafc}.vr-photo img{display:block;max-width:100%;max-height:170px;margin:auto;border:1px solid #cbd5e1;border-radius:6px;object-fit:contain}
+                .vr-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;page-break-inside:avoid;break-inside:avoid}
+                .vr-sign{min-height:48px;padding:5px;border:1px dashed #94a3b8;border-radius:6px;text-align:center;color:#64748b;font-size:8px}.vr-sign strong{display:block;margin-bottom:20px;color:#334155;font-size:9px}
+                .vr-footnote{margin-top:4px;padding-top:3px;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;font-size:7.5px}
+                @media print {
+                    @page { size: A4 portrait; margin: 6mm 8mm; }
+                    html, body { background: #fff !important; height: auto !important; min-height: 0 !important; }
+                    .report-wrapper { padding: 8px 12px !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+                    .report-header { padding-bottom: 6px !important; margin-bottom: 6px !important; }
+                    .report-footer-unified { margin-top: 6px !important; padding-top: 4px !important; }
+                    .vr-section, .vr-photo, .vr-signatures, .vr-banner { page-break-inside: avoid !important; break-inside: avoid !important; }
+                }
+            </style>
+            <div class="violation-report">
+                <div class="vr-banner">
+                    <div><div class="vr-banner-title">${a?"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644":"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0648\u0638\u0641"}</div><div class="vr-banner-sub">\u0633\u062C\u0644 \u0631\u0633\u0645\u064A \u0645\u0648\u062B\u0642 \u0628\u0643\u0627\u0645\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u0648\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630</div></div>
+                    <div class="vr-code"><small>\u0631\u0642\u0645 \u0627\u0644\u062A\u0642\u0631\u064A\u0631</small><strong>${i(t.isoCode||t.id||"\u2014")}</strong></div>
+                </div>
+
+                <section class="vr-section">
+                    <div class="vr-section-title">${a?"\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0642\u0627\u0648\u0644 \u0648\u0627\u0644\u0645\u062E\u0627\u0644\u0641":"\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0648\u0638\u0641 \u0627\u0644\u0645\u062E\u0627\u0644\u0641"}</div>
+                    <div class="vr-grid">
+                        ${a?`
+                            ${n("\u0627\u0633\u0645 \u0627\u0644\u0645\u0642\u0627\u0648\u0644",t.contractorName)}
+                            ${n("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0642\u0627\u0648\u0644",t.contractorId)}
+                            ${n("\u0627\u0633\u0645 \u0627\u0644\u0639\u0627\u0645\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641",t.contractorWorker||t.employeeName||t.contractorName)}
+                            ${n("\u0627\u0644\u0648\u0638\u064A\u0641\u0629",t.contractorPosition)}
+                            ${n("\u0627\u0644\u0625\u062F\u0627\u0631\u0629 / \u0627\u0644\u0642\u0633\u0645",t.contractorDepartment)}
+                            ${n("\u0646\u0648\u0639 \u0627\u0644\u0633\u062C\u0644","\u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644")}
+                        `:`
+                            ${n("\u0627\u0633\u0645 \u0627\u0644\u0645\u0648\u0638\u0641",t.employeeName)}
+                            ${n("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0648\u0638\u064A\u0641\u064A",t.employeeCode||t.employeeNumber)}
+                            ${n("\u0627\u0644\u0648\u0638\u064A\u0641\u0629",t.employeePosition)}
+                            ${n("\u0627\u0644\u0625\u062F\u0627\u0631\u0629 / \u0627\u0644\u0642\u0633\u0645",t.employeeDepartment)}
+                        `}
+                    </div>
+                </section>
+
+                <section class="vr-section">
+                    <div class="vr-section-title">\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</div>
+                    <div class="vr-grid">
+                        ${n("\u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationType)}
+                        ${n("\u0645\u0639\u0631\u0641 \u0646\u0648\u0639 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationTypeId)}
+                        ${n("\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationDate?Utils.formatDate(t.violationDate):"\u2014")}
+                        ${n("\u0648\u0642\u062A \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationTime)}
+                        ${n("\u0627\u0644\u0645\u0648\u0642\u0639",t.violationLocation)}
+                        ${n("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0648\u0642\u0639",t.violationLocationId)}
+                        ${n("\u0645\u0643\u0627\u0646 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationPlace)}
+                        ${n("\u0645\u0639\u0631\u0641 \u0627\u0644\u0645\u0643\u0627\u0646",t.violationPlaceId)}
+                        ${n("\u062F\u0631\u062C\u0629 \u0627\u0644\u0634\u062F\u0629",t.severity,{accent:"vr-danger"})}
+                        ${n("\u062D\u0627\u0644\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.status,{accent:t.status==="\u0645\u062D\u0644\u0648\u0644"?"vr-success":"vr-danger"})}
+                        ${n("\u062A\u0633\u0644\u0633\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u062E\u0644\u0627\u0644 \u0627\u0644\u0634\u0647\u0631",t.violationSequenceInMonth)}
+                        ${n("\u0627\u0644\u0642\u064A\u0645\u0629 \u0627\u0644\u0645\u0627\u0644\u064A\u0629",this.formatFineAmount(Number(this.getEffectiveFineAmount(t))),{accent:"vr-money"})}
+                        ${t.violationDetails?n("\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629",t.violationDetails,{wide:!0}):""}
+                        ${t.actionTaken?n("\u0627\u0644\u0625\u062C\u0631\u0627\u0621 \u0627\u0644\u0645\u062A\u062E\u0630",t.actionTaken,{wide:!0}):""}
+                    </div>
+                </section>
+
+                ${s?`<section class="vr-section"><div class="vr-section-title">\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629</div><div class="vr-photo"><img src="${i(s,"")}" alt="\u0635\u0648\u0631\u0629 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629" onerror="this.closest('.vr-section').style.display='none'"></div></section>`:""}
+
+                <div class="vr-signatures">
+                    <div class="vr-sign"><strong>\u0645\u0645\u062B\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644 / \u0627\u0644\u0645\u062E\u0627\u0644\u0641</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
+                    <div class="vr-sign"><strong>\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
+                    <div class="vr-sign"><strong>\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0625\u062F\u0627\u0631\u0629</strong>\u0627\u0644\u0627\u0633\u0645 \u0648\u0627\u0644\u062A\u0648\u0642\u064A\u0639</div>
+                </div>
+                <div class="vr-footnote">\u062A\u0645 \u0625\u0646\u0634\u0627\u0621 \u0647\u0630\u0627 \u0627\u0644\u062A\u0642\u0631\u064A\u0631 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0627\u064B \u0645\u0646 \u0645\u062F\u064A\u0648\u0644 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0627\u062A - \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0635\u062F\u0627\u0631: ${i(o(new Date().toISOString()))}</div>
+            </div>`},_generateViolationPrintDocumentHtml(e,t){const i=this.normalizeViolationRecord(e)||e,o=this._buildViolationReportTableHtml(i),a=i.isoCode||`VIOL-${i.id?.substring(0,8)||"UNKNOWN"}`;if(typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function")return FormHeader.generatePDFHTML(a,t,o,!1,!1,{version:"1.0",includeQRCode:!1,compactPdfFooter:!0},i.createdAt,i.updatedAt);const n=typeof AppState<"u"&&AppState.companySettings?.name?Utils.escapeHTML(AppState.companySettings.name):"";return`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(t)}</title>
+<style>
+body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;}
+table{border-collapse:collapse;width:100%;} th,td{border:1px solid #e2e8f0;padding:10px 12px;text-align:right;font-size:0.95rem;} th{background:#f1f5f9;width:30%;color:#334155;}
+</style></head><body>
+<h1>${Utils.escapeHTML(t)}</h1>
+${n?`<div class="co">${n}</div>`:""}
+${o}
+</body></html>`},async _completeViolationReportPrint(e){const t=new Blob([e],{type:"text/html;charset=utf-8"}),i=URL.createObjectURL(t),o=window.open(i,"_blank");if(!o)throw URL.revokeObjectURL(i),new Error("popup_blocked");await new Promise((a,n)=>{o.onload=()=>{try{const s=o.document.querySelectorAll("img");let r=0;const c=s.length;let l=!1;const d=()=>{l||(l=!0,setTimeout(()=>{o.print(),setTimeout(()=>URL.revokeObjectURL(i),1e3),a()},300))};if(c===0){d();return}const p=()=>{r>=c&&d()};s.forEach(f=>{f.complete?(r++,p()):(f.onload=()=>{r++,p()},f.onerror=()=>{r++,p()})}),setTimeout(()=>d(),3500)}catch(s){n(s)}}})},async printViolationProfessional(e){const t=AppState.appData?.violations?.find(i=>i.id===e);if(!t){Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629");return}try{Loading.show();const i=this._generateViolationPrintDocumentHtml(t,"\u0628\u0637\u0627\u0642\u0629 \u0645\u062E\u0627\u0644\u0641\u0629 \u2014 \u0646\u0633\u062E\u0629 \u0637\u0628\u0627\u0639\u0629");await this._completeViolationReportPrint(i)}catch(i){i&&i.message==="popup_blocked"?Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0628\u0646\u0648\u0627\u0641\u0630 \u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0644\u0637\u0628\u0627\u0639\u0629"):(Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629:",i),Notification.error("\u0641\u0634\u0644 \u0641\u062A\u062D \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0637\u0628\u0627\u0639\u0629: "+(i.message||"")))}finally{Loading.hide()}},_safeViolationReportFilePart(e,t="\u0633\u062C\u0644"){return String(e||t).trim().replace(/[\u0000-\u001f<>:"/\\|?*]+/g,"_").replace(/\s+/g,"_").replace(/_+/g,"_").replace(/^_+|_+$/g,"")||t},_readViolationReportImageBlob_(e){return new Promise(t=>{if(!e||!String(e.type||"").toLowerCase().startsWith("image/")){t("");return}try{const i=new FileReader;i.onload=()=>t(typeof i.result=="string"?i.result:""),i.onerror=()=>t(""),i.readAsDataURL(e)}catch{t("")}})},async _resolveViolationReportPhoto_(e){const t=this.processPhoto(e);if(!t)return"";if(/^data:image\//i.test(t))return t;const i=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(t):{canonical:t,displaySrc:t,needsProxy:!1,proxyFileId:""};if(i.needsProxy&&i.proxyFileId&&typeof Utils.fetchDriveImageDataUri=="function")try{const a=await Utils.fetchDriveImageDataUri(i.proxyFileId);if(a&&/^data:image\//i.test(a))return a}catch{}const o=i.canonical||t;if(/^(https?:|blob:)/i.test(o)&&typeof fetch=="function")try{const a=await fetch(o,{method:"GET",credentials:"omit",mode:"cors"});if(a.ok){const n=await this._readViolationReportImageBlob_(await a.blob());if(n)return n}}catch{}return o},async downloadViolationReport(e,t=null){const i=AppState.appData?.violations?.find(s=>s.id===e);if(!i)return Notification.error("\u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629"),!1;const o=this.normalizeViolationRecord(i)||i,a=o.personType==="contractor"||!!o.contractorName,n=t?.innerHTML||"";try{t&&(t.disabled=!0,t.setAttribute("aria-busy","true"),t.innerHTML='<i class="fas fa-spinner fa-spin"></i>'),Loading.show();const s=a?"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0642\u0627\u0648\u0644":"\u062A\u0642\u0631\u064A\u0631 \u0645\u062E\u0627\u0644\u0641\u0629 \u0645\u0648\u0638\u0641",r=await this._resolveViolationReportPhoto_(o.photo),c={...o,photo:r},l=this._generateViolationPrintDocumentHtml(c,s),d=a?o.contractorName||o.contractorWorker:o.employeeName,p=o.isoCode||o.id||"\u0633\u062C\u0644",f=o.violationDate?String(o.violationDate).slice(0,10):new Date().toISOString().slice(0,10),m=["\u062A\u0642\u0631\u064A\u0631_\u0645\u062E\u0627\u0644\u0641\u0629",this._safeViolationReportFilePart(d,a?"\u0645\u0642\u0627\u0648\u0644":"\u0645\u0648\u0638\u0641"),this._safeViolationReportFilePart(p),this._safeViolationReportFilePart(f)].join("_")+".pdf";if(!await this._downloadHtmlReportAsPdf(l,m))throw new Error("\u062A\u0639\u0630\u0631 \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 PDF");return Notification.success("\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF \u0628\u062C\u0645\u064A\u0639 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0628\u0646\u062C\u0627\u062D"),!0}catch(s){return Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629 PDF:",s),Notification.error("\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u062A\u0642\u0631\u064A\u0631 \u0627\u0644\u0645\u062E\u0627\u0644\u0641\u0629: "+(s.message||"")),!1}finally{Loading.hide(),t&&(t.disabled=!1,t.removeAttribute("aria-busy"),t.innerHTML=n||'<i class="fas fa-file-download"></i>')}},async exportPDF(e,t=null){return this.downloadViolationReport(e,t)},async loadBlacklistDataAsync(){try{(typeof AppState>"u"||!AppState.appData)&&(AppState.appData={}),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]);const e=AppState.googleConfig?.appsScript?.enabled&&AppState.googleConfig?.appsScript?.scriptUrl,t=typeof GoogleIntegration<"u"&&typeof GoogleIntegration.sendRequest=="function";if(!e||!t){AppState.debugMode&&Utils.safeLog("\u26A0\uFE0F Google Integration \u063A\u064A\u0631 \u0645\u062A\u0627\u062D - \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644\u064A\u0629 \u0641\u0642\u0637");return}const i=await GoogleIntegration.sendRequest({action:"readFromSheet",data:{sheetName:"Blacklist_Register",spreadsheetId:AppState.googleConfig?.sheets?.spreadsheetId}}).catch(a=>(Utils.safeWarn("\u26A0\uFE0F \u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL:",a),{success:!1,data:[]}));let o=!1;if(i&&i.success&&Array.isArray(i.data)?(AppState.appData.blacklistRegister=i.data,o=!0,AppState.debugMode&&Utils.safeLog(`\u2705 \u062A\u0645 \u062A\u062D\u0645\u064A\u0644 ${i.data.length} \u0633\u062C\u0644 Blacklist \u0645\u0646 \u0642\u0627\u0639\u062F\u0629 SQL`)):AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),o&&typeof window.DataManager<"u"&&window.DataManager.save)try{window.DataManager.save()}catch(a){AppState.debugMode&&Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0645\u062D\u0644\u064A\u0627\u064B:",a)}}catch(e){Utils.safeError("\u274C \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A Blacklist:",e),AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[])}},refreshBlacklistDisplay(){const e=document.getElementById("violations-tab-content");if(!(!e||!document.querySelector('.tab-btn.active[data-tab="blacklist"]')))try{const i=e.querySelector(".card-body");if(i){const n=i.querySelector(".grid.grid-cols-1")||i.querySelector(".grid")||i.querySelector('[class*="grid-cols"]');if(n&&n.parentElement)n.outerHTML=this.renderBlacklistStats();else{const s=i.querySelector("div > div.grid");s&&(s.outerHTML=this.renderBlacklistStats())}}const o=document.getElementById("blacklist-cards-container");o&&(o.innerHTML=this.renderBlacklistCards());const a=document.getElementById("blacklist-table-container");a&&(a.innerHTML=this.renderBlacklistTable()),this.setupBlacklistEventListeners()}catch(i){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u062F\u064A\u062B \u0639\u0631\u0636 Blacklist:",i)}},renderBlacklistTab(){return`
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <h2 class="card-title">
+                            <i class="fas fa-user-slash ml-2"></i>
+                            \u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u2013 Blacklist
+                        </h2>
+                        <button id="blacklist-add-btn" class="btn-primary">
+                            <i class="fas fa-plus ml-2"></i>
+                            \u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- \u0625\u062D\u0635\u0627\u0626\u064A\u0627\u062A \u0633\u0631\u064A\u0639\u0629 -->
+                    ${this.renderBlacklistStats()}
+                    
+                    <!-- \u0643\u0631\u0648\u062A \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
+                    <div id="blacklist-cards-container" class="mb-6">
+                        ${this.renderBlacklistCards()}
+                    </div>
+                    
+                    <!-- \u062C\u062F\u0648\u0644 \u0639\u0631\u0636 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
+                    <div id="blacklist-table-container">
+                        ${this.renderBlacklistTable()}
+                    </div>
+                </div>
+            </div>
+        `},renderBlacklistStats(){const e=AppState.appData?.blacklistRegister||[],t=e.length,i=new Date().getMonth(),o=new Date().getFullYear(),a=e.filter(r=>{if(!r.banDate)return!1;const c=new Date(r.banDate);return c.getMonth()===i&&c.getFullYear()===o}).length,n=new Set;e.forEach(r=>{r.factory&&r.location?n.add(`${r.factory} - ${r.location}`):r.factory?n.add(r.factory):r.location&&n.add(r.location)});const s=n.size;return`
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="stat-card blacklist-stat-card blacklist-stat-total" style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border: none; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.3), 0 2px 4px -1px rgba(220, 38, 38, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(220, 38, 38, 0.4), 0 4px 6px -2px rgba(220, 38, 38, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(220, 38, 38, 0.3), 0 2px 4px -1px rgba(220, 38, 38, 0.2)';">
+                    <div class="stat-icon" style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-user-slash"></i>
+                    </div>
+                    <div class="stat-content" style="flex: 1;">
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof t=="number"?t.toLocaleString("en-US"):t}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646</p>
+                    </div>
+                </div>
+                <div class="stat-card blacklist-stat-card blacklist-stat-month" style="background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border: none; box-shadow: 0 4px 6px -1px rgba(234, 88, 12, 0.3), 0 2px 4px -1px rgba(234, 88, 12, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(234, 88, 12, 0.4), 0 4px 6px -2px rgba(234, 88, 12, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(234, 88, 12, 0.3), 0 2px 4px -1px rgba(234, 88, 12, 0.2)';">
+                    <div class="stat-icon" style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-content" style="flex: 1;">
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof a=="number"?a.toLocaleString("en-US"):a}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0647\u0630\u0627 \u0627\u0644\u0634\u0647\u0631</p>
+                    </div>
+                </div>
+                <div class="stat-card blacklist-stat-card blacklist-stat-details" style="background: linear-gradient(135deg, #d97706 0%, #b45309 100%); border: none; box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.3), 0 2px 4px -1px rgba(217, 119, 6, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(217, 119, 6, 0.4), 0 4px 6px -2px rgba(217, 119, 6, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(217, 119, 6, 0.3), 0 2px 4px -1px rgba(217, 119, 6, 0.2)';">
+                    <div class="stat-icon" style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-content" style="flex: 1;">
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${e.filter(r=>r.banReason&&r.banReason.length>50).length.toLocaleString("en-US")}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0639 \u062A\u0641\u0627\u0635\u064A\u0644</p>
+                    </div>
+                </div>
+                <div class="stat-card blacklist-stat-card blacklist-stat-factory-location" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); border: none; box-shadow: 0 4px 6px -1px rgba(124, 58, 237, 0.3), 0 2px 4px -1px rgba(124, 58, 237, 0.2); transition: all 0.3s ease; cursor: pointer;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(124, 58, 237, 0.4), 0 4px 6px -2px rgba(124, 58, 237, 0.3)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px -1px rgba(124, 58, 237, 0.3), 0 2px 4px -1px rgba(124, 58, 237, 0.2)';">
+                    <div class="stat-icon" style="background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #ffffff; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <i class="fas fa-industry"></i>
+                    </div>
+                    <div class="stat-content" style="flex: 1;">
+                        <h3 class="stat-value" style="font-size: 2.5rem; font-weight: 700; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2; letter-spacing: -0.5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">${typeof s=="number"?s.toLocaleString("en-US"):s}</h3>
+                        <p class="stat-label" style="font-size: 1rem; font-weight: 600; color: rgba(255, 255, 255, 0.95); margin: 0; letter-spacing: 0.3px;">\u0627\u0644\u0645\u0635\u0646\u0639 - \u0627\u0644\u0645\u0648\u0642\u0639</p>
+                    </div>
+                </div>
+            </div>
+        `},getPhotoSource(e){return typeof Utils<"u"&&typeof Utils.extractImageSourceCandidate=="function"?Utils.extractImageSourceCandidate(e):e&&typeof e=="string"?e:""},normalizeGoogleDrivePhotoUrl(e){return typeof Utils<"u"&&typeof Utils.normalizeGoogleDriveImageUrl=="function"?Utils.normalizeGoogleDriveImageUrl(e):String(e||"").trim()},processPhoto(e){if(typeof Utils<"u"&&typeof Utils.normalizeImageSource=="function"){const a=Utils.normalizeImageSource(e);if(a)return a}const t=this.getPhotoSource(e);if(!t)return null;let i=String(t).trim().replace(/^['"`]+|['"`]+$/g,"");if(!i)return null;if(i.startsWith("blob:"))return i;if(/^data:image\//i.test(i)){const a=i.indexOf(",");if(a===-1)return i.replace(/\s+/g,"");const n=i.slice(0,a).replace(/\s+/g,""),s=i.slice(a+1).replace(/\s+/g,"");return s?`${n},${s}`:null}if(/^https?:\/\//i.test(i))return this.normalizeGoogleDrivePhotoUrl(i);const o=i.replace(/\s+/g,"");return o.length>100&&/^[A-Za-z0-9+/=]+$/.test(o.substring(0,Math.min(120,o.length)))?"data:image/jpeg;base64,"+o:(AppState.debugMode,null)},_onBlacklistCardPhotoError(e){try{if(!e)return;e.onerror=null;const t=document.createElement("div");t.className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800",t.innerHTML='<i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>',e.replaceWith(t)}catch{}},_onBlacklistTablePhotoError(e){try{if(!e)return;e.onerror=null,e.src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2212%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E"}catch{}},_hydrateBlacklistDrivePhotos(){try{if(typeof Utils.hydrateDriveProxyImages!="function")return;const e=o=>{if(!o)return;const a=o.className||"";a.indexOf("blacklist-table-photo")!==-1?this._onBlacklistTablePhotoError(o):a.indexOf("blacklist-detail-photo")!==-1?this._onBlacklistTablePhotoError(o):a.indexOf("blacklist-form-photo")!==-1?this._onBlacklistTablePhotoError(o):this._onBlacklistCardPhotoError(o)},t=document.getElementById("blacklist-cards-container"),i=document.getElementById("blacklist-table");t&&Utils.hydrateDriveProxyImages(t,{onFetchFail:e}),i&&Utils.hydrateDriveProxyImages(i,{onFetchFail:e})}catch{}},renderBlacklistCards(){const e=AppState.appData?.blacklistRegister||[];return e.length===0?`
+                <div class="empty-state py-8">
+                    <i class="fas fa-user-slash text-gray-400 text-5xl mb-4"></i>
+                    <p class="text-gray-500 text-lg">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</p>
+                    <p class="text-gray-400 text-sm mt-2">\u0627\u0646\u0642\u0631 \u0639\u0644\u0649 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0644\u0625\u0636\u0627\u0641\u0629 \u0633\u062C\u0644 \u062C\u062F\u064A\u062F</p>
+                </div>
+            `:`
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${[...e].sort((i,o)=>{const a=new Date(i.banDate||i.createdAt||0);return new Date(o.banDate||o.createdAt||0)-a}).map(i=>{const o=this.processPhoto(i),a=o&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(o):{canonical:o||"",displaySrc:o||"",needsProxy:!1,proxyFileId:""},n=a.canonical?a.displaySrc:"",s=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(a):"";return`
+                    <div class="content-card blacklist-card" style="position: relative; overflow: hidden;">
+                        <div class="absolute top-0 right-0 w-20 h-20 bg-red-100 dark:bg-red-900/20 opacity-10 rounded-bl-full"></div>
+                        <div class="relative z-10">
+                            <div class="p-4">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        ${o?`
+                                            <img src="${Utils.escapeHTML(n)}" alt="\u0635\u0648\u0631\u0629"${s}
+                                                data-photo-url="${Utils.escapeHTML(o)}"
+                                                class="blacklist-card-photo w-16 h-16 rounded-full object-cover border-2 border-red-200 dark:border-red-800 cursor-pointer shadow-sm"
+                                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
+                                                title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629"
+                                                onerror="Violations._onBlacklistCardPhotoError(this)">
+                                        `:`
+                                            <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border-2 border-red-200 dark:border-red-800">
+                                                <i class="fas fa-user text-red-500 dark:text-red-400 text-2xl"></i>
+                                            </div>
+                                        `}
+                                        <div>
+                                            <h3 class="font-bold text-gray-800 dark:text-gray-100 text-lg">${Utils.escapeHTML(i.fullName||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}</h3>
+                                            <p class="text-sm text-gray-600 dark:text-gray-400">#${i.serialNumber||"-"}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="Violations.editBlacklistRecord('${i.id}')" 
+                                            class="btn-icon btn-icon-warning text-xs" title="\u062A\u0639\u062F\u064A\u0644">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button onclick="Violations.deleteBlacklistRecord('${i.id}')" 
+                                            class="btn-icon btn-icon-danger text-xs" title="\u062D\u0630\u0641">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-id-card text-red-500 dark:text-red-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.idNumber||"-")}</span>
+                                    </div>
+                                    ${i.job?`
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-briefcase text-red-500 dark:text-red-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0648\u0638\u064A\u0641\u0629:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.job)}</span>
+                                    </div>
+                                    `:""}
+                                    ${i.contractor?`
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-building text-cyan-500 dark:text-cyan-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.contractor)}</span>
+                                    </div>
+                                    `:""}
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-industry text-red-500 dark:text-red-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0645\u0635\u0646\u0639:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.factory||"-")}</span>
+                                    </div>
+                                    ${i.location?`
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-map-marker-alt text-red-500 dark:text-red-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u0627\u0644\u0645\u0648\u0642\u0639:</span>
+                                        <span class="font-semibold text-gray-800 dark:text-gray-200">${Utils.escapeHTML(i.location)}</span>
+                                    </div>
+                                    `:""}
+                                    <div class="flex items-center gap-2">
+                                        <i class="fas fa-calendar text-red-500 dark:text-red-400 w-4"></i>
+                                        <span class="text-gray-600 dark:text-gray-400">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639:</span>
+                                        <span class="font-semibold text-red-600 dark:text-red-400">${i.banDate?Utils.formatDate(i.banDate):"-"}</span>
+                                    </div>
+                                    ${i.banReason?`
+                                    <div class="pt-2 border-t border-red-100 dark:border-red-900/50">
+                                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-1">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639:</p>
+                                        <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">${Utils.escapeHTML(i.banReason)}</p>
+                                    </div>
+                                    `:""}
+                                </div>
+                            </div>
+                            <div class="bg-red-50 dark:bg-red-900/20 px-4 py-2 border-t border-red-100 dark:border-red-900/30 flex items-center justify-between text-xs">
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    <i class="fas fa-user-edit ml-1 text-red-500 dark:text-red-400"></i>
+                                    ${Utils.escapeHTML(i.editor||"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F")}
+                                </span>
+                                ${i.bannedBy?`
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    <i class="fas fa-user-shield ml-1 text-red-500 dark:text-red-400"></i>
+                                    ${Utils.escapeHTML(i.bannedBy)}
+                                </span>
+                                `:""}
+                            </div>
+                        </div>
+                    </div>
+                `}).join("")}
+            </div>
+        `},async showBlacklistForm(e=null){const t=!!e;if(typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function")try{await Permissions.ensureFormSettingsState()}catch(u){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",u)}const i=AppState.appData?.blacklistRegister||[],o=i.length>0?Math.max(...i.map(u=>parseInt(u.serialNumber)||0))+1:1,a=this.getSiteOptions(),n=a.map(u=>`<option value="${Utils.escapeHTML(u.name)}" data-site-id="${u.id}" ${e?.factory===u.name||e?.factoryId===u.id?"selected":""}>${Utils.escapeHTML(u.name)}</option>`).join(""),l=((AppState.appData?.formSettings||{}).departments||[]).map(u=>typeof u=="object"?u.name:u).filter(Boolean).map(u=>`<option value="${Utils.escapeHTML(u)}"></option>`).join(""),d=e?.factoryId||a.find(u=>u.name===e?.factory)?.id||"",p=d?this.getPlaceOptions(d).map(u=>`<option value="${Utils.escapeHTML(u.name)}" data-place-id="${u.id}" ${e?.location===u.name||e?.locationId===u.id?"selected":""}>${Utils.escapeHTML(u.name)}</option>`).join(""):'<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 \u0623\u0648\u0644\u0627\u064B --</option>',f=AppState.currentUser||{name:"\u063A\u064A\u0631 \u0645\u062D\u062F\u062F",email:""},m=document.createElement("div");m.className="modal-overlay",m.innerHTML=`
+            <div class="modal-content" style="max-width: 900px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-user-slash ml-2 text-red-600"></i>
+                        ${t?"\u062A\u0639\u062F\u064A\u0644 \u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644":"\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F"}
+                    </h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="\u0625\u063A\u0644\u0627\u0642">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    ${this.renderBlacklistFormContent(e,o,n,p,l,f)}
+                </div>
+            </div>
+        `,document.body.appendChild(m),this.setupBlacklistFormInModal(m,e).catch(u=>{Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u0625\u0639\u062F\u0627\u062F \u0646\u0645\u0648\u0630\u062C Blacklist:",u)}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(m,{onFetchFail:u=>this._onBlacklistTablePhotoError(u)}),m.addEventListener("click",u=>{u.target===m&&m.remove()});const y=u=>{u.key==="Escape"&&document.body.contains(m)&&(m.remove(),document.removeEventListener("keydown",y))};document.addEventListener("keydown",y)},renderBlacklistFormContent(e,t,i,o,a,n){const s=!!e,r=this.processPhoto(e),c=r&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(r):{canonical:r||"",displaySrc:r||"",needsProxy:!1,proxyFileId:""},l=c.canonical?c.displaySrc:"",d=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(c):"";return`
+            <form id="blacklist-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- \u0645 (\u0631\u0642\u0645 \u0645\u0633\u0644\u0633\u0644) -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-hashtag ml-2 text-blue-600"></i>
+                            \u0645 (\u0631\u0642\u0645 \u0645\u0633\u0644\u0633\u0644)
+                        </label>
+                        <input type="text" id="blacklist-serial" class="form-input" 
+                            value="${s&&e.serialNumber||t}" 
+                            readonly>
+                    </div>
+
+                    <!-- \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639 * -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-calendar ml-2 text-red-600"></i>
+                            \u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639 *
+                        </label>
+                        <input type="date" id="blacklist-ban-date" required class="form-input" 
+                            value="${e?.banDate?new Date(e.banDate).toISOString().slice(0,10):""}">
+                    </div>
+
+                    <!-- \u0627\u0644\u0645\u0635\u0646\u0639 * -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-industry ml-2 text-gray-600"></i>
+                            \u0627\u0644\u0645\u0635\u0646\u0639 *
+                        </label>
+                        <select id="blacklist-factory" required class="form-input">
+                            <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0635\u0646\u0639 --</option>
+                            ${i}
+                        </select>
+                    </div>
+
+                    <!-- \u0627\u0644\u0645\u0648\u0642\u0639 * -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-map-marker-alt ml-2 text-green-600"></i>
+                            \u0627\u0644\u0645\u0648\u0642\u0639 *
+                        </label>
+                        <select id="blacklist-location" required class="form-input">
+                            <option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>
+                            ${o}
+                        </select>
+                    </div>
+
+                    <!-- \u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A * -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user ml-2 text-purple-600"></i>
+                            \u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A *
+                        </label>
+                        <input type="text" id="blacklist-name" required class="form-input" 
+                            value="${Utils.escapeHTML(e?.fullName||"")}" 
+                            placeholder="\u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0643\u0627\u0645\u0644">
+                    </div>
+
+                    <!-- \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 * -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-id-card ml-2 text-orange-600"></i>
+                            \u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 *
+                        </label>
+                        <input type="text" id="blacklist-id-number" required class="form-input" 
+                            value="${Utils.escapeHTML(e?.idNumber||"")}" 
+                            placeholder="\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629">
+                    </div>
+
+                    <!-- \u0627\u0644\u0648\u0638\u064A\u0641\u0629 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-briefcase ml-2 text-indigo-600"></i>
+                            \u0627\u0644\u0648\u0638\u064A\u0641\u0629
+                        </label>
+                        <input type="text" id="blacklist-job" class="form-input" 
+                            value="${Utils.escapeHTML(e?.job||"")}" 
+                            placeholder="\u0627\u0644\u0648\u0638\u064A\u0641\u0629">
+                    </div>
+
+                    <!-- \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-building ml-2 text-cyan-600"></i>
+                            \u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644
+                        </label>
+                        <input type="text" id="blacklist-contractor" class="form-input" 
+                            list="blacklist-contractors-list" 
+                            value="${Utils.escapeHTML(e?.contractor||"")}" 
+                            placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0633\u0645 \u0627\u0644\u0634\u0631\u0643\u0629/\u0627\u0644\u0645\u0642\u0627\u0648\u0644">
+                        <datalist id="blacklist-contractors-list">
+                            <!-- \u0633\u064A\u062A\u0645 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646 \u062F\u064A\u0646\u0627\u0645\u064A\u0643\u064A\u0627\u064B -->
+                        </datalist>
+                    </div>
+
+                    <!-- \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647\u0627 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-building ml-2 text-teal-600"></i>
+                            \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u062A\u0627\u0628\u0639 \u0644\u0647\u0627
+                        </label>
+                        <input type="text" id="blacklist-department" class="form-input" 
+                            list="blacklist-departments-list" 
+                            value="${Utils.escapeHTML(e?.department||"")}" 
+                            placeholder="\u0627\u062E\u062A\u0631 \u0623\u0648 \u0627\u0643\u062A\u0628 \u0627\u0644\u0625\u062F\u0627\u0631\u0629">
+                        <datalist id="blacklist-departments-list">
+                            ${a}
+                        </datalist>
+                    </div>
+
+                    <!-- \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user-shield ml-2 text-yellow-600"></i>
+                            \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639
+                        </label>
+                        <input type="text" id="blacklist-banned-by" class="form-input" 
+                            value="${Utils.escapeHTML(e?.bannedBy||"")}" 
+                            placeholder="\u0627\u0633\u0645 \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639">
+                    </div>
+
+                    <!-- \u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-user-edit ml-2 text-gray-600"></i>
+                            \u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A
+                        </label>
+                        <input type="text" id="blacklist-editor" class="form-input" 
+                            value="${Utils.escapeHTML(e?.editor||n.name)}" 
+                            readonly>
+                    </div>
+
+                    <!-- \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629 -->
+                    <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-image ml-2"></i>
+                            \u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629
+                        </label>
+                        <input type="file" id="blacklist-photo-input" accept="image/*" class="form-input">
+                        <div id="blacklist-photo-preview" class="mt-2 ${r?"":"hidden"}">
+                            <img src="${l?Utils.escapeHTML(l):""}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629"${d}
+                                class="blacklist-form-photo w-32 h-32 object-cover rounded border" id="blacklist-photo-img">
+                            <button type="button" onclick="const blPhotoInput = document.getElementById('blacklist-photo-input'); if (blPhotoInput) blPhotoInput.value=''; const blPhotoPreview = document.getElementById('blacklist-photo-preview'); if (blPhotoPreview) blPhotoPreview.classList.add('hidden');" 
+                                class="mt-2 text-sm text-red-600 hover:text-red-800">
+                                <i class="fas fa-trash ml-1"></i>\u062D\u0630\u0641 \u0627\u0644\u0635\u0648\u0631\u0629
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- \u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639 * -->
+                    <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-exclamation-triangle ml-2 text-red-600"></i>
+                            \u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639 *
+                        </label>
+                        <textarea id="blacklist-ban-reason" required class="form-input" rows="3" 
+                            placeholder="\u0633\u0628\u0628 \u0645\u0646\u0639 \u0627\u0644\u062F\u062E\u0648\u0644">${Utils.escapeHTML(e?.banReason||"")}</textarea>
+                    </div>
+
+                    <!-- \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0645\u0629 -->
+                    <div class="md:col-span-2 lg:col-span-3">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                            <i class="fas fa-sticky-note ml-2 text-gray-600"></i>
+                            \u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0639\u0627\u0645\u0629
+                        </label>
+                        <textarea id="blacklist-notes" class="form-input" rows="3" 
+                            placeholder="\u0645\u0644\u0627\u062D\u0638\u0627\u062A \u0625\u0636\u0627\u0641\u064A\u0629">${Utils.escapeHTML(e?.notes||"")}</textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                    <button type="button" id="blacklist-cancel-btn" class="btn-secondary">
+                        <i class="fas fa-times ml-2"></i>\u0625\u0644\u063A\u0627\u0621
+                    </button>
+                    <button type="submit" id="blacklist-submit-btn" class="btn-primary">
+                        <i class="fas fa-save ml-2"></i>${s?"\u062D\u0641\u0638 \u0627\u0644\u062A\u0639\u062F\u064A\u0644\u0627\u062A":"\u062A\u0633\u062C\u064A\u0644"}
+                    </button>
+                </div>
+            </form>
+        `},async setupBlacklistFormInModal(e,t){const i=!!t,o=e.querySelector("#blacklist-form");o&&(o.dataset.editId=i?t.id:""),o&&o.addEventListener("submit",l=>this.handleBlacklistSubmit(l));const a=e.querySelector("#blacklist-cancel-btn");a&&a.addEventListener("click",()=>{e.remove()});const n=e.querySelector("#blacklist-photo-input");n&&n.addEventListener("change",l=>this.handleBlacklistPhotoUpload(l));const s=e.querySelector("#blacklist-contractor"),r=e.querySelector("#blacklist-contractors-list");if(s&&r)try{let l=[];if(typeof Contractors<"u"&&typeof Contractors.getAllContractorsForModules=="function"&&(l=Contractors.getAllContractorsForModules()||[]),l.length===0){const d=[...AppState.appData?.approvedContractors||[],...AppState.appData?.contractors||[]].filter(f=>f&&f.isActive!=="inactive"&&f.isActive!==!1&&f.isActive!=="false"&&f.isActive!=="FALSE");l=Array.from(new Map(d.map(f=>[f.id||f.contractorId,f])).values()).filter(f=>f&&(f.name||f.companyName||f.contractorName)).map(f=>({id:f.id||f.contractorId||"",name:(f.name||f.companyName||f.contractorName||"").trim()})).filter(f=>f.name&&f.name!=="\u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641").sort((f,m)=>f.name.localeCompare(m.name,"ar",{sensitivity:"base"}))}if(r.innerHTML=l.map(d=>`<option value="${Utils.escapeHTML(d.name)}" data-contractor-id="${d.id||""}"></option>`).join(""),t?.contractor){const d=t.contractor.split(" - ")[0].trim();s.value=d}}catch(l){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064A\u0646:",l)}const c=e.querySelector("#blacklist-factory");if(c&&(c.addEventListener("change",async l=>{const d=l.target.selectedOptions[0],p=d?.dataset.siteId||d?.value;await this.loadBlacklistPlaces(p)}),i&&t?.factoryId)){const l=t.factoryId;try{await this.loadBlacklistPlaces(l),setTimeout(()=>{const d=e.querySelector("#blacklist-location");d&&t?.location&&(d.value=t.location)},100)}catch(d){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",d)}}},renderBlacklistTable(){const t=[...AppState.appData?.blacklistRegister||[]].sort((i,o)=>{const a=new Date(i.banDate||i.createdAt||0);return new Date(o.banDate||o.createdAt||0)-a});return t.length===0?`
+                <div class="mt-6">
+                    <div class="empty-state">
+                        <i class="fas fa-user-slash text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-500">\u0644\u0627 \u062A\u0648\u062C\u062F \u0633\u062C\u0644\u0627\u062A \u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</p>
+                    </div>
+                </div>
+            `:`
+            <div class="mt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-list ml-2"></i>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644
+                    </h3>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="blacklist-search" class="form-input" 
+                            placeholder="\u0628\u062D\u062B..." style="width: 250px;">
+                        <button id="blacklist-export-pdf" class="btn-secondary">
+                            <i class="fas fa-file-pdf ml-2"></i>PDF
+                        </button>
+                        <button id="blacklist-export-excel" class="btn-secondary">
+                            <i class="fas fa-file-excel ml-2"></i>Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="table-wrapper" style="overflow-x: auto;">
+                    <table class="data-table" id="blacklist-table">
+                        <thead>
+                            <tr>
+                        <th>\u0645</th>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
+                        <th>\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                        <th>\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                        <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                        <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                        <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                        <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                        <th>\u0627\u0644\u0635\u0648\u0631\u0629</th>
+                        <th>\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                        <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
+                        <th>\u0627\u0644\u0625\u062C\u0631\u0627\u0621\u0627\u062A</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklist-table-body">
+                            ${t.map(i=>{const o=this.processPhoto(i),a=o&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(o):{canonical:o||"",displaySrc:o||"",needsProxy:!1,proxyFileId:""},n=a.canonical?a.displaySrc:"",s=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(a):"";return`
+                                <tr>
+                                    <td>${i.serialNumber||"-"}</td>
+                                    <td>${i.banDate?Utils.formatDate(i.banDate):"-"}</td>
+                                    <td>${Utils.escapeHTML(i.factory||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.location||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.fullName||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.idNumber||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.job||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.contractor||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.department||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.bannedBy||"-")}</td>
+                                    <td>${Utils.escapeHTML(i.editor||"-")}</td>
+                                    <td>
+                                        ${o?`<img src="${Utils.escapeHTML(n)}" alt="\u0635\u0648\u0631\u0629"${s} class="blacklist-table-photo w-12 h-12 object-cover rounded cursor-pointer"
+                                                data-photo-url="${Utils.escapeHTML(o)}"
+                                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)" title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629"
+                                                onerror="Violations._onBlacklistTablePhotoError(this)">`:"-"}
+                                    </td>
+                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(i.banReason||"")}">
+                                        ${Utils.escapeHTML((i.banReason||"-").substring(0,50))}${(i.banReason||"").length>50?"...":""}
+                                    </td>
+                                    <td class="max-w-xs truncate" title="${Utils.escapeHTML(i.notes||"")}">
+                                        ${Utils.escapeHTML((i.notes||"-").substring(0,30))}${(i.notes||"").length>30?"...":""}
+                                    </td>
+                                    <td>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="Violations.viewBlacklistDetails('${i.id}')" 
+                                                class="btn-icon btn-icon-info" title="\u0639\u0631\u0636 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button onclick="Violations.editBlacklistRecord('${i.id}')" 
+                                                class="btn-icon btn-icon-warning" title="\u062A\u0639\u062F\u064A\u0644">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button onclick="Violations.deleteBlacklistRecord('${i.id}')" 
+                                                class="btn-icon btn-icon-danger" title="\u062D\u0630\u0641">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `}).join("")}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `},async setupBlacklistEventListeners(){setTimeout(async()=>{if(AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function")try{await Permissions.ensureFormSettingsState()}catch(r){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0625\u0639\u062F\u0627\u062F\u0627\u062A \u0627\u0644\u0646\u0645\u0627\u0630\u062C:",r)}const e=document.getElementById("blacklist-form");if(e&&!e.closest(".modal-overlay")){const r=e.cloneNode(!0);e.parentNode.replaceChild(r,e),r.addEventListener("submit",c=>this.handleBlacklistSubmit(c))}const t=document.getElementById("blacklist-photo-input");t&&!t.closest(".modal-overlay")&&t.addEventListener("change",r=>this.handleBlacklistPhotoUpload(r));const i=document.getElementById("blacklist-search");if(i){const r=i.cloneNode(!0);i.parentNode.replaceChild(r,i),r.addEventListener("input",c=>this.filterBlacklistTable(c.target.value))}const o=document.getElementById("blacklist-add-btn");o?o.dataset.listenerAttached?AppState.debugMode&&Utils.safeLog('\u2139\uFE0F \u0632\u0631 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0645\u0631\u0628\u0648\u0637 \u0645\u0633\u0628\u0642\u0627\u064B'):(o.addEventListener("click",r=>{r.preventDefault(),r.stopPropagation();try{this.showBlacklistForm()}catch(c){Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0641\u062A\u062D \u0646\u0645\u0648\u0630\u062C Blacklist:",c),Notification.error("\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0641\u062A\u062D \u0627\u0644\u0646\u0645\u0648\u0630\u062C. \u064A\u0631\u062C\u0649 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649.")}}),o.dataset.listenerAttached="true",AppState.debugMode&&Utils.safeLog('\u2705 \u062A\u0645 \u0631\u0628\u0637 \u0632\u0631 "\u062A\u0633\u062C\u064A\u0644 \u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 \u062C\u062F\u064A\u062F" \u0628\u0646\u062C\u0627\u062D')):AppState.debugMode&&Utils.safeWarn('\u26A0\uFE0F \u0632\u0631 "blacklist-add-btn" \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F \u0641\u064A DOM');const a=document.getElementById("blacklist-factory");a&&!a.closest(".modal-overlay")&&a.addEventListener("change",async r=>{const c=r.target.selectedOptions[0],l=c?.dataset.siteId||c?.value;await this.loadBlacklistPlaces(l)});const n=document.getElementById("blacklist-export-pdf");if(n){const r=n.cloneNode(!0);n.parentNode.replaceChild(r,n),r.addEventListener("click",()=>this.exportBlacklistToPDF())}const s=document.getElementById("blacklist-export-excel");if(s){const r=s.cloneNode(!0);s.parentNode.replaceChild(r,s),r.addEventListener("click",()=>this.exportBlacklistToExcel())}this._hydrateBlacklistDrivePhotos()},100)},async handleBlacklistSubmit(e){e.preventDefault();const t=e.target,i=!!t.dataset.editId;let o=i&&AppState.appData?.blacklistRegister?.find(f=>f.id===t.dataset.editId)?.photo||"";const a=t.closest(".modal-overlay"),n=a?a.querySelector("#blacklist-photo-input"):document.getElementById("blacklist-photo-input");if(n?.files?.[0]){const f=n.files[0];if(f.size>2097152){Notification.error("\u062D\u062C\u0645 \u0627\u0644\u0635\u0648\u0631\u0629 \u0643\u0628\u064A\u0631 \u062C\u062F\u0627\u064B. \u0627\u0644\u062D\u062F \u0627\u0644\u0623\u0642\u0635\u0649 2MB");return}try{o=await this.convertImageToBase64(f)}catch(m){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0648\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629:",m)}}const s=a?a.querySelector("#blacklist-factory"):document.getElementById("blacklist-factory"),r=a?a.querySelector("#blacklist-location"):document.getElementById("blacklist-location"),c=s?.selectedOptions[0],l=r?.selectedOptions[0],d=f=>(a?a.querySelector(`#${f}`):document.getElementById(f))?.value||"",p={id:t.dataset.editId||Utils.generateId("BLACKLIST"),serialNumber:d("blacklist-serial"),factory:s?.value||"",factoryId:c?.dataset.siteId||"",location:r?.value||"",locationId:l?.dataset.placeId||"",fullName:d("blacklist-name"),idNumber:d("blacklist-id-number"),photo:o,job:d("blacklist-job"),contractor:(d("blacklist-contractor")||"").trim().split(" - ")[0],department:d("blacklist-department"),banReason:d("blacklist-ban-reason"),banDate:d("blacklist-ban-date"),bannedBy:d("blacklist-banned-by"),editor:d("blacklist-editor"),notes:d("blacklist-notes"),createdAt:i?AppState.appData?.blacklistRegister?.find(f=>f.id===t.dataset.editId)?.createdAt||new Date().toISOString():new Date().toISOString(),updatedAt:new Date().toISOString()};if(o&&o.startsWith("data:"))try{const f=await GoogleIntegration.uploadFileToDrive?.(o,`blacklist_${p.id}_${Date.now()}.jpg`,"image/jpeg","Blacklist_Register");f?.success&&(f.directLink||f.shareableLink)?(p.photo=f.directLink||f.shareableLink,AppState.debugMode):(AppState.debugMode,Notification.warning("\u0641\u0634\u0644 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629 \u0625\u0644\u0649 Drive. \u0633\u064A\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u0624\u0642\u062A\u0627\u064B."))}catch(f){AppState.debugMode&&Utils.safeWarn("\u274C \u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629:",f),Notification.error("\u062E\u0637\u0623 \u0641\u064A \u0631\u0641\u0639 \u0627\u0644\u0635\u0648\u0631\u0629: "+f.message)}await this.saveBlacklistRecord(p,i)},async saveBlacklistRecord(e,t){Loading.show();try{if(AppState.appData.blacklistRegister||(AppState.appData.blacklistRegister=[]),t){const s=AppState.appData.blacklistRegister.findIndex(r=>r.id===e.id);s!==-1?AppState.appData.blacklistRegister[s]=e:AppState.appData.blacklistRegister.push(e)}else AppState.appData.blacklistRegister.push(e);typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();try{await GoogleIntegration.autoSave("Blacklist_Register",AppState.appData.blacklistRegister)}catch(s){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",s),Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL")}Loading.hide(),Notification.success(`\u062A\u0645 ${t?"\u062A\u062D\u062F\u064A\u062B":"\u062A\u0633\u062C\u064A\u0644"} \u0627\u0644\u0633\u062C\u0644 \u0628\u0646\u062C\u0627\u062D`);const i=document.querySelector(".modal-overlay");i&&i.querySelector("#blacklist-form")&&i.remove();const o=document.getElementById("blacklist-cards-container");o&&(o.innerHTML=this.renderBlacklistCards(),this.setupBlacklistEventListeners());const a=document.getElementById("blacklist-table-container");a&&(a.innerHTML=this.renderBlacklistTable(),this.setupBlacklistEventListeners());const n=document.querySelector("#violations-tab-content .card-body");if(n){const s=n.querySelector(".grid.grid-cols-1.md\\:grid-cols-3");s&&(s.outerHTML=this.renderBlacklistStats())}}catch(i){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644:",i),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062D\u0641\u0638 \u0627\u0644\u0633\u062C\u0644: "+i.message)}},handleBlacklistPhotoUpload(e){const t=e.target.files?.[0];if(!t)return;const i=new FileReader;i.onload=o=>{const a=document.querySelector(".modal-overlay"),n=a?a.querySelector("#blacklist-photo-preview"):document.getElementById("blacklist-photo-preview"),s=a?a.querySelector("#blacklist-photo-img"):document.getElementById("blacklist-photo-img");n&&s&&(s.src=o.target.result,n.classList.remove("hidden"))},i.readAsDataURL(t)},async loadBlacklistPlaces(e){try{typeof Permissions<"u"&&typeof Permissions.ensureFormSettingsState=="function"&&await Permissions.ensureFormSettingsState();const t=document.querySelector(".modal-overlay"),i=t?t.querySelector("#blacklist-location"):document.getElementById("blacklist-location");if(!i)return;i.innerHTML='<option value="">-- \u0627\u062E\u062A\u0631 \u0627\u0644\u0645\u0648\u0642\u0639 --</option>',this.getPlaceOptions(e).forEach(a=>{const n=document.createElement("option");n.value=a.name,n.dataset.placeId=a.id,n.textContent=a.name,i.appendChild(n)})}catch(t){Utils.safeWarn("\u26A0\uFE0F \u062E\u0637\u0623 \u0641\u064A \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0623\u0645\u0627\u0643\u0646:",t)}},filterBlacklistTable(e){const t=document.getElementById("blacklist-table-body");if(!t)return;const i=t.querySelectorAll("tr"),o=e.toLowerCase();i.forEach(a=>{const n=a.textContent.toLowerCase();a.style.display=n.includes(o)?"":"none"})},editBlacklistRecord(e){const t=AppState.appData?.blacklistRegister?.find(i=>i.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}this.showBlacklistForm(t)},async deleteBlacklistRecord(e){if(confirm("\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061F")){Loading.show();try{AppState.appData?.blacklistRegister&&(AppState.appData.blacklistRegister=AppState.appData.blacklistRegister.filter(i=>i.id!==e)),typeof window.DataManager<"u"&&window.DataManager.save&&window.DataManager.save();try{await GoogleIntegration.autoSave("Blacklist_Register",AppState.appData.blacklistRegister)}catch(i){AppState.debugMode&&Utils.safeWarn("\u062E\u0637\u0623 \u0641\u064A \u062D\u0641\u0638 \u0642\u0627\u0639\u062F\u0629 SQL:",i),Notification.warning("\u062A\u0645 \u0627\u0644\u062D\u0630\u0641 \u0645\u062D\u0644\u064A\u0627\u064B \u0644\u0643\u0646 \u0641\u0634\u0644 \u0627\u0644\u062D\u0641\u0638 \u0641\u064A \u0642\u0627\u0639\u062F\u0629 SQL")}Loading.hide(),Notification.success("\u062A\u0645 \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644 \u0628\u0646\u062C\u0627\u062D"),document.querySelector('.tab-btn.active[data-tab="blacklist"]')&&await this.switchTab("blacklist")}catch(t){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644:",t),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062D\u0630\u0641 \u0627\u0644\u0633\u062C\u0644: "+t.message)}}},viewBlacklistPhoto(e){if(!e){Notification.error("\u0644\u0627 \u062A\u0648\u062C\u062F \u0635\u0648\u0631\u0629");return}const t=this.processPhoto(e);if(!t){Notification.error("\u0631\u0627\u0628\u0637 \u0627\u0644\u0635\u0648\u0631\u0629 \u063A\u064A\u0631 \u0635\u0627\u0644\u062D");return}const i=a=>{const n=document.createElement("div");n.className="modal-overlay",n.innerHTML=`
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <img src="${Utils.escapeHTML(a)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="width: 100%; max-height: 70vh; object-fit: contain;"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23ddd%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23666%22 font-family=%22sans-serif%22 font-size=%2220%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
+                </div>
+            </div>
+        `,document.body.appendChild(n)},o=typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(t):{needsProxy:!1,proxyFileId:""};if(o.needsProxy&&typeof Utils.fetchDriveImageDataUri=="function"){Utils.fetchDriveImageDataUri(o.proxyFileId).then(a=>{a?i(a):Notification.error("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629 \u0645\u0646 \u0627\u0644\u062E\u0627\u062F\u0645")}).catch(()=>Notification.error("\u062A\u0639\u0630\u0631 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629"));return}i(t)},viewBlacklistDetails(e){const t=AppState.appData?.blacklistRegister?.find(r=>r.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=this.processPhoto(t),o=i&&typeof Utils.resolveDriveAwareImgDisplay=="function"?Utils.resolveDriveAwareImgDisplay(i):{canonical:i||"",displaySrc:i||"",needsProxy:!1,proxyFileId:""},a=o.canonical?o.displaySrc:"",n=typeof Utils.driveProxyImgAttrs=="function"?Utils.driveProxyImgAttrs(o):"",s=document.createElement("div");s.className="modal-overlay",s.innerHTML=`
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">
+                        <i class="fas fa-user-slash ml-2"></i>
+                        \u062A\u0641\u0627\u0635\u064A\u0644 \u0633\u062C\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644
+                    </h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="blacklist-details-content">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.serialNumber||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</label>
+                            <p class="text-gray-800">${t.banDate?Utils.formatDate(t.banDate):"-"}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0635\u0646\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.factory||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0645\u0648\u0642\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.location||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.fullName||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.idNumber||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0648\u0638\u064A\u0641\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.job||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.contractor||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0625\u062F\u0627\u0631\u0629</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.department||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.bannedBy||"-")}</p>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</label>
+                            <p class="text-gray-800">${Utils.escapeHTML(t.editor||"-")}</p>
+                        </div>
+                        ${t.createdAt?`
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</label>
+                            <p class="text-gray-800">${Utils.formatDateTime(t.createdAt)}</p>
+                        </div>
+                        `:""}
+                        ${t.updatedAt?`
+                        <div>
+                            <label class="text-sm font-semibold text-gray-600">\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</label>
+                            <p class="text-gray-800">${Utils.formatDateTime(t.updatedAt)}</p>
+                        </div>
+                        `:""}
+                    </div>
+                    ${i?`
+                    <div class="mt-4">
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</label>
+                        <div class="flex justify-center">
+                            <img src="${Utils.escapeHTML(a)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629"${n}
+                                class="blacklist-detail-photo max-w-xs max-h-64 object-cover rounded-lg cursor-pointer border-2 border-gray-200"
+                                data-photo-url="${Utils.escapeHTML(i)}"
+                                onclick="Violations.viewBlacklistPhoto(this.dataset.photoUrl)"
+                                title="\u0627\u0646\u0642\u0631 \u0644\u0639\u0631\u0636 \u0627\u0644\u0635\u0648\u0631\u0629 \u0628\u062D\u062C\u0645 \u0643\u0627\u0645\u0644"
+                                onerror="Violations._onBlacklistTablePhotoError(this)">
+                        </div>
+                    </div>
+                    `:""}
+                    <div class="mt-4">
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</label>
+                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(t.banReason||"-")}</p>
+                    </div>
+                    ${t.notes?`
+                    <div class="mt-4">
+                        <label class="text-sm font-semibold text-gray-600 mb-2 block">\u0645\u0644\u0627\u062D\u0638\u0627\u062A</label>
+                        <p class="text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200 whitespace-pre-wrap">${Utils.escapeHTML(t.notes)}</p>
+                    </div>
+                    `:""}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="Violations.printBlacklistDetails('${e}')">
+                        <i class="fas fa-print ml-2"></i>\u0637\u0628\u0627\u0639\u0629
+                    </button>
+                    ${typeof EmailDispatch<"u"?EmailDispatch.renderFooterButtonHtml("violations.blacklist"):""}
+                    <button type="button" class="btn-warning" onclick="Violations.editBlacklistRecord('${e}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-edit ml-2"></i>\u062A\u0639\u062F\u064A\u0644
+                    </button>
+                    <button type="button" class="btn-danger" onclick="if(confirm('\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 \u0647\u0630\u0627 \u0627\u0644\u0633\u062C\u0644\u061F')) { Violations.deleteBlacklistRecord('${e}'); this.closest('.modal-overlay').remove(); }">
+                        <i class="fas fa-trash ml-2"></i>\u062D\u0630\u0641
+                    </button>
+                    <button type="button" class="btn-primary" onclick="this.closest('.modal-overlay').remove()">\u0625\u063A\u0644\u0627\u0642</button>
+                </div>
+            </div>
+        `,document.body.appendChild(s),typeof EmailDispatch<"u"&&EmailDispatch.bindFooterButtons(s,{moduleKey:"violations.blacklist",record:{...t,name:t.fullName||"",nationalId:t.idNumber||"",reason:t.banReason||"",date:t.banDate||t.createdAt||""},recordId:t.id||e||""}),typeof Utils.hydrateDriveProxyImages=="function"&&Utils.hydrateDriveProxyImages(s,{onFetchFail:r=>this._onBlacklistTablePhotoError(r)})},printBlacklistDetails(e){const t=AppState.appData?.blacklistRegister?.find(o=>o.id===e);if(!t){Notification.error("\u0627\u0644\u0633\u062C\u0644 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F");return}const i=this.processPhoto(t);try{Loading.show("\u062C\u0627\u0631\u064A \u0625\u0639\u062F\u0627\u062F \u0627\u0644\u0637\u0628\u0627\u0639\u0629...");const o=`BLACKLIST-${(t.id||t.serialNumber||"UNKNOWN").substring(0,12)}`,a="\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0645\u0646\u0648\u0639 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Details",n=`
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <span class="summary-label">\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.serialNumber||"-")}</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</span>
+                        <span class="summary-value">${t.banDate?Utils.formatDate(t.banDate):"-"}</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">\u0627\u0644\u0645\u0635\u0646\u0639</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.factory||"-")}</span>
+                    </div>
+                    <div class="summary-card">
+                        <span class="summary-label">\u0627\u0644\u0645\u0648\u0642\u0639</span>
+                        <span class="summary-value">${Utils.escapeHTML(t.location||"-")}</span>
+                    </div>
+                </div>
+
+                <div class="section-title">\u0645\u0639\u0644\u0648\u0645\u0627\u062A \u0627\u0644\u0634\u062E\u0635 \u0627\u0644\u0645\u0645\u0646\u0648\u0639</div>
+                <table class="report-table">
+                    <tr>
+                        <th style="width: 30%;">\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                        <td>${Utils.escapeHTML(t.fullName||"-")}</td>
+                    </tr>
+                    <tr>
+                        <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                        <td>${Utils.escapeHTML(t.idNumber||"-")}</td>
+                    </tr>
+                    <tr>
+                        <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                        <td>${Utils.escapeHTML(t.job||"-")}</td>
+                    </tr>
+                    <tr>
+                        <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                        <td>${Utils.escapeHTML(t.contractor||"-")}</td>
+                    </tr>
+                    <tr>
+                        <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                        <td>${Utils.escapeHTML(t.department||"-")}</td>
+                    </tr>
+                </table>
+
+                ${i?`
+                <div class="section-title">\u0627\u0644\u0635\u0648\u0631\u0629 \u0627\u0644\u0634\u062E\u0635\u064A\u0629</div>
+                <div style="text-align: center; margin: 20px 0;">
+                    <img src="${Utils.escapeHTML(i)}" alt="\u0635\u0648\u0631\u0629 \u0634\u062E\u0635\u064A\u0629" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;" 
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22400%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3E\u0641\u0634\u0644 \u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0635\u0648\u0631\u0629%3C/text%3E%3C/svg%3E';">
+                </div>
+                `:""}
+
+                <div class="section-title">\u062A\u0641\u0627\u0635\u064A\u0644 \u0627\u0644\u0645\u0646\u0639</div>
+                <table class="report-table">
+                    <tr>
+                        <th style="width: 30%;">\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(t.banReason||"-")}</td>
+                    </tr>
+                    ${t.notes?`
+                    <tr>
+                        <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
+                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(t.notes)}</td>
+                    </tr>
+                    `:""}
+                    <tr>
+                        <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                        <td>${Utils.escapeHTML(t.bannedBy||"-")}</td>
+                    </tr>
+                    <tr>
+                        <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                        <td>${Utils.escapeHTML(t.editor||"-")}</td>
+                    </tr>
+                    ${t.createdAt?`
+                    <tr>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621</th>
+                        <td>${Utils.formatDateTime(t.createdAt)}</td>
+                    </tr>
+                    `:""}
+                    ${t.updatedAt?`
+                    <tr>
+                        <th>\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B</th>
+                        <td>${Utils.formatDateTime(t.updatedAt)}</td>
+                    </tr>
+                    `:""}
+                </table>
+            `,s=typeof FormHeader<"u"&&typeof FormHeader.generatePDFHTML=="function"?FormHeader.generatePDFHTML(o,a,n,!1,!0,{version:"1.0",releaseDate:t.createdAt||new Date().toISOString(),revisionDate:t.updatedAt||t.createdAt||new Date().toISOString(),"\u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u062A\u0633\u0644\u0633\u0644\u064A":t.serialNumber||t.id||"",qrData:{type:"Blacklist",id:t.id,serialNumber:t.serialNumber}},t.createdAt||new Date().toISOString(),t.updatedAt||t.createdAt||new Date().toISOString()):`<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${a}</title></head><body>${n}</body></html>`,r=new Blob([s],{type:"text/html;charset=utf-8"}),c=URL.createObjectURL(r),l=window.open(c,"_blank");l?l.onload=()=>{setTimeout(()=>{l.print(),setTimeout(()=>{URL.revokeObjectURL(c),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(o){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u0637\u0628\u0627\u0639\u0629 \u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644:",o),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u0627\u0644\u0637\u0628\u0627\u0639\u0629: "+o.message)}},async exportBlacklistToPDF(){try{const e=AppState.appData?.blacklistRegister||[];if(e.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}if(Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 PDF..."),typeof window.jsPDF<"u")try{const{jsPDF:n}=window.jsPDF,s=new n("l","mm","a4");s.setFontSize(18),s.text("\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Register",150,15,{align:"center"}),s.setFontSize(10),s.text(`\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${Utils.formatDateTime(new Date().toISOString())}`,14,22),s.text(`\u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A: ${e.length}`,14,27);const r=e.map(l=>[l.serialNumber||"-",l.banDate?Utils.formatDate(l.banDate):"-",Utils.escapeHTML(l.factory||"-"),Utils.escapeHTML(l.location||"-"),Utils.escapeHTML(l.fullName||"-"),Utils.escapeHTML(l.idNumber||"-"),Utils.escapeHTML(l.job||"-"),Utils.escapeHTML(l.contractor||"-"),Utils.escapeHTML(l.department||"-"),Utils.escapeHTML(l.bannedBy||"-"),Utils.escapeHTML(l.banReason||"-").substring(0,50)]);if(typeof s.autoTable<"u")s.autoTable({head:[["\u0645","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639","\u0627\u0644\u0645\u0635\u0646\u0639","\u0627\u0644\u0645\u0648\u0642\u0639","\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A","\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629","\u0627\u0644\u0648\u0638\u064A\u0641\u0629","\u0627\u0644\u0634\u0631\u0643\u0629","\u0627\u0644\u0625\u062F\u0627\u0631\u0629","\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639","\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639"]],body:r,startY:35,styles:{fontSize:7,font:"Arial",cellPadding:2},headStyles:{fillColor:[59,130,246],textColor:255,fontSize:8},alternateRowStyles:{fillColor:[245,247,250]},margin:{left:14,right:14},overflow:"linebreak"});else{let l=35;r.forEach((d,p)=>{l>180&&(s.addPage(),l=20),s.setFontSize(8),s.text(`${p+1}. ${d[4]} - ${d[3]}`,14,l),l+=7})}const c=`\u0642\u0627\u0626\u0645\u0629_\u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646_\u0645\u0646_\u0627\u0644\u062F\u062E\u0648\u0644_${new Date().toISOString().slice(0,10)}.pdf`;s.save(c),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 PDF \u0628\u0646\u062C\u0627\u062D");return}catch(n){Utils.safeWarn("\u0641\u0634\u0644 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 jsPDF\u060C \u0633\u064A\u062A\u0645 \u0627\u0633\u062A\u062E\u062F\u0627\u0645 \u0637\u0631\u064A\u0642\u0629 HTML:",n)}const t=`
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644</title>
+    <style>
+        @media print {
+            @page { margin: 1cm; size: A4 landscape; }
+            body { margin: 0; }
+            .no-print { display: none !important; }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #003865;
+            padding-bottom: 15px;
+        }
+        .header h1 {
+            color: #003865;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: right;
+        }
+        th {
+            background: #3b82f6;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background: #f5f7fa;
+        }
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 12px 24px;
+            background: #003865;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn no-print" onclick="window.print()">
+        <i class="fas fa-print"></i> \u0637\u0628\u0627\u0639\u0629
+    </button>
+    <div class="header">
+        <h1>\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646 \u0645\u0646 \u0627\u0644\u062F\u062E\u0648\u0644 - Blacklist Register</h1>
+        <p>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u062A\u0635\u062F\u064A\u0631: ${Utils.formatDateTime(new Date().toISOString())} | \u0639\u062F\u062F \u0627\u0644\u0633\u062C\u0644\u0627\u062A: ${e.length}</p>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>\u0645</th>
+                <th>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0627\u0644\u0645\u0635\u0646\u0639</th>
+                <th>\u0627\u0644\u0645\u0648\u0642\u0639</th>
+                <th>\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A</th>
+                <th>\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629</th>
+                <th>\u0627\u0644\u0648\u0638\u064A\u0641\u0629</th>
+                <th>\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644</th>
+                <th>\u0627\u0644\u0625\u062F\u0627\u0631\u0629</th>
+                <th>\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A</th>
+                <th>\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639</th>
+                <th>\u0645\u0644\u0627\u062D\u0638\u0627\u062A</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${e.map(n=>`
+                <tr>
+                    <td>${Utils.escapeHTML(n.serialNumber||"-")}</td>
+                    <td>${n.banDate?Utils.formatDate(n.banDate):"-"}</td>
+                    <td>${Utils.escapeHTML(n.factory||"-")}</td>
+                    <td>${Utils.escapeHTML(n.location||"-")}</td>
+                    <td>${Utils.escapeHTML(n.fullName||"-")}</td>
+                    <td>${Utils.escapeHTML(n.idNumber||"-")}</td>
+                    <td>${Utils.escapeHTML(n.job||"-")}</td>
+                    <td>${Utils.escapeHTML(n.contractor||"-")}</td>
+                    <td>${Utils.escapeHTML(n.department||"-")}</td>
+                    <td>${Utils.escapeHTML(n.bannedBy||"-")}</td>
+                    <td>${Utils.escapeHTML(n.editor||"-")}</td>
+                    <td>${Utils.escapeHTML((n.banReason||"-").substring(0,100))}</td>
+                    <td>${Utils.escapeHTML((n.notes||"-").substring(0,50))}</td>
+                </tr>
+            `).join("")}
+        </tbody>
+    </table>
+</body>
+</html>`,i=new Blob([t],{type:"text/html;charset=utf-8"}),o=URL.createObjectURL(i),a=window.open(o,"_blank");a?a.onload=()=>{setTimeout(()=>{a.print(),setTimeout(()=>{URL.revokeObjectURL(o),Loading.hide()},800)},500)}:(Loading.hide(),Notification.error("\u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u0645\u0627\u062D \u0644\u0644\u0646\u0648\u0627\u0641\u0630 \u0627\u0644\u0645\u0646\u0628\u062B\u0642\u0629 \u0644\u0639\u0631\u0636 \u0627\u0644\u062A\u0642\u0631\u064A\u0631"))}catch(e){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF:",e),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 PDF: "+e.message)}},exportBlacklistToExcel(){try{const e=AppState.appData?.blacklistRegister||[];if(e.length===0){Notification.warning("\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A \u0644\u0644\u062A\u0635\u062F\u064A\u0631");return}if(Loading.show("\u062C\u0627\u0631\u064A \u0625\u0646\u0634\u0627\u0621 \u0645\u0644\u0641 Excel..."),typeof XLSX>"u"){Loading.hide(),Notification.error("\u0645\u0643\u062A\u0628\u0629 Excel \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629. \u064A\u0631\u062C\u0649 \u0627\u0644\u062A\u0623\u0643\u062F \u0645\u0646 \u062A\u062D\u0645\u064A\u0644 \u0645\u0643\u062A\u0628\u0629 SheetJS");return}const t=e.map(r=>({\u0645:r.serialNumber||"","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0645\u0646\u0639":r.banDate?Utils.formatDate(r.banDate):"",\u0627\u0644\u0645\u0635\u0646\u0639:r.factory||"",\u0627\u0644\u0645\u0648\u0642\u0639:r.location||"","\u0627\u0644\u0627\u0633\u0645 \u0631\u0628\u0627\u0639\u064A":r.fullName||"","\u0631\u0642\u0645 \u0627\u0644\u0628\u0637\u0627\u0642\u0629":r.idNumber||"",\u0627\u0644\u0648\u0638\u064A\u0641\u0629:r.job||"","\u0627\u0644\u0634\u0631\u0643\u0629 - \u0627\u0644\u0645\u0642\u0627\u0648\u0644":r.contractor||"",\u0627\u0644\u0625\u062F\u0627\u0631\u0629:r.department||"","\u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0645\u0646\u0639":r.bannedBy||"","\u0645\u062D\u0631\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A":r.editor||"","\u0633\u0628\u0628 \u0627\u0644\u0645\u0646\u0639":r.banReason||"",\u0645\u0644\u0627\u062D\u0638\u0627\u062A:r.notes||"","\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0625\u0646\u0634\u0627\u0621":r.createdAt?Utils.formatDateTime(r.createdAt):"","\u062A\u0627\u0631\u064A\u062E \u0622\u062E\u0631 \u062A\u062D\u062F\u064A\u062B":r.updatedAt?Utils.formatDateTime(r.updatedAt):""})),i=XLSX.utils.book_new(),o=XLSX.utils.json_to_sheet(t),a=[{wch:8},{wch:12},{wch:15},{wch:15},{wch:25},{wch:15},{wch:20},{wch:20},{wch:15},{wch:20},{wch:20},{wch:40},{wch:40},{wch:18},{wch:18}];o["!cols"]=a,XLSX.utils.book_append_sheet(i,o,"\u0642\u0627\u0626\u0645\u0629 \u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646");const s=`\u0642\u0627\u0626\u0645\u0629_\u0627\u0644\u0645\u0645\u0646\u0648\u0639\u064A\u0646_\u0645\u0646_\u0627\u0644\u062F\u062E\u0648\u0644_${new Date().toISOString().slice(0,10)}.xlsx`;XLSX.writeFile(i,s),Loading.hide(),Notification.success("\u062A\u0645 \u062A\u0635\u062F\u064A\u0631 \u0627\u0644\u0628\u064A\u0627\u0646\u0627\u062A \u0625\u0644\u0649 Excel \u0628\u0646\u062C\u0627\u062D")}catch(e){Loading.hide(),Utils.safeError("\u062E\u0637\u0623 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel:",e),Notification.error("\u0641\u0634\u0644 \u0641\u064A \u062A\u0635\u062F\u064A\u0631 Excel: "+e.message)}}};(function(){"use strict";try{typeof window<"u"&&typeof Violations<"u"&&(window.Violations=Violations,typeof AppState<"u"&&AppState.debugMode&&typeof Utils<"u"&&Utils.safeLog&&Utils.safeLog("\u2705 Violations module loaded and available on window.Violations"))}catch{if(typeof window<"u"&&typeof Violations<"u")try{window.Violations=Violations}catch{}}})();

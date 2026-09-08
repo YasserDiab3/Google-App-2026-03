@@ -1,0 +1,11 @@
+---
+description: Always respond in Arabic
+alwaysApply: true
+---
+
+# Arabic-Only Chat Language Rule
+
+- For every user-facing response, use Arabic only.
+- Do not include English text unless the user explicitly asks for English.
+- Keep wording clear, concise, and natural Arabic.
+- When quoting code, commands, file paths, or technical identifiers, keep them as-is.

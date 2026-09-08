@@ -1,0 +1,7560 @@
+/**
+ * Employees Module
+ * تم استخراجه من app-modules.js
+ */
+// ===== Employees Module (قاعدة بيانات الموظين) =====
+const Employees = {
+    // Cache للبيانات مع timestamp
+    cache: {
+        data: null,
+        lastLoad: null,
+        lastUpdate: null,
+        isUpdating: false
+    },
+    
+    // إعدادات التحديث التلقائي
+    config: {
+        cacheTimeout: 15 * 60 * 1000, // 15 دقيقة — ثبات أعلى وتقليل إعادة الجلب عند التنشيط
+        backgroundUpdateInterval: 10 * 60 * 1000, // 10 دقائق - فترة التحديث في الخلفية
+        backgroundUpdateTimer: null,
+        _refreshedOnceForInactive: false, // مرة واحدة لكل جلسة لجلب المستقيلين من الخادم
+        listPageSize: 100 // عرض أولي سريع ثم «المزيد» — بدون فقد بيانات
+    },
+    activeTab: 'employees-list',
+    externalWorkforceYear: new Date().getFullYear(),
+    _externalWorkforceLoaded: false,
+    _externalWorkforceLoadPromise: null,
+    _externalWorkforceCache: new Map(),
+    _empAnalyticsCharts: {},
+    _empAnalyticsDetailTab: 'department',
+    _empAnalyticsEventsBound: false,
+    _visibilityResumeBound: false,
+    _listRowsCache: null,
+    _listVisibleCount: 0,
+    _listCanEdit: false,
+
+    /** مفتاح موظف مستقر للمطابقة */
+    _employeeStableKey_(e) {
+        const raw = (e && (e.employeeNumber || e.id || e.sapId)) || '';
+        let s = String(raw).trim().toLowerCase();
+        if (!s) return '';
+        if (/^\d+(\.0+)?$/.test(s)) s = String(parseInt(s, 10));
+        // تجاهل تواريخ انزلقت إلى id
+        if (/^\d{4}-\d{2}-\d{2}/.test(s) || /^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return '';
+        return s;
+    },
+
+    /** تطبيع مفتاح بحث موظف — يمنع فشل === بين رقم الشيت ونص الزر */
+    _normalizeEmployeeLookupKey_(value) {
+        let s = String(value == null ? '' : value).trim();
+        if (!s) return '';
+        if (/^\d+(\.0+)?$/.test(s)) s = String(parseInt(s, 10));
+        return s.toLowerCase();
+    },
+
+    _employeeMatchesLookupId_(employee, lookupId) {
+        if (!employee) return false;
+        const want = this._normalizeEmployeeLookupKey_(lookupId);
+        if (!want) return false;
+        const keys = [employee.id, employee.employeeNumber, employee.sapId];
+        for (let i = 0; i < keys.length; i++) {
+            const k = this._normalizeEmployeeLookupKey_(keys[i]);
+            if (k && k === want) return true;
+        }
+        return false;
+    },
+
+    _findEmployeeById_(id) {
+        const list = AppState.appData.employees || [];
+        return list.find((e) => this._employeeMatchesLookupId_(e, id)) || null;
+    },
+
+    _findEmployeeIndexById_(id) {
+        const list = AppState.appData.employees || [];
+        return list.findIndex((e) => this._employeeMatchesLookupId_(e, id));
+    },
+
+    _employeeActionId_(employee) {
+        const raw = (employee && (employee.id || employee.employeeNumber || employee.sapId)) || '';
+        return String(raw).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    },
+
+    /** اسم موظف من الحقول الشائعة */
+    _employeeDisplayName_(e) {
+        if (!e || typeof e !== 'object') return '';
+        return String(e.name || e.employeeName || e.fullName || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    },
+
+    _countNamedEmployees_(list) {
+        const arr = Array.isArray(list) ? list : [];
+        let n = 0;
+        for (let i = 0; i < arr.length; i++) {
+            if (this._employeeDisplayName_(arr[i])) n++;
+        }
+        return n;
+    },
+
+    /**
+     * دمج قائمة خادم مع المحلية دون فقد الأسماء أو مسح القائمة ببيانات فارغة.
+     */
+    mergeEmployeesPreservingNames_(incoming, existing) {
+        const remote = Array.isArray(incoming) ? incoming : [];
+        const local = Array.isArray(existing) ? existing : [];
+        if (remote.length === 0 && local.length > 0) return local.slice();
+
+        const localByKey = new Map();
+        for (let i = 0; i < local.length; i++) {
+            const e = local[i];
+            const k = this._employeeStableKey_(e);
+            if (k) localByKey.set(k, e);
+        }
+
+        const merged = remote.map((e) => {
+            if (!e || typeof e !== 'object') return e;
+            const k = this._employeeStableKey_(e);
+            const localE = k ? localByKey.get(k) : null;
+            const remoteName = this._employeeDisplayName_(e);
+            if (remoteName) {
+                if (String(e.name || '').trim() === remoteName) return e;
+                return Object.assign({}, e, { name: remoteName });
+            }
+            if (localE) {
+                const localName = this._employeeDisplayName_(localE);
+                if (localName) return Object.assign({}, e, { name: localName });
+            }
+            return e;
+        });
+
+        const remoteNamed = this._countNamedEmployees_(merged);
+        const localNamed = this._countNamedEmployees_(local);
+        // إن أعاد الخادم قائمة بلا أسماء بينما المحلي يملك أسماء — أبقِ المحلي
+        if (localNamed > 0 && remoteNamed === 0 && local.length > 0) {
+            return local.slice();
+        }
+        return merged;
+    },
+
+    /**
+     * تطبيق بيانات موظفين على AppState/Cache بأمان (لا استبدال فارغ، لا فقد أسماء).
+     */
+    applyEmployeesData_(incoming) {
+        const existing = (AppState.appData && Array.isArray(AppState.appData.employees))
+            ? AppState.appData.employees
+            : [];
+        const cleanedIncoming = Array.isArray(incoming)
+            ? incoming.map((row) => this.sanitizeEmployeeRecordDrift_({ ...(row || {}) }))
+            : incoming;
+        const merged = this.mergeEmployeesPreservingNames_(cleanedIncoming, existing);
+        if ((!merged || merged.length === 0) && existing.length > 0) {
+            this.cache.data = existing;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+            return existing;
+        }
+        const cleanedMerged = (merged || []).map((row) => this.sanitizeEmployeeRecordDrift_(row));
+        AppState.appData = AppState.appData || {};
+        AppState.appData.employees = cleanedMerged;
+        this.cache.data = cleanedMerged;
+        this.cache.lastLoad = Date.now();
+        this.cache.lastUpdate = Date.now();
+        return cleanedMerged;
+    },
+
+    /**
+     * عند إخفاء الصفحة: لا تُلغَ الطلبات الجارية؛ ابدأ جلباً إن لزم.
+     * عند الإظهار: أعد عرض القائمة من الكاش/الدمج فوراً ثم حدّث.
+     */
+    _ensureVisibilityResumeBound_() {
+        if (this._visibilityResumeBound) return;
+        this._visibilityResumeBound = true;
+        document.addEventListener('visibilitychange', () => {
+            try {
+                if (document.hidden) {
+                    const list = (AppState.appData && AppState.appData.employees) || [];
+                    const needsFetch = !list.length || this._countNamedEmployees_(list) === 0 || !this.cache.lastLoad;
+                    if (needsFetch && !this.cache.isUpdating) {
+                        void this.loadEmployeesFromBackend(false);
+                    }
+                    return;
+                }
+
+                const sectionOpen = AppState.currentSection === 'employees'
+                    || !!document.getElementById('employees-table-container')
+                    || !!document.getElementById('employees-section');
+                if (!sectionOpen) return;
+
+                void (async () => {
+                    try {
+                        // عرض فوري من المحلي إن وُجد — بدون انتظار الشبكة
+                        if ((AppState.appData.employees || []).length > 0 && this.activeTab === 'employees-list') {
+                            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                            this.loadEmployeesList(showInactive);
+                            this.renderStatsCards();
+                            if (typeof StableLoader !== 'undefined') {
+                                StableLoader.markPaint('employees', 'employees-list', {
+                                    count: (AppState.appData.employees || []).length
+                                });
+                            }
+                        }
+                        await this.ensureEmployeesLoaded(false);
+                        if (this.activeTab === 'employees-list' && document.getElementById('employees-table-container')) {
+                            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                            this.loadEmployeesList(showInactive);
+                        }
+                        this.renderStatsCards();
+                    } catch (_e) { /* لا تكسر الواجهة */ }
+                })();
+            } catch (_err) { /* ignore */ }
+        });
+    },
+
+    _getI18nCore() {
+        return (window.AppI18n && typeof window.AppI18n.t === 'function')
+            ? window.AppI18n
+            : ((window.I18n && typeof window.I18n.t === 'function') ? window.I18n : null);
+    },
+    t(key, fallback) {
+        const i18nCore = this._getI18nCore();
+        if (i18nCore) return i18nCore.t(key, null, fallback || key);
+        return fallback || key;
+    },
+    applyModuleI18n(root) {
+        const i18nCore = this._getI18nCore();
+        if (!i18nCore) return;
+        const target = root || document.getElementById('employees-section') || document;
+        if (typeof i18nCore.applyI18n === 'function') i18nCore.applyI18n(target);
+        if (typeof i18nCore.applyLiteralTranslations === 'function') i18nCore.applyLiteralTranslations(target);
+    },
+
+    // ===== Photo loading guards (avoid repeated 503) =====
+    _photoFailKey(photoKey) {
+        return `hse_emp_photo_failed_${String(photoKey || '').trim()}`;
+    },
+    _getDriveIdFromUrl(url) {
+        try {
+            const s = String(url || '').trim();
+            if (!s) return '';
+            const m = s.match(/[?&]id=([^&]+)/) || s.match(/\/file\/d\/([^/]+)/);
+            return m ? String(m[1] || '').trim() : '';
+        } catch (e) {
+            return '';
+        }
+    },
+    _normalizeEmployeePhotoUrl(photoUrl, employeeId = '') {
+        try {
+            const raw = typeof Utils !== 'undefined' && typeof Utils.extractImageSourceCandidate === 'function'
+                ? String(Utils.extractImageSourceCandidate(photoUrl) || '').trim()
+                : String(photoUrl || '').trim();
+            if (!raw) return '';
+
+            // Normalize الخادم links when helper exists
+            let normalized = raw;
+            if (typeof Utils !== 'undefined' && typeof Utils.normalizeImageSource === 'function') {
+                normalized = Utils.normalizeImageSource(raw) || raw;
+            } else if (typeof window !== 'undefined' && typeof window.__convertGoogleDriveUrl === 'function') {
+                normalized = window.__convertGoogleDriveUrl(raw) || raw;
+            }
+
+            const driveId = this._getDriveIdFromUrl(normalized);
+            const photoKey = driveId || employeeId || normalized;
+
+            // If failed recently in this tab, skip re-request to avoid spam/slowdowns
+            const failedAt = sessionStorage.getItem(this._photoFailKey(photoKey));
+            if (failedAt) return '';
+
+            return normalized;
+        } catch (e) {
+            return '';
+        }
+    },
+    _setupEmployeePhotoFallbacks(rootEl) {
+        try {
+            const root = rootEl || document;
+            const images = root.querySelectorAll('img[data-emp-photo="1"]');
+            if (!images || images.length === 0) return;
+
+            images.forEach((img) => {
+                if (!img || img.dataset._fallbackBound === '1') return;
+                img.dataset._fallbackBound = '1';
+                const photoKey = (img.dataset.photoKey || '').trim();
+
+                img.addEventListener('error', () => {
+                    try {
+                        if (photoKey) sessionStorage.setItem(this._photoFailKey(photoKey), Date.now().toString());
+                    } catch (e) { /* ignore */ }
+
+                    try {
+                        const parent = img.parentElement;
+                        if (parent) {
+                            parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                        }
+                    } catch (e) { /* ignore */ }
+                }, { passive: true });
+            });
+        } catch (e) {
+            // ignore
+        }
+    },
+
+    /**
+     * التحقق من صلاحيات المستخدم للتحرير والحذف
+     * فقط لمدير النظام (admin) - باقي الأدوار يمكنهم العرض والبحث فقط
+     */
+    canEditOrDelete() {
+        const user = AppState.currentUser;
+        if (!user) return false;
+        
+        const role = (user.role || '').toLowerCase();
+        
+        // فقط المدير لديه صلاحيات التعديل والحذف
+        return role === 'admin';
+    },
+
+    /**
+     * التحقق من صلاحيات المستخدم للإضافة والاستيراد
+     * فقط لمدير النظام (admin) - باقي الأدوار يمكنهم العرض والبحث فقط
+     */
+    canAddOrImport() {
+        const user = AppState.currentUser;
+        if (!user) return false;
+        
+        const role = (user.role || '').toLowerCase();
+        
+        // فقط المدير لديه صلاحيات الإضافة والاستيراد
+        return role === 'admin';
+    },
+
+    getEmployeesDetailedPermissionsState() {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                const effective = Permissions.getEffectivePermissions();
+                const detailed = effective?.employeesPermissions;
+                if (detailed && typeof detailed === 'object' && !Array.isArray(detailed)) {
+                    return detailed;
+                }
+            }
+        } catch (error) {
+            // ignore and fallback
+        }
+
+        const raw = AppState.currentUser?.permissions?.employeesPermissions;
+        return raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : null;
+    },
+
+    canViewEmployeesRegistryTab() {
+        if (this.canAddOrImport()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('employees')) {
+            return false;
+        }
+
+        const detailed = this.getEmployeesDetailedPermissionsState();
+        if (!detailed) return true;
+        return detailed['employees-list'] !== false;
+    },
+
+    canViewExternalWorkforceTab() {
+        if (this.canAddOrImport()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('employees')) {
+            return false;
+        }
+
+        const detailed = this.getEmployeesDetailedPermissionsState();
+        if (!detailed) return true;
+        return detailed['external-workforce'] === true;
+    },
+
+    canViewEmployeesAnalysisTab() {
+        if (this.canAddOrImport()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function' && !Permissions.hasAccess('employees')) {
+            return false;
+        }
+
+        const detailed = this.getEmployeesDetailedPermissionsState();
+        if (!detailed) return true;
+        return detailed['data-analysis'] !== false;
+    },
+
+    canManageExternalWorkforceTab() {
+        return this.canAddOrImport();
+    },
+
+    /**
+     * التحقق من صحة التاريخ
+     */
+    isValidDate(dateString) {
+        if (!dateString) return false;
+        try {
+            const date = new Date(dateString);
+            return date instanceof Date && !isNaN(date.getTime());
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * تحويل تاريخ إلى صيغة YYYY-MM-DD بدون مشاكل timezone
+     * يدعم: Date / ISO String / YYYY-MM-DD / أرقام Excel (serial) / صيغ dd/mm/yyyy
+     */
+    normalizeDateOnly(input) {
+        if (input === null || input === undefined || input === '') return '';
+
+        // Date object
+        if (input instanceof Date && !isNaN(input.getTime())) {
+            const y = input.getFullYear();
+            const m = String(input.getMonth() + 1).padStart(2, '0');
+            const d = String(input.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        // Excel serial number (SheetJS may return number)
+        if (typeof input === 'number' && isFinite(input)) {
+            try {
+                if (typeof XLSX !== 'undefined' && XLSX?.SSF?.parse_date_code) {
+                    const dc = XLSX.SSF.parse_date_code(input);
+                    if (dc && dc.y && dc.m && dc.d) {
+                        const y = String(dc.y).padStart(4, '0');
+                        const m = String(dc.m).padStart(2, '0');
+                        const d = String(dc.d).padStart(2, '0');
+                        return `${y}-${m}-${d}`;
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        let s = String(input).trim();
+        if (!s) return '';
+
+        // Unwrap JSON-quoted strings (e.g. "\"2020-01-01T00:00:00.000Z\"")
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+            try {
+                const parsed = JSON.parse(s);
+                if (typeof parsed === 'string') {
+                    s = parsed.trim();
+                } else {
+                    s = s.substring(1, s.length - 1).trim();
+                }
+            } catch (e0) {
+                s = s.substring(1, s.length - 1).trim();
+            }
+            if (!s) return '';
+        }
+
+        // Already YYYY-MM-DD (or ISO starting with it)
+        const ymd = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (ymd) return ymd[1];
+
+        // dd/mm/yyyy or dd-mm-yyyy
+        const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (dmy) {
+            const day = String(dmy[1]).padStart(2, '0');
+            const month = String(dmy[2]).padStart(2, '0');
+            const year = dmy[3].length === 2 ? `20${dmy[3]}` : String(dmy[3]).padStart(4, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // yyyy/mm/dd or yyyy-m-d
+        const ymd2 = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+        if (ymd2) {
+            const year = String(ymd2[1]).padStart(4, '0');
+            const month = String(ymd2[2]).padStart(2, '0');
+            const day = String(ymd2[3]).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Fallback: parse as Date then format local YYYY-MM-DD
+        try {
+            const d = new Date(s);
+            if (!isNaN(d.getTime())) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        return '';
+    },
+
+    /**
+     * تحويل أي تاريخ إلى Date محلي (لاستخدامه في الحسابات فقط)
+     */
+    parseLocalDate(input) {
+        if (!input) return null;
+        if (input instanceof Date && !isNaN(input.getTime())) return input;
+        let s = String(input).trim();
+        if (!s) return null;
+
+        // Unwrap JSON-quoted strings
+        if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+            try {
+                const parsed = JSON.parse(s);
+                if (typeof parsed === 'string') {
+                    s = parsed.trim();
+                } else {
+                    s = s.substring(1, s.length - 1).trim();
+                }
+            } catch (e0) {
+                s = s.substring(1, s.length - 1).trim();
+            }
+            if (!s) return null;
+        }
+
+        // Prefer YYYY-MM-DD parsing as local date (avoid UTC parsing differences)
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m) {
+            const y = Number(m[1]);
+            const mo = Number(m[2]) - 1;
+            const d = Number(m[3]);
+            const dt = new Date(y, mo, d);
+            return isNaN(dt.getTime()) ? null : dt;
+        }
+
+        // Otherwise rely on Date parsing (handles ISO with timezone)
+        const dt = new Date(s);
+        return isNaN(dt.getTime()) ? null : dt;
+    },
+
+    /**
+     * تنسيق التاريخ بشكل آمن
+     */
+    formatDateSafe(dateString) {
+        return this.normalizeDateOnly(dateString);
+    },
+
+    /**
+     * حساب السن بناءً على تاريخ الميلاد
+     */
+    calculateAge(birthDate) {
+        if (!birthDate) return '';
+        try {
+            const birth = this.parseLocalDate(birthDate);
+            if (!birth) return '';
+            const today = new Date();
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            return age >= 0 ? age : '';
+        } catch (error) {
+            return '';
+        }
+    },
+
+    async load() {
+        // إضافة مستمع لتغيير اللغة (debounce لمنع تكرار load() الكامل عند تبديل سريع)
+        if (!this._languageChangeListenerAdded) {
+            document.addEventListener('language-changed', () => {
+                if (typeof AppState !== 'undefined' && AppState._languageRefresh) return;
+                clearTimeout(this._langChangeTimer);
+                this._langChangeTimer = setTimeout(() => { this.load(); }, 150);
+            });
+            this._languageChangeListenerAdded = true;
+        }
+
+        // التحقق من وجود التبعيات المطلوبة
+        if (typeof Utils === 'undefined') {
+            console.error('Utils غير متوفر!');
+            return;
+        }
+        if (typeof AppState === 'undefined') {
+            // لا تترك الواجهة فارغة (مهم لاختبارات AppTester وتجربة المستخدم)
+            const section = document.getElementById('employees-section');
+            if (section) {
+                section.innerHTML = `
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                <p class="text-gray-500 mb-2">${this.t('module.employees.unableLoad', 'تعذر تحميل قاعدة بيانات الموظفين')}</p>
+                                <p class="text-sm text-gray-400">AppState غير متوفر حالياً. جرّب تحديث الصفحة.</p>
+                                <button onclick="location.reload()" class="btn-primary mt-4">
+                                    <i class="fas fa-redo ml-2"></i>
+                                    ${this.t('module.common.refreshPage', 'تحديث الصفحة')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            Utils.safeError('AppState غير متوفر!');
+            return;
+        }
+
+        const section = document.getElementById('employees-section');
+        if (!section) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError(' قسم employees-section غير موجود!');
+            } else {
+                console.error(' قسم employees-section غير موجود!');
+            }
+            return;
+        }
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('✅ مديول Employees يكتب ي قسم: employees-section');
+        }
+
+        try {
+            const canAddOrImport = this.canAddOrImport();
+
+            // ⚡️ مهم: عرض Skeleton فوراً بدون انتظار المزامنة مع قاعدة SQL
+            // هذا يمنع "الواجهة فارغة" و Timeout في AppTester (مهلة 15 ثانية للـ UI)
+            section.innerHTML = `
+                <div class="section-header">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h1 class="section-title">
+                                <i class="fas fa-user-tie ml-3"></i>
+                                ${this.t('module.employees.title', 'قاعدة بيانات الموظفين')}
+                            </h1>
+                            <p class="section-subtitle">${canAddOrImport
+                                ? this.t('module.employees.subtitleAdmin', 'إدارة بيانات الموظفين مع إمكانية استيراد من Excel')
+                                : this.t('module.employees.subtitleViewer', 'عرض وبحث في قاعدة بيانات الموظفين')}</p>
+                        </div>
+                        ${canAddOrImport ? `
+                        <div class="flex gap-2">
+                            <button id="import-employees-excel-btn" class="btn-secondary">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                ${this.t('module.employees.importExcel', 'استيراد من Excel')}
+                            </button>
+                            <button id="add-employee-btn" class="btn-primary">
+                                <i class="fas fa-plus ml-2"></i>
+                                ${this.t('module.employees.addNewEmployee', 'إضافة موظف جديد')}
+                            </button>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                <div id="employees-content" class="mt-6">
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <div style="width: 300px; margin: 0 auto 16px;">
+                                    <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                        <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                    </div>
+                                </div>
+                                <p class="text-gray-500">${this.t('module.employees.loadingList', 'جاري تحميل قائمة الموظفين...')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            this.applyModuleI18n(section);
+            
+            // ✅ تحميل القائمة فوراً بعد عرض الواجهة (سيتم استدعاء setupEventListeners من renderList)
+            setTimeout(async () => {
+                try {
+                    const contentArea = document.getElementById('employees-content');
+                    if (!contentArea) return;
+                    
+                    const listContent = await this.renderList().catch(error => {
+                        Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+                        return `
+                            <div class="content-card">
+                                <div class="card-body">
+                                    <div class="empty-state">
+                                        <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                        <p class="text-gray-500 mb-4">${this.t('module.common.loadDataError', 'حدث خطأ في تحميل البيانات')}</p>
+                                        <button onclick="Employees.load()" class="btn-primary">
+                                            <i class="fas fa-redo ml-2"></i>
+                                            ${this.t('module.common.retry', 'إعادة المحاولة')}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    contentArea.innerHTML = listContent;
+                    this.applyModuleI18n(contentArea);
+                    
+                    // ✅ إعادة إعداد event listeners بعد تحميل المحتوى
+                    this.setupEventListeners();
+                    
+                    // ✅ آلية التحميل الكلاسيكية: انتظار الجلب ثم عرض القائمة (كما قبل تنظيف الجدول)
+                    if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
+                        await this.loadEmployeesAnalysis();
+                    } else if (this.activeTab === 'external-workforce' && this.canViewExternalWorkforceTab()) {
+                        await this.ensureExternalWorkforceDataLoaded();
+                        this.renderExternalWorkforceTable();
+                    } else if (this.activeTab === 'employees-list' && this.canViewEmployeesRegistryTab()) {
+                        const tableHost = document.getElementById('employees-table-container');
+                        const hasLocal = Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
+                        // عرض فوري من المحلي إن وُجد — لا تُعلّق الواجهة على جلب الخادم
+                        if (hasLocal) {
+                            await this.loadEmployeesList();
+                            void this.updateEmployeesInBackground();
+                        } else if (tableHost) {
+                            tableHost.innerHTML = `
+                                <div class="empty-state" style="padding:28px;">
+                                    <div style="width: 280px; margin: 0 auto 14px;">
+                                        <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                            <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                        </div>
+                                    </div>
+                                    <p class="text-gray-600">${this.t('module.employees.loadingList', 'جاري تحميل قائمة الموظفين...')}</p>
+                                </div>`;
+                            try {
+                                await this._ensureEmployeesLoadedWithTimeout_(false, 25000);
+                            } catch (loadErr) {
+                                Utils.safeWarn('⚠️ انتهاء/فشل جلب الموظفين:', loadErr);
+                            }
+                            if (document.getElementById('employees-table-container')) {
+                                await this.loadEmployeesList();
+                            }
+                        }
+                    } else if (this.canViewEmployeesRegistryTab()) {
+                        const hasLocal = Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
+                        if (hasLocal) {
+                            await this.loadEmployeesList();
+                            void this.updateEmployeesInBackground();
+                        } else {
+                            try {
+                                await this._ensureEmployeesLoadedWithTimeout_(false, 25000);
+                            } catch (_e) { /* ignore */ }
+                            if (document.getElementById('employees-table-container')) {
+                                await this.loadEmployeesList();
+                            }
+                        }
+                    } else if (this.canViewEmployeesAnalysisTab()) {
+                        await this.loadEmployeesAnalysis();
+                    } else if (this.canViewExternalWorkforceTab()) {
+                        await this.ensureExternalWorkforceDataLoaded();
+                        this.renderExternalWorkforceTable();
+                    }
+                    
+                    // ✅ تطبيق الفلاتر إذا كان هناك قيم
+                    setTimeout(async () => {
+                        try {
+                            const filters = this.getFilterValues();
+                            if (filters.search || filters.department || filters.branch || filters.location || 
+                                filters.job || filters.position || filters.gender) {
+                                await this.applyFilters();
+                            }
+                        } catch (error) {
+                            if (AppState.debugMode) {
+                                Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                            }
+                        }
+                    }, 200);
+                } catch (error) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل القائمة:', error);
+                }
+            }, 0);
+            
+            // التمرير السلس إلى حقل البحث بعد تحميل المحتوى
+            requestAnimationFrame(() => {
+                if (this.activeTab === 'employees-list') this.scrollToSearchField();
+            });
+            
+            // بدء التحديث التلقائي في الخلفية
+            this.startBackgroundUpdate();
+            this._ensureVisibilityResumeBound_();
+
+            // مزامنة البيانات في الخلفية بدون إيقاف الواجهة
+            // (لا ننتظرها حتى لا نتجاوز مهلة التحميل/الاختبار)
+            Promise.resolve()
+                .then(async () => {
+                    try {
+                        // إذا كانت البيانات المحلية موجودة، نعرضها فوراً ثم نحدّث في الخلفية
+                        await this.ensureEmployeesLoaded(false);
+                        // تحديث القائمة بعد اكتمال المزامنة (إن وُجدت بيانات جديدة)
+                        if (this.activeTab === 'employees-list') {
+                            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                            this.loadEmployeesList(showInactive);
+                        }
+                        this.renderStatsCards();
+                    } catch (e) {
+                        // لا نكسر الواجهة - مجرد تحذير
+                        Utils.safeWarn('⚠️ تعذر مزامنة بيانات الموظفين في الخلفية:', e);
+                    }
+                });
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ خطأ في تحميل مديول الموظفين:', error);
+            } else {
+                console.error('❌ خطأ في تحميل مديول الموظفين:', error);
+            }
+            if (section) {
+                section.innerHTML = `
+                    <div class="content-card">
+                        <div class="card-body">
+                            <div class="empty-state">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                                <p class="text-gray-500 mb-4">${this.t('module.common.loadDataRuntimeError', 'حدث خطأ أثناء تحميل البيانات')}</p>
+                                <button onclick="Employees.load()" class="btn-primary">
+                                    <i class="fas fa-redo ml-2"></i>
+                                    ${this.t('module.common.retry', 'إعادة المحاولة')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                this.applyModuleI18n(section);
+            }
+        }
+    },
+
+    /**
+     * هل القيمة تاريخ استقالة حقيقي؟ (ترفض رقم وظيفي/تواريخ انزلقت خطأً)
+     */
+    _isRealResignationDateValue_(value, employee) {
+        if (value === null || value === undefined || value === '') return false;
+        if (value instanceof Date && !isNaN(value.getTime())) return true;
+        const s = String(value).trim();
+        if (!s) return false;
+        if (s === 'active' || s === 'inactive' || s === 'نشط' || s === 'غير نشط') return false;
+        const empNo = String((employee && (employee.employeeNumber || employee.id || employee.sapId)) || '').trim();
+        if (empNo && s === empNo) return false;
+        // رقم وظيفي خالص بدون فواصل تاريخ
+        if (/^\d+(\.0+)?$/.test(s) && s.length >= 4 && s.length <= 12) return false;
+        // تواريخ مقبولة
+        if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return true;
+        if (/^\d{1,2}-\d{1,2}-\d{2,4}/.test(s)) return true;
+        if (s.indexOf('T') > 0 && !isNaN(new Date(s).getTime())) return true;
+        const d = new Date(s);
+        return !isNaN(d.getTime());
+    },
+
+    /**
+     * تطبيع حقول انزلقت بعد الاستيراد حتى لا تختفي القائمة (resignationDate=رقم، status=تاريخ).
+     */
+    sanitizeEmployeeRecordDrift_(e) {
+        if (!e || typeof e !== 'object') return e;
+        const empNo = String(e.employeeNumber || '').trim();
+        const statusRaw = String(e.status != null ? e.status : '').trim();
+        const resigRaw = String(e.resignationDate != null ? e.resignationDate : '').trim();
+        const idRaw = String(e.id != null ? e.id : '').trim();
+        const createdRaw = String(e.createdAt != null ? e.createdAt : '').trim();
+        const photoRaw = String(e.photo != null ? e.photo : '').trim();
+
+        const looksDate = (s) => {
+            if (!s) return false;
+            if (/^\d{4}-\d{2}-\d{2}/.test(s)) return true;
+            if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return true;
+            if (/^\d{1,2}-\d{1,2}-\d{2,4}/.test(s)) return true;
+            if (s.indexOf('T') > 0 && !isNaN(new Date(s).getTime())) return true;
+            return false;
+        };
+
+        if (photoRaw === 'active' || photoRaw === 'inactive') e.photo = '';
+
+        if (looksDate(statusRaw) || statusRaw === 'active' && createdRaw === 'active') {
+            // status عمود انزلق — اعتبر نشطاً ما لم يكن inactive صريحاً لاحقاً
+        }
+        if (looksDate(statusRaw)) {
+            if (!e.createdAt || createdRaw === 'active' || createdRaw === 'inactive') e.createdAt = statusRaw;
+            e.status = 'active';
+        } else if (statusRaw && statusRaw !== 'active' && statusRaw !== 'inactive' && statusRaw !== 'نشط' && statusRaw !== 'غير نشط') {
+            // قيمة غير معروفة (غالباً انزلاق) → نشط
+            e.status = 'active';
+        }
+
+        if (createdRaw === 'active' || createdRaw === 'inactive') {
+            if (looksDate(idRaw)) e.createdAt = idRaw;
+            else if (looksDate(statusRaw)) e.createdAt = statusRaw;
+            else e.createdAt = '';
+        }
+
+        if (!this._isRealResignationDateValue_(resigRaw, e)) {
+            e.resignationDate = '';
+        }
+
+        if (empNo && looksDate(idRaw)) {
+            e.id = empNo;
+        } else if (!idRaw && empNo) {
+            e.id = empNo;
+        }
+        return e;
+    },
+
+    /**
+     * تحديد إذا كان الموظف غير نشط (مستقيل)
+     * نشط صريح يفوز دائماً — تاريخ الاستقالة يجب أن يكون تاريخاً حقيقياً فقط
+     */
+    isEmployeeInactive(employee) {
+        if (!employee) return false;
+        const status = (employee.status != null && employee.status !== '') ? String(employee.status).trim() : '';
+        const statusLower = status.toLowerCase();
+        // صريح نشط → ليس مستقيل (يمنع انزلاق resignationDate=رقم وظيفي من إخفاء الجميع)
+        if (statusLower === 'active' || status === 'نشط' || statusLower === 'true' || status === '1') {
+            return false;
+        }
+        const resignationDate = (employee.resignationDate != null && employee.resignationDate !== '')
+            ? String(employee.resignationDate).trim()
+            : '';
+        if (resignationDate && this._isRealResignationDateValue_(resignationDate, employee)) {
+            return true;
+        }
+        if (statusLower === 'inactive' || status === 'غير نشط' || statusLower === 'false' || status === '0') {
+            return true;
+        }
+        return false;
+    },
+
+    /**
+     * حساب الإحصائيات للموظفين
+     */
+    calculateStatistics() {
+        const employees = AppState.appData.employees || [];
+        
+        if (employees.length === 0) {
+            return {
+                total: 0,
+                averageAge: 0,
+                genderStats: { male: 0, female: 0 },
+                averageExperience: 0,
+                inactiveCount: 0
+            };
+        }
+
+        // حساب عدد الموظفين (النشطين فقط - لا يشمل المستقيلين أو من تم إلغاء تفعيلهم)
+        const activeEmployees = employees.filter(e => !this.isEmployeeInactive(e));
+        const total = activeEmployees.length;
+
+        // حساب متوسط السن (النشطين فقط)
+        let totalAge = 0;
+        let ageCount = 0;
+        activeEmployees.forEach(emp => {
+            const age = this.calculateAge(emp.birthDate);
+            if (age && age > 0) {
+                totalAge += age;
+                ageCount++;
+            }
+        });
+        const averageAge = ageCount > 0 ? Math.round(totalAge / ageCount) : 0;
+
+        // حساب النوع (ذكر/أنثى) — النشطين فقط
+        let maleCount = 0;
+        let femaleCount = 0;
+        let unknownCount = 0; // لتتبع القيم غير المعروفة للتشخيص
+        
+        // دالة مساعدة لتطبيع قيمة النوع
+        const normalizeGender = (genderValue) => {
+            if (!genderValue) return '';
+            // تحويل إلى نص وإزالة المسافات الزائدة
+            let normalized = String(genderValue).trim().replace(/\s+/g, ' ').trim();
+            // إزالة أي أحرف غير مرئية أو خاصة
+            normalized = normalized.replace(/[\u200B-\u200D\uFEFF]/g, '');
+            return normalized;
+        };
+        
+        // دالة مساعدة للتحقق من النوع
+        const checkGender = (genderValue) => {
+            const normalized = normalizeGender(genderValue);
+            if (!normalized) return { isMale: false, isFemale: false };
+            
+            // تحويل لحروف صغيرة للنصوص الإنجليزية
+            const genderLower = normalized.toLowerCase();
+            // الحصول على أول حرف كبير (للقيم المكونة من حرف واحد فقط)
+            const genderFirstChar = normalized.length === 1 ? normalized.toUpperCase() : '';
+            
+            // قائمة بالقيم المحتملة للذكر (شاملة)
+            const maleValues = [
+                'ذكر',           // القيمة العربية الافتراضية
+                'male',          // الإنجليزية
+                'm',             // حرف واحد
+                'M',             // حرف واحد كبير
+                'ذكر ',          // مع مسافة في النهاية (سيتم إزالتها بالتطبيع)
+                ' ذكر',          // مع مسافة في البداية (سيتم إزالتها بالتطبيع)
+            ];
+            
+            // قائمة بالقيم المحتملة للأنثى (شاملة)
+            const femaleValues = [
+                'أنثى',          // القيمة العربية الافتراضية
+                'female',        // الإنجليزية
+                'f',             // حرف واحد
+                'F',             // حرف واحد كبير
+                'أنثى ',         // مع مسافة في النهاية (سيتم إزالتها بالتطبيع)
+                ' أنثى',         // مع مسافة في البداية (سيتم إزالتها بالتطبيع)
+            ];
+            
+            // التحقق من الذكر
+            const isMale = normalized === 'ذكر' ||
+                          genderLower === 'male' ||
+                          genderFirstChar === 'M' ||
+                          maleValues.some(val => normalizeGender(val) === normalized);
+            
+            // التحقق من الأنثى
+            const isFemale = normalized === 'أنثى' ||
+                            genderLower === 'female' ||
+                            genderFirstChar === 'F' ||
+                            femaleValues.some(val => normalizeGender(val) === normalized);
+            
+            return { isMale, isFemale, normalized };
+        };
+        
+        activeEmployees.forEach(emp => {
+            const genderCheck = checkGender(emp.gender);
+            
+            if (genderCheck.isMale) {
+                maleCount++;
+            } else if (genderCheck.isFemale) {
+                femaleCount++;
+            } else {
+                unknownCount++;
+                // عدم تسجيل تحذير لكل موظف (قيمة فارغة أو غير معروفة للنوع شائعة ولا تعتبر خطأ)
+            }
+        });
+        
+        // تسجيل إحصائية واحدة فقط عند وجود قيم غير محددة (وفي وضع التصحيح فقط لتقليل الضوضاء)
+        if (unknownCount > 0 && typeof AppState !== 'undefined' && AppState.debugMode && typeof console !== 'undefined' && console.log) {
+            console.log(`📊 [Employees] إحصائيات النوع (نشطين) - ذكر: ${maleCount}, أنثى: ${femaleCount}, غير محدد/فارغ: ${unknownCount} من ${total}`);
+        }
+
+        // حساب متوسط سنوات الخبرة (من تاريخ التعيين) — النشطين فقط
+        let totalExperience = 0;
+        let experienceCount = 0;
+        const today = new Date();
+        
+        activeEmployees.forEach(emp => {
+            if (emp.hireDate) {
+                try {
+                    const hireDate = this.parseLocalDate(emp.hireDate);
+                    if (hireDate) {
+                        const yearsDiff = today.getFullYear() - hireDate.getFullYear();
+                        const monthDiff = today.getMonth() - hireDate.getMonth();
+                        const dayDiff = today.getDate() - hireDate.getDate();
+                        
+                        let experienceYears = yearsDiff;
+                        if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                            experienceYears--;
+                        }
+                        
+                        if (experienceYears >= 0) {
+                            totalExperience += experienceYears;
+                            experienceCount++;
+                        }
+                    }
+                } catch (error) {
+                    // تجاهل التواريخ غير الصحيحة
+                }
+            }
+        });
+        
+        const averageExperience = experienceCount > 0 ? (totalExperience / experienceCount).toFixed(1) : 0;
+
+        // ✅ حساب عدد الموظفين غير النشطين (المستقيلين) - يدعم inactive / غير نشط / تاريخ استقالة
+        const inactiveCount = employees.filter(e => this.isEmployeeInactive(e)).length;
+
+        return {
+            total,
+            averageAge,
+            genderStats: {
+                male: maleCount,
+                female: femaleCount
+            },
+            averageExperience: parseFloat(averageExperience),
+            inactiveCount // ✅ عدد المستقيلين
+        };
+    },
+
+    /**
+     * أنماط كروت الإحصائيات — منفصلة عن content-card لتجنب الاستطالة العمودية
+     */
+    ensureEmployeesStatsCardsStyles() {
+        const styleId = 'employees-stats-cards-styles-v2';
+        const existing = document.getElementById(styleId);
+        if (existing) return;
+
+        document.getElementById('employees-stats-cards-styles')?.remove();
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            #employees-stats-cards {
+                align-items: start;
+                gap: 1rem;
+            }
+            #employees-stats-cards .employee-stat-card {
+                --emp-stat-accent: #2563eb;
+                --emp-stat-accent-light: #eff6ff;
+                display: flex !important;
+                flex-direction: column;
+                justify-content: flex-start;
+                height: auto !important;
+                min-height: 0;
+                align-self: start;
+                width: 100%;
+                padding: 1rem 1.15rem 1.05rem;
+                box-sizing: border-box;
+                border-radius: 14px;
+                background: linear-gradient(145deg, #ffffff 0%, var(--emp-stat-accent-light) 140%);
+                border: 1px solid color-mix(in srgb, var(--emp-stat-accent) 18%, #e5e7eb);
+                box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 6px 18px rgba(15, 23, 42, 0.04);
+                position: relative;
+                overflow: hidden;
+                transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+            }
+            #employees-stats-cards .employee-stat-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                inset-inline-end: 0;
+                width: 4px;
+                background: linear-gradient(180deg, var(--emp-stat-accent) 0%, color-mix(in srgb, var(--emp-stat-accent) 55%, #fff) 100%);
+                border-radius: 0 14px 14px 0;
+            }
+            [dir="rtl"] #employees-stats-cards .employee-stat-card::before {
+                border-radius: 14px 0 0 14px;
+            }
+            #employees-stats-cards .employee-stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 10px rgba(15, 23, 42, 0.07), 0 10px 24px rgba(15, 23, 42, 0.06);
+                border-color: color-mix(in srgb, var(--emp-stat-accent) 32%, #e5e7eb);
+            }
+            #employees-stats-cards .employee-stat-card__head {
+                display: flex;
+                align-items: flex-start;
+                gap: 0.7rem;
+                margin-bottom: 0.65rem;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-card__icon {
+                width: 40px;
+                height: 40px;
+                border-radius: 11px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                background: color-mix(in srgb, var(--emp-stat-accent) 12%, #fff);
+                color: var(--emp-stat-accent);
+                font-size: 1rem;
+                box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--emp-stat-accent) 16%, transparent);
+            }
+            #employees-stats-cards .employee-stat-card__meta {
+                min-width: 0;
+                flex: 1;
+            }
+            #employees-stats-cards .employee-stat-card__title {
+                margin: 0;
+                font-size: 0.84rem;
+                font-weight: 700;
+                color: #1e293b;
+                line-height: 1.35;
+            }
+            #employees-stats-cards .employee-stat-card__desc {
+                margin: 0.2rem 0 0;
+                font-size: 0.72rem;
+                color: #64748b;
+                line-height: 1.45;
+            }
+            #employees-stats-cards .employee-stat-card__value {
+                position: relative;
+                z-index: 1;
+                margin-top: 0.15rem;
+                font-size: 1.65rem;
+                font-weight: 800;
+                line-height: 1.1;
+                color: var(--emp-stat-accent);
+                letter-spacing: -0.02em;
+            }
+            #employees-stats-cards .employee-stat-card--gender .employee-stat-gender-row {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-item {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                align-items: baseline;
+                gap: 0.35rem;
+                padding: 0.45rem 0.55rem;
+                border-radius: 10px;
+                background: rgba(255, 255, 255, 0.72);
+                box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.22);
+            }
+            #employees-stats-cards .employee-stat-gender-item--male {
+                color: #1d4ed8;
+            }
+            #employees-stats-cards .employee-stat-gender-item--female {
+                color: #be185d;
+            }
+            #employees-stats-cards .employee-stat-gender-num {
+                font-size: 1.15rem;
+                font-weight: 800;
+                line-height: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-label {
+                font-size: 0.72rem;
+                font-weight: 600;
+            }
+            #employees-stats-cards .employee-stat-gender-pct {
+                margin-inline-start: auto;
+                font-size: 0.68rem;
+                font-weight: 700;
+                opacity: 0.85;
+            }
+            #employees-stats-cards .employee-stat-gender-bar {
+                margin-top: 0.55rem;
+                height: 5px;
+                border-radius: 999px;
+                background: #e2e8f0;
+                overflow: hidden;
+                display: flex;
+                position: relative;
+                z-index: 1;
+            }
+            #employees-stats-cards .employee-stat-gender-bar__male {
+                background: linear-gradient(90deg, #3b82f6, #2563eb);
+            }
+            #employees-stats-cards .employee-stat-gender-bar__female {
+                background: linear-gradient(90deg, #ec4899, #db2777);
+            }
+            @media (max-width: 640px) {
+                #employees-stats-cards .employee-stat-card {
+                    min-height: 0;
+                }
+                #employees-stats-cards .employee-stat-card__value {
+                    font-size: 1.45rem;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    },
+
+    /**
+     * عرض كروت الإحصائيات
+     */
+    renderStatsCards() {
+        const container = document.getElementById('employees-stats-cards');
+        if (!container) return;
+
+        this.ensureEmployeesStatsCardsStyles();
+
+        const stats = this.calculateStatistics();
+        
+        // ✅ تحديث عدد المستقيلين في الزر
+        this.updateInactiveCount();
+
+        const cards = [
+            {
+                id: 'total',
+                title: this.t('module.employees.stats.totalEmployees', 'عدد الموظفين'),
+                value: stats.total,
+                icon: 'fas fa-users',
+                accent: '#2563eb',
+                accentLight: '#eff6ff',
+                description: this.t('module.employees.stats.totalEmployeesDesc', 'إجمالي الموظفين النشطين')
+            },
+            {
+                id: 'average-age',
+                title: this.t('module.employees.stats.avgAge', 'متوسط السن'),
+                value: stats.averageAge > 0 ? `${stats.averageAge} ${this.t('module.common.yearsUnit', 'سنة')}` : this.t('module.common.notAvailable', 'غير متاح'),
+                icon: 'fas fa-birthday-cake',
+                accent: '#16a34a',
+                accentLight: '#f0fdf4',
+                description: this.t('module.employees.stats.avgAgeDesc', 'متوسط عمر الموظفين')
+            },
+            {
+                id: 'gender',
+                title: this.t('module.employees.gender', 'النوع'),
+                isGenderCard: true,
+                maleCount: stats.genderStats.male,
+                femaleCount: stats.genderStats.female,
+                icon: 'fas fa-venus-mars',
+                accent: '#7c3aed',
+                accentLight: '#f5f3ff',
+                description: this.t('module.employees.stats.genderDistDesc', 'توزيع الموظفين النشطين حسب النوع')
+            },
+            {
+                id: 'experience',
+                title: this.t('module.employees.stats.avgExperience', 'متوسط سنوات الخبرة'),
+                value: stats.averageExperience > 0 ? `${stats.averageExperience} ${this.t('module.common.yearsUnit', 'سنة')}` : this.t('module.common.notAvailable', 'غير متاح'),
+                icon: 'fas fa-briefcase',
+                accent: '#ea580c',
+                accentLight: '#fff7ed',
+                description: this.t('module.employees.stats.avgExperienceDesc', 'متوسط سنوات الخبرة من تاريخ التعيين')
+            }
+        ];
+
+        const maleLabel = this.t('module.employees.genderMale', 'ذكر');
+        const femaleLabel = this.t('module.employees.genderFemale', 'أنثى');
+
+        const renderStatCardHead = (card) => `
+            <div class="employee-stat-card__head">
+                <div class="employee-stat-card__icon"><i class="${card.icon}" aria-hidden="true"></i></div>
+                <div class="employee-stat-card__meta">
+                    <h3 class="employee-stat-card__title">${card.title}</h3>
+                    <p class="employee-stat-card__desc">${card.description}</p>
+                </div>
+            </div>
+        `;
+
+        const renderGenderCard = (card) => {
+            const maleCount = card.maleCount || 0;
+            const femaleCount = card.femaleCount || 0;
+            const genderTotal = maleCount + femaleCount;
+            const malePct = genderTotal > 0 ? Math.round((maleCount / genderTotal) * 100) : 0;
+            const femalePct = genderTotal > 0 ? 100 - malePct : 0;
+
+            return `
+                <div class="employee-stat-card employee-stat-card--gender"
+                     style="--emp-stat-accent:${card.accent};--emp-stat-accent-light:${card.accentLight};">
+                    ${renderStatCardHead(card)}
+                    ${genderTotal > 0 ? `
+                        <div class="employee-stat-gender-row">
+                            <div class="employee-stat-gender-item employee-stat-gender-item--male" title="${maleLabel}: ${maleCount}">
+                                <span class="employee-stat-gender-num">${maleCount.toLocaleString('en-US')}</span>
+                                <span class="employee-stat-gender-label">${maleLabel}</span>
+                                <span class="employee-stat-gender-pct">${malePct}%</span>
+                            </div>
+                            <div class="employee-stat-gender-item employee-stat-gender-item--female" title="${femaleLabel}: ${femaleCount}">
+                                <span class="employee-stat-gender-num">${femaleCount.toLocaleString('en-US')}</span>
+                                <span class="employee-stat-gender-label">${femaleLabel}</span>
+                                <span class="employee-stat-gender-pct">${femalePct}%</span>
+                            </div>
+                        </div>
+                        <div class="employee-stat-gender-bar" title="${maleLabel} ${malePct}% / ${femaleLabel} ${femalePct}%">
+                            <div class="employee-stat-gender-bar__male" style="width:${malePct}%"></div>
+                            <div class="employee-stat-gender-bar__female" style="width:${femalePct}%"></div>
+                        </div>
+                    ` : `
+                        <div class="employee-stat-card__value">${this.t('module.common.notAvailable', 'غير متاح')}</div>
+                    `}
+                </div>
+            `;
+        };
+
+        container.innerHTML = cards.map(card => {
+            if (card.isGenderCard) {
+                return renderGenderCard(card);
+            }
+            const valueDisplay = typeof card.value === 'number' ? card.value.toLocaleString('en-US') : card.value;
+            return `
+                <div class="employee-stat-card"
+                     style="--emp-stat-accent:${card.accent};--emp-stat-accent-light:${card.accentLight};">
+                    ${renderStatCardHead(card)}
+                    <div class="employee-stat-card__value">${valueDisplay}</div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    getExternalWorkforceMonths() {
+        const viewState = this.getExternalWorkforceViewState();
+        const formatter = new Intl.DateTimeFormat(viewState.lang === 'en' ? 'en-US' : 'ar-EG', { month: 'short' });
+        return [
+            { key: 'jan', index: 0 },
+            { key: 'feb', index: 1 },
+            { key: 'mar', index: 2 },
+            { key: 'apr', index: 3 },
+            { key: 'may', index: 4 },
+            { key: 'jun', index: 5 },
+            { key: 'jul', index: 6 },
+            { key: 'aug', index: 7 },
+            { key: 'sep', index: 8 },
+            { key: 'oct', index: 9 },
+            { key: 'nov', index: 10 },
+            { key: 'dec', index: 11 }
+        ].map(month => ({
+            ...month,
+            label: formatter.format(new Date(2026, month.index, 1))
+        }));
+    },
+
+    getExternalWorkforceViewState() {
+        const lang = typeof I18n !== 'undefined' && typeof I18n.getCurrentLanguage === 'function'
+            ? I18n.getCurrentLanguage()
+            : (AppState?.currentLanguage || localStorage.getItem('language') || 'ar');
+        const isRTL = typeof I18n !== 'undefined' && typeof I18n.isRTL === 'function'
+            ? I18n.isRTL()
+            : lang === 'ar';
+
+        return {
+            lang,
+            isRTL,
+            dir: isRTL ? 'rtl' : 'ltr',
+            stickySide: isRTL ? 'right' : 'left',
+            textAlign: isRTL ? 'right' : 'left',
+            labels: {
+                employeesTab: lang === 'en' ? 'Employee Database' : 'قاعدة بيانات الموظفين',
+                externalTab: lang === 'en' ? 'External Workforce / Contractors' : 'العمالة الخارجية / المقاولين',
+                contractor: lang === 'en' ? 'Company / Contractor' : 'الشركة / المقاول',
+                noCode: lang === 'en' ? 'No code' : 'بدون كود',
+                total: 'Total',
+                externalTotal: lang === 'en' ? 'Total External Workforce' : 'إجمالي العمالة الخارجية',
+                directEmployees: lang === 'en' ? 'Direct Employees' : 'العمالة المثبتة',
+                combinedTotal: lang === 'en' ? 'Combined Total' : 'الإجمالي المشترك',
+                estimatedHours: lang === 'en' ? 'Estimated Work Hours' : 'ساعات العمل التقديرية'
+            }
+        };
+    },
+
+    getExternalWorkforceRecords() {
+        if (!AppState.appData || typeof AppState.appData !== 'object') AppState.appData = {};
+        if (!Array.isArray(AppState.appData.externalWorkforceMonthly)) {
+            AppState.appData.externalWorkforceMonthly = [];
+        }
+        return AppState.appData.externalWorkforceMonthly;
+    },
+
+    getExternalWorkforceYearOptions() {
+        const years = new Set([this.externalWorkforceYear, new Date().getFullYear(), new Date().getFullYear() - 1]);
+        this.getExternalWorkforceRecords().forEach(record => {
+            const year = Number(record?.year);
+            if (Number.isFinite(year) && year > 2000) years.add(year);
+        });
+        return Array.from(years).sort((a, b) => b - a);
+    },
+
+    normalizeExternalWorkforceContractor(record = {}, index = 0) {
+        const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+        const contractorId = clean(record.contractorId || record.id);
+        const contractorCode = clean(record.contractorCode || record.code || record.isoCode);
+        const contractorName = clean(record.contractorName || record.companyName || record.name || record.company || `Contractor ${index + 1}`);
+        const stableKey = (contractorCode || contractorId || contractorName.toLowerCase()).toLowerCase();
+
+        return { contractorId, contractorCode, contractorName, stableKey };
+    },
+
+    async ensureExternalWorkforceDataLoaded(forceReload = false) {
+        if (this._externalWorkforceLoaded && !forceReload) return true;
+        if (this._externalWorkforceLoadPromise && !forceReload) return this._externalWorkforceLoadPromise;
+
+        const data = AppState.appData || (AppState.appData = {});
+        const tasks = [];
+
+        if ((!Array.isArray(data.approvedContractors) || data.approvedContractors.length === 0) &&
+            typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
+            tasks.push(
+                GoogleIntegration.readFromSheets('ApprovedContractors', 15000)
+                    .then(result => {
+                        if (Array.isArray(result)) data.approvedContractors = result;
+                    })
+                    .catch(() => {})
+            );
+        }
+
+        if ((forceReload || !Array.isArray(data.externalWorkforceMonthly) || data.externalWorkforceMonthly.length === 0) &&
+            typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.readFromSheets === 'function') {
+            tasks.push(
+                GoogleIntegration.readFromSheets('ExternalWorkforceMonthly', 15000)
+                    .then(result => {
+                        if (Array.isArray(result)) data.externalWorkforceMonthly = result;
+                    })
+                    .catch(() => {})
+            );
+        }
+
+        this._externalWorkforceLoadPromise = Promise.allSettled(tasks).then(() => {
+            this._externalWorkforceLoaded = true;
+            return true;
+        }).finally(() => {
+            this._externalWorkforceLoadPromise = null;
+        });
+
+        return this._externalWorkforceLoadPromise;
+    },
+
+    getAvailableContractorsForExternalWorkforce() {
+        let contractors = [];
+        try {
+            if (typeof Contractors !== 'undefined' && typeof Contractors.getAllContractorsForModules === 'function') {
+                contractors = Contractors.getAllContractorsForModules() || [];
+            }
+        } catch (error) {
+            contractors = [];
+        }
+
+        if (!Array.isArray(contractors) || contractors.length === 0) {
+            contractors = (AppState.appData.approvedContractors || []).filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE');
+        }
+
+        const unique = new Map();
+        contractors.forEach((record, index) => {
+            const normalized = this.normalizeExternalWorkforceContractor(record, index);
+            if (!normalized.stableKey || unique.has(normalized.stableKey)) return;
+            unique.set(normalized.stableKey, normalized);
+        });
+
+        return Array.from(unique.values()).sort((a, b) => a.contractorName.localeCompare(b.contractorName, 'ar'));
+    },
+
+    getExternalWorkforceRecord(year, stableKey) {
+        return this.getExternalWorkforceRecords().find(record =>
+            record &&
+            Number(record.year) === Number(year) &&
+            this.normalizeExternalWorkforceContractor(record).stableKey === stableKey
+        ) || null;
+    },
+
+    getExternalWorkforceMonthlyValue(record, monthKey) {
+        const value = parseFloat(record?.[monthKey]);
+        return Number.isFinite(value) && value >= 0 ? value : 0;
+    },
+
+    getOperationalEmployeesForMonth(monthIndex, year = this.externalWorkforceYear) {
+        const employees = AppState.appData.employees || [];
+        const monthEnd = new Date(year, monthIndex + 1, 0, 23, 59, 59, 999);
+
+        return employees.filter(employee => {
+            if (!employee) return false;
+            const hireDate = this.parseLocalDate(employee.hireDate || employee.startDate || employee.createdAt);
+            const resignationDate = this.parseLocalDate(employee.resignationDate || employee.endDate || employee.terminationDate);
+            if (hireDate && hireDate > monthEnd) return false;
+            if (resignationDate && resignationDate <= monthEnd) return false;
+            if (this.isEmployeeInactive(employee) && !resignationDate) return false;
+            return true;
+        }).length;
+    },
+
+    buildExternalWorkforceModel(year = this.externalWorkforceYear) {
+        const getVersion = (list = [], fields = []) => {
+            if (!Array.isArray(list) || list.length === 0) return '0:0';
+            let max = 0;
+            list.forEach(item => {
+                const rawValue = fields.map(field => item?.[field]).find(Boolean);
+                const parsed = rawValue ? new Date(rawValue) : null;
+                if (parsed && !Number.isNaN(parsed.getTime())) {
+                    max = Math.max(max, parsed.getTime());
+                }
+            });
+            return `${list.length}:${max}`;
+        };
+
+        const cacheKey = `external:${year}:${getVersion(this.getExternalWorkforceRecords(), ['updatedAt', 'createdAt'])}:${getVersion(AppState.appData.approvedContractors || [], ['updatedAt', 'createdAt', 'approvalDate'])}:${getVersion(AppState.appData.employees || [], ['updatedAt', 'createdAt', 'hireDate', 'resignationDate'])}`;
+        if (this._externalWorkforceCache.has(cacheKey)) {
+            return this._externalWorkforceCache.get(cacheKey);
+        }
+
+        const months = this.getExternalWorkforceMonths();
+        const contractors = this.getAvailableContractorsForExternalWorkforce();
+        const rows = contractors.map(contractor => {
+            const record = this.getExternalWorkforceRecord(year, contractor.stableKey) || {};
+            const values = months.map(month => this.getExternalWorkforceMonthlyValue(record, month.key));
+            return {
+                ...contractor,
+                recordId: record.id || `EWM-${year}-${contractor.stableKey}`,
+                values,
+                total: values.reduce((sum, value) => sum + value, 0)
+            };
+        });
+
+        const monthTotals = months.map((_, monthIndex) => rows.reduce((sum, row) => sum + (row.values[monthIndex] || 0), 0));
+        const directEmployees = months.map(month => this.getOperationalEmployeesForMonth(month.index, year));
+        const combined = months.map((_, monthIndex) => directEmployees[monthIndex] + monthTotals[monthIndex]);
+        const estimatedHours = combined.map(value => value * 8 * 22);
+
+        const model = {
+            year,
+            months,
+            rows,
+            monthTotals,
+            directEmployees,
+            combined,
+            estimatedHours,
+            grandTotal: monthTotals.reduce((sum, value) => sum + value, 0)
+        };
+
+        this._externalWorkforceCache.clear();
+        this._externalWorkforceCache.set(cacheKey, model);
+        return model;
+    },
+
+    renderExternalWorkforcePanel() {
+        const canManage = this.canManageExternalWorkforceTab();
+        const viewState = this.getExternalWorkforceViewState();
+        const labels = {
+            title: viewState.lang === 'en' ? 'External Workforce / Contractors' : 'العمالة الخارجية / المقاولين',
+            description: viewState.lang === 'en'
+                ? 'Monthly table linked to approved contractors and used automatically in Safety Performance Scorecard to calculate combined headcount and work hours.'
+                : 'جدول شهري مرتبط بالمقاولين المعتمدين ويُستخدم تلقائيًا داخل Safety Performance Scorecard لحساب العدد الكلي وساعات العمل.',
+            year: viewState.lang === 'en' ? 'Year' : 'السنة',
+            admin: viewState.lang === 'en' ? 'Admin Edit' : 'تحرير إداري',
+            viewOnly: viewState.lang === 'en' ? 'View Only' : 'عرض فقط',
+            exportExcel: viewState.lang === 'en' ? 'Export Excel' : 'تصدير Excel',
+            exportPdf: viewState.lang === 'en' ? 'Export PDF' : 'تصدير PDF',
+            importExcel: viewState.lang === 'en' ? 'Import Excel' : 'استيراد اكسيل'
+        };
+        labels.title = viewState.lang === 'en' ? 'External Workforce / Contractors' : '\u0627\u0644\u0639\u0645\u0627\u0644\u0629 \u0627\u0644\u062e\u0627\u0631\u062c\u064a\u0629 / \u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064a\u0646';
+        labels.description = viewState.lang === 'en'
+            ? 'Monthly table linked to approved contractors and used automatically in Safety Performance Scorecard to calculate combined headcount and work hours.'
+            : '\u062c\u062f\u0648\u0644 \u0634\u0647\u0631\u064a \u0645\u0631\u062a\u0628\u0637 \u0628\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064a\u0646 \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u064a\u0646 \u0648\u064a\u064f\u0633\u062a\u062e\u062f\u0645 \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u062f\u0627\u062e\u0644 Safety Performance Scorecard \u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0639\u062f\u062f \u0627\u0644\u0643\u0644\u064a \u0648\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644.';
+        labels.year = viewState.lang === 'en' ? 'Year' : '\u0627\u0644\u0633\u0646\u0629';
+        labels.admin = viewState.lang === 'en' ? 'Admin Edit' : '\u062a\u062d\u0631\u064a\u0631 \u0625\u062f\u0627\u0631\u064a';
+        labels.viewOnly = viewState.lang === 'en' ? 'View Only' : '\u0639\u0631\u0636 \u0641\u0642\u0637';
+        labels.exportExcel = viewState.lang === 'en' ? 'Export Excel' : '\u062a\u0635\u062f\u064a\u0631 Excel';
+        labels.exportPdf = viewState.lang === 'en' ? 'Export PDF' : '\u062a\u0635\u062f\u064a\u0631 PDF';
+        labels.importExcel = viewState.lang === 'en' ? 'Import Excel' : '\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0643\u0633\u064a\u0644';
+        return `
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                            <h2 class="card-title">
+                                <i class="fas fa-helmet-safety ml-2"></i>
+                                العمالة الخارجية / المقاولين
+                            </h2>
+                            <p class="text-sm text-gray-600 mt-2">جدول شهري مرتبط بالمقاولين المعتمدين ويُستخدم تلقائيًا داخل Safety Performance Scorecard لحساب العدد الكلي وساعات العمل.</p>
+                        </div>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="text-sm font-semibold text-gray-700" for="external-workforce-year">السنة</label>
+                            <select id="external-workforce-year" class="form-input" style="min-width: 120px;"></select>
+                            ${canManage ? '<span class="text-xs px-3 py-2 rounded-full bg-blue-100 text-blue-700 font-semibold">تحرير إداري</span>' : '<span class="text-xs px-3 py-2 rounded-full bg-gray-100 text-gray-600 font-semibold">عرض فقط</span>'}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="external-workforce-summary" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6"></div>
+                    <div class="table-wrapper" style="overflow-x: auto;">
+                        <div id="external-workforce-table-container"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    populateExternalWorkforceYearSelector() {
+        const select = document.getElementById('external-workforce-year');
+        if (!select) return;
+        select.innerHTML = this.getExternalWorkforceYearOptions()
+            .map(year => `<option value="${year}" ${year === this.externalWorkforceYear ? 'selected' : ''}>${year}</option>`)
+            .join('');
+    },
+
+    renderExternalWorkforceSummary(model) {
+        const container = document.getElementById('external-workforce-summary');
+        if (!container || !model) return;
+
+        const ytdLimit = model.year === new Date().getFullYear() ? new Date().getMonth() : 11;
+        const ytdContractors = model.monthTotals.slice(0, ytdLimit + 1).reduce((sum, value) => sum + value, 0);
+        const ytdDirectEmployees = model.directEmployees.slice(0, ytdLimit + 1).reduce((sum, value) => sum + value, 0);
+        const ytdCombined = model.combined.slice(0, ytdLimit + 1).reduce((sum, value) => sum + value, 0);
+        const ytdHours = model.estimatedHours.slice(0, ytdLimit + 1).reduce((sum, value) => sum + value, 0);
+
+        const cards = [
+            { label: 'إجمالي العمالة الخارجية YTD', value: ytdContractors, color: '#0ea5e9', icon: 'fa-users-viewfinder' },
+            { label: 'إجمالي العمالة المثبتة YTD', value: ytdDirectEmployees, color: '#2563eb', icon: 'fa-user-check' },
+            { label: 'الإجمالي المشترك YTD', value: ytdCombined, color: '#16a34a', icon: 'fa-people-group' },
+            { label: 'ساعات العمل التقديرية YTD', value: ytdHours.toLocaleString('en-US'), color: '#f59e0b', icon: 'fa-clock' }
+        ];
+
+        container.innerHTML = cards.map(card => `
+            <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-500">${card.label}</div>
+                        <div class="text-3xl font-black mt-3" style="color:${card.color};">${card.value}</div>
+                    </div>
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white" style="background:${card.color};">
+                        <i class="fas ${card.icon}"></i>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    },
+
+    ensureExternalWorkforceToolbar() {
+        const panel = document.getElementById('employees-external-panel');
+        if (!panel) return;
+
+        const header = panel.querySelector('.card-header');
+        const title = panel.querySelector('.card-title');
+        const description = panel.querySelector('.card-header p');
+        const yearLabel = panel.querySelector('label[for="external-workforce-year"]');
+        const badge = panel.querySelector('.rounded-full');
+        const controlsRow = yearLabel?.parentElement;
+        const canManage = this.canManageExternalWorkforceTab();
+        const labels = this.getExternalWorkforceViewState().labels;
+        const meta = {
+            description: this.getExternalWorkforceViewState().lang === 'en'
+                ? 'Monthly table linked to approved contractors and used automatically in Safety Performance Scorecard to calculate combined headcount and work hours.'
+                : '\u062c\u062f\u0648\u0644 \u0634\u0647\u0631\u064a \u0645\u0631\u062a\u0628\u0637 \u0628\u0627\u0644\u0645\u0642\u0627\u0648\u0644\u064a\u0646 \u0627\u0644\u0645\u0639\u062a\u0645\u062f\u064a\u0646 \u0648\u064a\u064f\u0633\u062a\u062e\u062f\u0645 \u062a\u0644\u0642\u0627\u0626\u064a\u064b\u0627 \u062f\u0627\u062e\u0644 Safety Performance Scorecard \u0644\u062d\u0633\u0627\u0628 \u0627\u0644\u0639\u062f\u062f \u0627\u0644\u0643\u0644\u064a \u0648\u0633\u0627\u0639\u0627\u062a \u0627\u0644\u0639\u0645\u0644.',
+            year: this.getExternalWorkforceViewState().lang === 'en' ? 'Year' : '\u0627\u0644\u0633\u0646\u0629',
+            admin: this.getExternalWorkforceViewState().lang === 'en' ? 'Admin Edit' : '\u062a\u062d\u0631\u064a\u0631 \u0625\u062f\u0627\u0631\u064a',
+            viewOnly: this.getExternalWorkforceViewState().lang === 'en' ? 'View Only' : '\u0639\u0631\u0636 \u0641\u0642\u0637',
+            exportExcel: this.getExternalWorkforceViewState().lang === 'en' ? 'Export Excel' : '\u062a\u0635\u062f\u064a\u0631 Excel',
+            exportPdf: this.getExternalWorkforceViewState().lang === 'en' ? 'Export PDF' : '\u062a\u0635\u062f\u064a\u0631 PDF',
+            importExcel: this.getExternalWorkforceViewState().lang === 'en' ? 'Import Excel' : '\u0627\u0633\u062a\u064a\u0631\u0627\u062f \u0627\u0643\u0633\u064a\u0644'
+        };
+
+        if (title) {
+            title.innerHTML = `<i class="fas fa-helmet-safety ml-2"></i>${labels.externalTab}`;
+        }
+        if (description) description.textContent = meta.description;
+        if (yearLabel) yearLabel.textContent = meta.year;
+        if (badge) badge.textContent = canManage ? meta.admin : meta.viewOnly;
+        if (!controlsRow) return;
+
+        let actions = document.getElementById('external-workforce-actions');
+        if (!actions) {
+            actions = document.createElement('div');
+            actions.id = 'external-workforce-actions';
+            actions.className = 'flex items-center gap-3 flex-wrap';
+            actions.innerHTML = `
+                <button type="button" id="external-workforce-export-excel-btn" class="btn-secondary">
+                    <i class="fas fa-file-excel ml-2"></i>
+                    <span></span>
+                </button>
+                <button type="button" id="external-workforce-export-pdf-btn" class="btn-secondary">
+                    <i class="fas fa-file-pdf ml-2"></i>
+                    <span></span>
+                </button>
+                ${canManage ? `
+                <button type="button" id="external-workforce-import-excel-btn" class="btn-secondary">
+                    <i class="fas fa-file-import ml-2"></i>
+                    <span></span>
+                </button>
+                <input type="file" id="external-workforce-import-input" accept=".xlsx,.xls" style="display:none;">
+                ` : ''}
+            `;
+            controlsRow.insertBefore(actions, controlsRow.firstChild);
+        }
+
+        const excelLabel = actions.querySelector('#external-workforce-export-excel-btn span');
+        const pdfLabel = actions.querySelector('#external-workforce-export-pdf-btn span');
+        const importLabel = actions.querySelector('#external-workforce-import-excel-btn span');
+        if (excelLabel) excelLabel.textContent = meta.exportExcel;
+        if (pdfLabel) pdfLabel.textContent = meta.exportPdf;
+        if (importLabel) importLabel.textContent = meta.importExcel;
+    },
+
+    getExternalWorkforceExportRows(year = this.externalWorkforceYear) {
+        const model = this.buildExternalWorkforceModel(year);
+        const labels = this.getExternalWorkforceViewState().labels;
+        const header = [labels.contractor, 'Code', ...model.months.map(month => month.label), labels.total];
+        const rows = model.rows.map(row => [
+            row.contractorName,
+            row.contractorCode || row.contractorId || '',
+            ...row.values,
+            row.total
+        ]);
+        rows.push([labels.externalTotal, '', ...model.monthTotals, model.grandTotal]);
+        rows.push([labels.directEmployees, '', ...model.directEmployees, model.directEmployees.reduce((sum, value) => sum + value, 0)]);
+        rows.push([labels.combinedTotal, '', ...model.combined, model.combined.reduce((sum, value) => sum + value, 0)]);
+        rows.push([labels.estimatedHours, '', ...model.estimatedHours, model.estimatedHours.reduce((sum, value) => sum + value, 0)]);
+        return { model, header, rows };
+    },
+
+    exportExternalWorkforceToExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('XLSX library is not available');
+            return;
+        }
+
+        const { model, header, rows } = this.getExternalWorkforceExportRows();
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'External Workforce');
+        XLSX.writeFile(workbook, `external_workforce_${model.year}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    exportExternalWorkforceToPDF() {
+        const { model, header, rows } = this.getExternalWorkforceExportRows();
+        const viewState = this.getExternalWorkforceViewState();
+        const reportTitle = `${viewState.labels.externalTab} - ${model.year}`;
+        const exportDate = new Date().toISOString();
+        const tableRows = [header, ...rows].map((row, index) => `
+            <tr>
+                ${row.map(cell => `<${index === 0 ? 'th' : 'td'}>${Utils.escapeHTML(String(cell ?? ''))}</${index === 0 ? 'th' : 'td'}>`).join('')}
+            </tr>
+        `).join('');
+
+        const content = `
+            <style>
+                .external-workforce-report {
+                    direction: ${viewState.dir};
+                    font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+                }
+                .external-workforce-report__meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 16px;
+                    margin-bottom: 18px;
+                    padding: 12px 16px;
+                    border: 1px solid #D7E3F1;
+                    border-radius: 12px;
+                    background: #F8FBFF;
+                    font-size: 13px;
+                    color: #334155;
+                }
+                .external-workforce-report__meta strong {
+                    color: #0F172A;
+                }
+                .external-workforce-report__table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    table-layout: fixed;
+                    direction: ${viewState.dir};
+                }
+                .external-workforce-report__table th,
+                .external-workforce-report__table td {
+                    border: 1px solid #334155;
+                    padding: 8px 6px;
+                    text-align: center;
+                    font-size: 11px;
+                    word-break: break-word;
+                }
+                .external-workforce-report__table th {
+                    background: #B7D2EA;
+                    color: #102A43;
+                    font-weight: 700;
+                }
+                .external-workforce-report__table td:first-child,
+                .external-workforce-report__table th:first-child {
+                    font-weight: 700;
+                    background: #DCEAF7;
+                }
+                @media print {
+                    .external-workforce-report__meta {
+                        break-inside: avoid;
+                    }
+                }
+            </style>
+            <div class="external-workforce-report" dir="${viewState.dir}" lang="${viewState.lang}">
+                <div class="external-workforce-report__meta">
+                    <div><strong>${Utils.escapeHTML(viewState.labels.year)}:</strong> ${Utils.escapeHTML(String(model.year))}</div>
+                    <div><strong>${Utils.escapeHTML(viewState.labels.externalTab)}</strong></div>
+                    <div><strong>${Utils.escapeHTML(viewState.labels.totalHoursYtd || 'YTD Hours')}:</strong> ${Utils.escapeHTML(String(model.hoursYtd || 0))}</div>
+                </div>
+                <table class="external-workforce-report__table">${tableRows}</table>
+            </div>
+        `;
+
+        const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+            ? FormHeader.generatePDFHTML(
+                `EXT-WORKFORCE-${model.year}`,
+                reportTitle,
+                content,
+                false,
+                true,
+                {
+                    version: '1.0',
+                    source: 'ExternalWorkforceMonthly',
+                    reportYear: model.year,
+                    releaseDate: exportDate,
+                    revisionDate: exportDate
+                },
+                exportDate,
+                exportDate
+            )
+            : `<!DOCTYPE html><html lang="${viewState.lang}" dir="${viewState.dir}"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;direction:${viewState.dir};padding:20px;">${content}</body></html>`;
+
+        const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            URL.revokeObjectURL(url);
+            Notification.error('Unable to open print window');
+            return;
+        }
+
+        printWindow.onload = () => {
+            setTimeout(() => {
+                printWindow.print();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }, 400);
+        };
+    },
+
+    async importExternalWorkforceExcelFile(file) {
+        if (!file || !this.canManageExternalWorkforceTab()) return;
+        if (typeof XLSX === 'undefined') {
+            Notification.error('XLSX library is not available');
+            return;
+        }
+
+        Loading.show();
+        try {
+            const buffer = await file.arrayBuffer();
+            const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const aoa = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
+            if (!Array.isArray(aoa) || aoa.length < 2) throw new Error('File is empty');
+
+            const header = aoa[0].map(cell => String(cell || '').trim().toLowerCase());
+            const contractors = this.getAvailableContractorsForExternalWorkforce();
+            const year = Number(this.externalWorkforceYear);
+            const monthMap = {
+                jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2, apr: 3, april: 3,
+                may: 4, jun: 5, june: 5, jul: 6, july: 6, aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+                oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+                'يناير': 0, 'فبراير': 1, 'مارس': 2, 'أبريل': 3, 'ابريل': 3, 'مايو': 4, 'يونيو': 5,
+                'يوليو': 6, 'أغسطس': 7, 'اغسطس': 7, 'سبتمبر': 8, 'أكتوبر': 9, 'اكتوبر': 9, 'نوفمبر': 10, 'ديسمبر': 11
+            };
+            const monthKeys = this.getExternalWorkforceMonths().map(month => month.key);
+            const companyIndex = header.findIndex(value => value.includes('contractor') || value.includes('company') || value.includes('الشركة') || value.includes('المقاول'));
+            const codeIndex = header.findIndex(value => value === 'code' || value.includes('contractor code') || value.includes('الكود'));
+            const monthIndexes = {};
+            header.forEach((value, index) => {
+                const normalized = value.replace(/\./g, '').trim();
+                if (monthMap[normalized] !== undefined) {
+                    monthIndexes[monthKeys[monthMap[normalized]]] = index;
+                }
+            });
+
+            const records = this.getExternalWorkforceRecords();
+            let updatedRows = 0;
+            aoa.slice(1).forEach(row => {
+                const rawName = companyIndex >= 0 ? String(row[companyIndex] || '').trim() : '';
+                const rawCode = codeIndex >= 0 ? String(row[codeIndex] || '').trim() : '';
+                if (!rawName && !rawCode) return;
+
+                const contractor = contractors.find(item =>
+                    (rawCode && (item.contractorCode || '').trim().toLowerCase() === rawCode.toLowerCase()) ||
+                    (rawName && item.contractorName.trim().toLowerCase() === rawName.toLowerCase())
+                );
+                if (!contractor) return;
+
+                let record = this.getExternalWorkforceRecord(year, contractor.stableKey);
+                if (!record) {
+                    record = {
+                        id: `EWM-${year}-${contractor.stableKey}`,
+                        year,
+                        contractorId: contractor.contractorId || '',
+                        contractorCode: contractor.contractorCode || '',
+                        contractorName: contractor.contractorName || '',
+                        createdAt: new Date().toISOString()
+                    };
+                    records.push(record);
+                }
+
+                monthKeys.forEach(monthKey => {
+                    const columnIndex = monthIndexes[monthKey];
+                    if (columnIndex === undefined) return;
+                    record[monthKey] = Math.max(0, parseInt(row[columnIndex] || '0', 10) || 0);
+                });
+                record.total = monthKeys.reduce((sum, key) => sum + (parseInt(record[key] || '0', 10) || 0), 0);
+                record.updatedAt = new Date().toISOString();
+                record.updatedBy = AppState.currentUser?.name || AppState.currentUser?.email || 'admin';
+                updatedRows += 1;
+            });
+
+            this._externalWorkforceCache.clear();
+            this.renderExternalWorkforceTable();
+            if (typeof DataManager !== 'undefined' && typeof DataManager.save === 'function') DataManager.save();
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+                await GoogleIntegration.autoSave('ExternalWorkforceMonthly', records).catch(() => {});
+            }
+            window.dispatchEvent(new CustomEvent('employeesDataUpdated', { detail: { externalWorkforce: true, year } }));
+            Notification.success(`Imported ${updatedRows} rows successfully`);
+        } catch (error) {
+            Notification.error(`Failed to import file: ${error.message}`);
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    renderExternalWorkforceTable() {
+        const container = document.getElementById('external-workforce-table-container');
+        if (!container) return;
+
+        const model = this.buildExternalWorkforceModel(this.externalWorkforceYear);
+        const viewState = this.getExternalWorkforceViewState();
+        const { dir, stickySide, textAlign, labels } = viewState;
+        this.renderExternalWorkforceSummary(model);
+        const canManage = this.canManageExternalWorkforceTab();
+        const monthHeaders = model.months.map(month => `<th style="min-width: 74px;">${month.label}</th>`).join('');
+
+        const bodyRows = model.rows.map((row, rowIndex) => {
+            const cells = model.months.map((month, monthIndex) => {
+                const value = row.values[monthIndex] || 0;
+                const content = canManage
+                    ? `<input type="number" min="0" step="1" class="form-input external-workforce-input" style="min-width:70px;text-align:center;padding:6px 8px;" value="${value}" data-row="${rowIndex}" data-contractor-key="${row.stableKey}" data-month="${month.key}" />`
+                    : `<span class="font-semibold text-slate-700">${value}</span>`;
+                return `<td style="background:#dceaf6;">${content}</td>`;
+            }).join('');
+
+            return `
+                <tr>
+                    <td class="sticky-cell" style="background:#c7dcef; font-weight:700; text-align:${textAlign};">
+                        <div>${Utils.escapeHTML(row.contractorName)}</div>
+                        <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(row.contractorCode || row.contractorId || 'بدون كود')}</div>
+                    </td>
+                    ${cells}
+                    <td style="background:#dceaf6; font-weight:800;">${row.total}</td>
+                </tr>
+            `;
+        }).join('');
+
+        const totalsCells = model.monthTotals.map(value => `<td style="background:#fff6cf; font-weight:800;">${value}</td>`).join('');
+        const directCells = model.directEmployees.map(value => `<td style="background:#eef2ff; font-weight:700;">${value}</td>`).join('');
+        const combinedCells = model.combined.map(value => `<td style="background:#ecfdf5; font-weight:800;">${value}</td>`).join('');
+        const hoursCells = model.estimatedHours.map(value => `<td style="background:#fff7ed; font-weight:700;">${value.toLocaleString('en-US')}</td>`).join('');
+
+        container.innerHTML = `
+            <style>
+                .external-workforce-table { width: max-content; min-width: 100%; border-collapse: collapse; direction: ltr; }
+                .external-workforce-table th, .external-workforce-table td { border: 1px solid #1f2937; padding: 8px; text-align: center; white-space: nowrap; }
+                .external-workforce-table thead th { background: #b7d2ea; font-weight: 800; }
+                @media (max-width: 768px) {
+                    .external-workforce-table th, .external-workforce-table td { padding: 6px; font-size: 12px; }
+                }
+            </style>
+            <table class="external-workforce-table">
+                <thead>
+                    <tr>
+                        <th class="sticky-cell" style="position:sticky; right:0; min-width:240px; z-index:2; text-align:right;">الشركة / المقاول</th>
+                        ${monthHeaders}
+                        <th style="min-width:80px;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${bodyRows}
+                    <tr>
+                        <td class="sticky-cell" style="position:sticky; right:0; background:#fff6cf; z-index:1; font-weight:800; text-align:right;">إجمالي العمالة الخارجية</td>
+                        ${totalsCells}
+                        <td style="background:#fff6cf; font-weight:900;">${model.grandTotal}</td>
+                    </tr>
+                    <tr>
+                        <td class="sticky-cell" style="position:sticky; right:0; background:#eef2ff; z-index:1; font-weight:800; text-align:right;">العمالة المثبتة</td>
+                        ${directCells}
+                        <td style="background:#eef2ff; font-weight:900;">${model.directEmployees.reduce((sum, value) => sum + value, 0)}</td>
+                    </tr>
+                    <tr>
+                        <td class="sticky-cell" style="position:sticky; right:0; background:#ecfdf5; z-index:1; font-weight:800; text-align:right;">الإجمالي المشترك</td>
+                        ${combinedCells}
+                        <td style="background:#ecfdf5; font-weight:900;">${model.combined.reduce((sum, value) => sum + value, 0)}</td>
+                    </tr>
+                    <tr>
+                        <td class="sticky-cell" style="position:sticky; right:0; background:#fff7ed; z-index:1; font-weight:800; text-align:right;">ساعات العمل التقديرية</td>
+                        ${hoursCells}
+                        <td style="background:#fff7ed; font-weight:900;">${model.estimatedHours.reduce((sum, value) => sum + value, 0).toLocaleString('en-US')}</td>
+                    </tr>
+                </tbody>
+            </table>
+        `;
+
+        const table = container.querySelector('.external-workforce-table');
+        if (!table) return;
+
+        let shell = container.querySelector('.external-workforce-shell');
+        if (!shell) {
+            shell = document.createElement('div');
+            shell.className = 'external-workforce-shell';
+            table.parentNode.insertBefore(shell, table);
+            shell.appendChild(table);
+        }
+
+        shell.setAttribute('dir', dir);
+        Object.assign(shell.style, {
+            width: '100%',
+            maxWidth: '100%',
+            maxHeight: 'min(70vh, calc(100vh - 260px))',
+            overflow: 'auto',
+            border: '1px solid #cbd5e1',
+            borderRadius: '18px',
+            background: '#ffffff'
+        });
+
+        Object.assign(table.style, {
+            width: 'max(100%, 1180px)',
+            borderCollapse: 'separate',
+            borderSpacing: '0',
+            direction: dir,
+            tableLayout: 'fixed'
+        });
+
+        table.querySelectorAll('th, td').forEach(cell => {
+            cell.style.padding = 'clamp(6px, 0.7vw, 10px)';
+            cell.style.fontSize = 'clamp(11px, 0.85vw, 14px)';
+        });
+
+        const headerCells = Array.from(table.querySelectorAll('thead th'));
+        headerCells.forEach(cell => {
+            cell.style.position = 'sticky';
+            cell.style.top = '0';
+            cell.style.zIndex = '4';
+            cell.style.background = '#b7d2ea';
+        });
+
+        if (headerCells[0]) {
+            headerCells[0].textContent = labels.contractor;
+            headerCells[0].classList.add('sticky-cell');
+            headerCells[0].style.textAlign = textAlign;
+        }
+        if (headerCells[headerCells.length - 1]) {
+            headerCells[headerCells.length - 1].textContent = labels.total;
+        }
+
+        table.querySelectorAll('.sticky-cell').forEach(cell => {
+            cell.style.position = 'sticky';
+            cell.style.left = '';
+            cell.style.right = '';
+            cell.style[stickySide] = '0';
+            cell.style.zIndex = cell.closest('thead') ? '6' : '2';
+            cell.style.minWidth = 'clamp(170px, 18vw, 240px)';
+            cell.style.maxWidth = 'clamp(170px, 18vw, 260px)';
+            cell.style.whiteSpace = 'normal';
+            cell.style.wordBreak = 'break-word';
+        });
+
+        const tableRows = Array.from(table.querySelectorAll('tbody tr'));
+        const dataRows = tableRows.slice(0, model.rows.length);
+        dataRows.forEach((rowElement, index) => {
+            const stickyCell = rowElement.querySelector('.sticky-cell');
+            const contractor = model.rows[index];
+            if (!stickyCell || !contractor) return;
+            stickyCell.style.textAlign = textAlign;
+            stickyCell.innerHTML = `
+                <div>${Utils.escapeHTML(contractor.contractorName)}</div>
+                <div class="text-xs text-gray-500 mt-1">${Utils.escapeHTML(contractor.contractorCode || contractor.contractorId || labels.noCode)}</div>
+            `;
+        });
+
+        const summaryLabels = [labels.externalTotal, labels.directEmployees, labels.combinedTotal, labels.estimatedHours];
+        tableRows.slice(-4).forEach((rowElement, index) => {
+            const stickyCell = rowElement.querySelector('.sticky-cell');
+            if (!stickyCell) return;
+            stickyCell.textContent = summaryLabels[index] || stickyCell.textContent;
+            stickyCell.style.textAlign = textAlign;
+        });
+
+        table.querySelectorAll('.external-workforce-input').forEach(input => {
+            input.style.width = '100%';
+            input.style.minWidth = '0';
+            input.style.height = window.innerWidth <= 768 ? '32px' : '36px';
+            input.style.padding = '6px 8px';
+            input.style.textAlign = 'center';
+        });
+
+        if (window.innerWidth <= 768) {
+            shell.style.maxHeight = 'min(62vh, calc(100vh - 220px))';
+            table.style.width = 'max(100%, 980px)';
+        }
+    },
+
+    async saveExternalWorkforceValue(stableKey, monthKey, rawValue) {
+        if (!this.canManageExternalWorkforceTab()) return;
+
+        const contractor = this.getAvailableContractorsForExternalWorkforce().find(item => item.stableKey === stableKey);
+        if (!contractor) return;
+
+        const year = Number(this.externalWorkforceYear);
+        const records = this.getExternalWorkforceRecords();
+        let record = this.getExternalWorkforceRecord(year, stableKey);
+        if (!record) {
+            record = {
+                id: `EWM-${year}-${stableKey}`,
+                year,
+                contractorId: contractor.contractorId || '',
+                contractorCode: contractor.contractorCode || '',
+                contractorName: contractor.contractorName || '',
+                createdAt: new Date().toISOString()
+            };
+            records.push(record);
+        }
+
+        record[monthKey] = Math.max(0, parseInt(rawValue || '0', 10) || 0);
+        record.total = this.getExternalWorkforceMonths().reduce((sum, month) => sum + (parseInt(record[month.key] || '0', 10) || 0), 0);
+        record.updatedAt = new Date().toISOString();
+        record.updatedBy = AppState.currentUser?.name || AppState.currentUser?.email || 'admin';
+
+        this._externalWorkforceCache.clear();
+        this.renderExternalWorkforceTable();
+
+        if (typeof DataManager !== 'undefined' && typeof DataManager.save === 'function') {
+            DataManager.save();
+        }
+        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.autoSave === 'function') {
+            GoogleIntegration.autoSave('ExternalWorkforceMonthly', records).catch(() => {});
+        }
+
+        window.dispatchEvent(new CustomEvent('employeesDataUpdated', {
+            detail: { externalWorkforce: true, year }
+        }));
+    },
+
+    // ═══════════════════════════════════════════════════════════════════
+    // تحليل بيانات الموظفين — لوحة تفاعلية (أقسام / وظائف / رسوم)
+    // ═══════════════════════════════════════════════════════════════════
+
+    _empChartPalette() {
+        return ['#1d4ed8', '#3b82f6', '#6366f1', '#8b5cf6', '#0ea5e9', '#2563eb', '#4f46e5', '#7c3aed', '#0284c7', '#1e40af', '#4338ca', '#5b21b6'];
+    },
+
+    _empAnalyticsLabel(value) {
+        const s = String(value || '').trim();
+        return s || this.t('module.employees.analytics.unknown', 'غير محدد');
+    },
+
+    _empNormalizeGenderForAnalytics(genderValue) {
+        if (!genderValue) return 'unknown';
+        let normalized = String(genderValue).trim().replace(/\s+/g, ' ').replace(/[\u200B-\u200D\uFEFF]/g, '');
+        const lower = normalized.toLowerCase();
+        if (normalized === 'ذكر' || lower === 'male' || lower === 'm') return 'male';
+        if (normalized === 'أنثى' || lower === 'female' || lower === 'f') return 'female';
+        return 'unknown';
+    },
+
+    _empGetExperienceYears(emp) {
+        if (!emp?.hireDate) return null;
+        try {
+            const hireDate = this.parseLocalDate(emp.hireDate);
+            if (!hireDate) return null;
+            const today = new Date();
+            let years = today.getFullYear() - hireDate.getFullYear();
+            const monthDiff = today.getMonth() - hireDate.getMonth();
+            const dayDiff = today.getDate() - hireDate.getDate();
+            if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) years--;
+            return years >= 0 ? years : null;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    async _empEnsureChartJs() {
+        if (typeof Chart !== 'undefined') return true;
+        const existing = document.querySelector('script[src*="chart.js"],script[src*="chartjs"]');
+        if (existing) {
+            return new Promise(resolve => {
+                let tries = 0;
+                const t = setInterval(() => {
+                    if (typeof Chart !== 'undefined') { clearInterval(t); resolve(true); }
+                    else if (++tries > 50) { clearInterval(t); resolve(false); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+            s.onload = () => resolve(true);
+            s.onerror = () => {
+                const s2 = document.createElement('script');
+                s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+                s2.onload = () => resolve(true);
+                s2.onerror = () => resolve(false);
+                document.head.appendChild(s2);
+            };
+            document.head.appendChild(s);
+        });
+    },
+
+    _empDestroyAnalyticsCharts() {
+        const charts = this._empAnalyticsCharts || {};
+        Object.keys(charts).forEach(key => {
+            try { charts[key]?.destroy?.(); } catch (e) { /* ignore */ }
+        });
+        this._empAnalyticsCharts = {};
+    },
+
+    _empGetAnalyticsFiltersFromDom() {
+        const get = (id) => {
+            const el = document.getElementById(id);
+            return el ? String(el.value || '').trim() : '';
+        };
+        return {
+            department: get('emp-af-department'),
+            job: get('emp-af-job'),
+            branch: get('emp-af-branch'),
+            location: get('emp-af-location'),
+            position: get('emp-af-position'),
+            gender: get('emp-af-gender'),
+            status: get('emp-af-status')
+        };
+    },
+
+    _empFilterIdMap() {
+        return {
+            department: 'emp-af-department',
+            job: 'emp-af-job',
+            branch: 'emp-af-branch',
+            location: 'emp-af-location',
+            position: 'emp-af-position',
+            gender: 'emp-af-gender',
+            status: 'emp-af-status'
+        };
+    },
+
+    _empApplyAnalyticsFilter(key, value, options = {}) {
+        const map = this._empFilterIdMap();
+        const elId = map[key];
+        if (elId) {
+            const el = document.getElementById(elId);
+            if (el) el.value = value || '';
+        }
+        this._empUpdateAnalyticsFilterBadge();
+        if (!options.skipUpdate) this.updateEmployeesAnalyticsDashboard();
+    },
+
+    _empClearAnalyticsFilters() {
+        Object.values(this._empFilterIdMap()).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+        this._empUpdateAnalyticsFilterBadge();
+        this.updateEmployeesAnalyticsDashboard();
+    },
+
+    _empUpdateAnalyticsFilterBadge() {
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const active = Object.values(filters).filter(Boolean).length;
+        const badge = document.getElementById('emp-filter-active-badge');
+        if (badge) {
+            badge.style.display = active > 0 ? 'inline' : 'none';
+            badge.textContent = active > 0 ? String(active) : '';
+        }
+        const countEl = document.getElementById('emp-filter-results-count');
+        if (countEl && countEl.dataset.baseCount) {
+            countEl.textContent = countEl.dataset.baseCount;
+        }
+    },
+
+    _empFilterEmployeesForAnalytics(employees, filters) {
+        const list = Array.isArray(employees) ? employees : [];
+        return list.filter(emp => {
+            if (!emp) return false;
+            if (filters.status === 'active' && this.isEmployeeInactive(emp)) return false;
+            if (filters.status === 'inactive' && !this.isEmployeeInactive(emp)) return false;
+            if (filters.department && this._empAnalyticsLabel(emp.department) !== filters.department) return false;
+            if (filters.job && this._empAnalyticsLabel(emp.job) !== filters.job) return false;
+            if (filters.branch && this._empAnalyticsLabel(emp.branch) !== filters.branch) return false;
+            if (filters.location && this._empAnalyticsLabel(emp.location) !== filters.location) return false;
+            if (filters.position && this._empAnalyticsLabel(emp.position) !== filters.position) return false;
+            if (filters.gender) {
+                const g = this._empNormalizeGenderForAnalytics(emp.gender);
+                if (filters.gender === 'male' && g !== 'male') return false;
+                if (filters.gender === 'female' && g !== 'female') return false;
+            }
+            return true;
+        });
+    },
+
+    _empAggregateGroupStats(employees, fieldKey) {
+        const buckets = {};
+        (employees || []).forEach(emp => {
+            const label = this._empAnalyticsLabel(emp[fieldKey]);
+            if (!buckets[label]) {
+                buckets[label] = { label, count: 0, male: 0, female: 0, ageSum: 0, ageCount: 0, expSum: 0, expCount: 0 };
+            }
+            const b = buckets[label];
+            b.count++;
+            const g = this._empNormalizeGenderForAnalytics(emp.gender);
+            if (g === 'male') b.male++;
+            else if (g === 'female') b.female++;
+            const age = Number(this.calculateAge(emp.birthDate));
+            if (age > 0) { b.ageSum += age; b.ageCount++; }
+            const exp = this._empGetExperienceYears(emp);
+            if (exp !== null) { b.expSum += exp; b.expCount++; }
+        });
+        const total = (employees || []).length || 1;
+        return Object.values(buckets)
+            .map(b => ({
+                ...b,
+                percent: Math.round((b.count / total) * 100),
+                avgAge: b.ageCount > 0 ? Math.round(b.ageSum / b.ageCount) : 0,
+                avgExperience: b.expCount > 0 ? (b.expSum / b.expCount).toFixed(1) : 0
+            }))
+            .sort((a, b) => b.count - a.count);
+    },
+
+    buildEmployeeAnalyticsDataset(employees, filters = {}) {
+        const filtered = this._empFilterEmployeesForAnalytics(employees, filters);
+        const activeList = filtered.filter(e => !this.isEmployeeInactive(e));
+        const inactiveList = filtered.filter(e => this.isEmployeeInactive(e));
+        const total = filtered.length;
+        const activeCount = activeList.length;
+        const inactiveCount = inactiveList.length;
+
+        const byDepartment = this._empAggregateGroupStats(filtered, 'department');
+        const byJob = this._empAggregateGroupStats(filtered, 'job');
+        const byBranch = this._empAggregateGroupStats(filtered, 'branch');
+        const byLocation = this._empAggregateGroupStats(filtered, 'location');
+        const byPosition = this._empAggregateGroupStats(filtered, 'position');
+
+        const departmentJobMatrix = {};
+        filtered.forEach(emp => {
+            const dept = this._empAnalyticsLabel(emp.department);
+            const job = this._empAnalyticsLabel(emp.job);
+            const key = dept + '|||' + job;
+            departmentJobMatrix[key] = (departmentJobMatrix[key] || 0) + 1;
+        });
+
+        const ageBuckets = { '18-25': 0, '26-35': 0, '36-45': 0, '46-55': 0, '55+': 0, unknown: 0 };
+        const tenureBuckets = { '0-2': 0, '3-5': 0, '6-10': 0, '11-15': 0, '15+': 0, unknown: 0 };
+        const hireByYear = {};
+        let ageSum = 0, ageCount = 0, expSum = 0, expCount = 0;
+        let male = 0, female = 0;
+        const completenessFields = ['employeeNumber', 'name', 'department', 'job', 'nationalId', 'birthDate', 'hireDate', 'gender', 'phone', 'email', 'branch', 'location', 'position'];
+        const completeness = completenessFields.map(field => ({ field, filled: 0, missing: 0 }));
+
+        filtered.forEach(emp => {
+            const g = this._empNormalizeGenderForAnalytics(emp.gender);
+            if (g === 'male') male++;
+            else if (g === 'female') female++;
+
+            const age = Number(this.calculateAge(emp.birthDate));
+            if (age > 0) {
+                ageSum += age; ageCount++;
+                if (age <= 25) ageBuckets['18-25']++;
+                else if (age <= 35) ageBuckets['26-35']++;
+                else if (age <= 45) ageBuckets['36-45']++;
+                else if (age <= 55) ageBuckets['46-55']++;
+                else ageBuckets['55+']++;
+            } else ageBuckets.unknown++;
+
+            const exp = this._empGetExperienceYears(emp);
+            if (exp !== null) {
+                expSum += exp; expCount++;
+                if (exp <= 2) tenureBuckets['0-2']++;
+                else if (exp <= 5) tenureBuckets['3-5']++;
+                else if (exp <= 10) tenureBuckets['6-10']++;
+                else if (exp <= 15) tenureBuckets['11-15']++;
+                else tenureBuckets['15+']++;
+            } else tenureBuckets.unknown++;
+
+            if (emp.hireDate) {
+                const hd = this.parseLocalDate(emp.hireDate);
+                if (hd) {
+                    const y = hd.getFullYear();
+                    hireByYear[y] = (hireByYear[y] || 0) + 1;
+                }
+            }
+
+            completeness.forEach(c => {
+                const val = emp[c.field];
+                if (val !== undefined && val !== null && String(val).trim() !== '') c.filled++;
+                else c.missing++;
+            });
+        });
+
+        const hireYears = Object.keys(hireByYear).map(Number).sort((a, b) => a - b);
+        const totalFieldSlots = total * completenessFields.length;
+        const filledSlots = completeness.reduce((s, c) => s + c.filled, 0);
+        const dataCompletenessPct = totalFieldSlots > 0 ? Math.round((filledSlots / totalFieldSlots) * 100) : 0;
+
+        const genderByDept = byDepartment.slice(0, 8).map(d => ({ label: d.label, male: d.male, female: d.female }));
+
+        return {
+            filtered,
+            total,
+            activeCount,
+            inactiveCount,
+            uniqueDepartments: byDepartment.filter(d => d.label !== this.t('module.employees.analytics.unknown', 'غير محدد')).length,
+            uniqueJobs: byJob.filter(j => j.label !== this.t('module.employees.analytics.unknown', 'غير محدد')).length,
+            averageAge: ageCount > 0 ? Math.round(ageSum / ageCount) : 0,
+            averageExperience: expCount > 0 ? (expSum / expCount).toFixed(1) : 0,
+            male,
+            female,
+            dataCompletenessPct,
+            byDepartment,
+            byJob,
+            byBranch,
+            byLocation,
+            byPosition,
+            departmentJobMatrix,
+            ageBuckets,
+            tenureBuckets,
+            hireByYear,
+            hireYears,
+            genderByDept,
+            completeness: completeness.map(c => ({
+                ...c,
+                percent: total > 0 ? Math.round((c.filled / total) * 100) : 0
+            }))
+        };
+    },
+
+    _empChartBaseOptions() {
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'inherit', size: 11 }, padding: 12 } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const val = ctx.parsed?.y ?? ctx.parsed ?? ctx.raw ?? 0;
+                            const total = ctx.dataset?.data?.reduce((a, b) => a + b, 0) || 1;
+                            const pct = Math.round((val / total) * 100);
+                            return `${ctx.label}: ${val} (${pct}%) — ${this.t('module.employees.analytics.clickToFilter', 'انقر للتصفية')}`;
+                        }
+                    }
+                }
+            }
+        };
+    },
+
+    _empCreateAnalyticsChart(canvasId, config) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || typeof Chart === 'undefined') return null;
+        if (this._empAnalyticsCharts[canvasId]) {
+            try { this._empAnalyticsCharts[canvasId].destroy(); } catch (e) { /* ignore */ }
+        }
+        const chart = new Chart(canvas, config);
+        this._empAnalyticsCharts[canvasId] = chart;
+        return chart;
+    },
+
+    _empMakeBarGradient(ctx, chartArea, colorStart, colorEnd) {
+        if (!chartArea) return colorStart;
+        const g = ctx.createLinearGradient(chartArea.left, 0, chartArea.right, 0);
+        g.addColorStop(0, colorStart);
+        g.addColorStop(1, colorEnd);
+        return g;
+    },
+
+    _empRenderAnalyticsKpiStrip(dataset) {
+        const strip = document.getElementById('emp-analytics-kpi-strip');
+        if (!strip) return;
+        const kpis = [
+            { label: this.t('module.employees.analytics.kpi.active', 'النشطون'), value: dataset.activeCount, color: '#16a34a', icon: 'fa-user-check' },
+            { label: this.t('module.employees.analytics.kpi.inactive', 'المستقيلون'), value: dataset.inactiveCount, color: '#dc2626', icon: 'fa-user-slash' },
+            { label: this.t('module.employees.analytics.kpi.total', 'الإجمالي'), value: dataset.total, color: '#1d4ed8', icon: 'fa-users' },
+            { label: this.t('module.employees.analytics.kpi.departments', 'الأقسام'), value: dataset.uniqueDepartments, color: '#7c3aed', icon: 'fa-building' },
+            { label: this.t('module.employees.analytics.kpi.jobs', 'الوظائف'), value: dataset.uniqueJobs, color: '#0ea5e9', icon: 'fa-briefcase' },
+            { label: this.t('module.employees.analytics.kpi.avgAge', 'متوسط العمر'), value: dataset.averageAge || this.t('module.common.notAvailable', 'غير متاح'), color: '#ea580c', icon: 'fa-birthday-cake' },
+            { label: this.t('module.employees.analytics.kpi.avgExperience', 'متوسط الخبرة'), value: dataset.averageExperience || this.t('module.common.notAvailable', 'غير متاح'), color: '#0891b2', icon: 'fa-clock' },
+            { label: this.t('module.employees.analytics.kpi.dataCompleteness', 'اكتمال البيانات'), value: dataset.dataCompletenessPct + '%', color: '#059669', icon: 'fa-database' }
+        ];
+        strip.innerHTML = kpis.map(k => `
+            <div class="emp-analytics-kpi" style="--kpi-color:${k.color};">
+                <div class="emp-analytics-kpi__icon"><i class="fas ${k.icon}"></i></div>
+                <div class="emp-analytics-kpi__value">${typeof k.value === 'number' ? k.value.toLocaleString('en-US') : k.value}</div>
+                <div class="emp-analytics-kpi__label">${k.label}</div>
+            </div>
+        `).join('');
+    },
+
+    _empRenderAnalyticsBreadcrumb(filters) {
+        const el = document.getElementById('emp-analytics-breadcrumb');
+        if (!el) return;
+        const parts = [this.t('module.employees.analytics.all', 'الكل')];
+        if (filters.department) parts.push(filters.department);
+        if (filters.job) parts.push(filters.job);
+        el.innerHTML = parts.map((p, i) => {
+            const isLast = i === parts.length - 1;
+            return `<span class="emp-analytics-crumb${isLast ? ' emp-analytics-crumb--active' : ''}">${Utils.escapeHTML(p)}</span>${isLast ? '' : '<span class="emp-analytics-crumb-sep">›</span>'}`;
+        }).join('');
+    },
+
+    _empPopulateAnalyticsFilterOptions(employees) {
+        const list = Array.isArray(employees) ? employees : [];
+        const uniq = (field) => [...new Set(list.map(e => this._empAnalyticsLabel(e[field])).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ar'));
+        const fill = (id, values, current) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const cur = current || el.value;
+            el.innerHTML = `<option value="">${this.t('module.employees.analytics.all', 'الكل')}</option>` +
+                values.map(v => `<option value="${Utils.escapeHTML(v)}"${v === cur ? ' selected' : ''}>${Utils.escapeHTML(v)}</option>`).join('');
+        };
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        fill('emp-af-department', uniq('department'), filters.department);
+        fill('emp-af-job', uniq('job'), filters.job);
+        fill('emp-af-branch', uniq('branch'), filters.branch);
+        fill('emp-af-location', uniq('location'), filters.location);
+        fill('emp-af-position', uniq('position'), filters.position);
+    },
+
+    _empRenderAnalyticsHeatmap(dataset) {
+        const container = document.getElementById('emp-analytics-heatmap');
+        if (!container) return;
+        const matrix = dataset.departmentJobMatrix || {};
+        const entries = Object.entries(matrix).map(([key, count]) => {
+            const [dept, job] = key.split('|||');
+            return { dept, job, count };
+        }).sort((a, b) => b.count - a.count);
+        if (!entries.length) {
+            container.innerHTML = `<div class="emp-analytics-empty">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+        const topDepts = [...new Set(entries.slice(0, 12).map(e => e.dept))];
+        const topJobs = [...new Set(entries.slice(0, 12).map(e => e.job))];
+        const maxCount = Math.max(...entries.map(e => e.count), 1);
+        const lookup = {};
+        entries.forEach(e => { lookup[e.dept + '|||' + e.job] = e.count; });
+
+        let html = '<table class="emp-analytics-heatmap-table"><thead><tr><th></th>';
+        topJobs.forEach(j => { html += `<th title="${Utils.escapeHTML(j)}">${Utils.escapeHTML(j.length > 14 ? j.slice(0, 14) + '…' : j)}</th>`; });
+        html += '</tr></thead><tbody>';
+        topDepts.forEach(dept => {
+            html += `<tr><th title="${Utils.escapeHTML(dept)}">${Utils.escapeHTML(dept.length > 16 ? dept.slice(0, 16) + '…' : dept)}</th>`;
+            topJobs.forEach(job => {
+                const count = lookup[dept + '|||' + job] || 0;
+                const intensity = count > 0 ? 0.15 + (count / maxCount) * 0.85 : 0;
+                const bg = count > 0 ? `rgba(29, 78, 216, ${intensity})` : '#f8fafc';
+                const color = intensity > 0.5 ? '#fff' : '#334155';
+                html += `<td class="emp-analytics-heatmap-cell" data-dept="${Utils.escapeHTML(dept)}" data-job="${Utils.escapeHTML(job)}" style="background:${bg};color:${color};" title="${Utils.escapeHTML(dept)} / ${Utils.escapeHTML(job)}: ${count}">${count || ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        container.querySelectorAll('.emp-analytics-heatmap-cell').forEach(cell => {
+            cell.addEventListener('click', () => {
+                const dept = cell.getAttribute('data-dept') || '';
+                const job = cell.getAttribute('data-job') || '';
+                if (!dept && !job) return;
+                this._empApplyAnalyticsFilter('department', dept, { skipUpdate: true });
+                this._empApplyAnalyticsFilter('job', job);
+            });
+        });
+    },
+
+    _empRenderAnalyticsDetailTable(dataset) {
+        const container = document.getElementById('emp-analytics-detail-table');
+        if (!container) return;
+        const tab = this._empAnalyticsDetailTab || 'department';
+        const rows = tab === 'job' ? dataset.byJob : dataset.byDepartment;
+        const colLabel = tab === 'job'
+            ? this.t('module.employees.job', 'الوظيفة')
+            : this.t('module.employees.department', 'القسم');
+        const filterKey = tab === 'job' ? 'job' : 'department';
+
+        if (!rows.length) {
+            container.innerHTML = `<div class="emp-analytics-empty">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>`;
+            return;
+        }
+
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const selectedVal = filters[filterKey];
+
+        container.innerHTML = `
+            <table class="emp-analytics-detail-table">
+                <thead>
+                    <tr>
+                        <th>${colLabel}</th>
+                        <th>${this.t('module.employees.analytics.table.count', 'العدد')}</th>
+                        <th>${this.t('module.employees.analytics.table.percent', 'النسبة')}</th>
+                        <th>${this.t('module.employees.analytics.table.male', 'ذكر')}</th>
+                        <th>${this.t('module.employees.analytics.table.female', 'أنثى')}</th>
+                        <th>${this.t('module.employees.analytics.table.avgAge', 'متوسط العمر')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rows.map(r => `
+                        <tr class="emp-analytics-detail-row${selectedVal === r.label ? ' emp-analytics-detail-row--selected' : ''}" data-filter-key="${filterKey}" data-filter-value="${Utils.escapeHTML(r.label)}">
+                            <td>${Utils.escapeHTML(r.label)}</td>
+                            <td>${r.count}</td>
+                            <td>${r.percent}%</td>
+                            <td>${r.male}</td>
+                            <td>${r.female}</td>
+                            <td>${r.avgAge || '—'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+
+        container.querySelectorAll('.emp-analytics-detail-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const key = row.getAttribute('data-filter-key');
+                const val = row.getAttribute('data-filter-value');
+                if (key) this._empApplyAnalyticsFilter(key, val);
+            });
+        });
+    },
+
+    _empRenderCompletenessTable(dataset) {
+        const container = document.getElementById('emp-analytics-completeness-table');
+        if (!container) return;
+        const fieldLabels = {
+            employeeNumber: this.t('module.employees.employeeNumber', 'الرقم الوظيفي'),
+            name: this.t('module.employees.fullName', 'الاسم الكامل'),
+            department: this.t('module.employees.department', 'القسم'),
+            job: this.t('module.employees.job', 'الوظيفة'),
+            nationalId: this.t('module.employees.table.nationalId', 'رقم البطاقة'),
+            birthDate: this.t('module.employees.table.birthDate', 'تاريخ الميلاد'),
+            hireDate: this.t('module.employees.table.hireDate', 'تاريخ التعيين'),
+            gender: this.t('module.employees.gender', 'النوع'),
+            phone: this.t('module.employees.table.phone', 'الهاتف'),
+            email: this.t('module.employees.email', 'البريد الإلكتروني'),
+            branch: this.t('module.employees.branch', 'الفرع'),
+            location: this.t('module.employees.location', 'الموقع'),
+            position: this.t('module.employees.position', 'المنصب')
+        };
+        container.innerHTML = `
+            <table class="emp-analytics-detail-table">
+                <thead>
+                    <tr>
+                        <th>الحقل</th>
+                        <th>${this.t('module.employees.analytics.filled', 'مملوء')}</th>
+                        <th>${this.t('module.employees.analytics.missing', 'ناقص')}</th>
+                        <th>${this.t('module.employees.analytics.table.percent', 'النسبة')}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${(dataset.completeness || []).map(c => `
+                        <tr>
+                            <td>${Utils.escapeHTML(fieldLabels[c.field] || c.field)}</td>
+                            <td>${c.filled}</td>
+                            <td>${c.missing}</td>
+                            <td>
+                                <div class="emp-analytics-progress">
+                                    <div class="emp-analytics-progress__bar" style="width:${c.percent}%"></div>
+                                    <span>${c.percent}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    },
+
+    _empBindChartClick(canvasId, items, filterKey) {
+        const chart = this._empAnalyticsCharts[canvasId];
+        if (!chart || !items?.length) return;
+        chart.options.onClick = (_evt, elements) => {
+            if (!elements?.length) return;
+            const idx = elements[0].index;
+            const item = items[idx];
+            if (item?.label) this._empApplyAnalyticsFilter(filterKey, item.label);
+        };
+        chart.update('none');
+    },
+
+    _empRenderAnalyticsCharts(dataset) {
+        const palette = this._empChartPalette();
+        const noData = this.t('module.employees.analytics.noData', 'لا توجد بيانات');
+        const toggleEmpty = (canvasId, hasData) => {
+            const empty = document.getElementById(canvasId + '-empty');
+            const canvas = document.getElementById(canvasId);
+            if (empty) empty.style.display = hasData ? 'none' : 'flex';
+            if (canvas) canvas.style.display = hasData ? 'block' : 'none';
+        };
+
+        const topDept = dataset.byDepartment.slice(0, 12);
+        toggleEmpty('emp-chart-departments', topDept.length > 0);
+        if (topDept.length) {
+            this._empCreateAnalyticsChart('emp-chart-departments', {
+                type: 'bar',
+                data: {
+                    labels: topDept.map(d => d.label),
+                    datasets: [{
+                        data: topDept.map(d => d.count),
+                        backgroundColor: (ctx) => this._empMakeBarGradient(ctx.chart.ctx, ctx.chart.chartArea, '#1d4ed8', '#6366f1'),
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    indexAxis: 'y',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { x: { beginAtZero: true, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } }
+                }
+            });
+            this._empBindChartClick('emp-chart-departments', topDept, 'department');
+        }
+
+        const topJobs = dataset.byJob.slice(0, 12);
+        toggleEmpty('emp-chart-jobs', topJobs.length > 0);
+        if (topJobs.length) {
+            this._empCreateAnalyticsChart('emp-chart-jobs', {
+                type: 'bar',
+                data: {
+                    labels: topJobs.map(j => j.label),
+                    datasets: [{
+                        data: topJobs.map(j => j.count),
+                        backgroundColor: palette.map((c, i) => palette[i % palette.length]),
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    indexAxis: 'y',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { x: { beginAtZero: true }, y: { grid: { display: false } } }
+                }
+            });
+            this._empBindChartClick('emp-chart-jobs', topJobs, 'job');
+        }
+
+        const genderData = [dataset.male, dataset.female];
+        toggleEmpty('emp-chart-gender', genderData.some(v => v > 0));
+        if (genderData.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-gender', {
+                type: 'doughnut',
+                data: {
+                    labels: [this.t('module.employees.genderMale', 'ذكر'), this.t('module.employees.genderFemale', 'أنثى')],
+                    datasets: [{ data: genderData, backgroundColor: ['#3b82f6', '#ec4899'], borderWidth: 0 }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    cutout: '65%',
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        const statusData = [dataset.activeCount, dataset.inactiveCount];
+        toggleEmpty('emp-chart-status', dataset.total > 0);
+        if (dataset.total > 0) {
+            this._empCreateAnalyticsChart('emp-chart-status', {
+                type: 'doughnut',
+                data: {
+                    labels: [this.t('module.employees.analytics.active', 'نشط'), this.t('module.employees.analytics.inactive', 'غير نشط')],
+                    datasets: [{ data: statusData, backgroundColor: ['#16a34a', '#ef4444'], borderWidth: 0 }]
+                },
+                options: { ...this._empChartBaseOptions(), cutout: '65%' }
+            });
+        }
+
+        const renderSimpleBar = (canvasId, rows, filterKey) => {
+            const top = rows.slice(0, 10);
+            toggleEmpty(canvasId, top.length > 0);
+            if (!top.length) return;
+            this._empCreateAnalyticsChart(canvasId, {
+                type: 'bar',
+                data: {
+                    labels: top.map(r => r.label),
+                    datasets: [{ data: top.map(r => r.count), backgroundColor: palette, borderRadius: 6 }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            if (filterKey) this._empBindChartClick(canvasId, top, filterKey);
+        };
+
+        renderSimpleBar('emp-chart-branches', dataset.byBranch, 'branch');
+        renderSimpleBar('emp-chart-locations', dataset.byLocation, 'location');
+        renderSimpleBar('emp-chart-positions', dataset.byPosition, 'position');
+
+        const ageLabels = Object.keys(dataset.ageBuckets);
+        const ageValues = ageLabels.map(k => dataset.ageBuckets[k]);
+        toggleEmpty('emp-chart-age', ageValues.some(v => v > 0));
+        if (ageValues.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-age', {
+                type: 'bar',
+                data: { labels: ageLabels, datasets: [{ data: ageValues, backgroundColor: '#6366f1', borderRadius: 8 }] },
+                options: { ...this._empChartBaseOptions(), plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } } }
+            });
+        }
+
+        const tenureLabels = Object.keys(dataset.tenureBuckets);
+        const tenureValues = tenureLabels.map(k => dataset.tenureBuckets[k]);
+        toggleEmpty('emp-chart-tenure', tenureValues.some(v => v > 0));
+        if (tenureValues.some(v => v > 0)) {
+            this._empCreateAnalyticsChart('emp-chart-tenure', {
+                type: 'bar',
+                data: { labels: tenureLabels, datasets: [{ data: tenureValues, backgroundColor: '#0ea5e9', borderRadius: 8 }] },
+                options: { ...this._empChartBaseOptions(), plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } } }
+            });
+        }
+
+        const years = dataset.hireYears || [];
+        const hireValues = years.map(y => dataset.hireByYear[y] || 0);
+        toggleEmpty('emp-chart-hire', years.length > 0);
+        if (years.length) {
+            this._empCreateAnalyticsChart('emp-chart-hire', {
+                type: 'line',
+                data: {
+                    labels: years.map(String),
+                    datasets: [{
+                        data: hireValues,
+                        borderColor: '#1d4ed8',
+                        backgroundColor: 'rgba(29,78,216,0.12)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#1d4ed8'
+                    }]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    plugins: { ...this._empChartBaseOptions().plugins, legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        const gbd = dataset.genderByDept || [];
+        toggleEmpty('emp-chart-gender-dept', gbd.length > 0);
+        if (gbd.length) {
+            this._empCreateAnalyticsChart('emp-chart-gender-dept', {
+                type: 'bar',
+                data: {
+                    labels: gbd.map(d => d.label),
+                    datasets: [
+                        { label: this.t('module.employees.genderMale', 'ذكر'), data: gbd.map(d => d.male), backgroundColor: '#3b82f6', borderRadius: 4 },
+                        { label: this.t('module.employees.genderFemale', 'أنثى'), data: gbd.map(d => d.female), backgroundColor: '#ec4899', borderRadius: 4 }
+                    ]
+                },
+                options: {
+                    ...this._empChartBaseOptions(),
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+                }
+            });
+            this._empBindChartClick('emp-chart-gender-dept', gbd, 'department');
+        }
+    },
+
+    renderEmployeesAnalysisShellHTML() {
+        const filterFields = [
+            { id: 'emp-af-department', icon: 'fa-building', label: this.t('module.employees.department', 'القسم') },
+            { id: 'emp-af-job', icon: 'fa-briefcase', label: this.t('module.employees.job', 'الوظيفة') },
+            { id: 'emp-af-branch', icon: 'fa-sitemap', label: this.t('module.employees.branch', 'الفرع') },
+            { id: 'emp-af-location', icon: 'fa-map-marker-alt', label: this.t('module.employees.location', 'الموقع') },
+            { id: 'emp-af-position', icon: 'fa-user-tie', label: this.t('module.employees.position', 'المنصب') },
+            { id: 'emp-af-gender', icon: 'fa-venus-mars', label: this.t('module.employees.gender', 'النوع'), options: [
+                { value: '', label: this.t('module.employees.analytics.all', 'الكل') },
+                { value: 'male', label: this.t('module.employees.genderMale', 'ذكر') },
+                { value: 'female', label: this.t('module.employees.genderFemale', 'أنثى') }
+            ]},
+            { id: 'emp-af-status', icon: 'fa-toggle-on', label: 'الحالة', options: [
+                { value: '', label: this.t('module.employees.analytics.all', 'الكل') },
+                { value: 'active', label: this.t('module.employees.analytics.active', 'نشط') },
+                { value: 'inactive', label: this.t('module.employees.analytics.inactive', 'غير نشط') }
+            ]}
+        ];
+
+        const chartCard = (id, title, icon) => `
+            <div class="emp-analytics-chart-card content-card">
+                <div class="emp-analytics-chart-card__head">
+                    <i class="fas ${icon}"></i><span>${title}</span>
+                </div>
+                <div class="emp-analytics-chart-card__body">
+                    <canvas id="${id}"></canvas>
+                    <div id="${id}-empty" class="emp-analytics-empty" style="display:none;">${this.t('module.employees.analytics.noData', 'لا توجد بيانات')}</div>
+                </div>
+            </div>
+        `;
+
+        return `
+            <style>
+                #emp-analytics-root { font-family: inherit; }
+                #emp-analytics-root .emp-analytics-toolbar {
+                    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+                    margin-bottom: 14px; padding: 16px 20px;
+                    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+                    border-radius: 14px; color: #fff; box-shadow: 0 4px 20px rgba(29, 78, 216, 0.35);
+                }
+                #emp-analytics-kpi-strip {
+                    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 18px;
+                }
+                .emp-analytics-kpi {
+                    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;
+                    box-shadow: 0 2px 8px rgba(15,23,42,0.04); transition: transform .2s, box-shadow .2s;
+                }
+                .emp-analytics-kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(15,23,42,0.08); }
+                .emp-analytics-kpi__icon { color: var(--kpi-color); font-size: 1.1rem; margin-bottom: 6px; }
+                .emp-analytics-kpi__value { font-size: 1.35rem; font-weight: 800; color: var(--kpi-color); }
+                .emp-analytics-kpi__label { font-size: 0.72rem; color: #64748b; font-weight: 600; margin-top: 4px; }
+                #emp-filter-panel { display: none; background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+                .emp-analytics-chart-card { padding: 0; overflow: hidden; margin-bottom: 0; }
+                .emp-analytics-chart-card__head { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-weight: 700; font-size: 0.88rem; display: flex; align-items: center; gap: 8px; }
+                .emp-analytics-chart-card__head i { color: #1d4ed8; }
+                .emp-analytics-chart-card__body { position: relative; height: 240px; padding: 12px; }
+                .emp-analytics-charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 16px; }
+                .emp-analytics-dept-job-panel { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(15,23,42,0.05); }
+                .emp-analytics-dept-job-panel h3 { margin: 0 0 12px; font-size: 1rem; font-weight: 800; color: #0f172a; }
+                #emp-analytics-breadcrumb { margin-bottom: 12px; font-size: 0.82rem; color: #64748b; }
+                .emp-analytics-crumb--active { color: #1d4ed8; font-weight: 700; }
+                .emp-analytics-crumb-sep { margin: 0 6px; opacity: 0.5; }
+                .emp-analytics-heatmap-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+                .emp-analytics-heatmap-table th, .emp-analytics-heatmap-table td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: center; }
+                .emp-analytics-heatmap-cell { cursor: pointer; transition: transform .15s; min-width: 36px; }
+                .emp-analytics-heatmap-cell:hover { transform: scale(1.08); outline: 2px solid #1d4ed8; }
+                .emp-analytics-detail-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+                .emp-analytics-detail-table th, .emp-analytics-detail-table td { border-bottom: 1px solid #e2e8f0; padding: 10px 12px; text-align: right; }
+                .emp-analytics-detail-table th { background: #f8fafc; font-weight: 700; color: #475569; }
+                .emp-analytics-detail-row { cursor: pointer; transition: background .15s; }
+                .emp-analytics-detail-row:hover { background: #eff6ff; }
+                .emp-analytics-detail-row--selected { background: #dbeafe; font-weight: 700; }
+                .emp-analytics-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: #94a3b8; font-size: 0.85rem; }
+                .emp-analytics-subtabs { display: flex; gap: 8px; margin-bottom: 12px; }
+                .emp-analytics-subtab { padding: 6px 14px; border-radius: 8px; border: 1px solid #bfdbfe; background: #fff; cursor: pointer; font-size: 0.8rem; font-weight: 600; color: #1d4ed8; }
+                .emp-analytics-subtab.active { background: #1d4ed8; color: #fff; border-color: #1d4ed8; }
+                .emp-analytics-progress { display: flex; align-items: center; gap: 8px; }
+                .emp-analytics-progress__bar { height: 6px; background: linear-gradient(90deg, #1d4ed8, #6366f1); border-radius: 999px; min-width: 4px; flex: 1; max-width: 120px; }
+            </style>
+            <div id="emp-analytics-root">
+                <div class="emp-analytics-toolbar">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;background:rgba(255,255,255,0.18);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-chart-bar" style="font-size:20px;"></i>
+                        </div>
+                        <div>
+                            <h2 style="margin:0;font-size:1.15rem;font-weight:700;">${this.t('module.employees.analytics.title', 'لوحة تحليل بيانات الموظفين')}</h2>
+                            <p style="margin:0;font-size:0.75rem;opacity:0.85;">${this.t('module.employees.analytics.subtitle', 'تحليل شامل • الأقسام والوظائف • فلاتر تفاعلية • تصدير PDF')}</p>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                        <button type="button" id="emp-toggle-filters-btn" class="btn-secondary" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.35);">
+                            <i class="fas fa-sliders-h ml-2"></i>${this.t('module.employees.analytics.filters', 'الفلاتر التفاعلية')}
+                            <span id="emp-filter-active-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:1px 6px;border-radius:10px;margin-right:4px;"></span>
+                        </button>
+                        <button type="button" id="emp-export-pdf-btn" class="btn-secondary" style="background:rgba(239,68,68,0.85);color:#fff;border:none;">
+                            <i class="fas fa-file-pdf ml-2"></i>${this.t('module.employees.analytics.exportPdf', 'تصدير PDF')}
+                        </button>
+                        <button type="button" id="emp-analytics-refresh" class="btn-secondary" style="background:rgba(255,255,255,0.15);color:#fff;border:none;" title="${this.t('module.employees.analytics.refresh', 'تحديث')}">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="emp-filter-panel">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-sliders-h" style="color:#1d4ed8;"></i>
+                            <span style="font-weight:700;font-size:0.9rem;color:#0f172a;">${this.t('module.employees.analytics.filters', 'الفلاتر التفاعلية')}</span>
+                            <span id="emp-filter-results-count" data-base-count="" style="background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:12px;font-size:0.72rem;font-weight:600;"></span>
+                        </div>
+                        <button type="button" id="emp-filter-reset-btn" class="btn-secondary" style="font-size:0.75rem;">
+                            <i class="fas fa-times ml-1"></i>${this.t('module.employees.analytics.clearFilters', 'مسح الكل')}
+                        </button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                        ${filterFields.map(f => `
+                            <div>
+                                <label style="font-size:0.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:5px;">
+                                    <i class="fas ${f.icon} ml-1" style="color:#1d4ed8;"></i>${f.label}
+                                </label>
+                                ${f.options ? `
+                                    <select id="${f.id}" class="form-input" style="width:100%;font-size:0.82rem;">
+                                        ${f.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+                                    </select>
+                                ` : `<select id="${f.id}" class="form-input" style="width:100%;font-size:0.82rem;"><option value="">${this.t('module.employees.analytics.all', 'الكل')}</option></select>`}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div id="emp-analytics-kpi-strip"><div style="text-align:center;padding:16px;color:#94a3b8;"><i class="fas fa-spinner fa-spin"></i></div></div>
+
+                <div id="emp-dept-job-panel" class="emp-analytics-dept-job-panel">
+                    <h3><i class="fas fa-building ml-2" style="color:#1d4ed8;"></i>${this.t('module.employees.analytics.deptJobTitle', 'تحليل الأقسام والوظائف')}</h3>
+                    <div id="emp-analytics-breadcrumb"></div>
+                    <div class="emp-analytics-charts-grid" style="margin-bottom:16px;">
+                        ${chartCard('emp-chart-departments', this.t('module.employees.analytics.chart.departments', 'أعلى الأقسام'), 'fa-building')}
+                        ${chartCard('emp-chart-jobs', this.t('module.employees.analytics.chart.jobs', 'أعلى الوظائف'), 'fa-briefcase')}
+                    </div>
+                    <h4 style="margin:0 0 10px;font-size:0.88rem;font-weight:700;color:#475569;">
+                        <i class="fas fa-th ml-1"></i>${this.t('module.employees.analytics.heatmap', 'خريطة حرارية: قسم × وظيفة')}
+                    </h4>
+                    <div id="emp-analytics-heatmap" style="overflow-x:auto;"></div>
+                </div>
+
+                <div class="emp-analytics-charts-grid">
+                    ${chartCard('emp-chart-gender', this.t('module.employees.analytics.chart.gender', 'التوزيع حسب النوع'), 'fa-venus-mars')}
+                    ${chartCard('emp-chart-status', this.t('module.employees.analytics.chart.status', 'الحالة'), 'fa-toggle-on')}
+                    ${chartCard('emp-chart-gender-dept', this.t('module.employees.analytics.chart.genderByDept', 'الجنس داخل الأقسام'), 'fa-chart-bar')}
+                    ${chartCard('emp-chart-branches', this.t('module.employees.analytics.chart.branches', 'الفروع'), 'fa-sitemap')}
+                    ${chartCard('emp-chart-locations', this.t('module.employees.analytics.chart.locations', 'المواقع'), 'fa-map-marker-alt')}
+                    ${chartCard('emp-chart-positions', this.t('module.employees.analytics.chart.positions', 'المناصب'), 'fa-user-tie')}
+                    ${chartCard('emp-chart-age', this.t('module.employees.analytics.chart.ageBuckets', 'شرائح العمر'), 'fa-birthday-cake')}
+                    ${chartCard('emp-chart-tenure', this.t('module.employees.analytics.chart.tenureBuckets', 'شرائح الخبرة'), 'fa-clock')}
+                    ${chartCard('emp-chart-hire', this.t('module.employees.analytics.chart.hireTrend', 'اتجاه التعيين'), 'fa-chart-line')}
+                </div>
+
+                <div class="content-card" style="margin-top:16px;padding:16px;">
+                    <div class="emp-analytics-subtabs">
+                        <button type="button" class="emp-analytics-subtab ${this._empAnalyticsDetailTab === 'department' ? 'active' : ''}" data-emp-detail-tab="department">${this.t('module.employees.analytics.table.byDepartment', 'حسب القسم')}</button>
+                        <button type="button" class="emp-analytics-subtab ${this._empAnalyticsDetailTab === 'job' ? 'active' : ''}" data-emp-detail-tab="job">${this.t('module.employees.analytics.table.byJob', 'حسب الوظيفة')}</button>
+                    </div>
+                    <div id="emp-analytics-detail-table"></div>
+                </div>
+
+                <div class="content-card" style="margin-top:16px;padding:16px;">
+                    <h3 style="margin:0 0 12px;font-size:0.95rem;font-weight:700;">
+                        <i class="fas fa-database ml-2" style="color:#1d4ed8;"></i>${this.t('module.employees.analytics.table.completeness', 'اكتمال البيانات')}
+                    </h3>
+                    <div id="emp-analytics-completeness-table"></div>
+                </div>
+            </div>
+        `;
+    },
+
+    async loadEmployeesAnalysis(forceReload = false) {
+        if (this.activeTab !== 'data-analysis') return;
+        const panel = document.getElementById('employees-analysis-panel');
+        if (!panel) return;
+
+        if (!panel.querySelector('#emp-analytics-root')) {
+            panel.innerHTML = this.renderEmployeesAnalysisShellHTML();
+            this._empAnalyticsEventsBound = false;
+        }
+
+        try {
+            await this.ensureEmployeesLoaded(forceReload);
+        } catch (e) { /* ignore */ }
+
+        await this._empEnsureChartJs();
+        if (!this._empAnalyticsEventsBound) {
+            this._empBindAnalyticsEvents();
+            this._empAnalyticsEventsBound = true;
+        }
+        await this.updateEmployeesAnalyticsDashboard();
+    },
+
+    async updateEmployeesAnalyticsDashboard() {
+        const root = document.getElementById('emp-analytics-root');
+        if (!root) return;
+
+        const employees = AppState.appData?.employees || [];
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        this._empPopulateAnalyticsFilterOptions(employees);
+        Object.entries(filters).forEach(([key, val]) => {
+            const map = this._empFilterIdMap();
+            const el = document.getElementById(map[key]);
+            if (el && val) el.value = val;
+        });
+
+        const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
+        const countEl = document.getElementById('emp-filter-results-count');
+        if (countEl) {
+            countEl.dataset.baseCount = `${dataset.total} موظف`;
+            countEl.textContent = countEl.dataset.baseCount;
+        }
+
+        this._empRenderAnalyticsBreadcrumb(filters);
+        this._empRenderAnalyticsKpiStrip(dataset);
+        this._empDestroyAnalyticsCharts();
+        this._empRenderAnalyticsCharts(dataset);
+        this._empRenderAnalyticsHeatmap(dataset);
+        this._empRenderAnalyticsDetailTable(dataset);
+        this._empRenderCompletenessTable(dataset);
+        this._empUpdateAnalyticsFilterBadge();
+    },
+
+    _empBindAnalyticsEvents() {
+        document.getElementById('emp-toggle-filters-btn')?.addEventListener('click', () => {
+            const panel = document.getElementById('emp-filter-panel');
+            if (panel) panel.style.display = panel.style.display === 'none' || !panel.style.display ? 'block' : 'none';
+        });
+        document.getElementById('emp-filter-reset-btn')?.addEventListener('click', () => this._empClearAnalyticsFilters());
+        document.getElementById('emp-analytics-refresh')?.addEventListener('click', () => this.loadEmployeesAnalysis(true));
+        document.getElementById('emp-export-pdf-btn')?.addEventListener('click', () => this._empExportAnalyticsPdf());
+
+        Object.values(this._empFilterIdMap()).forEach(id => {
+            document.getElementById(id)?.addEventListener('change', () => this.updateEmployeesAnalyticsDashboard());
+        });
+
+        document.querySelectorAll('[data-emp-detail-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._empAnalyticsDetailTab = btn.getAttribute('data-emp-detail-tab') || 'department';
+                document.querySelectorAll('[data-emp-detail-tab]').forEach(b => b.classList.toggle('active', b === btn));
+                const employees = AppState.appData?.employees || [];
+                const dataset = this.buildEmployeeAnalyticsDataset(employees, this._empGetAnalyticsFiltersFromDom());
+                this._empRenderAnalyticsDetailTable(dataset);
+            });
+        });
+    },
+
+    async _empExportAnalyticsPdf() {
+        const employees = AppState.appData?.employees || [];
+        const filters = this._empGetAnalyticsFiltersFromDom();
+        const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
+        const deptRows = dataset.byDepartment.slice(0, 20).map(r =>
+            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
+        ).join('');
+        const jobRows = dataset.byJob.slice(0, 20).map(r =>
+            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
+        ).join('');
+
+        const html = `
+            <div dir="rtl" style="font-family:Arial,sans-serif;padding:24px;">
+                <h1 style="color:#0f172a;margin-bottom:8px;">${this.t('module.employees.analytics.title', 'لوحة تحليل بيانات الموظفين')}</h1>
+                <p style="color:#64748b;margin-bottom:20px;">${new Date().toLocaleDateString('ar-SA')}</p>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
+                    <div style="background:#eff6ff;padding:12px;border-radius:8px;"><strong>النشطون</strong><br>${dataset.activeCount}</div>
+                    <div style="background:#fef2f2;padding:12px;border-radius:8px;"><strong>المستقيلون</strong><br>${dataset.inactiveCount}</div>
+                    <div style="background:#f0fdf4;padding:12px;border-radius:8px;"><strong>الأقسام</strong><br>${dataset.uniqueDepartments}</div>
+                    <div style="background:#f5f3ff;padding:12px;border-radius:8px;"><strong>الوظائف</strong><br>${dataset.uniqueJobs}</div>
+                </div>
+                <h2>أعلى الأقسام</h2>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+                    <thead><tr style="background:#f1f5f9;"><th>القسم</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
+                    <tbody>${deptRows}</tbody>
+                </table>
+                <h2>أعلى الوظائف</h2>
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead><tr style="background:#f1f5f9;"><th>الوظيفة</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
+                    <tbody>${jobRows}</tbody>
+                </table>
+            </div>
+        `;
+
+        try {
+            Loading.show('جاري إنشاء التقرير...');
+            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
+                await FormHeader.generatePDF(html, `تحليل-الموظفين-${new Date().toISOString().slice(0, 10)}.pdf`);
+            } else {
+                Utils.printHtmlContent('تحليل الموظفين', html);
+            }
+            Notification.success('تم إنشاء التقرير');
+        } catch (e) {
+            Notification.error('فشل تصدير التقرير');
+        } finally {
+            Loading.hide();
+        }
+    },
+
+    switchTab(tabName) {
+        const allowed = ['employees-list', 'external-workforce', 'data-analysis'];
+        const nextTab = allowed.includes(tabName) ? tabName : 'employees-list';
+        this.activeTab = nextTab;
+
+        document.querySelectorAll('[data-employees-tab]').forEach(button => {
+            const isActive = button.getAttribute('data-employees-tab') === nextTab;
+            button.classList.toggle('active', isActive);
+            button.style.background = isActive ? 'linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%)' : '#eff6ff';
+            button.style.color = isActive ? '#fff' : '#1d4ed8';
+            button.style.borderColor = isActive ? '#0f172a' : '#bfdbfe';
+        });
+
+        const employeesPanel = document.getElementById('employees-list-panel');
+        const externalPanel = document.getElementById('employees-external-panel');
+        const analysisPanel = document.getElementById('employees-analysis-panel');
+        if (employeesPanel) employeesPanel.classList.toggle('hidden', nextTab !== 'employees-list');
+        if (externalPanel) externalPanel.classList.toggle('hidden', nextTab !== 'external-workforce');
+        if (analysisPanel) analysisPanel.classList.toggle('hidden', nextTab !== 'data-analysis');
+
+        if (nextTab === 'external-workforce') {
+            this.populateExternalWorkforceYearSelector();
+            this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
+        } else if (nextTab === 'data-analysis') {
+            this.loadEmployeesAnalysis().catch(() => {});
+        } else if (this.canViewEmployeesRegistryTab()) {
+            this.loadEmployeesList();
+            this.scrollToSearchField();
+        }
+    },
+
+    async renderList() {
+        const canAdmin = this.canAddOrImport();
+        const canViewRegistry = this.canViewEmployeesRegistryTab();
+        const canViewExternal = this.canViewExternalWorkforceTab();
+        const canViewAnalysis = this.canViewEmployeesAnalysisTab();
+        const preferredTab = canViewRegistry ? 'employees-list' : (canViewAnalysis ? 'data-analysis' : (canViewExternal ? 'external-workforce' : 'employees-list'));
+        if ((this.activeTab === 'employees-list' && !canViewRegistry) ||
+            (this.activeTab === 'external-workforce' && !canViewExternal) ||
+            (this.activeTab === 'data-analysis' && !canViewAnalysis)) {
+            this.activeTab = preferredTab;
+        }
+        return `
+            <style>
+                .employees-tab-bar {
+                    display: flex;
+                    gap: 0.75rem;
+                    flex-wrap: wrap;
+                    margin-bottom: 1rem;
+                }
+                .employees-tab-btn {
+                    border: 1px solid #bfdbfe;
+                    background: #eff6ff;
+                    color: #1d4ed8;
+                    padding: 0.8rem 1.15rem;
+                    border-radius: 14px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: 0.2s ease;
+                }
+                .employees-tab-btn.active {
+                    background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+                    color: #ffffff;
+                    border-color: #0f172a;
+                    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.18);
+                }
+                @media (max-width: 768px) {
+                    .employees-tab-btn {
+                        width: 100%;
+                        justify-content: center;
+                    }
+                }
+            </style>
+            <div class="employees-tab-bar">
+                ${canViewRegistry ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'employees-list' ? 'active' : ''}" data-employees-tab="employees-list"><i class="fas fa-id-card ml-2"></i>${this.getExternalWorkforceViewState().labels.employeesTab}</button>` : ''}
+                ${canViewAnalysis ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'data-analysis' ? 'active' : ''}" data-employees-tab="data-analysis"><i class="fas fa-chart-bar ml-2"></i>${this.t('module.employees.tabs.dataAnalysis', 'تحليل البيانات')}</button>` : ''}
+                ${canViewExternal ? `<button type="button" class="employees-tab-btn ${this.activeTab === 'external-workforce' ? 'active' : ''}" data-employees-tab="external-workforce"><i class="fas fa-helmet-safety ml-2"></i>${this.getExternalWorkforceViewState().labels.externalTab}</button>` : ''}
+            </div>
+            <div id="employees-list-panel" class="${this.activeTab !== 'employees-list' || !canViewRegistry ? 'hidden' : ''}">
+            <div id="employees-stats-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 items-start"></div>
+            <div class="content-card">
+                <div class="card-header">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <h2 class="card-title">
+                            <i class="fas fa-users ml-2"></i>
+                            ${this.t('module.employees.employeeList', 'قائمة الموظفين')}
+                        </h2>
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <button id="refresh-employees-btn" class="btn-secondary" title="${this.t('module.employees.refreshFromDbTitle', 'تحديث البيانات من قاعدة البيانات')}">
+                                <i class="fas fa-sync-alt ml-2"></i>
+                                ${this.t('module.common.refresh', 'تحديث')}
+                            </button>
+                            ${canAdmin ? `
+                            <button id="refresh-employee-names-btn" class="btn-secondary" title="${this.t('module.employees.refreshNamesTitle', 'تحديث/تنظيف أسماء الموظفين ثم حفظها')}">
+                                <i class="fas fa-font ml-2"></i>
+                                ${this.t('module.employees.refreshNames', 'تحديث الأسماء')}
+                            </button>
+                            <button id="report-employee-duplicates-btn" class="btn-secondary" title="تقرير مكررات الموظفين (قراءة فقط — لا حذف)">
+                                <i class="fas fa-clone ml-2"></i>
+                                تقرير المكررات
+                            </button>
+                            <button id="cleanup-employee-duplicates-btn" class="btn-secondary" title="تنظيف المكررات بأمان (نسخة احتياطية + رقم سري)">
+                                <i class="fas fa-broom ml-2"></i>
+                                تنظيف المكررات
+                            </button>
+                            <button id="delete-all-employees-btn" class="btn-danger" title="${this.t('module.employees.deleteAllTitle', 'حذف جميع بيانات الموظفين (عملية خطيرة)')}">
+                                <i class="fas fa-trash-alt ml-2"></i>
+                                ${this.t('module.employees.deleteAll', 'حذف الجميع')}
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 16px;">
+                <!-- ✅ الفلاتر مدمجة احترافية في صف واحد مباشر أعلى الجدول -->
+                <div class="employees-filters-row" style="background: #ffffff; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02); direction: rtl; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent;">
+                    <style>
+                        .employees-filters-row::-webkit-scrollbar {
+                            height: 4px;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+                        .employees-filters-row::-webkit-scrollbar-thumb {
+                            background: #cbd5e1;
+                            border-radius: 4px;
+                        }
+                        .employees-filters-row .filters-flex-row {
+                            display: flex;
+                            align-items: flex-end;
+                            gap: 8px;
+                            flex-wrap: nowrap;
+                            width: 100%;
+                            min-width: max-content;
+                        }
+                        .employees-filters-row .filter-field {
+                            display: flex;
+                            flex-direction: column;
+                            gap: 3px;
+                        }
+                        .employees-filters-row .filter-field--search {
+                            flex: 2;
+                            min-width: 170px;
+                        }
+                        .employees-filters-row .filter-field--select {
+                            flex: 1;
+                            min-width: 110px;
+                        }
+                        .employees-filters-row .filter-field--reset {
+                            flex: 0 0 auto;
+                        }
+                        .employees-filters-row .filter-label {
+                            display: flex;
+                            align-items: center;
+                            gap: 4px;
+                            font-size: 11px;
+                            font-weight: 700;
+                            color: #475569;
+                            white-space: nowrap;
+                            margin-bottom: 1px;
+                        }
+                        .employees-filters-row .filter-label i {
+                            color: #3b82f6;
+                            font-size: 11px;
+                        }
+                        .employees-filters-row .filter-input {
+                            width: 100%;
+                            height: 36px;
+                            padding: 0 10px;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            font-size: 13px;
+                            background: #f8fafc;
+                            color: #0f172a;
+                            transition: all 0.2s ease;
+                            text-overflow: ellipsis;
+                            white-space: nowrap;
+                        }
+                        .employees-filters-row .filter-input:hover {
+                            background: #ffffff;
+                            border-color: #94a3b8;
+                        }
+                        .employees-filters-row .filter-input:focus {
+                            outline: none;
+                            background: #ffffff;
+                            border-color: #3b82f6;
+                            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+                        }
+                        .employees-filters-row .filter-count-badge {
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            min-width: 18px;
+                            height: 16px;
+                            padding: 0 5px;
+                            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                            color: white;
+                            border-radius: 10px;
+                            font-size: 10px;
+                            font-weight: 700;
+                            margin-right: 2px;
+                            box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+                        }
+                        .employees-filters-row .filter-reset-btn {
+                            height: 36px;
+                            padding: 0 14px;
+                            background: #f1f5f9;
+                            color: #475569;
+                            border: 1px solid #cbd5e1;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 12px;
+                            font-weight: 700;
+                            transition: all 0.2s ease;
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            gap: 6px;
+                            white-space: nowrap;
+                        }
+                        .employees-filters-row .filter-reset-btn:hover {
+                            background: #e2e8f0;
+                            color: #0f172a;
+                            border-color: #94a3b8;
+                            transform: translateY(-1px);
+                        }
+                    </style>
+                    <div class="filters-flex-row">
+                        <!-- حقل البحث -->
+                        <div class="filter-field filter-field--search">
+                            <label for="employees-search-filter" class="filter-label">
+                                <i class="fas fa-search"></i>${this.t('module.common.search', 'البحث')}
+                            </label>
+                            <input type="text" id="employees-search-filter" class="filter-input" placeholder="${this.t('module.employees.searchAllData', 'ابحث في جميع البيانات...')}" style="direction: rtl; text-align: right;">
+                        </div>
+                        
+                        <!-- فلتر القسم -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-department" class="filter-label">
+                                <i class="fas fa-building"></i>${this.t('module.employees.department', 'القسم')}
+                            </label>
+                            <select id="employee-filter-department" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر الفرع -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-branch" class="filter-label">
+                                <i class="fas fa-sitemap"></i>${this.t('module.employees.branch', 'الفرع')}
+                            </label>
+                            <select id="employee-filter-branch" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر الموقع -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-location" class="filter-label">
+                                <i class="fas fa-map-marker-alt"></i>${this.t('module.employees.location', 'الموقع')}
+                            </label>
+                            <select id="employee-filter-location" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر الوظيفة -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-job" class="filter-label">
+                                <i class="fas fa-briefcase"></i>${this.t('module.employees.job', 'الوظيفة')}
+                            </label>
+                            <select id="employee-filter-job" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر المنصب -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-position" class="filter-label">
+                                <i class="fas fa-user-tie"></i>${this.t('module.employees.position', 'المنصب')}
+                            </label>
+                            <select id="employee-filter-position" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر النوع -->
+                        <div class="filter-field filter-field--select">
+                            <label for="employee-filter-gender" class="filter-label">
+                                <i class="fas fa-venus-mars"></i>${this.t('module.employees.gender', 'النوع')}
+                            </label>
+                            <select id="employee-filter-gender" class="filter-input" style="direction: rtl;">
+                                <option value="">${this.t('module.common.all', 'الكل')}</option>
+                                <option value="ذكر">${this.t('module.employees.genderMale', 'ذكر')}</option>
+                                <option value="أنثى">${this.t('module.employees.genderFemale', 'أنثى')}</option>
+                            </select>
+                        </div>
+                        
+                        <!-- فلتر المستقيلين -->
+                        <div class="filter-field filter-field--select" style="min-width: 140px;">
+                            <label class="filter-label">
+                                <i class="fas fa-user-slash"></i>${this.t('module.employees.status', 'الحالة')}
+                            </label>
+                            <label id="show-inactive-employees-container" style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; white-space: nowrap; transition: all 0.2s ease;">
+                                <input type="checkbox" id="show-inactive-employees" style="width: 15px; height: 15px; cursor: pointer;">
+                                <span style="font-size: 12px; font-weight: 600; color: #475569;">${this.t('module.employees.showInactive', 'عرض المستقيلين')}</span>
+                                <span class="inactive-count-badge" id="inactive-employees-count" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; background: #dc2626; color: white; border-radius: 9px; font-size: 10px; font-weight: 700;">0</span>
+                            </label>
+                        </div>
+
+                        <!-- زر إعادة التعيين -->
+                        <div class="filter-field filter-field--reset">
+                            <button id="employee-reset-filters" class="filter-reset-btn">
+                                <i class="fas fa-redo"></i>${this.t('module.common.reset', 'إعادة تعيين')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                </div>
+                <div class="card-body">
+                    <div id="employees-table-container">
+                        <div class="empty-state">
+                            <div style="width: 300px; margin: 0 auto 16px;">
+                                <div style="width: 100%; height: 6px; background: rgba(59, 130, 246, 0.2); border-radius: 3px; overflow: hidden;">
+                                    <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb, #3b82f6); background-size: 200% 100%; border-radius: 3px; animation: loadingProgress 1.5s ease-in-out infinite;"></div>
+                                </div>
+                            </div>
+                            <p class="text-gray-500">${this.t('module.common.loading', 'جاري التحميل...')}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            ${canViewExternal ? `
+            <div id="employees-external-panel" class="${this.activeTab !== 'external-workforce' ? 'hidden' : ''}">
+                ${this.renderExternalWorkforcePanel()}
+            </div>
+            ` : ''}
+            ${canViewAnalysis ? `
+            <div id="employees-analysis-panel" class="${this.activeTab !== 'data-analysis' ? 'hidden' : ''}"></div>
+            ` : ''}
+        `;
+    },
+
+    /**
+     * انتظار انتهاء isUpdating بحد أقصى — يمنع حلقة لا نهائية تعلق الشاشة
+     */
+    async _waitWhileUpdating_(maxMs = 60000) {
+        const start = Date.now();
+        while (this.cache.isUpdating && (Date.now() - start) < maxMs) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        if (this.cache.isUpdating) {
+            Utils.safeWarn('⚠️ تجاوز انتظار تحديث الموظفين — فك القفل');
+            this.cache.isUpdating = false;
+        }
+    },
+
+    async _ensureEmployeesLoadedWithTimeout_(forceReload = false, timeoutMs = 90000) {
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('EMPLOYEES_LOAD_TIMEOUT')), timeoutMs);
+        });
+        return Promise.race([this.ensureEmployeesLoaded(forceReload), timeoutPromise]);
+    },
+
+    /**
+     * التأكد من تحميل بيانات الموظفين (من Cache أو من Backend)
+     */
+    async ensureEmployeesLoaded(forceReload = false) {
+        // منع التحميل المتزامن المتكرر
+        if (this.cache.isUpdating && !forceReload) {
+            await this._waitWhileUpdating_(60000);
+            // التحقق مرة أخرى بعد انتهاء التحميل
+            if (AppState.appData.employees && Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0) {
+                return true;
+            }
+        }
+
+        // التحقق من وجود البيانات في AppState أولاً
+        const hasLocalData = AppState.appData.employees && Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0;
+        
+        // التحقق من Cache
+        const hasValidCache = this.cache.data && 
+                             this.cache.lastLoad && 
+                             (Date.now() - this.cache.lastLoad) < this.config.cacheTimeout &&
+                             !forceReload;
+
+        // إذا كانت البيانات موجودة في AppState و Cache صالح، لا حاجة للتحميل
+        if (hasLocalData && hasValidCache) {
+            if (AppState.debugMode) {
+                Utils.safeLog(`✅ استخدام بيانات الموظفين من Cache (${this.cache.data.length} موظف)`);
+            }
+            // دمج الكاش مع المحلي — لا تستبدل بأسماء فارغة
+            if (this.cache.data && this.cache.data.length > 0) {
+                this.applyEmployeesData_(this.cache.data);
+            }
+            // ✅ مرة واحدة لكل جلسة: إذا عداد المستقيلين 0 والكاش قد يكون قديماً، جلب كامل من الخادم في الخلفية
+            if (!this.config._refreshedOnceForInactive && AppState.appData.employees.length > 0 && AppState.googleConfig?.appsScript?.enabled) {
+                const inactiveInCache = (AppState.appData.employees || []).filter(e => this.isEmployeeInactive(e)).length;
+                if (inactiveInCache === 0) {
+                    this.config._refreshedOnceForInactive = true;
+                    this.loadEmployeesFromBackend(true).then(() => {
+                        window.dispatchEvent(new CustomEvent('employeesDataUpdated', { detail: {} }));
+                    }).catch(() => {});
+                }
+            }
+            return true;
+        }
+
+        // إذا كانت البيانات موجودة في AppState ولكن Cache منتهي الصلاحية، تحديث في الخلفية
+        if (hasLocalData && !hasValidCache && !forceReload) {
+            // استخدام البيانات المحلية مباشرة وتحديث في الخلفية
+            this.cache.data = AppState.appData.employees;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+            
+            // تحديث في الخلفية بدون تأخير
+            this.updateEmployeesInBackground();
+            return true;
+        }
+
+        // إذا لم تكن البيانات موجودة، تحميل من Backend
+        return await this.loadEmployeesFromBackend(forceReload);
+    },
+
+    /**
+     * تحميل بيانات الموظفين من قاعدة البيانات (قاعدة SQL)
+     */
+    async loadEmployeesFromBackend(forceReload = false) {
+        // منع التحميل المتزامن المتكرر
+        if (this.cache.isUpdating && !forceReload) {
+            if (AppState.debugMode) {
+                Utils.safeLog('⚠️ تحميل البيانات قيد التنفيذ بالفعل، انتظار...');
+            }
+            await this._waitWhileUpdating_(60000);
+            if (AppState.appData.employees && Array.isArray(AppState.appData.employees) && AppState.appData.employees.length > 0) {
+                return true;
+            }
+        }
+
+        // تعيين flag لمنع التحميلات المتزامنة
+        this.cache.isUpdating = true;
+        if (typeof StableLoader !== 'undefined') StableLoader.beginOwnedFetch('employees');
+
+        try {
+            // التحقق من تفعيل Google Integration
+            if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                if (AppState.debugMode) {
+                    Utils.safeLog('⚠️ خادم SQL غير مفعّل - استخدام البيانات المحلية فقط');
+                }
+                if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
+                    this.cache.data = AppState.appData.employees;
+                    this.cache.lastLoad = Date.now();
+                    this.cache.lastUpdate = Date.now();
+                }
+                return false;
+            }
+
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ GoogleIntegration غير متاح');
+                }
+                if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
+                    this.cache.data = AppState.appData.employees;
+                    this.cache.lastLoad = Date.now();
+                    this.cache.lastUpdate = Date.now();
+                }
+                return false;
+            }
+
+            // skipCache فقط عند التحديث الإجباري — الجلب العادي أسرع بعد إصلاح الخادم
+            try {
+                const employeesFetchData = {
+                    filters: { includeInactive: true, lite: true },
+                    __timeoutMs: forceReload ? 45000 : 25000,
+                    ...(forceReload ? { skipCache: true, forceRefresh: true } : {})
+                };
+                if (forceReload && typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_('getAllEmployees', {
+                        filters: { includeInactive: true, lite: true },
+                        skipCache: true,
+                        forceRefresh: true
+                    });
+                }
+                const result = await GoogleIntegration.sendRequest({
+                    action: 'getAllEmployees',
+                    data: employeesFetchData
+                });
+
+                if (result && result.success && Array.isArray(result.data)) {
+                    if (result.data.length === 0 && (AppState.appData.employees || []).length > 0) {
+                        this.cache.data = AppState.appData.employees;
+                        this.cache.lastLoad = Date.now();
+                        this.cache.lastUpdate = Date.now();
+                        return true;
+                    }
+
+                    this.applyEmployeesData_(result.data);
+
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`✅ تم تحميل ${result.data.length} موظف من قاعدة البيانات`);
+                    }
+                    return true;
+                }
+
+                if ((AppState.appData.employees || []).length > 0) {
+                    this.cache.data = AppState.appData.employees;
+                    this.cache.lastLoad = Date.now();
+                    this.cache.lastUpdate = Date.now();
+                    return true;
+                }
+
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ getAllEmployees فشل، جاري المحاولة بـ readFromSheet...');
+                }
+
+                const sheetFetchData = {
+                    sheetName: 'Employees',
+                    spreadsheetId: AppState.googleConfig.sheets.spreadsheetId,
+                    __timeoutMs: 25000,
+                    skipCache: true,
+                    forceRefresh: true
+                };
+                if (typeof GoogleIntegration._invalidateSmartCacheForRead_ === 'function') {
+                    GoogleIntegration._invalidateSmartCacheForRead_('readFromSheet', sheetFetchData);
+                }
+                const sheetResult = await GoogleIntegration.sendRequest({
+                    action: 'readFromSheet',
+                    data: sheetFetchData
+                });
+
+                if (sheetResult && sheetResult.success && Array.isArray(sheetResult.data)) {
+                    if (sheetResult.data.length === 0 && (AppState.appData.employees || []).length > 0) {
+                        this.cache.data = AppState.appData.employees;
+                        this.cache.lastLoad = Date.now();
+                        this.cache.lastUpdate = Date.now();
+                        return true;
+                    }
+
+                    this.applyEmployeesData_(sheetResult.data);
+
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`✅ تم تحميل ${sheetResult.data.length} موظف من قاعدة SQL`);
+                    }
+                    return true;
+                }
+            } catch (error) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ خطأ في تحميل بيانات الموظفين من Backend:', error);
+                }
+                if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
+                    this.cache.data = AppState.appData.employees;
+                    this.cache.lastLoad = Date.now();
+                    this.cache.lastUpdate = Date.now();
+                }
+                return false;
+            }
+
+            return false;
+        } catch (error) {
+            if (AppState.debugMode) {
+                Utils.safeError('❌ خطأ في loadEmployeesFromBackend:', error);
+            }
+            if (AppState.appData.employees && Array.isArray(AppState.appData.employees)) {
+                this.cache.data = AppState.appData.employees;
+                this.cache.lastLoad = Date.now();
+                this.cache.lastUpdate = Date.now();
+            }
+            return false;
+        } finally {
+            this.cache.isUpdating = false;
+            if (typeof StableLoader !== 'undefined') StableLoader.endOwnedFetch('employees');
+        }
+    },
+
+    /**
+     * تحديث بيانات الموظفين في الخلفية بدون تأخير
+     */
+    async updateEmployeesInBackground() {
+        // منع التحديث المتزامن
+        if (this.cache.isUpdating) {
+            return;
+        }
+
+        this.cache.isUpdating = true;
+        
+        try {
+            // التحقق من تفعيل Google Integration
+            if (!AppState.googleConfig?.appsScript?.enabled || !AppState.googleConfig?.appsScript?.scriptUrl) {
+                return;
+            }
+
+            // التحقق من وجود GoogleIntegration
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.sendRequest) {
+                return;
+            }
+
+            const employeesFetchData = {
+                filters: { includeInactive: true, lite: true },
+                __timeoutMs: 25000
+            };
+            const result = await GoogleIntegration.sendRequest({
+                action: 'getAllEmployees',
+                data: employeesFetchData
+            });
+
+            if (result && result.success && Array.isArray(result.data)) {
+                if (result.data.length === 0 && (AppState.appData.employees || []).length > 0) {
+                    return;
+                }
+
+                const beforeNamed = this._countNamedEmployees_(AppState.appData.employees);
+                const applied = this.applyEmployeesData_(result.data);
+                const afterNamed = this._countNamedEmployees_(applied);
+                const currentCount = (AppState.appData.employees || []).length;
+                const newCount = result.data.length;
+
+                // حفظ فقط عند تغيّر حقيقي — وتجنّب فقد الأسماء
+                if (currentCount !== newCount || afterNamed !== beforeNamed || afterNamed > 0) {
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        window.DataManager.save();
+                    }
+
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`🔄 تم تحديث بيانات الموظفين في الخلفية (${applied.length} موظف، أسماء: ${afterNamed})`);
+                    }
+                    
+                    window.dispatchEvent(new CustomEvent('employeesDataUpdated', { 
+                        detail: { count: applied.length } 
+                    }));
+                }
+            }
+        } catch (error) {
+            if (AppState.debugMode) {
+                Utils.safeWarn('⚠️ خطأ في تحديث بيانات الموظفين في الخلفية:', error);
+            }
+        } finally {
+            this.cache.isUpdating = false;
+        }
+    },
+
+    /**
+     * بدء التحديث التلقائي في الخلفية
+     */
+    startBackgroundUpdate() {
+        // إيقاف التحديث السابق إذا كان موجوداً
+        if (this.config.backgroundUpdateTimer) {
+            clearInterval(this.config.backgroundUpdateTimer);
+        }
+
+        // بدء التحديث التلقائي كل فترة زمنية محددة
+        this.config.backgroundUpdateTimer = setInterval(() => {
+            this.updateEmployeesInBackground();
+        }, this.config.backgroundUpdateInterval);
+
+        if (AppState.debugMode) {
+            Utils.safeLog(`✅ تم بدء التحديث التلقائي لبيانات الموظفين (كل ${this.config.backgroundUpdateInterval / 60000} دقيقة)`);
+        }
+    },
+
+    /**
+     * إيقاف التحديث التلقائي في الخلفية
+     */
+    stopBackgroundUpdate() {
+        if (this.config.backgroundUpdateTimer) {
+            clearInterval(this.config.backgroundUpdateTimer);
+            this.config.backgroundUpdateTimer = null;
+        }
+    },
+
+    /**
+     * تنظيف جميع الموارد عند إلغاء تحميل الموديول
+     * يمنع تسريبات الذاكرة (Memory Leaks)
+     */
+    cleanup() {
+        try {
+            if (AppState.debugMode) {
+                Utils.safeLog('🧹 تنظيف موارد Employees module...');
+            }
+
+            // إيقاف التحديث التلقائي في الخلفية
+            this.stopBackgroundUpdate();
+
+            // إزالة مستمعات الأحداث
+            if (this.handleDataUpdate) {
+                window.removeEventListener('employeesDataUpdated', this.handleDataUpdate);
+                this.handleDataUpdate = null;
+            }
+
+            // تنظيف مراجع DOM (سيتم تنظيفها تلقائياً عند إزالة العناصر من DOM)
+            
+            if (AppState.debugMode) {
+                Utils.safeLog('✅ تم تنظيف موارد Employees module');
+            }
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في تنظيف Employees module:', error);
+        }
+    },
+
+    /**
+     * بناء صف جدول موظف واحد (مشترك بين القائمة والفلاتر).
+     */
+    buildEmployeeTableRowElement_(employee, canEditOrDelete) {
+        const birthDate = this.formatDateSafe(employee.birthDate);
+        const hireDate = this.formatDateSafe(employee.hireDate);
+        const age = this.calculateAge(employee.birthDate);
+        const isInactive = this.isEmployeeInactive(employee);
+        const tr = document.createElement('tr');
+        if (isInactive) {
+            tr.style.cssText = 'opacity: 0.7; background-color: #f8f9fa;';
+        }
+        const driveId = this._getDriveIdFromUrl(employee.photo || '');
+        const photoKey = (driveId || employee.id || employee.employeeNumber || employee.name || '').toString();
+        const photoSrc = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+        const photoDisp = photoSrc && typeof Utils.resolveDriveAwareImgDisplay === 'function'
+            ? Utils.resolveDriveAwareImgDisplay(photoSrc)
+            : { canonical: photoSrc || '', displaySrc: photoSrc || '', needsProxy: false, proxyFileId: '' };
+        const imgTagSrc = photoDisp.canonical ? photoDisp.displaySrc : '';
+        const photoProxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(photoDisp) : '';
+        const displayName = this._employeeDisplayName_(employee) || employee.name || '';
+        const safeId = this._employeeActionId_(employee);
+
+        tr.innerHTML = `
+            <td style="word-wrap: break-word;">
+                ${photoSrc ? `<img data-emp-photo="1" data-photo-key="${Utils.escapeHTML(photoKey)}" src="${Utils.escapeHTML(imgTagSrc)}" alt="${Utils.escapeHTML(displayName)}"${photoProxyAttr} class="w-12 h-12 rounded-full object-cover" loading="lazy" decoding="async" referrerpolicy="no-referrer">` : `<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`}
+            </td>
+            <td style="word-wrap: break-word; white-space: normal;">
+                ${Utils.escapeHTML(employee.employeeNumber || '')}
+                ${isInactive ? `<span class="badge badge-warning ml-2" style="font-size: 10px; padding: 2px 6px;">${this.t('module.employees.inactive', 'غير نشط')}</span>` : ''}
+            </td>
+            <td style="word-wrap: break-word; white-space: normal; max-width: 200px;">
+                ${Utils.escapeHTML(displayName)}
+                ${isInactive && employee.resignationDate ? `<br><span class="text-xs text-gray-500" style="font-size: 11px;">${this.t('module.employees.resignedOn', 'استقال')}: ${this.formatDateSafe(employee.resignationDate)}</span>` : ''}
+            </td>
+            <td style="word-wrap: break-word; white-space: normal; max-width: 150px;">${Utils.escapeHTML(employee.department || '')}</td>
+            <td style="word-wrap: break-word; white-space: normal; max-width: 150px;">${Utils.escapeHTML(employee.job || employee.position || '')}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.nationalId || '')}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${birthDate || ''}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${age ? age + ' ' + this.t('module.common.yearsUnit', 'سنة') : ''}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${hireDate || ''}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.gender || '')}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.phone || '')}</td>
+            <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.insuranceNumber || '')}</td>
+            ${canEditOrDelete ? `
+            <td style="min-width: 150px;">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="Employees.viewEmployee('${safeId}')" class="btn-icon btn-icon-info" title="${this.t('module.common.view', 'عرض')}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="Employees.editEmployee('${safeId}')" class="btn-icon btn-icon-primary" title="${this.t('module.common.edit', 'تعديل')}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button onclick="Employees.deactivateEmployee('${safeId}')" class="btn-icon btn-icon-danger" title="${this.t('module.employees.deactivate', 'إلغاء تفعيل')}">
+                        <i class="fas fa-user-slash"></i>
+                    </button>
+                </div>
+            </td>
+            ` : `
+            <td>
+                <span class="text-gray-400 text-sm">—</span>
+            </td>
+            `}
+        `;
+        return tr;
+    },
+
+    /**
+     * ملء tbody بدفعة صفوف + شريط «عرض المزيد» — يفتح القائمة بسرعة دون رسم آلاف الصفوف دفعة واحدة.
+     */
+    fillEmployeesTbodyPaged_(tbody, employees, canEditOrDelete, reset) {
+        if (!tbody) return;
+        const list = Array.isArray(employees) ? employees : [];
+        const pageSize = Math.max(40, parseInt(this.config.listPageSize, 10) || 100);
+
+        if (reset) {
+            this._listRowsCache = list;
+            this._listVisibleCount = 0;
+            this._listCanEdit = !!canEditOrDelete;
+            tbody.innerHTML = '';
+            const moreWrap = document.getElementById('employees-load-more-wrap');
+            if (moreWrap) moreWrap.remove();
+        }
+
+        const start = this._listVisibleCount || 0;
+        const end = Math.min(list.length, start + pageSize);
+        const frag = document.createDocumentFragment();
+        for (let i = start; i < end; i++) {
+            frag.appendChild(this.buildEmployeeTableRowElement_(list[i], this._listCanEdit));
+        }
+        tbody.appendChild(frag);
+        this._listVisibleCount = end;
+
+        let moreWrap = document.getElementById('employees-load-more-wrap');
+        const tableWrapper = tbody.closest('.table-wrapper') || tbody.parentElement?.parentElement;
+        if (end < list.length) {
+            if (!moreWrap && tableWrapper && tableWrapper.parentElement) {
+                moreWrap = document.createElement('div');
+                moreWrap.id = 'employees-load-more-wrap';
+                moreWrap.style.cssText = 'padding:12px;text-align:center;';
+                tableWrapper.parentElement.appendChild(moreWrap);
+            }
+            if (moreWrap) {
+                moreWrap.innerHTML = `
+                    <button type="button" id="employees-load-more-btn" class="btn-secondary">
+                        <i class="fas fa-chevron-down ml-2"></i>
+                        عرض المزيد (${end} / ${list.length})
+                    </button>`;
+                const btn = moreWrap.querySelector('#employees-load-more-btn');
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        this.fillEmployeesTbodyPaged_(tbody, this._listRowsCache || list, this._listCanEdit, false);
+                        const host = document.getElementById('employees-table-container');
+                        if (host) {
+                            this._setupEmployeePhotoFallbacks(host);
+                            if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                                Utils.hydrateDriveProxyImages(host);
+                            }
+                        }
+                    });
+                }
+            }
+        } else if (moreWrap) {
+            moreWrap.remove();
+        }
+    },
+
+    async loadEmployeesList(showInactive = false) {
+        const container = document.getElementById('employees-table-container');
+        if (!container) {
+            if (AppState.debugMode) {
+                Utils.safeWarn('⚠️ employees-table-container غير موجود في loadEmployeesList');
+            }
+            return;
+        }
+
+        // تطبيع انزلاق أعمدة قبل التصفية — يمنع قائمة فارغة بسبب resignationDate=رقم وظيفي
+        let employees = (AppState.appData.employees || []).map((e) => this.sanitizeEmployeeRecordDrift_({ ...(e || {}) }));
+        AppState.appData.employees = employees;
+        
+        if (AppState.debugMode) {
+            Utils.safeLog(`📊 loadEmployeesList: إجمالي الموظفين = ${employees.length}, showInactive = ${showInactive}`);
+        }
+
+        // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك)
+        if (!showInactive) {
+            const beforeFilter = employees.length;
+            const activeOnly = employees.filter(e => !this.isEmployeeInactive(e));
+            // حماية حرجة: إن صُفّي الجميع رغم وجود بيانات → اعرض الكل (انزلاق أعمدة / تنظيف جزئي)
+            if (activeOnly.length === 0 && beforeFilter > 0) {
+                Utils.safeWarn(`⚠️ تصفية النشطين أخفت ${beforeFilter} موظفاً — عرض الكل مؤقتاً لحماية الواجهة`);
+            } else {
+                employees = activeOnly;
+            }
+            if (AppState.debugMode) {
+                Utils.safeLog(`📊 بعد التصفية (نشطين): ${employees.length} من ${beforeFilter}`);
+            }
+        } else {
+            if (AppState.debugMode) {
+                Utils.safeLog(`📊 عرض جميع الموظفين: ${employees.length}`);
+            }
+        }
+
+        // تحديث كروت الإحصائيات أولاً
+        this.renderStatsCards();
+        
+        // ✅ تحديث عدد المستقيلين في الزر
+        this.updateInactiveCount();
+
+        const canAddOrImport = this.canAddOrImport();
+        const canEditOrDelete = this.canEditOrDelete();
+
+        // استخدام DocumentFragment لتقليل reflow
+        const fragment = document.createDocumentFragment();
+
+        if (employees.length === 0) {
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-state';
+            emptyDiv.innerHTML = `
+                <i class="fas fa-user-tie text-4xl text-gray-300 mb-4"></i>
+                <p class="text-gray-500">${this.t('module.employees.emptyList', 'لا يوجد موظفين مسجلين')}</p>
+                ${canAddOrImport ? `
+                <button id="add-employee-empty-btn" class="btn-primary mt-4">
+                    <i class="fas fa-plus ml-2"></i>
+                    ${this.t('module.employees.addNewEmployee', 'إضافة موظف جديد')}
+                </button>
+                ` : ''}
+            `;
+            fragment.appendChild(emptyDiv);
+            container.innerHTML = '';
+            container.appendChild(fragment);
+            // إعادة إعداد event listeners بعد تحديث DOM
+            requestAnimationFrame(() => {
+                const addEmptyBtn = document.getElementById('add-employee-empty-btn');
+                if (addEmptyBtn && this.canAddOrImport()) {
+                    addEmptyBtn.addEventListener('click', () => this.showForm());
+                }
+            });
+            return;
+        }
+
+        // بناء الجدول باستخدام DocumentFragment لتقليل reflow
+        const tableWrapper = document.createElement('div');
+        tableWrapper.className = 'table-wrapper';
+        tableWrapper.style.cssText = 'width: 100%; max-width: 100%; overflow-x: auto;';
+
+        const table = document.createElement('table');
+        table.className = 'data-table table-header-blue';
+        table.style.cssText = 'width: 100%; min-width: 100%; table-layout: auto;';
+
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th style="min-width: 80px;">${this.t('module.employees.table.photo', 'الصورة')}</th>
+                <th style="min-width: 100px;">${this.t('module.employees.table.employeeNumber', 'الرقم الوظيفي')}</th>
+                <th style="min-width: 150px;">${this.t('module.employees.table.name', 'الاسم')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.department', 'القسم')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.job', 'الوظيفة')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.table.nationalId', 'رقم البطاقة')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.table.birthDate', 'تاريخ الميلاد')}</th>
+                <th style="min-width: 80px;">${this.t('module.employees.table.age', 'السن')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.table.hireDate', 'تاريخ التعيين')}</th>
+                <th style="min-width: 80px;">${this.t('module.employees.gender', 'النوع')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.table.phone', 'الهاتف')}</th>
+                <th style="min-width: 120px;">${this.t('module.employees.table.insuranceNo', 'الرقم التأميني')}</th>
+                <th style="min-width: 150px;">${this.t('module.employees.table.actions', 'الإجراءات')}</th>
+            </tr>
+        `;
+
+        const tbody = document.createElement('tbody');
+        // عرض أولي بصفحات — يمنع تعليق المتصفح عند رسم مئات الصفوف دفعة واحدة
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableWrapper.appendChild(table);
+        fragment.appendChild(tableWrapper);
+
+        // تحديث DOM مرة واحدة فقط
+        container.innerHTML = '';
+        container.appendChild(fragment);
+        this.fillEmployeesTbodyPaged_(tbody, employees, canEditOrDelete, true);
+        this.applyModuleI18n(container);
+
+        // ✅ تثبيت fallback لصور الموظفين (503 Drive) بعد تحديث DOM
+        if (typeof requestIdleCallback === 'function') {
+            requestIdleCallback(() => {
+                this._setupEmployeePhotoFallbacks(container);
+                if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                    Utils.hydrateDriveProxyImages(container, {
+                        onFetchFail: (img) => {
+                            try {
+                                const key = (img.dataset.photoKey || '').trim();
+                                if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                            } catch (e) { /* ignore */ }
+                            try {
+                                const parent = img.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                                }
+                            } catch (e2) { /* ignore */ }
+                        }
+                    });
+                }
+            }, { timeout: 600 });
+        } else {
+            setTimeout(() => {
+                this._setupEmployeePhotoFallbacks(container);
+                if (typeof Utils.hydrateDriveProxyImages === 'function') {
+                    Utils.hydrateDriveProxyImages(container, {
+                        onFetchFail: (img) => {
+                            try {
+                                const key = (img.dataset.photoKey || '').trim();
+                                if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                            } catch (e) { /* ignore */ }
+                            try {
+                                const parent = img.parentElement;
+                                if (parent) {
+                                    parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                                }
+                            } catch (e2) { /* ignore */ }
+                        }
+                    });
+                }
+            }, 0);
+        }
+        
+        // ✅ تعبئة الفلاتر بالقيم المتاحة بعد تحميل القائمة
+        this.populateFilters();
+        
+        // ✅ تطبيق الفلاتر إذا كان هناك فلاتر نشطة (بما في ذلك showInactive)
+        requestAnimationFrame(async () => {
+            try {
+                const filters = this.getFilterValues();
+                // ✅ التحقق من showInactive أيضاً
+                if (filters.search || filters.department || filters.branch || filters.location || 
+                    filters.job || filters.position || filters.gender || filters.showInactive) {
+                    await this.applyFilters();
+                }
+            } catch (error) {
+                if (AppState.debugMode) {
+                    Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                }
+            }
+        });
+    },
+    
+    /**
+     * تعبئة الفلاتر بالقيم المتاحة من بيانات الموظفين
+     */
+    populateFilters() {
+        const employees = AppState.appData.employees || [];
+        
+        // جمع القيم الفريدة لكل حقل
+        const departments = [...new Set(employees.map(e => e.department).filter(Boolean))].sort();
+        const branches = [...new Set(employees.map(e => e.branch).filter(Boolean))].sort();
+        const locations = [...new Set(employees.map(e => e.location).filter(Boolean))].sort();
+        const jobs = [...new Set(employees.map(e => e.job || e.position).filter(Boolean))].sort();
+        const positions = [...new Set(employees.map(e => e.position || e.job).filter(Boolean))].sort();
+        
+        // تعبئة فلتر القسم
+        const deptSelect = document.getElementById('employee-filter-department');
+        if (deptSelect) {
+            const currentValue = deptSelect.value;
+            deptSelect.innerHTML = '<option value="">الكل</option>' + 
+                departments.map(d => `<option value="${Utils.escapeHTML(d)}" ${d === currentValue ? 'selected' : ''}>${Utils.escapeHTML(d)}</option>`).join('');
+        }
+        
+        // تعبئة فلتر الفرع
+        const branchSelect = document.getElementById('employee-filter-branch');
+        if (branchSelect) {
+            const currentValue = branchSelect.value;
+            branchSelect.innerHTML = '<option value="">الكل</option>' + 
+                branches.map(b => `<option value="${Utils.escapeHTML(b)}" ${b === currentValue ? 'selected' : ''}>${Utils.escapeHTML(b)}</option>`).join('');
+        }
+        
+        // تعبئة فلتر الموقع
+        const locationSelect = document.getElementById('employee-filter-location');
+        if (locationSelect) {
+            const currentValue = locationSelect.value;
+            locationSelect.innerHTML = '<option value="">الكل</option>' + 
+                locations.map(l => `<option value="${Utils.escapeHTML(l)}" ${l === currentValue ? 'selected' : ''}>${Utils.escapeHTML(l)}</option>`).join('');
+        }
+        
+        // تعبئة فلتر الوظيفة
+        const jobSelect = document.getElementById('employee-filter-job');
+        if (jobSelect) {
+            const currentValue = jobSelect.value;
+            jobSelect.innerHTML = '<option value="">الكل</option>' + 
+                jobs.map(j => `<option value="${Utils.escapeHTML(j)}" ${j === currentValue ? 'selected' : ''}>${Utils.escapeHTML(j)}</option>`).join('');
+        }
+        
+        // تعبئة فلتر المنصب
+        const positionSelect = document.getElementById('employee-filter-position');
+        if (positionSelect) {
+            const currentValue = positionSelect.value;
+            positionSelect.innerHTML = '<option value="">الكل</option>' + 
+                positions.map(p => `<option value="${Utils.escapeHTML(p)}" ${p === currentValue ? 'selected' : ''}>${Utils.escapeHTML(p)}</option>`).join('');
+        }
+    },
+
+    setupEventListeners() {
+        // ✅ استخدام setTimeout للتأكد من وجود جميع العناصر في DOM
+        setTimeout(() => {
+            // إزالة المستمعات السابقة لتجنب التكرار
+            window.removeEventListener('employeesDataUpdated', this.handleDataUpdate);
+            
+            // إضافة مستمع لتحديثات البيانات في الخلفية
+            this.handleDataUpdate = (event) => {
+                if (event.detail?.externalWorkforce) {
+                    clearTimeout(this._employeesUpdateDebounceTimer);
+                    this._externalWorkforceCache.clear();
+                    this._employeesUpdateDebounceTimer = setTimeout(() => {
+                        if (document.getElementById('external-workforce-table-container')) {
+                            this.renderExternalWorkforceTable();
+                        }
+                    }, 60);
+                    return;
+                }
+
+                if (this.activeTab === 'data-analysis' && document.getElementById('emp-analytics-root')) {
+                    clearTimeout(this._employeesUpdateDebounceTimer);
+                    this._employeesUpdateDebounceTimer = setTimeout(() => {
+                        this.updateEmployeesAnalyticsDashboard().catch(() => {});
+                    }, 120);
+                    return;
+                }
+
+                if (event.detail && event.detail.count) {
+                    // Debounce لتجنب handler ثقيل عند تكرار التحديثات المتتالية
+                    clearTimeout(this._employeesUpdateDebounceTimer);
+                    this._employeesUpdateDebounceTimer = setTimeout(() => {
+                        const container = document.getElementById('employees-table-container');
+                        if (container) {
+                            // ✅ تجنّب Violation: اجعل rAF خفيفاً وادفع العمل الثقيل إلى setTimeout
+                            requestAnimationFrame(() => setTimeout(() => this.loadEmployeesList(), 0));
+                        } else {
+                            this.renderStatsCards();
+                        }
+                    }, 120);
+                }
+            };
+            window.addEventListener('employeesDataUpdated', this.handleDataUpdate);
+
+            document.querySelectorAll('[data-employees-tab]').forEach(button => {
+                // منع تكرار الربط على نفس الزر (يتراكم عند إعادة setupEventListeners بلا إعادة رسم DOM)
+                if (button.dataset.empTabBound === '1') return;
+                button.dataset.empTabBound = '1';
+                button.addEventListener('click', () => this.switchTab(button.getAttribute('data-employees-tab') || 'employees-list'));
+            });
+
+            this.ensureExternalWorkforceToolbar();
+
+            const externalYearSelect = document.getElementById('external-workforce-year');
+            if (externalYearSelect) {
+                externalYearSelect.addEventListener('change', async (event) => {
+                    const year = Number(event.target.value);
+                    if (!Number.isFinite(year) || year < 2000) return;
+                    this.externalWorkforceYear = year;
+                    await this.ensureExternalWorkforceDataLoaded();
+                    this.renderExternalWorkforceTable();
+                });
+            }
+
+            const externalTableContainer = document.getElementById('external-workforce-table-container');
+            if (externalTableContainer) {
+                const saveHandler = async (event) => {
+                    const target = event.target;
+                    if (!target || !target.matches('.external-workforce-input')) return;
+                    await this.saveExternalWorkforceValue(
+                        target.getAttribute('data-contractor-key') || '',
+                        target.getAttribute('data-month') || '',
+                        target.value
+                    );
+                };
+
+                externalTableContainer.addEventListener('change', saveHandler);
+                externalTableContainer.addEventListener('blur', saveHandler, true);
+            }
+
+            document.getElementById('external-workforce-export-excel-btn')?.addEventListener('click', () => {
+                this.exportExternalWorkforceToExcel();
+            });
+
+            document.getElementById('external-workforce-export-pdf-btn')?.addEventListener('click', () => {
+                this.exportExternalWorkforceToPDF();
+            });
+
+            const externalImportBtn = document.getElementById('external-workforce-import-excel-btn');
+            const externalImportInput = document.getElementById('external-workforce-import-input');
+            if (externalImportBtn && externalImportInput) {
+                externalImportBtn.addEventListener('click', () => externalImportInput.click());
+                externalImportInput.addEventListener('change', async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    await this.importExternalWorkforceExcelFile(file);
+                    event.target.value = '';
+                });
+            }
+
+            if (this.canViewExternalWorkforceTab()) {
+                this.populateExternalWorkforceYearSelector();
+                if (this.activeTab === 'external-workforce') {
+                    this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
+                }
+            }
+            
+            const addBtn = document.getElementById('add-employee-btn');
+            const addEmptyBtn = document.getElementById('add-employee-empty-btn');
+            const importBtn = document.getElementById('import-employees-excel-btn');
+            const refreshBtn = document.getElementById('refresh-employees-btn');
+            const refreshNamesBtn = document.getElementById('refresh-employee-names-btn');
+            const deleteAllBtn = document.getElementById('delete-all-employees-btn');
+
+            // ✅ التحقق من وجود الأزرار
+            if (AppState.debugMode) {
+                Utils.safeLog('🔍 فحص الأزرار:', {
+                    refreshBtn: !!refreshBtn,
+                    refreshNamesBtn: !!refreshNamesBtn,
+                    deleteAllBtn: !!deleteAllBtn,
+                    searchInput: !!document.getElementById('employees-search'),
+                    filterSearchInput: !!document.getElementById('employees-search-filter')
+                });
+            }
+
+            if (addBtn && this.canAddOrImport()) addBtn.addEventListener('click', () => this.showForm());
+            if (addEmptyBtn && this.canAddOrImport()) addEmptyBtn.addEventListener('click', () => this.showForm());
+            if (importBtn && this.canAddOrImport()) importBtn.addEventListener('click', () => this.showImportExcel());
+            
+            // ✅ زر التحديث - إزالة أي مستمعات سابقة وإضافة جديدة
+            if (refreshBtn) {
+                // إزالة المستمعات السابقة
+                const newRefreshBtn = refreshBtn.cloneNode(true);
+                refreshBtn.parentNode.replaceChild(newRefreshBtn, refreshBtn);
+                
+                newRefreshBtn.addEventListener('click', async () => {
+                    newRefreshBtn.disabled = true;
+                    const originalHTML = newRefreshBtn.innerHTML;
+                    newRefreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري التحديث...';
+                    
+                    // ✅ إضافة Loading indicator
+                    if (typeof Loading !== 'undefined') {
+                        Loading.show();
+                    }
+                    
+                    try {
+                        // إجبار إعادة التحميل
+                        const loaded = await this.loadEmployeesFromBackend(true);
+                        if (loaded) {
+                            // ✅ تحديث القائمة مع الحفاظ على حالة showInactive
+                            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                            await this.loadEmployeesList(showInactive);
+                            
+                            // ✅ تطبيق جميع الفلاتر بعد التحديث
+                            await this.applyFilters();
+                            
+                            if (typeof Notification !== 'undefined') {
+                                Notification.success('تم تحديث البيانات بنجاح');
+                            }
+                        } else {
+                            if (typeof Notification !== 'undefined') {
+                                Notification.warning('لم يتم العثور على بيانات جديدة');
+                            }
+                        }
+                    } catch (error) {
+                        if (typeof Notification !== 'undefined') {
+                            Notification.error('حدث خطأ أثناء تحديث البيانات: ' + error.message);
+                        }
+                        Utils.safeError('خطأ في تحديث بيانات الموظفين:', error);
+                    } finally {
+                        if (typeof Loading !== 'undefined') {
+                            Loading.hide();
+                        }
+                        newRefreshBtn.disabled = false;
+                        newRefreshBtn.innerHTML = originalHTML;
+                    }
+                });
+            } else {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ زر التحديث غير موجود!');
+                }
+            }
+
+            if (refreshNamesBtn && this.canAddOrImport()) {
+                refreshNamesBtn.addEventListener('click', async () => this.refreshEmployeeNames());
+            }
+
+            const reportDupBtn = document.getElementById('report-employee-duplicates-btn');
+            if (reportDupBtn && this.canAddOrImport()) {
+                reportDupBtn.addEventListener('click', async () => this.reportEmployeeDuplicates());
+            }
+
+            const cleanupDupBtn = document.getElementById('cleanup-employee-duplicates-btn');
+            if (cleanupDupBtn && this.canAddOrImport()) {
+                cleanupDupBtn.addEventListener('click', async () => this.cleanupDuplicateEmployees());
+            }
+
+            if (deleteAllBtn && this.canAddOrImport()) {
+                deleteAllBtn.addEventListener('click', async () => this.deleteAllEmployees());
+            }
+
+            // ✅ حقل البحث في header - إضافة debounce
+            const searchInput = document.getElementById('employees-search');
+            if (searchInput) {
+                // إزالة أي مستمعات سابقة لتجنب التكرار
+                const newSearchInput = searchInput.cloneNode(true);
+                searchInput.parentNode.replaceChild(newSearchInput, searchInput);
+                
+                let searchTimeout = null;
+                const applySearch = async () => {
+                    try {
+                        // مزامنة مع حقل البحث في الفلتر
+                        const filterSearchInput = document.getElementById('employees-search-filter');
+                        if (filterSearchInput) {
+                            filterSearchInput.value = newSearchInput.value;
+                        }
+                        await this.applyFilters();
+                    } catch (error) {
+                        if (AppState.debugMode) {
+                            Utils.safeError('خطأ في البحث:', error);
+                        }
+                    }
+                };
+                
+                newSearchInput.addEventListener('input', (e) => {
+                    // إلغاء البحث السابق إذا كان موجوداً
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    
+                    // البحث بعد 300ms من توقف المستخدم عن الكتابة
+                    searchTimeout = setTimeout(applySearch, 300);
+                });
+                
+                // ✅ إضافة event listener للبحث الفوري عند الضغط على Enter
+                newSearchInput.addEventListener('keydown', async (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (searchTimeout) {
+                            clearTimeout(searchTimeout);
+                        }
+                        await applySearch();
+                    }
+                });
+            } else {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ حقل البحث في header غير موجود!');
+                }
+            }
+            
+            // ✅ حقل البحث في الفلتر
+            const filterSearchInput = document.getElementById('employees-search-filter');
+            if (filterSearchInput) {
+                // إزالة أي مستمعات سابقة لتجنب التكرار
+                const newFilterSearchInput = filterSearchInput.cloneNode(true);
+                filterSearchInput.parentNode.replaceChild(newFilterSearchInput, filterSearchInput);
+                
+                let filterSearchTimeout = null;
+                const applyFilterSearch = async () => {
+                    try {
+                        // مزامنة مع حقل البحث في header
+                        if (searchInput) {
+                            searchInput.value = newFilterSearchInput.value;
+                        }
+                        await this.applyFilters();
+                    } catch (error) {
+                        if (AppState.debugMode) {
+                            Utils.safeError('خطأ في البحث:', error);
+                        }
+                    }
+                };
+                
+                // ✅ إضافة debounce للبحث لتحسين الأداء
+                newFilterSearchInput.addEventListener('input', (e) => {
+                    // إلغاء البحث السابق إذا كان موجوداً
+                    if (filterSearchTimeout) {
+                        clearTimeout(filterSearchTimeout);
+                    }
+                    
+                    // البحث بعد 300ms من توقف المستخدم عن الكتابة
+                    filterSearchTimeout = setTimeout(applyFilterSearch, 300);
+                });
+                
+                // ✅ إضافة event listener للبحث الفوري عند الضغط على Enter
+                newFilterSearchInput.addEventListener('keydown', async (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (filterSearchTimeout) {
+                            clearTimeout(filterSearchTimeout);
+                        }
+                        await applyFilterSearch();
+                    }
+                });
+            } else {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ حقل البحث في الفلتر غير موجود!');
+                }
+            }
+            
+            // ✅ إضافة event listeners للفلاتر
+            const filterSelects = [
+                'employee-filter-department',
+                'employee-filter-branch',
+                'employee-filter-location',
+                'employee-filter-job',
+                'employee-filter-position',
+                'employee-filter-gender'
+            ];
+            
+            filterSelects.forEach(filterId => {
+                const select = document.getElementById(filterId);
+                if (select) {
+                    select.addEventListener('change', async () => {
+                        try {
+                            await this.applyFilters();
+                        } catch (error) {
+                            if (AppState.debugMode) {
+                                Utils.safeError('خطأ في الفلتر:', error);
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // ✅ زر إعادة تعيين الفلاتر - إزالة أي مستمعات سابقة
+            const resetFiltersBtn = document.getElementById('employee-reset-filters');
+            if (resetFiltersBtn) {
+                // إزالة المستمعات السابقة
+                const newResetBtn = resetFiltersBtn.cloneNode(true);
+                resetFiltersBtn.parentNode.replaceChild(newResetBtn, resetFiltersBtn);
+                
+                newResetBtn.addEventListener('click', async () => {
+                    try {
+                        await this.resetFilters();
+                    } catch (error) {
+                        if (AppState.debugMode) {
+                            Utils.safeError('خطأ في إعادة تعيين الفلاتر:', error);
+                        }
+                        if (typeof Notification !== 'undefined') {
+                            Notification.error('حدث خطأ أثناء إعادة تعيين الفلاتر');
+                        }
+                    }
+                });
+            } else {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ زر إعادة التعيين غير موجود!');
+                }
+            }
+
+            // ✅ إضافة event listener لزر Toggle عرض الموظفين غير النشطين
+            let showInactiveCheckbox = document.getElementById('show-inactive-employees');
+            if (showInactiveCheckbox) {
+                // إزالة أي مستمعات سابقة
+                const newCheckbox = showInactiveCheckbox.cloneNode(true);
+                showInactiveCheckbox.parentNode.replaceChild(newCheckbox, showInactiveCheckbox);
+                
+                newCheckbox.addEventListener('change', async (e) => {
+                    const isChecked = e.target.checked;
+                    
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`🔄 تغيير حالة عرض المستقيلين: ${isChecked ? 'عرض' : 'إخفاء'}`);
+                    }
+                    
+                    try {
+                        // ✅ إضافة Loading indicator
+                        if (typeof Loading !== 'undefined') {
+                            Loading.show();
+                        }
+                        
+                        // ✅ تحديث لون الزر حسب الحالة
+                        const container = document.getElementById('show-inactive-employees-container');
+                        if (container) {
+                            if (isChecked) {
+                                // ✅ لون أحمر عند التفعيل (عرض المستقيلين)
+                                container.style.background = 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)';
+                                container.style.borderColor = '#dc2626';
+                                container.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.2)';
+                            } else {
+                                // ✅ لون رمادي عند الإلغاء (إخفاء المستقيلين)
+                                container.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)';
+                                container.style.borderColor = '#dee2e6';
+                                container.style.boxShadow = 'none';
+                            }
+                        }
+                        
+                        // ✅ تحميل القائمة مع الحالة الجديدة
+                        await this.loadEmployeesList(isChecked);
+                        
+                        // ✅ التأكد من أن checkbox محدث قبل تطبيق الفلاتر
+                        const checkbox = document.getElementById('show-inactive-employees');
+                        if (checkbox && checkbox.checked !== isChecked) {
+                            checkbox.checked = isChecked;
+                        }
+                        
+                        // ✅ تطبيق جميع الفلاتر بعد تحميل القائمة (مع التأكد من showInactive)
+                        await this.applyFilters();
+                        
+                        // ✅ تحديث عدد المستقيلين بعد تطبيق الفلاتر
+                        this.updateInactiveCount();
+                        
+                        // ✅ إظهار إشعار
+                        if (typeof Notification !== 'undefined') {
+                            Notification.success(isChecked ? 
+                                'تم عرض الموظفين غير النشطين (المستقيلين)' : 
+                                'تم إخفاء الموظفين غير النشطين'
+                            );
+                        }
+                    } catch (error) {
+                        // إرجاع حالة checkbox في حالة الخطأ
+                        newCheckbox.checked = !isChecked;
+                        
+                        if (AppState.debugMode) {
+                            Utils.safeError('خطأ في تحميل القائمة:', error);
+                        }
+                        if (typeof Notification !== 'undefined') {
+                            Notification.error('حدث خطأ أثناء تحميل البيانات');
+                        }
+                    } finally {
+                        if (typeof Loading !== 'undefined') {
+                            Loading.hide();
+                        }
+                        // ✅ تحديث عدد المستقيلين دائماً في النهاية
+                        this.updateInactiveCount();
+                    }
+                });
+                
+                // ✅ تحديث عدد المستقيلين عند تحميل الصفحة (مع تأخير للتأكد من جاهزية الـ DOM)
+                this.updateInactiveCount();
+                // ✅ تحديث إضافي بعد 300ms لضمان ظهور العدد
+                setTimeout(() => this.updateInactiveCount(), 300);
+            } else {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ زر عرض المستقيلين غير موجود!');
+                }
+            }
+            
+            // ✅ تحديث عدد المستقيلين عند تحديث البيانات
+            window.addEventListener('employeesDataUpdated', () => {
+                this.updateInactiveCount();
+                // ✅ تحديث إضافي للتأكد من الظهور
+                setTimeout(() => this.updateInactiveCount(), 100);
+            });
+            
+            // ✅ تطبيق الفلاتر عند تحميل الصفحة إذا كان هناك قيم
+            requestAnimationFrame(async () => {
+                try {
+                    const filters = this.getFilterValues();
+                    if (filters.search || filters.department || filters.branch || filters.location || 
+                        filters.job || filters.position || filters.gender || filters.showInactive) {
+                        await this.applyFilters();
+                    }
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                    }
+                }
+            });
+
+            const form = document.getElementById('employee-form');
+            if (form) form.addEventListener('submit', (e) => this.handleSubmit(e));
+            const cancelBtn = document.getElementById('cancel-employee-btn');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => this.showList());
+
+            this.setupPhotoPreview();
+        }, 100); // ✅ تأخير 100ms للتأكد من وجود جميع العناصر
+    },
+
+    /**
+     * تحديث/تنظيف أسماء الموظفين ثم حفظها (Admin فقط)
+     */
+    async refreshEmployeeNames() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+
+        const btn = document.getElementById('refresh-employee-names-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري تحديث الأسماء...';
+        }
+
+        // ✅ إضافة Loading indicator
+        if (typeof Loading !== 'undefined') {
+            Loading.show();
+        }
+
+        try {
+            // 1) اجلب أحدث نسخة من الشيت (حتى نصلح الأسماء على آخر بيانات)
+            await this.loadEmployeesFromBackend(true);
+
+            const employees = Array.isArray(AppState.appData.employees) ? AppState.appData.employees : [];
+            if (employees.length === 0) {
+                Notification?.warning?.('لا توجد بيانات موظفين');
+                return;
+            }
+
+            // 2) تنظيف الاسماء (trim + collapse spaces)
+            let changed = 0;
+            const cleaned = employees.map(e => {
+                const nameRaw = (e?.name ?? '');
+                const name = String(nameRaw).replace(/\s+/g, ' ').trim();
+                if (name !== String(nameRaw)) changed++;
+                return { ...e, name };
+            });
+
+            AppState.appData.employees = cleaned;
+            this.cache.data = cleaned;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+
+            // 3) حفظ (محلي + Sheets)
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            await GoogleIntegration.autoSave('Employees', AppState.appData.employees);
+
+            // ✅ تحديث القائمة مع الحفاظ على حالة showInactive
+            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+            this.renderStatsCards();
+            this.loadEmployeesList(showInactive);
+            
+            // ✅ تطبيق جميع الفلاتر بعد تحديث الأسماء
+            requestAnimationFrame(async () => {
+                try {
+                    await this.applyFilters();
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                    }
+                }
+            });
+            
+            Notification?.success?.(changed > 0 ? `تم تحديث الأسماء (${changed} تعديلات)` : 'لا توجد تغييرات في الأسماء');
+        } catch (error) {
+            Notification?.error?.('حدث خطأ أثناء تحديث الأسماء: ' + (error?.message || error));
+            Utils.safeError('خطأ في تحديث أسماء الموظفين:', error);
+        } finally {
+            if (typeof Loading !== 'undefined') {
+                Loading.hide();
+            }
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    /**
+     * حذف جميع بيانات الموظفين (Admin فقط)
+     */
+    async deleteAllEmployees() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+
+        const confirmed = window.confirm('تحذير: سيتم حذف جميع بيانات الموظفين. هل أنت متأكد؟');
+        if (!confirmed) return;
+
+        const pin = window.prompt('أدخل الرقم السري للحذف:');
+        if (pin === null) {
+            Notification?.warning?.('تم إلغاء العملية');
+            return;
+        }
+
+        const btn = document.getElementById('delete-all-employees-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحذف...';
+        }
+
+        try {
+            if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) {
+                throw new Error('GoogleIntegration غير متاح');
+            }
+
+            // ✅ حذف من الخلفية أولاً (محمي برقم سري في Apps Script)
+            const res = await GoogleIntegration.callBackend('deleteAllEmployees', { pin: String(pin || '').trim() });
+            if (!res || !res.success) {
+                throw new Error(res?.message || 'فشل حذف بيانات الموظفين من قاعدة البيانات');
+            }
+
+            // ✅ ثم مسح البيانات محلياً (الواجهة الأمامية)
+            AppState.appData.employees = [];
+            this.cache.data = [];
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+
+            this.renderStatsCards();
+            // ✅ تحميل القائمة وتطبيق الفلاتر بعد الحذف
+            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+            this.loadEmployeesList(showInactive);
+            requestAnimationFrame(async () => {
+                try {
+                    await this.applyFilters();
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                    }
+                }
+            });
+            Notification?.success?.(res?.message || 'تم حذف جميع بيانات الموظفين بنجاح');
+        } catch (error) {
+            Notification?.error?.('حدث خطأ أثناء حذف البيانات: ' + (error?.message || error));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    /**
+     * تقرير مكررات الموظفين — قراءة فقط، لا يحذف ولا يوقف الإنتاج.
+     */
+    async reportEmployeeDuplicates() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) {
+            Notification?.error?.('GoogleIntegration غير متاح');
+            return;
+        }
+
+        const btn = document.getElementById('report-employee-duplicates-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الفحص...';
+        }
+
+        try {
+            Loading?.show?.('جاري فحص مكررات الموظفين...');
+            const res = await GoogleIntegration.callBackend('reportEmployeeDuplicates', {
+                sampleLimit: 30,
+                __timeoutMs: 120000
+            });
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                throw new Error(res?.message || 'فشل تقرير المكررات');
+            }
+
+            const lines = [
+                res.message || '',
+                '',
+                `إجمالي الصفوف: ${res.totalRows ?? '—'}`,
+                `مفاتيح فريدة: ${res.uniqueKeys ?? '—'}`,
+                `مجموعات مكررة: ${res.duplicateGroupCount ?? 0}`,
+                `صفوف زائدة مرشحة للحذف: ${res.rowsToDeleteCount ?? 0}`,
+                `سيتبقى بعد التنظيف: ${res.keepCount ?? '—'}`,
+                `صفوف منزاحة أعمدة: ${res.driftedCount ?? 0}`,
+                `صفوف يتيمة بلا مفتاح: ${res.orphanCount ?? 0}`
+            ];
+            const sample = Array.isArray(res.duplicateGroupsSample) ? res.duplicateGroupsSample.slice(0, 8) : [];
+            if (sample.length) {
+                lines.push('', 'عيّنة مجموعات:');
+                sample.forEach((g) => {
+                    lines.push(`- ${g.key} ×${g.count} (يُبقى صف ${g.keepSheetRow}: ${g.keepName || '—'})`);
+                });
+            }
+            window.alert(lines.join('\n'));
+            Notification?.success?.(res.message || 'اكتمل تقرير المكررات');
+        } catch (error) {
+            Loading?.hide?.();
+            Notification?.error?.('فشل تقرير المكررات: ' + (error?.message || error));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    /**
+     * تنظيف مكررات الموظفين بأمان: معاينة → تأكيد → PIN → نسخة احتياطية → حذف الزائد فقط.
+     */
+    async cleanupDuplicateEmployees() {
+        if (!this.canAddOrImport()) {
+            Notification?.error?.('ليس لديك صلاحية لتنفيذ هذا الإجراء');
+            return;
+        }
+        if (typeof GoogleIntegration === 'undefined' || !GoogleIntegration.callBackend) {
+            Notification?.error?.('GoogleIntegration غير متاح');
+            return;
+        }
+
+        const btn = document.getElementById('cleanup-employee-duplicates-btn');
+        const originalHTML = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> معاينة...';
+        }
+
+        try {
+            Loading?.show?.('معاينة المكررات (بدون حذف)...');
+            const preview = await GoogleIntegration.callBackend('cleanupDuplicateEmployees', {
+                dryRun: true,
+                __timeoutMs: 120000
+            });
+            Loading?.hide?.();
+            if (!preview || !preview.success) {
+                throw new Error(preview?.message || 'فشلت معاينة التنظيف');
+            }
+
+            const toDelete = preview.rowsToDeleteCount || 0;
+            if (toDelete <= 0) {
+                window.alert(preview.message || 'لا توجد مكررات للحذف');
+                Notification?.success?.(preview.message || 'لا توجد مكررات');
+                return;
+            }
+
+            const okPreview = window.confirm(
+                `${preview.message || ''}\n\n` +
+                `إجمالي الصفوف: ${preview.totalRows ?? '—'}\n` +
+                `سيُحذف: ${toDelete}\n` +
+                `سيُبقى: ${preview.keepCount ?? '—'}\n\n` +
+                `سيتم إنشاء ورقة احتياطية Employees_backup_* قبل الحذف.\n` +
+                `هل تريد المتابعة لطلب الرقم السري؟`
+            );
+            if (!okPreview) {
+                Notification?.warning?.('تم إلغاء التنظيف');
+                return;
+            }
+
+            const pin = window.prompt('أدخل الرقم السري لتنظيف المكررات (EMPLOYEES_DELETE_PIN):');
+            if (pin === null) {
+                Notification?.warning?.('تم إلغاء العملية');
+                return;
+            }
+
+            if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري التنظيف...';
+            Loading?.show?.('جاري تنظيف المكررات مع نسخة احتياطية...');
+            const res = await GoogleIntegration.callBackend('cleanupDuplicateEmployees', {
+                pin: String(pin || '').trim(),
+                execute: true,
+                __timeoutMs: 180000
+            });
+            Loading?.hide?.();
+            if (!res || !res.success) {
+                throw new Error(res?.message || 'فشل تنظيف المكررات');
+            }
+
+            window.alert(
+                `${res.message || 'تم التنظيف'}\n` +
+                `محذوف: ${res.deletedCount ?? 0}\n` +
+                `احتياطي: ${res.backupSheetName || '—'}`
+            );
+
+            // إعادة تحميل القائمة من الخادم دون المساس بمسارات العيادة
+            try {
+                await this.ensureEmployeesLoaded(true);
+            } catch (_loadErr) {
+                const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                this.loadEmployeesList(showInactive);
+            }
+            this.renderStatsCards();
+            requestAnimationFrame(() => {
+                try { this.applyFilters(); } catch (_e) {}
+            });
+            Notification?.success?.(res.message || 'تم تنظيف المكررات');
+        } catch (error) {
+            Loading?.hide?.();
+            Notification?.error?.('فشل تنظيف المكررات: ' + (error?.message || error));
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+    },
+
+    setupPhotoPreview() {
+        const photoInput = document.getElementById('employee-photo-input');
+        const preview = document.getElementById('employee-photo-preview');
+        const icon = document.getElementById('employee-photo-icon');
+
+        if (photoInput && preview && icon) {
+            photoInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        preview.src = e.target.result;
+                        preview.style.display = 'block';
+                        icon.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    },
+
+    currentEditId: null,
+
+    async showForm(employeeData = null) {
+        // التحقق من الصلاحيات للإضافة
+        if (!employeeData && !this.canAddOrImport()) {
+            Notification.error('ليس لديك صلاحية لإضافة موظف جديد');
+            return;
+        }
+        
+        // التحقق من الصلاحيات للتعديل
+        if (employeeData && !this.canEditOrDelete()) {
+            Notification.error('ليس لديك صلاحية لتعديل الموظف');
+            return;
+        }
+
+        this.currentEditId = employeeData?.id || null;
+        const content = document.getElementById('employees-content');
+        if (!content) return;
+
+        content.innerHTML = await this.renderForm(employeeData);
+        this.applyModuleI18n(content);
+        this.setupEventListeners();
+    },
+
+    async renderForm(employeeData = null) {
+        const isEdit = !!employeeData;
+        return `
+            <div class="content-card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-${isEdit ? 'edit' : 'user-plus'} ml-2"></i>
+                        ${isEdit ? this.t('module.employees.editEmployee', 'تعديل موظف') : this.t('module.employees.addNewEmployee', 'إضافة موظف جديد')}
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form id="employee-form" class="space-y-6">
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="col-span-2">
+                                <label for="employee-photo-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-image ml-2"></i>
+                                    ${this.t('module.employees.employeePhoto', 'صورة الموظف')}
+                                </label>
+                                <div class="flex items-center gap-4">
+                                    <div class="w-32 h-32 rounded-full border-2 border-gray-300 overflow-hidden bg-gray-100 flex items-center justify-center">
+                                        <img id="employee-photo-preview" src="${employeeData?.photo || ''}" alt="${this.t('module.employees.employeePhoto', 'صورة الموظف')}" style="width: 100%; height: 100%; object-fit: cover; display: ${employeeData?.photo ? 'block' : 'none'};">
+                                        <i id="employee-photo-icon" class="fas fa-user text-4xl text-gray-400" style="display: ${employeeData?.photo ? 'none' : 'block'}"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <input 
+                                            type="file" 
+                                            id="employee-photo-input" 
+                                            accept="image/*"
+                                            class="form-input"
+                                        >
+                                        <p class="text-xs text-gray-500 mt-1">${this.t('module.employees.photoHint', 'يجب أن تكون صورة مربعة بحجم لا يتجاوز 2MB')}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="employee-name" class="block text-sm font-semibold text-gray-700 mb-2">${this.t('module.employees.fullNameRequired', 'الاسم الكامل *')}</label>
+                                <input type="text" id="employee-name" required class="form-input" value="${employeeData?.name || ''}" placeholder="${this.t('module.employees.fullName', 'الاسم الكامل')}">
+                            </div>
+                            <div>
+                                <label for="employee-sap-id" class="block text-sm font-semibold text-gray-700 mb-2">الكود الوظيفي (ID SAP) *</label>
+                                <input type="text" id="employee-sap-id" required class="form-input" value="${employeeData?.sapId || employeeData?.employeeNumber || ''}" placeholder="ID SAP">
+                            </div>
+                            <div>
+                                <label for="employee-number" class="block text-sm font-semibold text-gray-700 mb-2">${this.t('module.employees.employeeNumberRequired', 'الرقم الوظيفي *')}</label>
+                                <input type="text" id="employee-number" required class="form-input" value="${employeeData?.employeeNumber || ''}" placeholder="${this.t('module.employees.employeeNumber', 'الرقم الوظيفي')}">
+                            </div>
+                            <div>
+                                <label for="employee-hire-date" class="block text-sm font-semibold text-gray-700 mb-2">تاريخ التعيين *</label>
+                                <input type="date" id="employee-hire-date" required class="form-input" value="${employeeData?.hireDate ? this.formatDateSafe(employeeData.hireDate) : ''}">
+                            </div>
+                            <div>
+                                <label for="employee-birth-date" class="block text-sm font-semibold text-gray-700 mb-2">تاريخ الميلاد</label>
+                                <input type="date" id="employee-birth-date" class="form-input" value="${employeeData?.birthDate ? this.formatDateSafe(employeeData.birthDate) : ''}">
+                            </div>
+                            <div>
+                                <label for="employee-department" class="block text-sm font-semibold text-gray-700 mb-2">القسم *</label>
+                                <input type="text" id="employee-department" required class="form-input" value="${employeeData?.department || ''}" placeholder="القسم">
+                            </div>
+                            <div>
+                                <label for="employee-position" class="block text-sm font-semibold text-gray-700 mb-2">المنصب (Job) *</label>
+                                <input type="text" id="employee-position" required class="form-input" value="${employeeData?.position || ''}" placeholder="المنصب">
+                            </div>
+                            <div>
+                                <label for="employee-branch" class="block text-sm font-semibold text-gray-700 mb-2">الرع (Branch)</label>
+                                <input type="text" id="employee-branch" class="form-input" value="${employeeData?.branch || ''}" placeholder="الرع">
+                            </div>
+                            <div>
+                                <label for="employee-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع (Location)</label>
+                                <input type="text" id="employee-location" class="form-input" value="${employeeData?.location || ''}" placeholder="الموقع">
+                            </div>
+                            <div>
+                                <label for="employee-gender" class="block text-sm font-semibold text-gray-700 mb-2">الجنس (Gender)</label>
+                                <select id="employee-gender" class="form-input">
+                                    <option value="">اختر الجنس</option>
+                                    <option value="ذكر" ${employeeData?.gender === 'ذكر' ? 'selected' : ''}>ذكر</option>
+                                    <option value="أنثى" ${employeeData?.gender === 'أنثى' ? 'selected' : ''}>أنثى</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="employee-national-id" class="block text-sm font-semibold text-gray-700 mb-2">رقم البطاقة القومية</label>
+                                <input type="text" id="employee-national-id" class="form-input" value="${employeeData?.nationalId || ''}" placeholder="رقم البطاقة القومية">
+                            </div>
+                            <div>
+                                <label for="employee-email" class="block text-sm font-semibold text-gray-700 mb-2">البريد الإلكتروني</label>
+                                <input type="email" id="employee-email" class="form-input" value="${employeeData?.email || ''}" placeholder="البريد الإلكتروني">
+                            </div>
+                            <div>
+                                <label for="employee-phone" class="block text-sm font-semibold text-gray-700 mb-2">الهاتف</label>
+                                <input type="tel" id="employee-phone" class="form-input" value="${employeeData?.phone || ''}" placeholder="رقم الهاتف">
+                            </div>
+                            <div>
+                                <label for="employee-insurance-number" class="block text-sm font-semibold text-gray-700 mb-2">الرقم التأميني</label>
+                                <input type="text" id="employee-insurance-number" class="form-input" value="${employeeData?.insuranceNumber || ''}" placeholder="الرقم التأميني">
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                            <button type="button" id="cancel-employee-btn" class="btn-secondary">${this.t('module.common.cancel', 'إلغاء')}</button>
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-save ml-2"></i>${isEdit ? this.t('module.common.saveChanges', 'حفظ التعديلات') : this.t('module.employees.addEmployee', 'إضافة الموظف')}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+    },
+
+    /** تطبيع مفتاح هوية الموظف للاستيراد (رقم وظيفي / SAP) */
+    normalizeEmployeeImportKey(value) {
+        if (value === null || value === undefined) return '';
+        return String(value).trim().replace(/\s+/g, '');
+    },
+
+    /**
+     * فهرس مفاتيح الموظفين الموجودين (مرة واحدة) — يمنع مسح القائمة لكل صف ملف.
+     * يشمل employeeNumber / sapId / id بعد التطبيع.
+     */
+    buildEmployeeImportExistingKeySet(employeesList) {
+        const set = new Set();
+        const list = Array.isArray(employeesList) ? employeesList : (AppState.appData.employees || []);
+        for (let i = 0; i < list.length; i++) {
+            const e = list[i];
+            if (!e) continue;
+            const eNum = this.normalizeEmployeeImportKey(e.employeeNumber || e.id);
+            const eSap = this.normalizeEmployeeImportKey(e.sapId);
+            const eId = this.normalizeEmployeeImportKey(e.id);
+            if (eNum) set.add(eNum);
+            if (eSap) set.add(eSap);
+            if (eId) set.add(eId);
+        }
+        return set;
+    },
+
+    employeeImportKeysMatchExisting(employeeNumber, sapId, existingKeySet) {
+        const empKey = this.normalizeEmployeeImportKey(employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(sapId);
+        if (existingKeySet instanceof Set) {
+            if (empKey && existingKeySet.has(empKey)) return true;
+            if (sapKey && existingKeySet.has(sapKey)) return true;
+            return false;
+        }
+        return !!this.findExistingEmployeeByImportKey(employeeNumber, sapId);
+    },
+
+    /** هل يوجد موظف بنفس الرقم الوظيفي أو SAP أو id */
+    findExistingEmployeeByImportKey(employeeNumber, sapId) {
+        const empKey = this.normalizeEmployeeImportKey(employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(sapId);
+        const list = AppState.appData.employees || [];
+        return list.find(e => {
+            const eNum = this.normalizeEmployeeImportKey(e.employeeNumber || e.id);
+            const eSap = this.normalizeEmployeeImportKey(e.sapId);
+            const eId = this.normalizeEmployeeImportKey(e.id);
+            if (empKey && (eNum === empKey || eId === empKey || eSap === empKey)) return true;
+            if (sapKey && (eSap === sapKey || eNum === sapKey || eId === sapKey)) return true;
+            return false;
+        }) || null;
+    },
+
+    /** استخراج حقول صف Excel إلى مسودة موحّدة */
+    parseEmployeeImportRow(row, uid) {
+        const safeStr = (v) => (v === null || v === undefined) ? '' : String(v).trim();
+        const name = safeStr(row['اسم الموظ'] || row['اسم الموظف'] || row['Employee Name'] || row['Name'] || row['name'] || '');
+        const sapId = safeStr(row['ID SAP'] || row['رقم SAP'] || row['SAP ID'] || row['sap_id'] || '');
+        const employeeNumberRaw = safeStr(row['رقم الموظف'] || row['الرقم الوظيفي'] || row['Employee Number'] || row['employee_number'] || '');
+        const employeeNumber = employeeNumberRaw || sapId;
+        return {
+            uid,
+            name,
+            sapId,
+            employeeNumber,
+            hireDate: safeStr(row['تاريخ التعيين'] || row['Hire Date'] || row['hire_date'] || ''),
+            job: safeStr(row['Job'] || row['job'] || row['المنصب'] || ''),
+            department: safeStr(row['Department'] || row['department'] || row['القسم'] || ''),
+            branch: safeStr(row['Branch'] || row['branch'] || row['الرع'] || row['الفرع'] || ''),
+            location: safeStr(row['Location'] || row['location'] || row['الموقع'] || ''),
+            gender: safeStr(row['Gender'] || row['gender'] || row['الجنس'] || ''),
+            nationalId: safeStr(row['رقم البطاقة القومى'] || row['رقم البطاقة القومي'] || row['National ID'] || row['national_id'] || ''),
+            birthDate: safeStr(row['تاريخ الميلاد'] || row['Date of Birth'] || row['birth_date'] || ''),
+            email: safeStr(row['Email'] || row['email'] || row['البريد الإلكتروني'] || ''),
+            phone: safeStr(row['Phone'] || row['phone'] || row['الهاتف'] || row['الهات'] || ''),
+            insuranceNumber: safeStr(row['الرقم التأميني'] || row['Insurance Number'] || row['insurance_number'] || row['رقم التأمين'] || ''),
+            status: 'invalid'
+        };
+    },
+
+    /**
+     * عدد أشهر قبول تاريخ التعيين عند استيراد Excel (إعداد المدير، افتراضي 3).
+     */
+    getEmployeeImportHireMonths() {
+        const v = parseInt(AppState?.companySettings?.employeeImportHireMonths, 10);
+        if (!isNaN(v) && v >= 1 && v <= 120) return v;
+        return 3;
+    },
+
+    getEmployeeImportHireWindowLabel() {
+        const months = this.getEmployeeImportHireMonths();
+        if (months === 1) return 'آخر شهر واحد';
+        return `آخر ${months} أشهر`;
+    },
+
+    /**
+     * تاريخ التعيين للجدد عند الاستيراد: خلال فترة الأشهر المضبوطة حتى اليوم فقط.
+     * أقدم من الفترة أو تاريخ مستقبلي أو فارغ/غير صالح → مرفوض.
+     */
+    isEmployeeImportHireDateAllowed(hireDateRaw) {
+        const normalized = this.normalizeDateOnly(hireDateRaw);
+        if (!normalized) return false;
+        const hire = new Date(`${normalized}T12:00:00`);
+        if (Number.isNaN(hire.getTime())) return false;
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+
+        const minDate = new Date(today);
+        minDate.setMonth(minDate.getMonth() - this.getEmployeeImportHireMonths());
+
+        return hire.getTime() >= minDate.getTime() && hire.getTime() <= today.getTime();
+    },
+
+    /** تصنيف مسودة: new | exists | invalid — بدون مطابقة بالاسم */
+    classifyEmployeeImportDraft(draft, seenKeys, existingKeySet) {
+        const empKey = this.normalizeEmployeeImportKey(draft.employeeNumber);
+        const sapKey = this.normalizeEmployeeImportKey(draft.sapId);
+        const primaryKey = empKey || sapKey;
+        draft._dupInFile = false;
+        draft._hireDateRejected = false;
+
+        if (!primaryKey || !String(draft.name || '').trim()) {
+            draft.status = 'invalid';
+            return draft;
+        }
+
+        if (seenKeys) {
+            if (seenKeys.has(primaryKey)) {
+                draft.status = 'invalid';
+                draft._dupInFile = true;
+                return draft;
+            }
+            seenKeys.add(primaryKey);
+        }
+
+        if (this.employeeImportKeysMatchExisting(draft.employeeNumber, draft.sapId, existingKeySet)) {
+            draft.status = 'exists';
+            return draft;
+        }
+
+        // جدد فقط: تاريخ التعيين ضمن فترة الأشهر المضبوطة من المدير
+        if (!this.isEmployeeImportHireDateAllowed(draft.hireDate)) {
+            draft.status = 'invalid';
+            draft._hireDateRejected = true;
+            return draft;
+        }
+
+        draft.status = 'new';
+        return draft;
+    },
+
+    getEmployeeImportCounts(drafts) {
+        const list = Array.isArray(drafts) ? drafts : [];
+        return {
+            total: list.length,
+            newCount: list.filter(d => d.status === 'new').length,
+            existsCount: list.filter(d => d.status === 'exists').length,
+            invalidCount: list.filter(d => d.status === 'invalid').length,
+            hireDateRejectedCount: list.filter(d => d._hireDateRejected).length
+        };
+    },
+
+    reclassifyAllEmployeeImportDrafts(drafts, existingKeySet) {
+        const seenKeys = new Set();
+        const keySet = existingKeySet instanceof Set
+            ? existingKeySet
+            : this.buildEmployeeImportExistingKeySet();
+        drafts.forEach(d => {
+            d._dupInFile = false;
+            this.classifyEmployeeImportDraft(d, seenKeys, keySet);
+        });
+        return drafts;
+    },
+
+    async yieldEmployeeImportUi_() {
+        await new Promise((resolve) => {
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(() => setTimeout(resolve, 0));
+            } else {
+                setTimeout(resolve, 0);
+            }
+        });
+    },
+
+    buildEmployeeFromImportDraft(draft) {
+        const employeeNumber = this.normalizeEmployeeImportKey(draft.employeeNumber)
+            || this.normalizeEmployeeImportKey(draft.sapId);
+        if (!employeeNumber || !String(draft.name || '').trim()) return null;
+        if (!this.isEmployeeImportHireDateAllowed(draft.hireDate)) return null;
+        const hireDate = this.normalizeDateOnly(draft.hireDate);
+        if (!hireDate) return null;
+        const now = new Date().toISOString();
+        return {
+            id: employeeNumber,
+            name: String(draft.name || '').trim(),
+            employeeNumber,
+            sapId: String(draft.sapId || '').trim(),
+            hireDate,
+            job: String(draft.job || '').trim(),
+            position: String(draft.job || '').trim(),
+            department: String(draft.department || '').trim(),
+            branch: String(draft.branch || '').trim(),
+            location: String(draft.location || '').trim(),
+            gender: String(draft.gender || '').trim(),
+            nationalId: String(draft.nationalId || '').trim(),
+            birthDate: this.normalizeDateOnly(draft.birthDate),
+            email: String(draft.email || '').trim(),
+            phone: String(draft.phone || '').trim(),
+            insuranceNumber: String(draft.insuranceNumber || '').trim(),
+            photo: '',
+            status: 'active',
+            createdAt: now,
+            updatedAt: now
+        };
+    },
+
+    renderEmployeeImportReview(modal, drafts) {
+        const summaryEl = modal.querySelector('#employee-import-summary');
+        const preview = modal.querySelector('#employee-import-preview');
+        const tbody = modal.querySelector('#employee-import-new-body');
+        const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
+        if (!summaryEl || !preview || !tbody || !confirmBtn) return;
+
+        const counts = this.getEmployeeImportCounts(drafts);
+        const newRows = drafts.filter(d => d.status === 'new');
+        const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
+
+        summaryEl.innerHTML = `
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <span style="background:#dcfce7;color:#166534;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    جديد (سيُضاف): ${counts.newCount}
+                </span>
+                <span style="background:#f1f5f9;color:#475569;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    موجود مسبقاً (تخطّي — غير معروض): ${counts.existsCount}
+                </span>
+                <span style="background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    ناقص/غير صالح: ${counts.invalidCount}
+                </span>
+                <span style="background:#ffedd5;color:#9a3412;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    تعيين خارج ${Utils.escapeHTML(hireWindowLabel)} / غير مقبول: ${counts.hireDateRejectedCount}
+                </span>
+                <span style="background:#e0f2fe;color:#075985;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;">
+                    إجمالي الملف: ${counts.total}
+                </span>
+            </div>
+            <p style="font-size:12px;color:#1e3a8a;margin:0;">
+                الجدول يعرض فقط الجدد غير الموجودين بالنظام وتاريخ تعيينهم خلال ${Utils.escapeHTML(hireWindowLabel)}. الموجودون والمستقيلون لا يُعدَّلون ولا يُحذفون.
+            </p>
+        `;
+
+        if (newRows.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center;padding:16px;color:#64748b;">
+                        لا يوجد موظفون جدد للاستيراد من هذا الملف.
+                    </td>
+                </tr>
+            `;
+        } else {
+            const maxPreviewRows = 200;
+            const visibleRows = newRows.slice(0, maxPreviewRows);
+            const hiddenCount = newRows.length - visibleRows.length;
+            tbody.innerHTML = visibleRows.map(d => `
+                <tr data-import-uid="${Utils.escapeHTML(d.uid)}">
+                    <td><input type="text" class="form-input emp-imp-field" data-field="employeeNumber" value="${Utils.escapeHTML(d.employeeNumber || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="sapId" value="${Utils.escapeHTML(d.sapId || '')}" style="min-width:80px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="name" value="${Utils.escapeHTML(d.name || '')}" style="min-width:120px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="department" value="${Utils.escapeHTML(d.department || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="job" value="${Utils.escapeHTML(d.job || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="branch" value="${Utils.escapeHTML(d.branch || '')}" style="min-width:80px;padding:4px 6px;font-size:12px;"></td>
+                    <td><input type="text" class="form-input emp-imp-field" data-field="hireDate" value="${Utils.escapeHTML(d.hireDate || '')}" style="min-width:90px;padding:4px 6px;font-size:12px;"></td>
+                    <td style="white-space:nowrap;">
+                        <button type="button" class="btn-icon btn-icon-danger emp-imp-remove" title="حذف من قائمة الإضافة" style="padding:4px 8px;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('') + (hiddenCount > 0
+                ? `<tr><td colspan="8" style="text-align:center;padding:12px;color:#075985;background:#e0f2fe;font-size:12px;">
+                    يُعرض أول ${maxPreviewRows} صف للمراجعة. ${hiddenCount} صف إضافي سيُضاف أيضاً عند التأكيد بدون عرض.
+                   </td></tr>`
+                : '');
+        }
+
+        preview.classList.remove('hidden');
+        confirmBtn.disabled = counts.newCount === 0;
+        confirmBtn.innerHTML = counts.newCount > 0
+            ? `<i class="fas fa-check ml-2"></i>تأكيد إضافة ${counts.newCount} موظف جديد`
+            : `<i class="fas fa-ban ml-2"></i>لا يوجد جدد للإضافة`;
+    },
+
+    async showImportExcel() {
+        // التحقق من الصلاحيات
+        if (!this.canAddOrImport()) {
+            Notification.error(this.t('module.employees.noImportPermission', 'ليس لديك صلاحية لاستيراد الموظفين'));
+            return;
+        }
+
+        // فتح النموذج فوراً — لا تنتظر ensureEmployeesLoaded (كان يسبب تأخيراً طويلاً)
+        const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
+        const hireMonths = this.getEmployeeImportHireMonths();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 1100px; width: 96%;">
+                <div class="modal-header">
+                    <h2 class="modal-title"><i class="fas fa-file-excel ml-2"></i>${this.t('module.employees.importModalTitle', 'استيراد الموظفين من ملف Excel')}</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="space-y-4">
+                        <div class="bg-amber-50 border border-amber-200 rounded p-4">
+                            <p class="text-sm text-amber-900 mb-2"><strong>حماية البيانات:</strong></p>
+                            <ul class="text-sm text-amber-800 list-disc mr-6 mt-2 space-y-1">
+                                <li>الاستيراد <strong>يضيف الجدد فقط</strong> (غير الموجودين في النظام).</li>
+                                <li>تاريخ التعيين للجدد يجب أن يكون خلال <strong>${Utils.escapeHTML(hireWindowLabel)}</strong> من يوم الاستيراد (وليس مستقبلاً) — يضبطها المدير من الإعدادات (${hireMonths} شهر).</li>
+                                <li><strong>لا يُعدَّل</strong> ولا <strong>يُحذف</strong> أي موظف موجود أو مستقيل.</li>
+                                <li>راجع القائمة جيداً قبل التأكيد — يمكنك تعديل أو حذف صف من قائمة الإضافة فقط.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-blue-50 border border-blue-200 rounded p-4">
+                            <p class="text-sm text-blue-800 mb-2"><strong>أعمدة الملف المدعومة:</strong></p>
+                            <ul class="text-sm text-blue-700 list-disc mr-6 mt-2 space-y-1">
+                                <li><strong>ID SAP</strong> أو <strong>رقم SAP</strong></li>
+                                <li><strong>رقم الموظف</strong> / <strong>الرقم الوظيفي</strong> / <strong>Employee Number</strong></li>
+                                <li><strong>اسم الموظف</strong> / <strong>Employee Name</strong></li>
+                                <li>تاريخ التعيين، Job، Department، Branch، Location، Gender، رقم البطاقة، تاريخ الميلاد، الرقم التأميني</li>
+                            </ul>
+                        </div>
+                        <div id="employee-import-ready-hint" class="text-xs text-slate-500" hidden></div>
+                        <div>
+                            <label for="employee-excel-file-input" class="block text-sm font-semibold text-gray-700 mb-2">
+                                <i class="fas fa-file-excel ml-2"></i>
+                                اختر ملف Excel (.xlsx, .xls)
+                            </label>
+                            <input type="file" id="employee-excel-file-input" accept=".xlsx,.xls" class="form-input">
+                        </div>
+                        <div id="employee-import-summary"></div>
+                        <div id="employee-import-preview" class="hidden">
+                            <h3 class="text-sm font-semibold mb-2">الموظفون الجدد فقط (غير الموجودين بالنظام):</h3>
+                            <div class="max-h-80 overflow-auto border rounded">
+                                <table class="data-table text-xs" style="min-width:100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>الرقم الوظيفي</th>
+                                            <th>SAP</th>
+                                            <th>الاسم</th>
+                                            <th>القسم</th>
+                                            <th>الوظيفة</th>
+                                            <th>الفرع</th>
+                                            <th>تاريخ التعيين</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="employee-import-new-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${this.t('module.common.cancel', 'إلغاء')}</button>
+                    <button type="button" id="employee-import-confirm-btn" class="btn-primary" disabled>
+                        <i class="fas fa-check ml-2"></i>
+                        ${this.t('module.employees.confirmImport', 'تأكيد الاستيراد')}
+                    </button>
+                </div>
+            </div>
+        `;
+        this.applyModuleI18n(modal);
+        document.body.appendChild(modal);
+
+        const fileInput = modal.querySelector('#employee-excel-file-input');
+        const confirmBtn = modal.querySelector('#employee-import-confirm-btn');
+        const readyHint = modal.querySelector('#employee-import-ready-hint');
+        let importDrafts = [];
+        let existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+        let reclassifyTimer = null;
+        let employeesIndexReady = existingImportKeySet.size > 0;
+
+        const refreshReview = () => this.renderEmployeeImportReview(modal, importDrafts);
+
+        const setReadyHint = (text, visible) => {
+            if (!readyHint) return;
+            if (visible && text) {
+                readyHint.hidden = false;
+                readyHint.textContent = text;
+            } else {
+                readyHint.hidden = true;
+                readyHint.textContent = '';
+            }
+        };
+
+        if (!employeesIndexReady) {
+            setReadyHint('جاري تجهيز فهرس الموظفين الحالي بالخلفية لمطابقة المكررات…', true);
+        }
+
+        // تحديث فهرس الموجودين بالخلفية دون حجب فتح النموذج
+        void (async () => {
+            try {
+                await this.ensureEmployeesLoaded(false);
+            } catch (_e) { /* المحلي كافٍ للمطابقة إن وُجد */ }
+            if (!modal.isConnected) return;
+            existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+            employeesIndexReady = true;
+            setReadyHint('', false);
+            if (importDrafts.length > 0) {
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
+                refreshReview();
+            }
+        })();
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Loading.show('جاري قراءة الملف...');
+            try {
+                // إن كان الفهرس لم يجهز بعد، انتظره هنا فقط (بعد اختيار الملف) وليس عند فتح النموذج
+                if (!employeesIndexReady) {
+                    Loading.show('جاري تجهيز فهرس الموظفين للمطابقة...');
+                    try {
+                        await this.ensureEmployeesLoaded(false);
+                    } catch (_e) { /* continue with local */ }
+                    existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+                    employeesIndexReady = true;
+                    setReadyHint('', false);
+                } else {
+                    existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+                }
+
+                await this.yieldEmployeeImportUi_();
+                const buffer = await file.arrayBuffer();
+                Loading.show('جاري تحليل Excel...');
+                await this.yieldEmployeeImportUi_();
+                const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '', raw: false });
+
+                if (data.length < 2) {
+                    Notification.error(this.t('module.employees.invalidFile', 'الملف فارغ أو غير صحيح'));
+                    importDrafts = [];
+                    refreshReview();
+                    Loading.hide();
+                    return;
+                }
+
+                const headers = data[0].map(h => String(h || '').trim());
+                const rawRows = data.slice(1).map(row => {
+                    const obj = {};
+                    headers.forEach((header, index) => {
+                        const cell = row[index];
+                        obj[header] = (cell === undefined || cell === null) ? '' : cell;
+                    });
+                    return obj;
+                }).filter(row => headers.some(h => String(row[h] || '').trim() !== ''));
+
+                existingImportKeySet = this.buildEmployeeImportExistingKeySet();
+                const seenKeys = new Set();
+                const stamp = Date.now();
+                importDrafts = new Array(rawRows.length);
+                const chunkSize = 400;
+                for (let start = 0; start < rawRows.length; start += chunkSize) {
+                    const end = Math.min(start + chunkSize, rawRows.length);
+                    Loading.show(`جاري مطابقة الصفوف... ${end} / ${rawRows.length}`);
+                    for (let idx = start; idx < end; idx++) {
+                        const draft = this.parseEmployeeImportRow(rawRows[idx], `imp-${idx}-${stamp}`);
+                        importDrafts[idx] = this.classifyEmployeeImportDraft(draft, seenKeys, existingImportKeySet);
+                    }
+                    await this.yieldEmployeeImportUi_();
+                }
+
+                Loading.show('جاري تجهيز شاشة المراجعة...');
+                await this.yieldEmployeeImportUi_();
+                refreshReview();
+                Loading.hide();
+            } catch (error) {
+                Loading.hide();
+                Notification.error(this.t('module.employees.readFileFailed', 'فشل قراءة الملف') + ': ' + error.message);
+            }
+        });
+
+        modal.addEventListener('change', (e) => {
+            const input = e.target.closest('.emp-imp-field');
+            if (!input) return;
+            const tr = input.closest('tr[data-import-uid]');
+            if (!tr) return;
+            const uid = tr.getAttribute('data-import-uid');
+            const draft = importDrafts.find(d => d.uid === uid);
+            if (!draft) return;
+            const field = input.getAttribute('data-field');
+            if (!field) return;
+            draft[field] = input.value;
+            if (reclassifyTimer) clearTimeout(reclassifyTimer);
+            reclassifyTimer = setTimeout(() => {
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
+                refreshReview();
+            }, 180);
+        });
+
+        modal.addEventListener('click', (e) => {
+            const removeBtn = e.target.closest('.emp-imp-remove');
+            if (removeBtn) {
+                const tr = removeBtn.closest('tr[data-import-uid]');
+                if (!tr) return;
+                const uid = tr.getAttribute('data-import-uid');
+                importDrafts = importDrafts.filter(d => d.uid !== uid);
+                this.reclassifyAllEmployeeImportDrafts(importDrafts, existingImportKeySet);
+                refreshReview();
+                return;
+            }
+            if (e.target === modal) modal.remove();
+        });
+
+        confirmBtn.addEventListener('click', async () => {
+            const newDrafts = importDrafts.filter(d => d.status === 'new');
+            if (newDrafts.length === 0) {
+                Notification.warning('لا يوجد موظفون جدد للإضافة');
+                return;
+            }
+
+            const counts = this.getEmployeeImportCounts(importDrafts);
+            const hireWindowLabel = this.getEmployeeImportHireWindowLabel();
+            const ok = window.confirm(
+                `سيتم إضافة ${newDrafts.length} موظف جديد فقط.\n` +
+                `تخطّي موجود مسبقاً: ${counts.existsCount}\n` +
+                `ناقص/غير صالح: ${counts.invalidCount}\n` +
+                `تعيين خارج ${hireWindowLabel}: ${counts.hireDateRejectedCount}\n\n` +
+                `الموجودون والمستقيلون لن يُعدَّلوا ولن يُحذفوا.\nهل تريد المتابعة؟`
+            );
+            if (!ok) return;
+
+            Loading.show(`جاري إضافة ${newDrafts.length} موظف...`);
+            try {
+                let addedCount = 0;
+                let skippedDuringWrite = 0;
+                const addedEmployees = [];
+                const writeKeySet = existingImportKeySet instanceof Set
+                    ? new Set(existingImportKeySet)
+                    : this.buildEmployeeImportExistingKeySet();
+
+                const writeChunk = 300;
+                for (let start = 0; start < newDrafts.length; start += writeChunk) {
+                    const end = Math.min(start + writeChunk, newDrafts.length);
+                    for (let i = start; i < end; i++) {
+                        const draft = newDrafts[i];
+                        try {
+                            if (this.employeeImportKeysMatchExisting(draft.employeeNumber, draft.sapId, writeKeySet)) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            const employee = this.buildEmployeeFromImportDraft(draft);
+                            if (!employee) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            if (this.employeeImportKeysMatchExisting(employee.employeeNumber, employee.sapId, writeKeySet)) {
+                                skippedDuringWrite++;
+                                continue;
+                            }
+                            AppState.appData.employees.push(employee);
+                            addedEmployees.push(employee);
+                            const k1 = this.normalizeEmployeeImportKey(employee.employeeNumber);
+                            const k2 = this.normalizeEmployeeImportKey(employee.sapId);
+                            const k3 = this.normalizeEmployeeImportKey(employee.id);
+                            if (k1) writeKeySet.add(k1);
+                            if (k2) writeKeySet.add(k2);
+                            if (k3) writeKeySet.add(k3);
+                            addedCount++;
+                        } catch (_err) {
+                            skippedDuringWrite++;
+                        }
+                    }
+                    Loading.show(`جاري الإضافة... ${end} / ${newDrafts.length}`);
+                    await this.yieldEmployeeImportUi_();
+                }
+
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+
+                this.cache.data = AppState.appData.employees;
+                this.cache.lastLoad = Date.now();
+                this.cache.lastUpdate = Date.now();
+                existingImportKeySet = writeKeySet;
+
+                // استجابة فورية: لا ننتظر رفع كل ورقة Employees (كان يعلّق على «مزامنة السحابة»)
+                Loading.hide();
+                Notification.success(
+                    `أُضيف ${addedCount} موظف جديد محلياً` +
+                    (counts.existsCount > 0 ? ` — تُخطي موجود ${counts.existsCount}` : '') +
+                    (counts.hireDateRejectedCount > 0 ? ` — تعيين خارج ${this.getEmployeeImportHireWindowLabel()} ${counts.hireDateRejectedCount}` : '') +
+                    (counts.invalidCount > counts.hireDateRejectedCount ? ` — ناقص ${counts.invalidCount - counts.hireDateRejectedCount}` : '') +
+                    (skippedDuringWrite > 0 ? ` — استُبعد عند الحفظ ${skippedDuringWrite}` : '') +
+                    (addedEmployees.length > 0 ? ' — جاري مزامنة الجدد مع السحابة بالخلفية' : '')
+                );
+                modal.remove();
+
+                this.renderStatsCards();
+                const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+                this.loadEmployeesList(showInactive);
+                requestAnimationFrame(() => {
+                    this.applyFilters();
+                });
+
+                if (addedEmployees.length > 0) {
+                    void this.syncImportedEmployeesToCloud_(addedEmployees);
+                }
+            } catch (error) {
+                Loading.hide();
+                Notification.error('فشل الاستيراد: ' + error.message);
+            }
+        });
+    },
+
+    /**
+     * مزامنة موظفين مستوردين فقط (append دفعات) — لا ترفع ورقة Employees كاملة عبر autoSave.
+     */
+    async syncImportedEmployeesToCloud_(employees) {
+        const list = Array.isArray(employees) ? employees.filter(Boolean) : [];
+        if (!list.length) return;
+        if (typeof GoogleIntegration === 'undefined') return;
+        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function'
+            && !GoogleIntegration._isBackendRpcConfigured()) {
+            Notification?.warning?.('حُفظ محلياً — الخادم غير مفعّل للمزامنة');
+            return;
+        }
+
+        const toCloudRow = (e) => ({
+            id: e.id,
+            name: e.name,
+            employeeNumber: e.employeeNumber,
+            sapId: e.sapId,
+            hireDate: e.hireDate,
+            job: e.job || e.position || '',
+            position: e.position || e.job || '',
+            department: e.department || '',
+            branch: e.branch || '',
+            location: e.location || '',
+            gender: e.gender || '',
+            nationalId: e.nationalId || '',
+            birthDate: e.birthDate || '',
+            email: e.email || '',
+            phone: e.phone || '',
+            insuranceNumber: e.insuranceNumber || '',
+            photo: '',
+            status: e.status || 'active',
+            resignationDate: e.resignationDate || '',
+            createdAt: e.createdAt || new Date().toISOString(),
+            updatedAt: e.updatedAt || new Date().toISOString()
+        });
+
+        const chunkSize = 40;
+        let synced = 0;
+        let failed = 0;
+
+        for (let i = 0; i < list.length; i += chunkSize) {
+            const chunk = list.slice(i, i + chunkSize).map(toCloudRow);
+            try {
+                const sendPromise = (typeof GoogleIntegration.sendRequest === 'function')
+                    ? GoogleIntegration.sendRequest({
+                        action: 'appendToSheet',
+                        data: {
+                            sheetName: 'Employees',
+                            data: chunk,
+                            __timeoutMs: 90000,
+                            userData: AppState.currentUser || {}
+                        }
+                    })
+                    : GoogleIntegration.sendToAppsScript('appendToSheet', {
+                        sheetName: 'Employees',
+                        data: chunk,
+                        __timeoutMs: 90000,
+                        userData: AppState.currentUser || {}
+                    });
+
+                const result = (typeof Utils !== 'undefined' && Utils.promiseWithTimeout)
+                    ? await Utils.promiseWithTimeout(sendPromise, 95000, 'انتهت مهلة مزامنة دفعة موظفين')
+                    : await sendPromise;
+
+                if (result && result.success) {
+                    synced += chunk.length;
+                } else {
+                    failed += chunk.length;
+                    Utils.safeWarn?.('⚠️ فشل مزامنة دفعة موظفين:', result?.message);
+                }
+            } catch (err) {
+                failed += chunk.length;
+                Utils.safeWarn?.('⚠️ خطأ مزامنة دفعة موظفين:', err?.message || err);
+            }
+            await this.yieldEmployeeImportUi_();
+        }
+
+        if (synced > 0 && failed === 0) {
+            Notification?.success?.(`تمت مزامنة ${synced} موظفاً جديداً مع السحابة`);
+        } else if (synced > 0 && failed > 0) {
+            Notification?.warning?.(`تمت مزامنة ${synced} — تعذّر ${failed}. البيانات محفوظة محلياً.`);
+        } else if (failed > 0) {
+            Notification?.warning?.(`حُفظ محلياً — تعذّرت مزامنة السحابة (${failed}). أعد المحاولة لاحقاً أو من زر التحديث.`);
+        }
+    },
+
+    _toCloudEmployeeRow_(e) {
+        const row = e && typeof e === 'object' ? e : {};
+        return {
+            id: row.id,
+            name: row.name,
+            employeeNumber: row.employeeNumber,
+            sapId: row.sapId,
+            hireDate: row.hireDate,
+            job: row.job || row.position || '',
+            position: row.position || row.job || '',
+            department: row.department || '',
+            branch: row.branch || '',
+            location: row.location || '',
+            gender: row.gender || '',
+            nationalId: row.nationalId || '',
+            birthDate: row.birthDate || '',
+            email: row.email || '',
+            phone: row.phone || '',
+            insuranceNumber: row.insuranceNumber || '',
+            photo: row.photo || '',
+            status: row.status || 'active',
+            resignationDate: row.resignationDate || '',
+            createdAt: row.createdAt || new Date().toISOString(),
+            updatedAt: row.updatedAt || new Date().toISOString()
+        };
+    },
+
+    async syncEmployeeRecordToCloud_(employee, options = {}) {
+        if (!employee) return;
+        if (typeof GoogleIntegration === 'undefined') return;
+        if (typeof GoogleIntegration._isBackendRpcConfigured === 'function'
+            && !GoogleIntegration._isBackendRpcConfigured()) {
+            Notification?.warning?.('حُفظ محلياً — الخادم غير مفعّل للمزامنة');
+            return;
+        }
+
+        const row = this._toCloudEmployeeRow_(employee);
+        const isEdit = !!options.isEdit;
+        const previousId = options.previousId || row.id;
+        try {
+            const result = await GoogleIntegration.sendRequest({
+                action: isEdit ? 'updateEmployee' : 'addEmployee',
+                data: isEdit
+                    ? {
+                        employeeId: previousId,
+                        id: previousId,
+                        updateData: row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+                    : {
+                        ...row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+            });
+            if (result && result.success) {
+                Utils.safeLog?.('✅ تمت مزامنة الموظف مع السحابة');
+                return;
+            }
+            if (isEdit && result && /غير موجود/.test(String(result.message || ''))) {
+                const added = await GoogleIntegration.sendRequest({
+                    action: 'addEmployee',
+                    data: {
+                        ...row,
+                        __timeoutMs: 60000,
+                        __highPriority: true,
+                        __allowStructuredFailure: true
+                    }
+                });
+                if (added && added.success) return;
+            }
+            Notification?.warning?.(result?.message || 'حُفظ محلياً — تعذّرت مزامنة السحابة. أعد المحاولة لاحقاً.');
+        } catch (err) {
+            Notification?.warning?.('حُفظ محلياً — تعذّرت مزامنة السحابة. أعد المحاولة لاحقاً.');
+            Utils.safeWarn?.('⚠️ مزامنة موظف:', err?.message || err);
+        }
+    },
+
+    async handleSubmit(e) {
+        e.preventDefault();
+
+        // منع النقر المتكرر
+        const submitBtn = e.target?.querySelector('button[type="submit"]') || 
+                         document.querySelector('#employee-form button[type="submit"]');
+        
+        if (submitBtn && submitBtn.disabled) {
+            return; // النموذج قيد المعالجة
+        }
+
+        // تعطيل الزر لمنع النقر المتكرر
+        let originalText = '';
+        if (submitBtn) {
+            originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-2"></i> جاري الحفظ...';
+        }
+
+        const employeeData = this.currentEditId ? this._findEmployeeById_(this.currentEditId) : null;
+
+        let photoBase64 = employeeData?.photo || '';
+        const photoInput = document.getElementById('employee-photo-input');
+        if (photoInput && photoInput.files.length > 0) {
+            const file = photoInput.files[0];
+            if (file.size > 2 * 1024 * 1024) {
+                Notification.error('حجم الصورة كبير جداً. الحد الأقصى هو 2MB');
+                // استعادة الزر عند الخطأ
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+                return;
+            }
+            photoBase64 = await this.convertImageToBase64(file);
+        }
+
+        // فحص العناصر قبل الاستخدام
+        const nameEl = document.getElementById('employee-name');
+        const employeeNumberEl = document.getElementById('employee-number');
+        const sapIdEl = document.getElementById('employee-sap-id');
+        const hireDateEl = document.getElementById('employee-hire-date');
+        const birthDateEl = document.getElementById('employee-birth-date');
+        const departmentEl = document.getElementById('employee-department');
+        const positionEl = document.getElementById('employee-position');
+        const branchEl = document.getElementById('employee-branch');
+        const locationEl = document.getElementById('employee-location');
+        const genderEl = document.getElementById('employee-gender');
+        const nationalIdEl = document.getElementById('employee-national-id');
+        const emailEl = document.getElementById('employee-email');
+        const phoneEl = document.getElementById('employee-phone');
+        const insuranceNumberEl = document.getElementById('employee-insurance-number');
+        
+        if (!nameEl || !employeeNumberEl || !sapIdEl || !departmentEl || !positionEl || 
+            !branchEl || !locationEl || !genderEl || !emailEl || !phoneEl) {
+            Notification.error('بعض الحقول المطلوبة غير موجودة. يرجى تحديث الصفحة والمحاولة مرة أخرى.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            return;
+        }
+
+        // ✅ في وضع التعديل: إذا ترك المستخدم التاريخ فارغاً، لا نمسح القيمة القديمة
+        const isEditMode = !!this.currentEditId;
+        const prevHireDate = isEditMode ? (employeeData?.hireDate || '') : '';
+        const prevBirthDate = isEditMode ? (employeeData?.birthDate || '') : '';
+
+        const formData = {
+            // ✅ مطلوب: id = رقم الموظف (employeeNumber)
+            id: employeeNumberEl.value.trim() || this.currentEditId || Utils.generateId('EMP'),
+            name: nameEl.value.trim(),
+            employeeNumber: employeeNumberEl.value.trim(),
+            sapId: sapIdEl.value.trim(),
+            // ✅ مطلوب: حفظ التاريخ بصيغة YYYY-MM-DD بدون مشاكل timezone
+            hireDate: hireDateEl?.value ? this.normalizeDateOnly(hireDateEl.value) : (isEditMode ? this.normalizeDateOnly(prevHireDate) : this.normalizeDateOnly(new Date())),
+            birthDate: birthDateEl?.value ? this.normalizeDateOnly(birthDateEl.value) : (isEditMode ? this.normalizeDateOnly(prevBirthDate) : ''),
+            department: departmentEl.value.trim(),
+            // ✅ توافق مع Header Employees: لدينا job و position
+            job: positionEl.value.trim(),
+            position: positionEl.value.trim(),
+            branch: branchEl.value.trim(),
+            location: locationEl.value.trim(),
+            gender: genderEl.value,
+            nationalId: nationalIdEl?.value.trim() || '',
+            email: emailEl.value.trim(),
+            phone: phoneEl.value.trim(),
+            insuranceNumber: insuranceNumberEl?.value.trim() || '',
+            photo: photoBase64,
+            // ✅ إضافة: status و resignationDate لإدارة استقالات الموظفين
+            status: isEditMode ? (employeeData?.status || 'active') : 'active', // افتراضي: نشط
+            resignationDate: isEditMode ? (employeeData?.resignationDate || '') : '', // فارغ للموظفين الجدد
+            createdAt: this.currentEditId ? employeeData?.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        if (!formData.name || !formData.sapId || !formData.employeeNumber || !formData.department || !formData.position) {
+            Notification.error('يرجى ملء جميع الحقول المطلوبة (الاسم، الكود الوظيفي، الرقم الوظيفي، القسم، المنصب)');
+            // استعادة الزر عند الخطأ
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            return;
+        }
+
+        // ✅ منع تعارض الـ id (لأن id أصبح = رقم الموظف)
+        const proposedId = String(formData.id || '').trim();
+        if (!proposedId) {
+            Notification.error('رقم الموظف غير صالح (لا يمكن إنشاء id فارغ)');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            return;
+        }
+        const isDuplicateId = AppState.appData.employees.some(e => {
+            const eid = String(e?.id || '').trim();
+            if (!eid) return false;
+            // في حالة التعديل: نسمح بنفس id القديم فقط
+            if (this.currentEditId && eid === String(this.currentEditId).trim()) return false;
+            return eid === proposedId;
+        });
+        if (isDuplicateId) {
+            Notification.error('رقم الموظف مستخدم بالفعل. يرجى اختيار رقم آخر.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            return;
+        }
+
+        Loading.show();
+        const previousEditId = this.currentEditId;
+        const isCloudEdit = !!previousEditId;
+        try {
+            if (isCloudEdit) {
+                const index = this._findEmployeeIndexById_(previousEditId);
+                if (index !== -1) {
+                    AppState.appData.employees[index] = formData;
+                    this.currentEditId = proposedId;
+                }
+                Notification.success('تم تحديث الموظف بنجاح');
+            } else {
+                AppState.appData.employees.push(formData);
+                Notification.success('تم إضافة الموظف بنجاح');
+            }
+
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            } else {
+                Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+            }
+
+            this.cache.data = AppState.appData.employees;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+
+            Loading.hide();
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+
+            this.renderStatsCards();
+            await this.showList();
+
+            void this.syncEmployeeRecordToCloud_(formData, {
+                isEdit: isCloudEdit,
+                previousId: previousEditId
+            });
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ: ' + error.message);
+            
+            // استعادة الزر في حالة الخطأ
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+    },
+
+    async convertImageToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    },
+
+    async showList() {
+        this.currentEditId = null;
+        if (!this.canViewEmployeesRegistryTab() && this.canViewEmployeesAnalysisTab()) {
+            this.activeTab = 'data-analysis';
+        } else if (!this.canViewEmployeesRegistryTab() && this.canViewExternalWorkforceTab()) {
+            this.activeTab = 'external-workforce';
+        } else if (!this.canViewExternalWorkforceTab() && !this.canViewEmployeesAnalysisTab()) {
+            this.activeTab = 'employees-list';
+        }
+        const content = document.getElementById('employees-content');
+        if (content) {
+            content.innerHTML = await this.renderList();
+            this.applyModuleI18n(content);
+            requestAnimationFrame(() => {
+                this.setupEventListeners();
+                if (this.canViewEmployeesRegistryTab() && this.activeTab === 'employees-list') {
+                    this.loadEmployeesList();
+                } else if (this.activeTab === 'data-analysis' && this.canViewEmployeesAnalysisTab()) {
+                    this.loadEmployeesAnalysis().catch(() => {});
+                } else if (this.canViewExternalWorkforceTab()) {
+                    this.populateExternalWorkforceYearSelector();
+                    this.ensureExternalWorkforceDataLoaded().then(() => this.renderExternalWorkforceTable()).catch(() => {});
+                }
+                if (this.activeTab === 'employees-list') this.scrollToSearchField();
+            });
+        }
+    },
+
+    async editEmployee(id) {
+        // التحقق من الصلاحيات
+        if (!this.canEditOrDelete()) {
+            Notification.error('ليس لديك صلاحية لتعديل الموظف');
+            return;
+        }
+
+        const employee = this._findEmployeeById_(id);
+        if (employee) await this.showForm(employee);
+    },
+
+    async printEmployee(id) {
+        const employee = this._findEmployeeById_(id);
+        if (!employee) {
+            Notification.error('الموظف غير موجود');
+            return;
+        }
+
+        try {
+            Loading.show();
+
+            let printPhotoSrc = '';
+            const normPhoto = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+            if (normPhoto && typeof Utils.resolveDriveAwareImgDisplay === 'function') {
+                const pd = Utils.resolveDriveAwareImgDisplay(normPhoto);
+                if (pd.needsProxy && typeof Utils.fetchDriveImageDataUri === 'function') {
+                    try {
+                        printPhotoSrc = await Utils.fetchDriveImageDataUri(pd.proxyFileId) || '';
+                    } catch (e) { printPhotoSrc = ''; }
+                }
+                if (!printPhotoSrc) printPhotoSrc = pd.canonical || normPhoto;
+            } else if (normPhoto) {
+                printPhotoSrc = normPhoto;
+            }
+            
+            const birthDate = this.formatDateSafe(employee.birthDate);
+            const hireDate = this.formatDateSafe(employee.hireDate);
+            const age = this.calculateAge(employee.birthDate);
+            
+            // تنسيق التاريخ بالعربية
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '-';
+                try {
+                    const date = new Date(dateStr);
+                    const year = date.getFullYear();
+                    const month = date.getMonth() + 1;
+                    const day = date.getDate();
+                    // تحويل الأرقام إلى عربية
+                    const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                    const toArabic = (num) => String(num).split('').map(d => arabicNumbers[parseInt(d)] || d).join('');
+                    return `${toArabic(year)}/${toArabic(month)}/${toArabic(day)}`;
+                } catch {
+                    return dateStr;
+                }
+            };
+
+            // تنسيق الوقت للطباعة
+            const now = new Date();
+            const printDate = formatDate(now.toISOString().split('T')[0]);
+            const printTime = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+
+            // الحصول على اسم الشركة من AppState أو استخدام القيمة الافتراضية
+            const companyName = AppState?.companySettings?.name || AppState?.appData?.companyName || 'الشركة';
+
+            const content = `
+                <style>
+                    @page { size: A4; margin: 20mm; }
+                    body {
+                        font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+                        direction: rtl;
+                        margin: 0;
+                        padding: 0;
+                        background: #ffffff;
+                        color: #1f2937;
+                    }
+                    .employee-card {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        background: #ffffff;
+                        padding: 30px;
+                    }
+                    .card-header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .company-name {
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #2563eb;
+                        margin-bottom: 5px;
+                        white-space: nowrap;
+                        word-break: keep-all;
+                        overflow-wrap: normal;
+                    }
+                    .card-title {
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #1e40af;
+                        margin-bottom: 10px;
+                    }
+                    .header-line {
+                        width: 100%;
+                        height: 2px;
+                        background: #2563eb;
+                        margin: 10px 0 20px 0;
+                    }
+                    .employee-photo {
+                        text-align: center;
+                        margin: 20px 0 30px 0;
+                    }
+                    .employee-photo img {
+                        width: 150px;
+                        height: 150px;
+                        border-radius: 50%;
+                        object-fit: cover;
+                        border: 3px solid #e5e7eb;
+                    }
+                    .employee-photo-placeholder {
+                        width: 150px;
+                        height: 150px;
+                        border-radius: 50%;
+                        background: #f3f4f6;
+                        margin: 0 auto;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 3px solid #e5e7eb;
+                    }
+                    .employee-photo-placeholder svg {
+                        width: 80px;
+                        height: 80px;
+                        fill: #9ca3af;
+                    }
+                    .employee-details {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 15px;
+                        margin-bottom: 30px;
+                    }
+                    .detail-field {
+                        background: #f9fafb;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        padding: 12px 15px;
+                    }
+                    .detail-label {
+                        font-size: 13px;
+                        font-weight: 600;
+                        color: #6b7280;
+                        margin-bottom: 5px;
+                    }
+                    .detail-value {
+                        font-size: 15px;
+                        font-weight: 500;
+                        color: #1f2937;
+                    }
+                    .card-footer {
+                        text-align: center;
+                        margin-top: 40px;
+                        padding-top: 20px;
+                        border-top: 1px solid #e5e7eb;
+                        font-size: 12px;
+                        color: #6b7280;
+                        line-height: 1.8;
+                    }
+                    .footer-text {
+                        margin-bottom: 8px;
+                    }
+                    .print-date {
+                        font-size: 11px;
+                        color: #9ca3af;
+                    }
+                    @media print {
+                        body { background: #ffffff; }
+                        .employee-card { box-shadow: none; }
+                    }
+                </style>
+                <div class="employee-card">
+                    <div class="card-header">
+                        <div class="company-name">${Utils.escapeHTML(companyName)}</div>
+                        <div class="card-title">بطاقة بيانات موظف</div>
+                        <div class="header-line"></div>
+                    </div>
+                    <div class="employee-photo">
+                        ${printPhotoSrc
+                            ? `<img src="${Utils.escapeHTML(printPhotoSrc)}" alt="${Utils.escapeHTML(employee.name || '')}"
+                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'employee-photo-placeholder\\'><svg viewBox=\\'0 0 24 24\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\'/></svg></div>';">`
+                            : `<div class="employee-photo-placeholder">
+                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                    </svg>
+                                </div>`}
+                    </div>
+                    <div class="employee-details">
+                        <div class="detail-field">
+                            <div class="detail-label">الرقم الوظيفي</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.employeeNumber || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">الاسم الكامل</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.name || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">الوظيفة</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.position || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">القسم</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.department || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">تاريخ الميلاد</div>
+                            <div class="detail-value">${formatDate(birthDate)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">رقم البطاقة القومية</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.nationalId || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">تاريخ التعيين</div>
+                            <div class="detail-value">${formatDate(hireDate)}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">السن</div>
+                            <div class="detail-value">${age ? age + ' سنة' : '-'}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">رقم الهاتف</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.phone || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">النوع</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.gender === 'ذكر' ? 'Male' : employee.gender === 'أنثى' ? 'Female' : employee.gender || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">البريد الإلكتروني</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.email || '-')}</div>
+                        </div>
+                        <div class="detail-field">
+                            <div class="detail-label">الرقم التأميني</div>
+                            <div class="detail-value">${Utils.escapeHTML(employee.insuranceNumber || '-')}</div>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="footer-text">هذا المستند تم إنشاؤه آلياً من نظام إدارة الموارد البشرية</div>
+                        <div class="print-date">تاريخ الطباعة: ${printDate} - ${printTime}</div>
+                    </div>
+                </div>
+            `;
+
+            const htmlContent = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بطاقة بيانات موظف - ${Utils.escapeHTML(employee.name || '')}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    ${content}
+</head>
+<body>
+    ${content}
+</body>
+</html>`;
+
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const printWindow = window.open(url, '_blank');
+            
+            if (printWindow) {
+                printWindow.onload = () => {
+                    // Wait for images to load before printing
+                    const images = printWindow.document.querySelectorAll('img');
+                    let imagesLoaded = 0;
+                    const totalImages = images.length;
+
+                    if (totalImages === 0) {
+                        // No images, print immediately
+                        setTimeout(() => {
+                            printWindow.print();
+                            setTimeout(() => {
+                                URL.revokeObjectURL(url);
+                                Loading.hide();
+                            }, 800);
+                        }, 300);
+                    } else {
+                        // Wait for all images to load
+                        const checkAllImagesLoaded = () => {
+                            if (imagesLoaded >= totalImages) {
+                                setTimeout(() => {
+                                    printWindow.print();
+                                    setTimeout(() => {
+                                        URL.revokeObjectURL(url);
+                                        Loading.hide();
+                                    }, 800);
+                                }, 300);
+                            }
+                        };
+
+                        images.forEach(img => {
+                            if (img.complete) {
+                                // Image already loaded
+                                imagesLoaded++;
+                                checkAllImagesLoaded();
+                            } else {
+                                // Wait for image to load
+                                img.onload = () => {
+                                    imagesLoaded++;
+                                    checkAllImagesLoaded();
+                                };
+                                img.onerror = () => {
+                                    // Image failed to load, still proceed
+                                    imagesLoaded++;
+                                    checkAllImagesLoaded();
+                                };
+                            }
+                        });
+
+                        // Fallback: print after 3 seconds even if not all images loaded
+                        setTimeout(() => {
+                            if (imagesLoaded < totalImages) {
+                                printWindow.print();
+                                setTimeout(() => {
+                                    URL.revokeObjectURL(url);
+                                    Loading.hide();
+                                }, 800);
+                            }
+                        }, 3000);
+                    }
+                };
+            } else {
+                URL.revokeObjectURL(url);
+                Loading.hide();
+                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في طباعة بيانات الموظف:', error);
+            Notification.error('حدث خطأ أثناء الطباعة: ' + error.message);
+        }
+    },
+
+    async viewEmployee(id) {
+        const employee = this._findEmployeeById_(id);
+        if (!employee) return;
+
+        const birthDate = this.formatDateSafe(employee.birthDate);
+        const hireDate = this.formatDateSafe(employee.hireDate);
+        const age = this.calculateAge(employee.birthDate);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h2 class="modal-title">${this.t('module.employees.employeeDetails', 'تفاصيل الموظف')}</h2>
+                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="space-y-4">
+                        <div class="text-center mb-4">
+                            ${(() => {
+                                const p = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
+                                if (!p) return `<div class="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto"><i class="fas fa-user text-5xl text-gray-400"></i></div>`;
+                                const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                    ? Utils.resolveDriveAwareImgDisplay(p)
+                                    : { canonical: p, displaySrc: p, needsProxy: false, proxyFileId: '' };
+                                const pa = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                                return `<img src="${Utils.escapeHTML(disp.displaySrc)}" alt="${Utils.escapeHTML(employee.name || '')}"${pa} class="emp-detail-photo w-32 h-32 rounded-full object-cover mx-auto border-4 border-gray-200">`;
+                            })()}
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.fullName', 'الاسم الكامل')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.name || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.employeeNumber', 'الرقم الوظيفي')}:</label>
+                                <p class="text-gray-800 font-mono">${Utils.escapeHTML(employee.employeeNumber || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.department', 'القسم')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.department || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.job', 'الوظيفة')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.position || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.nationalId', 'رقم البطاقة')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.nationalId || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.birthDate', 'تاريخ الميلاد')}:</label>
+                                <p class="text-gray-800">${birthDate || ''}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.age', 'السن')}:</label>
+                                <p class="text-gray-800">${age ? age + ' ' + this.t('module.common.yearsUnit', 'سنة') : ''}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.hireDate', 'تاريخ التعيين')}:</label>
+                                <p class="text-gray-800">${hireDate || ''}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.gender', 'النوع')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.gender || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.phone', 'الهاتف')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.phone || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.table.insuranceNo', 'الرقم التأميني')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.insuranceNumber || '')}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-semibold text-gray-600">${this.t('module.employees.email', 'البريد الإلكتروني')}:</label>
+                                <p class="text-gray-800">${Utils.escapeHTML(employee.email || '')}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">${this.t('module.common.close', 'إغلاق')}</button>
+                    ${typeof EmailDispatch !== 'undefined' ? EmailDispatch.renderFooterButtonHtml('employees') : ''}
+                    <button class="btn-secondary" onclick="Employees.printEmployee('${employee.id}')">
+                        <i class="fas fa-print ml-2"></i>${this.t('module.common.print', 'طباعة')}
+                    </button>
+                    ${Employees.canEditOrDelete() ? `
+                    <button class="btn-primary" onclick="Employees.editEmployee('${employee.id}'); this.closest('.modal-overlay').remove();">
+                        <i class="fas fa-edit ml-2"></i>${this.t('module.common.edit', 'تعديل')}
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        this.applyModuleI18n(modal);
+        document.body.appendChild(modal);
+        if (typeof EmailDispatch !== 'undefined') {
+            EmailDispatch.bindFooterButtons(modal, { moduleKey: 'employees', record: employee, recordId: employee.id || employee.employeeNumber || employee.isoCode || '' });
+        }
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal, {
+                onFetchFail: (img) => {
+                    try {
+                        const d = document.createElement('div');
+                        d.className = 'w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center mx-auto';
+                        d.innerHTML = '<i class="fas fa-user text-5xl text-gray-400"></i>';
+                        img.replaceWith(d);
+                    } catch (e) { /* ignore */ }
+                }
+            });
+        }
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+    },
+
+    /**
+     * إلغاء تفعيل موظف (Soft Delete) - بدلاً من الحذف الكامل
+     * ✅ يتم تعطيل الموظف بدلاً من حذفه من قاعدة البيانات
+     */
+    async deactivateEmployee(id) {
+        // التحقق من الصلاحيات
+        if (!this.canEditOrDelete()) {
+            Notification.error('ليس لديك صلاحية لإلغاء تفعيل الموظف');
+            return;
+        }
+
+        const employee = this._findEmployeeById_(id);
+        if (!employee) {
+            Notification.error('الموظف غير موجود');
+            return;
+        }
+
+        if (!confirm(`هل أنت متأكد من إلغاء تفعيل الموظف "${employee.name}"؟\nسيتم إخفاؤه من القوائم ولكن سيتم الاحتفاظ ببياناته في النظام.`)) return;
+        
+        Loading.show();
+        try {
+            // ✅ تحديث حالة الموظف بدلاً من الحذف
+            const employeeIndex = this._findEmployeeIndexById_(id);
+            if (employeeIndex !== -1) {
+                AppState.appData.employees[employeeIndex].status = 'inactive';
+                AppState.appData.employees[employeeIndex].resignationDate = this.normalizeDateOnly(new Date());
+                AppState.appData.employees[employeeIndex].updatedAt = new Date().toISOString();
+            }
+
+            // حفظ البيانات باستخدام window.DataManager (بشكل غير متزامن لتجنب تجميد الواجهة)
+            setTimeout(() => {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+            }, 50);
+            
+            // تحديث Cache
+            this.cache.data = AppState.appData.employees;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+            
+            // ✅ الاستجابة الفورية للمستخدم: إغلاق التحميل وإظهار النجاح قبل المزامنة
+            Loading.hide();
+            Notification.success('تم إلغاء تفعيل الموظف بنجاح');
+            
+            // تحديث الكروت الإحصائية
+            this.renderStatsCards();
+            
+            // تطبيق جميع الفلاتر بعد إلغاء التفعيل
+            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+            this.loadEmployeesList(showInactive);
+            requestAnimationFrame(async () => {
+                try {
+                    await this.applyFilters();
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                    }
+                }
+            });
+            
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
+            // نستخدم sendToAppsScript فقط (بدون autoSave) لتحديث صف واحد بدلاً من رفع كل السجلات
+            const syncId = employee.id || employee.employeeNumber || employee.sapId || id;
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendToAppsScript('deactivateEmployee', { employeeId: syncId })
+                    .then(res => {
+                        if (!res || !res.success) {
+                            Utils.safeWarn('⚠️ فشل إلغاء تفعيل الموظف من قاعدة SQL:', res?.message);
+                        } else {
+                            Utils.safeLog('✅ تم إلغاء التفعيل في قاعدة البيانات بنجاح');
+                        }
+                    })
+                    .catch(err => Utils.safeWarn('خطأ في مزامنة إلغاء التفعيل في الخلفية:', err));
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ: ' + error.message);
+        }
+    },
+
+    /**
+     * حذف موظف (Hard Delete) - محفوظ للتوافق مع الكود القديم
+     * ⚠️ يُنصح باستخدام deactivateEmployee بدلاً من هذه الدالة
+     * @deprecated استخدم deactivateEmployee بدلاً من هذه الدالة
+     */
+    async deleteEmployee(id) {
+        // التحقق من الصلاحيات
+        if (!this.canEditOrDelete()) {
+            Notification.error('ليس لديك صلاحية لحذف الموظف');
+            return;
+        }
+
+        if (!confirm('هل أنت متأكد من حذف هذا الموظف نهائياً؟\n⚠️ تحذير: هذه العملية لا يمكن التراجع عنها!')) return;
+        Loading.show();
+        try {
+            AppState.appData.employees = (AppState.appData.employees || []).filter(e => e.id !== id);
+            // حفظ البيانات باستخدام window.DataManager (بشكل غير متزامن لتجنب تجميد الواجهة)
+            setTimeout(() => {
+                if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                    window.DataManager.save();
+                } else {
+                    Utils.safeWarn('⚠️ DataManager غير متاح - لم يتم حفظ البيانات');
+                }
+            }, 50);
+            
+            // تحديث Cache
+            this.cache.data = AppState.appData.employees;
+            this.cache.lastLoad = Date.now();
+            this.cache.lastUpdate = Date.now();
+            
+            // ✅ الاستجابة الفورية للمستخدم: إغلاق التحميل وإظهار النجاح قبل المزامنة
+            Loading.hide();
+            Notification.success('تم حذف الموظف بنجاح');
+            
+            // تحديث الكروت الإحصائية
+            this.renderStatsCards();
+            
+            // ✅ تطبيق جميع الفلاتر بعد الحذف
+            const showInactive = document.getElementById('show-inactive-employees')?.checked || false;
+            this.loadEmployeesList(showInactive);
+            requestAnimationFrame(async () => {
+                try {
+                    await this.applyFilters();
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeError('خطأ في تطبيق الفلاتر:', error);
+                    }
+                }
+            });
+            
+            // ✅ تنفيذ المزامنة مع Backend في الخلفية لتجنب عدم استجابة النظام
+            // نستخدم sendToAppsScript فقط للحذف الدقيق والسريع
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                GoogleIntegration.sendToAppsScript('deleteEmployee', { employeeId: id })
+                    .then(res => {
+                        if (!res || !res.success) {
+                            Utils.safeWarn('⚠️ فشل الحذف من قاعدة SQL:', res?.message);
+                        } else {
+                            Utils.safeLog('✅ تم الحذف من قاعدة البيانات بنجاح');
+                        }
+                    })
+                    .catch(err => Utils.safeWarn('خطأ في مزامنة الحذف في الخلفية:', err));
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('حدث خطأ: ' + error.message);
+        }
+    },
+
+    /**
+     * التمرير السلس إلى حقل البحث
+     */
+    scrollToSearchField() {
+        setTimeout(() => {
+            const searchInput = document.getElementById('employees-search');
+            if (searchInput) {
+                const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+                const targetY = Math.max(0, (searchInput.offsetTop || 0) - 20);
+                const viewportBottom = currentScrollY + window.innerHeight;
+                const notVisible = targetY < currentScrollY || targetY > (viewportBottom - 100);
+                if (notVisible) {
+                    window.scrollTo({
+                        top: targetY,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+        }, 0);
+    },
+
+    /**
+     * جمع قيم الفلاتر من الواجهة
+     */
+    getFilterValues() {
+        return {
+            search: document.getElementById('employees-search-filter')?.value || document.getElementById('employees-search')?.value || '',
+            department: document.getElementById('employee-filter-department')?.value || '',
+            branch: document.getElementById('employee-filter-branch')?.value || '',
+            location: document.getElementById('employee-filter-location')?.value || '',
+            job: document.getElementById('employee-filter-job')?.value || '',
+            position: document.getElementById('employee-filter-position')?.value || '',
+            gender: document.getElementById('employee-filter-gender')?.value || '',
+            showInactive: document.getElementById('show-inactive-employees')?.checked || false
+        };
+    },
+
+    async filterEmployees(searchTerm = '', showInactive = false, filters = null) {
+        try {
+            // ✅ جمع قيم الفلاتر من الواجهة إذا لم يتم تمريرها
+            if (!filters) {
+                const filterValues = this.getFilterValues();
+                searchTerm = searchTerm || filterValues.search;
+                // ✅ احترام قيمة showInactive الممررة أولاً، ثم من الواجهة
+                showInactive = showInactive !== undefined && showInactive !== null ? showInactive : (filterValues.showInactive || false);
+                filters = filterValues;
+                // ✅ تحديث showInactive في filters لضمان الاتساق
+                filters.showInactive = showInactive;
+            } else {
+                // ✅ إذا تم تمرير filters، استخدام showInactive من filters
+                showInactive = filters.showInactive !== undefined && filters.showInactive !== null ? filters.showInactive : showInactive;
+            }
+            
+            // ✅ التأكد من أن الجدول موجود، وإذا لم يكن موجوداً، تحميل القائمة أولاً
+            const container = document.getElementById('employees-table-container');
+            if (!container) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ employees-table-container غير موجود');
+                }
+                return;
+            }
+            
+            let tbody = container.querySelector('tbody');
+            
+            // إذا لم يكن الجدول موجوداً (مثلاً تم استبداله بـ empty-state)، تحميل القائمة أولاً
+            if (!tbody) {
+                // تحميل القائمة مع إعدادات showInactive
+                await this.loadEmployeesList(showInactive);
+                // إعادة البحث عن tbody بعد تحميل القائمة
+                tbody = container.querySelector('tbody');
+                // إذا لم يكن موجوداً بعد التحميل، الخروج
+                if (!tbody) {
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('⚠️ tbody غير موجود بعد تحميل القائمة');
+                    }
+                    return;
+                }
+            }
+        
+        let employees = (AppState.appData.employees || []).map((e) => this.sanitizeEmployeeRecordDrift_({ ...(e || {}) }));
+        AppState.appData.employees = employees;
+        
+        // ✅ تصفية الموظفين النشطين فقط (ما لم يُطلب خلاف ذلك) - استخدام isEmployeeInactive
+        if (!showInactive) {
+            const beforeFilter = employees.length;
+            const activeOnly = employees.filter(e => !this.isEmployeeInactive(e));
+            if (activeOnly.length === 0 && beforeFilter > 0) {
+                Utils.safeWarn(`⚠️ filterEmployees: التصفية أخفت الجميع — عرض الكل`);
+            } else {
+                employees = activeOnly;
+            }
+        }
+        
+        let filtered = employees;
+        const canEditOrDelete = this.canEditOrDelete();
+
+        // ✅ تطبيق البحث مع trim لإزالة المسافات الزائدة - البحث في جميع البيانات
+        if (searchTerm && searchTerm.trim()) {
+            const term = searchTerm.trim().toLowerCase();
+            filtered = filtered.filter(employee =>
+                // ✅ البحث في جميع الحقول: الاسم، الكود، الرقم، الوظيفة، الإدارة، الفرع، الموقع، إلخ
+                (employee.name && employee.name.toLowerCase().includes(term)) ||
+                (employee.employeeNumber && String(employee.employeeNumber).toLowerCase().includes(term)) ||
+                (employee.sapId && String(employee.sapId).toLowerCase().includes(term)) ||
+                (employee.department && employee.department.toLowerCase().includes(term)) ||
+                (employee.position && employee.position.toLowerCase().includes(term)) ||
+                (employee.job && employee.job.toLowerCase().includes(term)) ||
+                (employee.branch && employee.branch.toLowerCase().includes(term)) ||
+                (employee.location && employee.location.toLowerCase().includes(term)) ||
+                (employee.nationalId && employee.nationalId.toLowerCase().includes(term)) ||
+                (employee.phone && employee.phone.toLowerCase().includes(term)) ||
+                (employee.insuranceNumber && employee.insuranceNumber.toLowerCase().includes(term)) ||
+                (employee.email && employee.email.toLowerCase().includes(term)) ||
+                (employee.gender && employee.gender.toLowerCase().includes(term))
+            );
+        }
+        
+        // ✅ تطبيق الفلاتر الإضافية
+        if (filters.department) {
+            filtered = filtered.filter(e => String(e.department || '').trim() === String(filters.department).trim());
+        }
+        if (filters.branch) {
+            filtered = filtered.filter(e => String(e.branch || '').trim() === String(filters.branch).trim());
+        }
+        if (filters.location) {
+            filtered = filtered.filter(e => String(e.location || '').trim() === String(filters.location).trim());
+        }
+        if (filters.job) {
+            filtered = filtered.filter(e => String(e.job || '').trim() === String(filters.job).trim());
+        }
+        if (filters.position) {
+            filtered = filtered.filter(e => String(e.position || '').trim() === String(filters.position).trim());
+        }
+        if (filters.gender) {
+            filtered = filtered.filter(e => String(e.gender || '').trim() === String(filters.gender).trim());
+        }
+
+        // عدد الأعمدة: 13 (12 أعمدة بيانات + عمود الإجراءات)
+        const colSpan = 13;
+        
+        if (filtered.length === 0) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="${colSpan}" class="text-center text-gray-500 py-8">لا توجد نتائج</td>`;
+            tbody.innerHTML = '';
+            tbody.appendChild(tr);
+            const moreWrap = document.getElementById('employees-load-more-wrap');
+            if (moreWrap) moreWrap.remove();
+            this._listRowsCache = [];
+            this._listVisibleCount = 0;
+        } else {
+            const frag = document.createDocumentFragment();
+            for (let i = 0; i < filtered.length; i++) {
+                frag.appendChild(this.buildEmployeeTableRowElement_(filtered[i], canEditOrDelete));
+            }
+            tbody.innerHTML = '';
+            tbody.appendChild(frag);
+            this._listRowsCache = filtered;
+            this._listVisibleCount = filtered.length;
+            this._listCanEdit = canEditOrDelete;
+            const moreWrap = document.getElementById('employees-load-more-wrap');
+            if (moreWrap) moreWrap.remove();
+        }
+
+        if (typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(tbody, {
+                onFetchFail: (img) => {
+                    try {
+                        const key = (img.dataset.photoKey || '').trim();
+                        if (key) sessionStorage.setItem(this._photoFailKey(key), Date.now().toString());
+                    } catch (e) { /* ignore */ }
+                    try {
+                        const parent = img.parentElement;
+                        if (parent) {
+                            parent.innerHTML = '<div class="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>';
+                        }
+                    } catch (e2) { /* ignore */ }
+                }
+            });
+        }
+        
+        // ✅ تحديث شارات العد على الفلاتر النشطة (مشابه لـ DailyObservations)
+        this.updateFilterBadges(employees, filtered, filters);
+        
+            // ✅ إضافة visual feedback: عرض عدد النتائج في Console (للتحقق)
+            if (AppState.debugMode && searchTerm) {
+                Utils.safeLog(`🔍 نتائج البحث: ${filtered.length} من ${employees.length} موظف`);
+            }
+        } catch (error) {
+            // معالجة الأخطاء بشكل صحيح
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ خطأ في filterEmployees:', error);
+            } else {
+                console.error('❌ خطأ في filterEmployees:', error);
+            }
+        }
+    },
+    
+    /**
+     * تحديث شارات العد على الفلاتر النشطة (مشابه لـ DailyObservations)
+     */
+    updateFilterBadges(allEmployees, filteredEmployees, filters) {
+        try {
+            // ✅ التأكد من وجود filters
+            if (!filters) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ updateFilterBadges: filters غير موجودة');
+                }
+                return;
+            }
+            
+            // دالة مساعدة لإزالة شارة موجودة وإضافة شارة جديدة
+            const updateFilterLabel = (filterId, filterValue, filteredCount) => {
+                try {
+                    const filterElement = document.getElementById(filterId);
+                    if (!filterElement) {
+                        if (AppState.debugMode && filterValue) {
+                            Utils.safeWarn(`⚠️ updateFilterLabel: ${filterId} غير موجود`);
+                        }
+                        return;
+                    }
+                    
+                    // البحث عن label المرتبط بهذا الفلتر
+                    const filterField = filterElement.closest('.filter-field');
+                    if (!filterField) {
+                        if (AppState.debugMode && filterValue) {
+                            Utils.safeWarn(`⚠️ updateFilterLabel: filter-field غير موجود لـ ${filterId}`);
+                        }
+                        return;
+                    }
+                    
+                    const label = filterField.querySelector('.filter-label');
+                    if (!label) {
+                        if (AppState.debugMode && filterValue) {
+                            Utils.safeWarn(`⚠️ updateFilterLabel: filter-label غير موجود لـ ${filterId}`);
+                        }
+                        return;
+                    }
+                    
+                    // إزالة الشارة الموجودة إن وجدت
+                    const existingBadge = label.querySelector('.filter-count-badge');
+                    if (existingBadge) {
+                        existingBadge.remove();
+                    }
+                    
+                    // إذا كان الفلتر نشطاً، إضافة الشارة
+                    if (filterValue && filterValue.trim() !== '') {
+                        const badge = document.createElement('span');
+                        badge.className = 'filter-count-badge';
+                        badge.title = 'عدد النتائج المفلترة';
+                        badge.textContent = filteredCount;
+                        
+                        // إدراج الشارة بعد الأيقونة
+                        const icon = label.querySelector('i');
+                        if (icon) {
+                            icon.insertAdjacentElement('afterend', badge);
+                        } else {
+                            label.insertBefore(badge, label.firstChild);
+                        }
+                        
+                        if (AppState.debugMode) {
+                            Utils.safeLog(`✅ تم إضافة شارة العدد (${filteredCount}) لـ ${filterId}`);
+                        }
+                    }
+                } catch (error) {
+                    // تجاهل الأخطاء في تحديث الشارات
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('خطأ في تحديث شارة الفلتر:', error);
+                    }
+                }
+            };
+        
+        // تحديث كل فلتر
+        if (filters.department) {
+            updateFilterLabel('employee-filter-department', filters.department, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-department', '', 0);
+        }
+        
+        if (filters.branch) {
+            updateFilterLabel('employee-filter-branch', filters.branch, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-branch', '', 0);
+        }
+        
+        if (filters.location) {
+            updateFilterLabel('employee-filter-location', filters.location, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-location', '', 0);
+        }
+        
+        if (filters.job) {
+            updateFilterLabel('employee-filter-job', filters.job, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-job', '', 0);
+        }
+        
+        if (filters.position) {
+            updateFilterLabel('employee-filter-position', filters.position, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-position', '', 0);
+        }
+        
+        if (filters.gender) {
+            updateFilterLabel('employee-filter-gender', filters.gender, filteredEmployees.length);
+        } else {
+            updateFilterLabel('employee-filter-gender', '', 0);
+        }
+        
+            // ✅ تحديث شارة البحث إذا كان هناك نص بحث
+            if (filters.search && filters.search.trim()) {
+                try {
+                    const searchInput = document.getElementById('employees-search-filter') || document.getElementById('employees-search');
+                    if (searchInput) {
+                        const filterField = searchInput.closest('.filter-field');
+                        if (filterField) {
+                            const label = filterField.querySelector('.filter-label');
+                            if (label) {
+                                const existingBadge = label.querySelector('.filter-count-badge');
+                                if (existingBadge) {
+                                    existingBadge.remove();
+                                }
+                                
+                                const badge = document.createElement('span');
+                                badge.className = 'filter-count-badge';
+                                badge.title = 'عدد النتائج المفلترة';
+                                badge.textContent = filteredEmployees.length;
+                                
+                                const icon = label.querySelector('i');
+                                if (icon) {
+                                    icon.insertAdjacentElement('afterend', badge);
+                                } else {
+                                    label.insertBefore(badge, label.firstChild);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('خطأ في تحديث شارة البحث:', error);
+                    }
+                }
+            } else {
+                // إزالة شارة البحث إذا لم يكن هناك نص
+                try {
+                    const searchInput = document.getElementById('employees-search-filter') || document.getElementById('employees-search');
+                    if (searchInput) {
+                        const filterField = searchInput.closest('.filter-field');
+                        if (filterField) {
+                            const label = filterField.querySelector('.filter-label');
+                            if (label) {
+                                const existingBadge = label.querySelector('.filter-count-badge');
+                                if (existingBadge) {
+                                    existingBadge.remove();
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    if (AppState.debugMode) {
+                        Utils.safeWarn('خطأ في إزالة شارة البحث:', error);
+                    }
+                }
+            }
+        } catch (error) {
+            // تجاهل الأخطاء في تحديث الشارات
+            if (AppState.debugMode) {
+                Utils.safeError('خطأ في updateFilterBadges:', error);
+            }
+        }
+    },
+    
+    /**
+     * تطبيق جميع الفلاتر
+     */
+    async applyFilters() {
+        try {
+            const filters = this.getFilterValues();
+            await this.filterEmployees(filters.search, filters.showInactive, filters);
+            // ✅ تحديث عدد المستقيلين بعد تطبيق الفلاتر
+            this.updateInactiveCount();
+        } catch (error) {
+            // معالجة الأخطاء بشكل صحيح
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('❌ خطأ في applyFilters:', error);
+            } else {
+                console.error('❌ خطأ في applyFilters:', error);
+            }
+        } finally {
+            // ✅ تحديث عدد المستقيلين دائماً بعد تطبيق الفلاتر
+            this.updateInactiveCount();
+        }
+    },
+    
+    /**
+     * إعادة تعيين جميع الفلاتر
+     */
+    async resetFilters() {
+        // إعادة تعيين حقل البحث
+        const searchInput = document.getElementById('employees-search');
+        const filterSearchInput = document.getElementById('employees-search-filter');
+        if (searchInput) searchInput.value = '';
+        if (filterSearchInput) filterSearchInput.value = '';
+        
+        // إعادة تعيين جميع الفلاتر
+        const filterSelects = [
+            'employee-filter-department',
+            'employee-filter-branch',
+            'employee-filter-location',
+            'employee-filter-job',
+            'employee-filter-position',
+            'employee-filter-gender'
+        ];
+        
+        filterSelects.forEach(filterId => {
+            const select = document.getElementById(filterId);
+            if (select) {
+                select.value = '';
+            }
+        });
+        
+        // إعادة تعيين checkbox المستقيلين
+        const showInactiveCheckbox = document.getElementById('show-inactive-employees');
+        if (showInactiveCheckbox) {
+            showInactiveCheckbox.checked = false;
+        }
+        
+        // ✅ إعادة تعيين مظهر الزر
+        const container = document.getElementById('show-inactive-employees-container');
+        if (container) {
+            container.style.background = 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)';
+            container.style.borderColor = '#dee2e6';
+            container.style.boxShadow = 'none';
+        }
+        
+        // تطبيق الفلاتر (جميعها فارغة)
+        await this.applyFilters();
+        
+        // ✅ تحديث عدد المستقيلين بعد إعادة التعيين
+        this.updateInactiveCount();
+    },
+    
+    /**
+     * تحديث عدد المستقيلين في الزر
+     * @param {number} retryCount - عدد محاولات إعادة المحاولة (داخلي)
+     */
+    updateInactiveCount(retryCount = 0) {
+        const maxRetries = 3;
+        const retryDelay = 100; // مللي ثانية
+        
+        const doUpdate = () => {
+            try {
+                const employees = AppState.appData.employees || [];
+                const inactiveCount = employees.filter(e => this.isEmployeeInactive(e)).length;
+                
+                const countBadge = document.getElementById('inactive-employees-count');
+                if (countBadge) {
+                    // ✅ تحديث المحتوى
+                    countBadge.textContent = inactiveCount;
+                    
+                    // ✅ لون الشارة: رمادي عند 0 (محايد)، أحمر عند وجود مستقيلين
+                    const isZero = inactiveCount === 0;
+                    const bgColor = isZero ? '#6b7280' : '#dc2626';
+                    const boxShadow = isZero ? '0 2px 4px rgba(107, 114, 128, 0.3)' : '0 2px 4px rgba(220, 38, 38, 0.3)';
+                    countBadge.style.cssText = `
+                        display: inline-flex !important;
+                        visibility: visible !important;
+                        opacity: 1 !important;
+                        align-items: center;
+                        justify-content: center;
+                        min-width: 24px;
+                        height: 22px;
+                        padding: 0 8px;
+                        background: ${bgColor};
+                        color: white;
+                        border-radius: 11px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        margin-right: 4px;
+                        box-shadow: ${boxShadow};
+                        transition: all 0.3s ease;
+                    `;
+                    
+                    // ✅ تطبيق تأثير خاص إذا كان checkbox مفعل (عرض المستقيلين)
+                    const checkbox = document.getElementById('show-inactive-employees');
+                    if (checkbox && checkbox.checked && !isZero) {
+                        countBadge.style.background = 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)';
+                        countBadge.style.boxShadow = '0 2px 6px rgba(220, 38, 38, 0.4)';
+                        countBadge.style.transform = 'scale(1.1)';
+                    } else {
+                        countBadge.style.transform = 'scale(1)';
+                    }
+                    
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`📊 عدد المستقيلين: ${inactiveCount}`);
+                    }
+                } else if (retryCount < maxRetries) {
+                    // ✅ إذا لم يوجد العنصر، إعادة المحاولة بعد تأخير
+                    if (AppState.debugMode) {
+                        Utils.safeLog(`⏳ العنصر غير موجود، إعادة المحاولة ${retryCount + 1}/${maxRetries}...`);
+                    }
+                    setTimeout(() => {
+                        this.updateInactiveCount(retryCount + 1);
+                    }, retryDelay);
+                } else if (AppState.debugMode) {
+                    Utils.safeWarn('⚠️ تعذر العثور على عنصر عداد المستقيلين بعد عدة محاولات');
+                }
+            } catch (error) {
+                if (AppState.debugMode) {
+                    Utils.safeWarn('خطأ في تحديث عدد المستقيلين:', error);
+                }
+            }
+        };
+        
+        // ✅ استخدام requestAnimationFrame لضمان أن الـ DOM جاهز
+        if (retryCount === 0) {
+            requestAnimationFrame(doUpdate);
+        } else {
+            doUpdate();
+        }
+    },
+
+    /**
+     * تهيئة الموديول - تحميل البيانات عند بدء التطبيق
+     * يمكن استدعاؤها من خارج الموديول لضمان تحميل البيانات
+     */
+    async init() {
+        try {
+            // التحقق من وجود البيانات المحلية
+            const hasLocalData = AppState.appData.employees && 
+                                Array.isArray(AppState.appData.employees) && 
+                                AppState.appData.employees.length > 0;
+
+            // إذا كانت البيانات موجودة، تحديث Cache
+            if (hasLocalData) {
+                this.cache.data = AppState.appData.employees;
+                this.cache.lastLoad = Date.now();
+                this.cache.lastUpdate = Date.now();
+                
+                if (AppState.debugMode) {
+                    Utils.safeLog(`✅ تم تهيئة بيانات الموظفين من البيانات المحلية (${this.cache.data.length} موظف)`);
+                }
+            } else {
+                // إذا لم تكن البيانات موجودة، محاولة تحميلها
+                await this.ensureEmployeesLoaded();
+            }
+
+            // بدء التحديث التلقائي في الخلفية
+            this.startBackgroundUpdate();
+        } catch (error) {
+            if (AppState.debugMode) {
+                Utils.safeError('❌ خطأ في تهيئة موديول الموظفين:', error);
+            }
+        }
+    }
+};
+
+Employees.getExternalWorkforceExportHeaderInfo = function (reportTitle, exportDate = new Date()) {
+    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'SafetyHub | ICAPP').trim();
+    const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
+    const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
+        ? Utils.formatDateTime(exportDate)
+        : new Date(exportDate).toISOString().slice(0, 19).replace('T', ' ');
+    return { companyName, secondaryName, reportTitle, exportDateTime };
+};
+
+Employees.buildExternalWorkforceExcelWorksheet = function (header, rows, reportTitle, exportDate = new Date()) {
+    const info = this.getExternalWorkforceExportHeaderInfo(reportTitle, exportDate);
+    const tableRows = [header, ...rows];
+    const columnCount = Math.max(...tableRows.map(row => Array.isArray(row) ? row.length : 0), 1);
+    const aoa = [
+        [info.companyName],
+        [info.secondaryName],
+        [info.reportTitle],
+        [`Generated: ${info.exportDateTime}`],
+        [],
+        ...tableRows
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    worksheet['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: columnCount - 1 } },
+        { s: { r: 1, c: 0 }, e: { r: 1, c: columnCount - 1 } },
+        { s: { r: 2, c: 0 }, e: { r: 2, c: columnCount - 1 } },
+        { s: { r: 3, c: 0 }, e: { r: 3, c: columnCount - 1 } }
+    ];
+    worksheet['!cols'] = [{ wch: 28 }, { wch: 14 }].concat(new Array(Math.max(columnCount - 3, 0)).fill({ wch: 14 }), [{ wch: 16 }]);
+    return worksheet;
+};
+
+Employees.exportExternalWorkforceToExcel = function () {
+    if (typeof XLSX === 'undefined') {
+        Notification.error('XLSX library is not available');
+        return;
+    }
+
+    const { model, header, rows } = this.getExternalWorkforceExportRows();
+    const reportTitle = `${this.getExternalWorkforceViewState().labels.externalTab} - ${model.year}`;
+    const workbook = XLSX.utils.book_new();
+    const worksheet = this.buildExternalWorkforceExcelWorksheet(header, rows, reportTitle, new Date());
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'External Workforce');
+    XLSX.writeFile(workbook, `external_workforce_${model.year}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+Employees.exportExternalWorkforceToPDF = function () {
+    const { model, header, rows } = this.getExternalWorkforceExportRows();
+    const viewState = this.getExternalWorkforceViewState();
+    const reportTitle = `${viewState.labels.externalTab} - ${model.year}`;
+    const exportDate = new Date().toISOString();
+    const tableRows = [header, ...rows].map((row, index) => `
+        <tr>
+            ${row.map(cell => `<${index === 0 ? 'th' : 'td'}>${Utils.escapeHTML(String(cell ?? ''))}</${index === 0 ? 'th' : 'td'}>`).join('')}
+        </tr>
+    `).join('');
+
+    const content = `
+        <style>
+            .external-workforce-report {
+                direction: ${viewState.dir};
+                font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+            }
+            .external-workforce-report__meta {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 18px;
+                padding: 12px 16px;
+                border: 1px solid #D7E3F1;
+                border-radius: 12px;
+                background: #F8FBFF;
+                font-size: 13px;
+                color: #334155;
+            }
+            .external-workforce-report__meta strong {
+                color: #0F172A;
+            }
+            .external-workforce-report__table {
+                width: 100%;
+                border-collapse: collapse;
+                table-layout: fixed;
+                direction: ${viewState.dir};
+            }
+            .external-workforce-report__table th,
+            .external-workforce-report__table td {
+                border: 1px solid #334155;
+                padding: 8px 6px;
+                text-align: center;
+                font-size: 11px;
+                word-break: break-word;
+            }
+            .external-workforce-report__table th {
+                background: #B7D2EA;
+                color: #102A43;
+                font-weight: 700;
+            }
+            .external-workforce-report__table td:first-child,
+            .external-workforce-report__table th:first-child {
+                font-weight: 700;
+                background: #DCEAF7;
+            }
+            @media print {
+                .external-workforce-report__meta {
+                    break-inside: avoid;
+                }
+            }
+        </style>
+        <div class="external-workforce-report" dir="${viewState.dir}" lang="${viewState.lang}">
+            <div class="external-workforce-report__meta">
+                <div><strong>${Utils.escapeHTML(viewState.labels.year)}:</strong> ${Utils.escapeHTML(String(model.year))}</div>
+                <div><strong>${Utils.escapeHTML(viewState.labels.externalTab)}</strong></div>
+                <div><strong>${Utils.escapeHTML(viewState.labels.totalHoursYtd || 'YTD Hours')}:</strong> ${Utils.escapeHTML(String(model.hoursYtd || 0))}</div>
+            </div>
+            <table class="external-workforce-report__table">${tableRows}</table>
+        </div>
+    `;
+
+    const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
+        ? FormHeader.generatePDFHTML(
+            `EXT-WORKFORCE-${model.year}`,
+            reportTitle,
+            content,
+            false,
+            true,
+            {
+                version: '1.0',
+                releaseDate: exportDate,
+                revisionDate: exportDate,
+                includeQRCode: true
+            },
+            exportDate,
+            exportDate
+        )
+        : `<!DOCTYPE html><html lang="${viewState.lang}" dir="${viewState.dir}"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;direction:${viewState.dir};padding:20px;">${content}</body></html>`;
+
+    const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const printWindow = window.open(url, '_blank');
+    if (!printWindow) {
+        URL.revokeObjectURL(url);
+        Notification.error('تعذر فتح نافذة الطباعة');
+        return;
+    }
+
+    printWindow.onload = () => {
+        setTimeout(() => {
+            printWindow.print();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, 400);
+    };
+};
+
+// ===== Export module to global scope =====
+// تصدير الموديول إلى window فوراً لضمان توافره
+(function () {
+    'use strict';
+    try {
+        if (typeof window !== 'undefined' && typeof Employees !== 'undefined') {
+            window.Employees = Employees;
+            
+            // إشعار عند تحميل الموديول بنجاح
+            if (typeof AppState !== 'undefined' && AppState.debugMode && typeof Utils !== 'undefined' && Utils.safeLog) {
+                Utils.safeLog('✅ Employees module loaded and available on window.Employees');
+            }
+            
+            // تهيئة الموديول عند تحميل الصفحة (إذا كان المستخدم مسجل دخول)
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                // تأخير بسيط لضمان تحميل جميع المتطلبات
+                setTimeout(() => {
+                    if (window.Employees && window.Employees.init) {
+                        window.Employees.init().catch(error => {
+                            if (AppState.debugMode) {
+                                Utils.safeWarn('⚠️ فشل تهيئة موديول الموظفين:', error);
+                            }
+                        });
+                    }
+                }, 2000); // تأخير 2 ثانية لضمان تحميل جميع المتطلبات
+            }
+        }
+    } catch (error) {
+        console.error('❌ خطأ في تصدير Employees:', error);
+        // محاولة التصدير مرة أخرى حتى في حالة الخطأ
+        if (typeof window !== 'undefined' && typeof Employees !== 'undefined') {
+            try {
+                window.Employees = Employees;
+            } catch (e) {
+                console.error('❌ فشل تصدير Employees:', e);
+            }
+        }
+    }
+})();

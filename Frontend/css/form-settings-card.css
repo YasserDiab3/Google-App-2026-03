@@ -1,0 +1,716 @@
+/* ========================================
+   إعدادات النماذج — تصميم محسّن
+   Form Settings Card — Enhanced UX
+   ======================================== */
+
+.content-card.form-settings-section {
+    position: relative;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    box-shadow:
+        0 4px 24px rgba(26, 99, 79, 0.06),
+        0 1px 4px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+}
+
+.content-card.form-settings-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--brand-primary, #1a634f) 0%, #3b82f6 100%);
+    z-index: 1;
+}
+
+.content-card.form-settings-section .card-header {
+    padding: 1.5rem 1.75rem 1.25rem;
+    background: linear-gradient(135deg, rgba(26, 99, 79, 0.04) 0%, rgba(59, 130, 246, 0.04) 100%);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.content-card.form-settings-section .card-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    gap: 0.65rem;
+}
+
+.content-card.form-settings-section .card-title i {
+    color: var(--brand-primary, #1a634f);
+}
+
+.content-card.form-settings-section .card-body {
+    padding: 1.5rem 1.75rem;
+}
+
+.content-card.form-settings-section .card-footer {
+    padding: 1rem 1.75rem 1.25rem;
+    background: var(--gray-50, #f9fafb);
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+/* مقدمة */
+.form-settings-intro {
+    display: flex;
+    gap: 0.875rem;
+    padding: 1rem 1.125rem;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.06) 0%, rgba(26, 99, 79, 0.05) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    margin-bottom: 0.25rem;
+}
+
+.form-settings-intro__icon {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: #fff;
+    color: #3b82f6;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+.form-settings-intro__text {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: var(--text-secondary, #64748b);
+    margin: 0;
+}
+
+/* قسم المواقع والأماكن */
+.form-settings-locations-block {
+    border-radius: 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    background: var(--gray-50, #f9fafb);
+    padding: 1.25rem 1.5rem 1.5rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.form-settings-locations-block__header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.form-settings-sites-excel-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+    .form-settings-sites-excel-toolbar {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .form-settings-sites-excel-toolbar .btn-sm {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+}
+
+.form-settings-locations-block__title {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0;
+}
+
+.form-settings-locations-block__title-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #2563eb;
+}
+
+.form-settings-locations-block__hint {
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #64748b);
+    margin: 0.25rem 0 0;
+    max-width: 36rem;
+}
+
+/* شبكة العمودين */
+.form-settings-panels {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .form-settings-panels {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem;
+        align-items: stretch;
+    }
+}
+
+@media (min-width: 1200px) {
+    .form-settings-panels {
+        gap: 1.5rem;
+    }
+}
+
+/* لوحة عمود */
+.form-settings-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 18rem;
+    border-radius: 14px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    background: #fff;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.form-settings-panel:hover {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.form-settings-panel--places {
+    border-inline-start: 4px solid #3b82f6;
+}
+
+.form-settings-panel--places.is-disabled {
+    opacity: 0.92;
+}
+
+.form-settings-panel__head {
+    padding: 1rem 1.125rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100, #f3f4f6);
+    background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+}
+
+.form-settings-panel__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0 0 0.25rem;
+}
+
+.form-settings-panel__title i {
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.form-settings-panel__desc {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #64748b);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.form-settings-panel__body {
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-settings-panel__list {
+    flex: 1;
+    min-height: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-inline-start: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 12rem;
+}
+
+.form-settings-panel__footer {
+    padding: 0.75rem 1rem 1rem;
+    border-top: 1px solid var(--gray-100, #f3f4f6);
+}
+
+.form-settings-panel__add-btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-settings-panel__add-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 99, 79, 0.2);
+}
+
+.form-settings-panel__add-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* سياق الموقع النشط */
+.form-settings-places-context {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.875rem;
+    margin-bottom: 0.75rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
+    border: 1px dashed rgba(59, 130, 246, 0.35);
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #475569);
+}
+
+.form-settings-places-context.is-empty {
+    background: var(--gray-50, #f9fafb);
+    border-color: var(--gray-200, #e5e7eb);
+    color: var(--text-secondary, #94a3b8);
+}
+
+.form-settings-places-context__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #fff;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    color: #1d4ed8;
+}
+
+.form-settings-places-context__count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(26, 99, 79, 0.1);
+    color: var(--brand-primary, #1a634f);
+}
+
+.form-settings-places-search {
+    margin-bottom: 0.75rem;
+}
+
+.form-settings-places-search__label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary, #64748b);
+}
+
+.form-settings-places-search__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.form-settings-places-search__input {
+    width: 100%;
+    padding: 0.5rem 2.25rem 0.5rem 0.75rem;
+    border: 1px solid var(--gray-200, #e5e7eb);
+    border-radius: 10px;
+    font-size: 0.875rem;
+    background: #fff;
+    color: var(--text-primary, #1e293b);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-settings-places-search__input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-settings-places-search__input::placeholder {
+    color: #94a3b8;
+}
+
+.form-settings-places-search__clear {
+    position: absolute;
+    left: 0.35rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.form-settings-places-search__clear:hover {
+    background: rgba(148, 163, 184, 0.15);
+    color: #334155;
+}
+
+/* صف عنصر */
+.form-settings-item-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    border-radius: 10px;
+    border: 1px solid var(--gray-200, #e5e7eb);
+    background: #fff;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-settings-item-row:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.form-settings-item-row--site {
+    cursor: pointer;
+}
+
+.form-settings-item-row--site.is-selected {
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.form-settings-item-row--site.is-selected:hover {
+    border-color: #2563eb;
+}
+
+.form-settings-item-row__index {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background: var(--gray-100, #f3f4f6);
+    color: var(--text-secondary, #64748b);
+}
+
+.form-settings-item-row--site.is-selected .form-settings-item-row__index {
+    background: #3b82f6;
+    color: #fff;
+}
+
+.form-settings-item-row__input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: var(--gray-50, #f9fafb);
+    font-size: 0.875rem;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-settings-item-row__input:hover {
+    background: #fff;
+    border-color: var(--gray-200, #e5e7eb);
+}
+
+.form-settings-item-row__input:focus {
+    outline: none;
+    background: #fff;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.form-settings-item-row__select-btn {
+    flex-shrink: 0;
+    min-width: 4.5rem;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.75rem;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.form-settings-item-row__select-btn.is-active {
+    background: #3b82f6;
+    color: #fff;
+    border-color: #3b82f6;
+}
+
+.form-settings-item-row__delete {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #94a3b8;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.form-settings-item-row__delete:hover {
+    color: #dc2626;
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+
+/* حالة فارغة */
+.form-settings-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 0.5rem;
+    padding: 1.75rem 1rem;
+    border-radius: 12px;
+    border: 2px dashed var(--gray-200, #e5e7eb);
+    background: var(--gray-50, #f9fafb);
+    color: var(--text-secondary, #64748b);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    min-height: 8rem;
+}
+
+.form-settings-empty__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fff;
+    color: #94a3b8;
+    font-size: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.form-settings-empty strong {
+    color: var(--text-primary, #334155);
+    font-weight: 600;
+}
+
+/* أقسام ثانوية */
+.form-settings-subsection {
+    border-radius: 14px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    background: #fff;
+    padding: 1.125rem 1.25rem;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.03);
+}
+
+.form-settings-subsection__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--text-primary, #1e293b);
+    margin: 0 0 0.875rem;
+    padding-bottom: 0.625rem;
+    border-bottom: 1px solid var(--gray-100, #f3f4f6);
+}
+
+.form-settings-subsection__title i {
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.form-settings-subsection__title i.fa-briefcase {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.form-settings-subsection__title i.fa-user-shield {
+    background: #ede9fe;
+    color: #7c3aed;
+}
+
+.form-settings-subsection__title i.fa-exchange-alt {
+    background: #e0f2fe;
+    color: #0284c7;
+}
+
+.form-settings-subsection__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-settings-subsection__add {
+    margin-top: 0.75rem;
+}
+
+/* استيراد/تصدير */
+.form-settings-io-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-settings-paste-box {
+    margin-top: 0.5rem;
+}
+
+.form-settings-paste-box textarea.form-input {
+    border-radius: 10px;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.8125rem;
+    min-height: 9rem;
+    background: var(--gray-50, #f9fafb);
+}
+
+.form-settings-paste-box textarea.form-input:focus {
+    background: #fff;
+}
+
+.form-settings-paste-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.625rem;
+}
+
+.form-settings-paste-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #94a3b8);
+    margin-top: 0.5rem;
+    line-height: 1.5;
+}
+
+/* تذييل الحفظ */
+.form-settings-footer-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #94a3b8);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+/* الوضع الداكن */
+[data-theme="dark"] .content-card.form-settings-section {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .form-settings-locations-block {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-theme="dark"] .form-settings-panel {
+    background: var(--card-bg, #1e293b);
+}
+
+[data-theme="dark"] .form-settings-panel__head {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .form-settings-item-row {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .form-settings-item-row__input {
+    background: rgba(0, 0, 0, 0.2);
+    color: var(--text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .form-settings-item-row__input:focus {
+    background: rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] .form-settings-empty {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .form-settings-subsection {
+    background: var(--card-bg, #1e293b);
+}
+
+[data-theme="dark"] .form-settings-places-search__input {
+    background: rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary, #f1f5f9);
+}
+
+[data-theme="dark"] .form-settings-places-search__input:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+}
+
+.form-settings-sync-status {
+    flex: 1 1 100%;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.5rem;
+    line-height: 1.45;
+}
+
+.form-settings-sync-status--info {
+    color: #1d4ed8;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.form-settings-sync-status--success {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.form-settings-sync-status--warning {
+    color: #b45309;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.form-settings-sync-status--error {
+    color: #b91c1c;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+[data-action="save-form-settings"].is-loading {
+    opacity: 0.75;
+    pointer-events: none;
+}

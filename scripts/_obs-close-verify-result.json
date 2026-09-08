@@ -1,0 +1,16 @@
+{
+  "targets": 1747,
+  "ok_closed": 1747,
+  "not_closed": 0,
+  "missing": 0,
+  "live_status_counts": {
+    "مغلق": 2563,
+    "مفتوح": 644,
+    "Open": 214,
+    "Closed": 87,
+    "جاري": 20,
+    "In progress": 7
+  },
+  "canonical_status": "مغلق",
+  "source": "Safety Observation - HSE TEAM (1).xlsx closed rows matched to DailyObservations"
+}

@@ -1,0 +1,15 @@
+{
+  "version": "1.0.1698",
+  "highlights": {
+    "ar": [
+      "تثبيت رأس جدول الملاحظات اليومية (thead) بألوان الهوية المعتمدة والحدود الذهبية عند التمرير.",
+      "زر إلغاء التحديد السريع للملاحظات المحددة في شريط الإجراءات الجماعية.",
+      "تحديث شامل لملفات البناء والنشر المباشر على منصة Vercel و GitHub."
+    ],
+    "en": [
+      "Sticky Daily Observations table header with brand identity colors and golden border accent.",
+      "Quick Deselect All button for selected observations in the bulk actions bar.",
+      "Full release build update deployed to Vercel and GitHub."
+    ]
+  }
+}

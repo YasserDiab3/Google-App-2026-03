@@ -1,0 +1,8 @@
+Frontend API Endpoint (canonical):
+/api/exec  (same origin — e.g. https://icapphub.vercel.app/api/exec)
+Local Dev: http://127.0.0.1:3001/exec
+
+Health Check:
+/api/health  (prod)  |  http://127.0.0.1:3001/health (local)
+
+Note: trycloudflare tunnel removed in P0 — use canonical above. Old tunnel https://entry-consoles-simon-medicare.trycloudflare.com/exec expired.

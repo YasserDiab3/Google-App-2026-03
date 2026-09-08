@@ -1,0 +1,19 @@
+# المستودع الرسمي المربوط بالدومين (هذا الـ workspace)
+
+## المستودع الافتراضي والوحيد للرفع (مرتبط بدومين safety-icapp.com)
+
+- **`origin`** → `https://github.com/YasserDiab3/Google-App-2026-03.git` (الفرع **`main`**)
+- أمر الرفع الاعتيادي بعد الـ commit: **`git push origin main`** فقط.
+- هذا المستودع هو المربوط بدومين `safety-icapp.com`.
+
+## قاعدة إلزامية صارمة (Strict Policy)
+
+- **إلزامي:** الرفع فقط وحصرياً إلى `https://github.com/YasserDiab3/Google-App-2026-03.git`.
+- **ممنوع نهائياً:** رفع أي شيء من هذه المحادثة/المجلد إلى أي مستودع آخر (مثل `ICAPP-V092026` أو `google-TR`).
+
+## قواعد للوكيل
+
+1. عند الرفع بعد «رفع»: **`git push origin main`** فقط (origin = Google-App-2026-03).
+2. لا تُضِف remote ثانياً لأغراض الدفع ولا ترفع لأي مكان آخر.
+3. إن كان `origin` على رابط آخر: صحّحه إلى `https://github.com/YasserDiab3/Google-App-2026-03.git` فوراً.
+

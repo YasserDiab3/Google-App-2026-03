@@ -1,0 +1,96 @@
+---
+description: حماية نظام التحميل المستقر — لا تعديلات تسبب تضارباً أو كسراً لجلب البيانات
+globs:
+  - "Frontend/**"
+  - "Backend/**"
+  - "vercel-deploy/frontend/**"
+  - "vercel-deploy/backend/**"
+alwaysApply: true
+---
+
+# حماية نظام التحميل المستقر (بدون تضارب)
+
+عند **أي تحديث أو إضافة** في الواجهة أو الخلفية: **لا تُعدّل** مسارات التحميل المثبتة إلا إذا كان الإصلاح مطلوباً صراحةً. الميزات الجديدة تُبنى **بجانب** النظام الحالي، لا **بداخله** بطريقة تكسره.
+
+## 0. عقد التحميل المعتمد
+
+- كل موديول ثقيل **يملك** بياناته. العرض من المحلي فوراً، والشبكة تحديث خلفي للتبويب الظاهر فقط.
+- المساعد المشترك: `Frontend/js/modules/services/stable-loader.js` (`StableLoader`).
+- المزامنة العامة **لا** تسحب أوراق مملوكة: `ClinicVisits`, `ClinicContractorVisits`, `Training`, `Employees`, `ExternalWorkforceMonthly`, `PTW`, `PTWRegistry`, `DailyObservations`.
+- بعد الدخول: لا مؤشر تقدم عالمي، ولا `forceRefresh` شامل. المزامنة الصامتة: `incremental:true` + `showLoader:false`.
+- طابور GAS: 3 عمال افتراضياً، و2 أثناء جلب مملوك للموديول (`beginOwnedFetch` / `endOwnedFetch`).
+- Watchdog: إن بقي `heavyDepth > 0` أكثر من 45 ثانية يُعاد العمال إلى 3.
+- قياس أول رسم: `StableLoader.markPaint(module, tab, { count })` ثم `getMetrics()`.
+- Auth preload **لا** يحمّل مسبقاً: `training`, `clinic`, `ptw`, `daily-observations`.
+
+## 1. مسارات محمية — لا تلمسها بدون ضرورة
+
+| المسار | الدور |
+|--------|--------|
+| `syncDataFromServer()` | مزامنة الخلفية المركزية |
+| `loadVisitsDataFromBackend()` + `_clinicVisitsLoadPromise` | **سجل التردد** |
+| `shouldFetchClinicVisitsFromBackend()` + `_visitsBackendFetchOk` | منع إعادة جلب غير ضرورية |
+| `mergeClinicVisitsWithLocalOnly()` | عدم فقدان زيارات محلية |
+| `renderVisitsTab()` → عرض فوري ثم جلب بالخلفية | UX مستقر |
+| `Training.loadTrainingDataAsync()` / `_fetchTrainingTabFromBackend()` | برامج/حضور/قانوني — تبويب ظاهر فقط |
+| `Employees.loadEmployeesFromBackend()` / `loadEmployeesList()` | قائمة الموظفين |
+| `PTW._startPtwBackendSync()` / `_mountPermitsListContent()` | تصاريح: محلي ثم `batchReadSheets` |
+| `DailyObservations.ensureDailyObservationsDataLoaded()` | ملاحظات: محلي ثم ورقة واحدة |
+
+**ممنوع** دمج ميزة جديدة داخل هذه الدوال إذا كان يمكن فصلها.
+
+## 1b. قواعد PTW الإضافية
+
+- **ممنوع** استدعاء `syncRegistryWithPermits()` تلقائياً عند فتح الموديول أو بعد `_startPtwBackendSync`.
+- **ممنوع** إرسال معرفات `_TMP_` إلى الخادم.
+- الجلب المملوك: `batchReadSheets(['PTW','PTWRegistry'])` فقط، ثم دمج محلي.
+
+## 2. قواعد إضافة ميزة جديدة (تحميل منفصل)
+
+1. **دالة تحميل مستقلة** لكل تبويب/ميزة (مثل `loadClinicStaffActivities`) — لا تُضاف تلقائياً إلى `syncDataFromServer()` إلا بعد مراجعة تأثيرها على الطلبات الثقيلة.
+2. **لا تستبدل** `AppState.appData.*` لمديول آخر (مثال: لا تمس `clinicVisits` من تبويب الحضور).
+3. **لا تستبدل** بيانات محلية غير فارغة بمصفوفة فارغة من الخادم.
+4. **انتظر** التحميل الحرج قبل الثانوي:
+   ```javascript
+   // ✅ قبل طلب ثانوي (نشاط، إحصائيات...)
+   if (this._clinicVisitsLoadPromise) {
+     try { await this._clinicVisitsLoadPromise; } catch (_e) {}
+   }
+   ```
+5. **قيّد** التحميل الثانوي بالتبويب النشط:
+   ```javascript
+   if (this.state?.activeTab !== 'attendance') return;
+   ```
+6. **مهلة كافية** للطلبات الثقيلة (سجل التردد: ~120000ms) — لا `Promise.race` قصير يقطع الجلب.
+7. استخدم `Promise.allSettled` للمزامنة المجمّعة؛ لا تفشل كل المزامنة بسبب طلب واحد.
+8. تبويبات التدريب الثانوية (`attendance`, `legalTraining`, `contractors`) تُجلب **عند الفتح فقط** — لا `runAction` ناري بعد برامج التدريب.
+
+## 3. الخلفية (GAS)
+
+- دوال **قراءة/تجميع** (مثل نشاط المستخدم) **قراءة فقط** — لا تغيّر منطق `getAllClinicVisits` أو upsert الزيارات.
+- لا تربط action جديد بمسار كتابة موجود إذا كان يمكن action منفصل.
+
+## 4. قبل إنهاء التعديل — تحقق
+
+- [ ] هل مسّست `syncDataFromServer` أو `loadVisitsDataFromBackend` أو `renderVisitsTab`؟ إن نعم: هل الضرورة مبررة؟
+- [ ] هل يوجد طلب API جديد يتنافس مع جلب سجل التردد في نفس اللحظة؟
+- [ ] هل الميزة الجديدة معزولة في `AppState` ودالة تحميل خاصة؟
+- [ ] هل طُبّق نفس التعديل في `vercel-deploy/` (انظر قاعدة المزامنة)؟
+- [ ] هل أضفت `StableLoader.beginOwnedFetch` / `endOwnedFetch` لأي جلب ثقيل جديد؟
+- [ ] PTW: هل تجنبت `syncRegistryWithPermits` التلقائي و`_TMP_`؟
+
+## 5. أمثلة
+
+```javascript
+// ❌ خطأ — نشاط جديد داخل syncDataFromServer بدون مراجعة
+promises.push(getClinicStaffSystemActivities(...));
+
+// ✅ صحيح — تحميل من تبويب الحضور فقط، بعد انتهاء جلب الزيارات
+async loadClinicStaffActivities(force) {
+  if (this.state?.activeTab !== 'attendance') return;
+  if (this._clinicVisitsLoadPromise) {
+    try { await this._clinicVisitsLoadPromise; } catch (_e) {}
+  }
+  // ...
+}
+```

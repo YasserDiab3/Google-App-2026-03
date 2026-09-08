@@ -1,0 +1,4588 @@
+/**
+ * طبقة الاتصال بـ خادم SQL (Web App) كخلفية للمزامنة مع قاعدة SQL.
+ */
+
+const GoogleIntegration = {
+    // المزامنة في التقدم - المستخدمين والآخرين
+    _syncInProgress: {
+        users: false,
+        global: false,
+        lastSyncStart: null,
+        lastSyncEnd: null
+    },
+
+    /**
+     * تنظيف رسائل خطأ GAS — لا تعرض HTML/DOCTYPE للمستخدم
+     */
+    sanitizeGasErrorText(text, fallback) {
+        const fb = fallback || 'تعذر الاتصال بالخادم. أعد المحاولة.';
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        if (!raw) return fb;
+        const looksHtml = raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+            || /<meta\s/i.test(raw);
+        if (looksHtml) {
+            return 'الخادم أعاد صفحة HTML بدل JSON (نشر Web App أو مهلة Google). أعد المحاولة بعد ثوانٍ.';
+        }
+        if (raw.length > 280) return raw.substring(0, 280) + '…';
+        return raw;
+    },
+
+    looksLikeGasHtmlResponse(text) {
+        const raw = String(text || '').replace(/^\uFEFF/, '').trim();
+        return !!raw && (
+            raw.charAt(0) === '<'
+            || /<!DOCTYPE/i.test(raw)
+            || /<html[\s>]/i.test(raw)
+            || /web word processing/i.test(raw)
+            || /accounts\.google\.com/i.test(raw)
+        );
+    },
+
+    /**
+     * التحقق من المزامنة في التقدم
+     */
+    isSyncing(sheetName = 'users') {
+        const key = sheetName.toLowerCase();
+        return this._syncInProgress[key] === true;
+    },
+
+    /**
+     * تعيين حالة المزامنة في التقدم
+     */
+    _setSyncState(sheetName, inProgress) {
+        const key = sheetName.toLowerCase();
+        this._syncInProgress[key] = inProgress;
+        if (inProgress) {
+            this._syncInProgress.lastSyncStart = Date.now();
+        } else {
+            this._syncInProgress.lastSyncEnd = Date.now();
+        }
+    },
+
+    /**
+     * هل خلفية خادم SQL جاهزة (رابط Web App + تفعيل الاتصال)
+     */
+    _isBackendRpcConfigured() {
+        try {
+            const url = String(this._resolveScriptUrl() || '').trim();
+            return !!(url && url.indexOf('script.google.com') !== -1);
+        } catch (e) {
+            return false;
+        }
+    },
+
+    /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
+    ADMIN_ONLY_READ_SHEETS: ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
+
+    _isCurrentUserEffectiveAdmin_() {
+        try {
+            return !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+        } catch (e) {
+            return false;
+        }
+    },
+
+    _filterSheetsForCurrentUser(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames.slice() : [];
+        if (this._isCurrentUserEffectiveAdmin_()) return list;
+        return list.filter((s) => !this.ADMIN_ONLY_READ_SHEETS.includes(s));
+    },
+
+    _canReadUsersSheet_() {
+        if (this._isCurrentUserEffectiveAdmin_()) return true;
+        if (typeof Permissions !== 'undefined' && typeof Permissions.hasAccess === 'function') {
+            return Permissions.hasAccess('users');
+        }
+        return false;
+    },
+
+    /**
+     * جلب قائمة مستخدمين مُصفّاة من الخادم (بدون passwordHash) — للمستخدمين غير المديرين
+     */
+    async fetchUsersForApp(options = {}) {
+        if (!this._isBackendRpcConfigured()) return null;
+        try {
+            const result = await this.sendToAppsScript('getUsersForApp', {
+                __timeoutMs: options.timeout || 15000
+            });
+            if (result && result.success && Array.isArray(result.data)) {
+                AppState.appData.users = result.data;
+                if (!AppState.syncMeta) AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                AppState.syncMeta.users = Date.now();
+                AppState.syncMeta.sheets = AppState.syncMeta.sheets || {};
+                AppState.syncMeta.sheets.Users = Date.now();
+                if (AppState.currentUser?.email) {
+                    AppState.syncMeta.userEmail = AppState.currentUser.email;
+                }
+                if (typeof DataManager !== 'undefined' && DataManager.save) {
+                    DataManager.save();
+                }
+                return result.data;
+            }
+            return null;
+        } catch (error) {
+            if (AppState?.debugMode) {
+                Utils.safeWarn('⚠️ fetchUsersForApp:', error?.message || error);
+            }
+            return null;
+        }
+    },
+
+    _isExpectedReadError_(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('admin_only') ||
+            msg.includes('actor_identity_required') ||
+            msg.includes('ليس لديك صلاحية') ||
+            msg.includes('direct_sheet_write_blocked') ||
+            msg.includes('get_read_denied');
+    },
+
+    /**
+     * عمليات تعديل على الخادم — لا يجب أبداً اعتبار نسخة localStorage/cache قديمة «نجاحاً» لها
+     * (وإلا يظهر للمستخدم أن الزيارة/السجل حُفظ وهو غير موجود في الشيت).
+     */
+    _isWriteMutationAction(action) {
+        if (!action || typeof action !== 'string') return false;
+        const a = action.toLowerCase();
+        const readPrefixes = ['get', 'read', 'fetch', 'load', 'list', 'query', 'search', 'find'];
+        if (readPrefixes.some((p) => a.startsWith(p))) return false;
+        const writePrefixes = [
+            'add', 'update', 'delete', 'save', 'append', 'remove', 'submit', 'create',
+            'patch', 'set', 'upload', 'import', 'initialize', 'sync', 'send', 'move', 'copy',
+            'approve', 'reject', 'cancel', 'revoke', 'reset'
+        ];
+        return writePrefixes.some((p) => a.startsWith(p));
+    },
+
+    prepareSheetPayload(sheetName, data) {
+        const sanitizePTW = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const allowedFields = [
+                'id', 'workType', 'workDescription', 'location', 'department', 'startDate', 'endDate',
+                'responsible', 'status', 'approvals', 'requiredPPE', 'riskAssessment', 'riskNotes',
+                'approvalCircuitOwnerId', 'approvalCircuitName', 'skipApprovalFlow',
+                'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(row, field)) {
+                    sanitized[field] = row[field];
+                }
+            });
+            return sanitized;
+        };
+
+        const sanitizePTWRegistry = (row) => {
+            if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+            const normalizedRow = { ...row };
+            // توافق رجعي: تطبيع case-insensitive لمفاتيح الكاتب/المحدّث من queue قديم
+            const normalizeLegacyAlias = (targetKey, aliases) => {
+                if (normalizedRow[targetKey]) return;
+                const keys = Object.keys(normalizedRow);
+                for (const key of keys) {
+                    const lowered = String(key || '').toLowerCase();
+                    if (aliases.includes(lowered)) {
+                        normalizedRow[targetKey] = normalizedRow[key];
+                        break;
+                    }
+                }
+            };
+            normalizeLegacyAlias('createdBy', ['createdby']);
+            normalizeLegacyAlias('createdById', ['createdbyid']);
+            normalizeLegacyAlias('updatedBy', ['updatedby']);
+            normalizeLegacyAlias('updatedById', ['updatedbyid']);
+            const allowedFields = [
+                'id', 'sequentialNumber', 'permitId', 'openDate', 'permitType', 'permitTypeDisplay',
+                'requestingParty', 'locationId', 'location', 'sublocationId', 'sublocation',
+                'timeFrom', 'timeTo', 'totalTime', 'authorizedParty', 'workDescription',
+                'supervisor1', 'supervisor2', 'status', 'paperPermitNumber', 'equipment', 'tools',
+                'toolsList', 'teamMembersText', 'hotWorkDetails', 'hotWorkOther',
+                'confinedSpaceDetails', 'confinedSpaceOther', 'heightWorkDetails', 'heightWorkOther',
+                'electricalWorkType', 'coldWorkType', 'otherWorkType', 'excavationLength',
+                'excavationWidth', 'excavationDepth', 'soilType', 'preStartChecklist', 'lotoApplied',
+                'governmentPermits', 'riskAssessmentAttached', 'gasTesting', 'mocRequest', 'ppeNotes',
+                'requiredPPE', 'riskLikelihood', 'riskConsequence', 'riskScore', 'riskLevel',
+                'riskNotes', 'manualApprovalsText', 'manualClosureApprovalsText', 'closureDate',
+                'closureReason', 'isManualEntry', 'approvalCircuitOwnerId', 'approvalCircuitName',
+                'skipApprovalFlow', 'createdBy', 'createdById', 'updatedBy', 'updatedById', 'createdAt', 'updatedAt'
+            ];
+            const sanitized = {};
+            allowedFields.forEach((field) => {
+                if (Object.prototype.hasOwnProperty.call(normalizedRow, field)) {
+                    sanitized[field] = normalizedRow[field];
+                }
+            });
+            return sanitized;
+        };
+
+        if (sheetName === 'PTW') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTW(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTW(data);
+            }
+            return data;
+        }
+
+        if (sheetName === 'PTWRegistry') {
+            if (Array.isArray(data)) {
+                return data.map((item) => sanitizePTWRegistry(item));
+            }
+            if (data && typeof data === 'object') {
+                return sanitizePTWRegistry(data);
+            }
+            return data;
+        }
+
+        if (sheetName === 'ContractorEvaluationApprovalRequests') {
+            const sanitizeCear = (row) => {
+                if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+                const allowedFields = [
+                    'id', 'contractorId', 'contractorName', 'evaluationData',
+                    'status', 'createdBy', 'createdByName', 'createdAt',
+                    'approvedAt', 'approvedBy', 'approvedByName',
+                    'rejectedAt', 'rejectedBy', 'rejectedByName', 'rejectionReason',
+                    'updatedAt', 'updatedBy', 'updatedByName', 'legacySource', 'spreadsheetId'
+                ];
+                const sanitized = {};
+                allowedFields.forEach((field) => {
+                    if (Object.prototype.hasOwnProperty.call(row, field)) {
+                        sanitized[field] = row[field];
+                    }
+                });
+                return sanitized;
+            };
+            if (Array.isArray(data)) return data.map((item) => sanitizeCear(item));
+            if (data && typeof data === 'object') return sanitizeCear(data);
+            return data;
+        }
+
+        if (sheetName !== 'Users') {
+            return data;
+        }
+
+        const sanitizeUser = (user) => {
+            if (!user || typeof user !== 'object') return user;
+            const sanitized = { ...user };
+            const canCheckHash = typeof Utils !== 'undefined' && Utils && typeof Utils.isSha256Hex === 'function';
+            const hasHash = sanitized.passwordHash && sanitized.passwordHash.trim() !== '';
+            const passwordValue = sanitized.password || '';
+
+            // التحقق من هل هو passwordHash
+            if (hasHash && canCheckHash && Utils.isSha256Hex(sanitized.passwordHash.trim())) {
+                // passwordHash موجود - يتم تخزينه
+            } else if (!hasHash && passwordValue && passwordValue !== '***' && canCheckHash && Utils.isSha256Hex(passwordValue)) {
+                // لا يوجد passwordHash - يتم تخزينه في passwordHash
+                sanitized.passwordHash = passwordValue.trim();
+            } else if (passwordValue && passwordValue !== '***' && !canCheckHash) {
+                // لا يوجد passwordHash - يتم تخزينه في password
+                // لا يوجد passwordHash - يتم تخزينه في passwordHash
+            }
+
+            // يتم تخزين password
+            sanitized.password = '***';
+
+            // يتم التحقق من هل هو passwordHash
+            if (sanitized.passwordHash && sanitized.passwordHash.trim() === '') {
+                delete sanitized.passwordHash;
+            } else if (sanitized.passwordHash && canCheckHash && !Utils.isSha256Hex(sanitized.passwordHash.trim())) {
+                // لا يوجد passwordHash - يتم حذفه
+                delete sanitized.passwordHash;
+            }
+
+            return sanitized;
+        };
+
+        if (Array.isArray(data)) {
+            return data.map(item => sanitizeUser(item));
+        }
+
+        if (data && typeof data === 'object') {
+            return sanitizeUser(data);
+        }
+
+        return data;
+    },
+
+    /**
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     * @param {string} action - نوع العملية (addUser, updateUser)
+     * @param {any} data - البيانات
+     * @param {number} maxRetries - عدد المحاولات (3)
+     * @returns {Promise<object>} - النتيجة
+     */
+    async immediateSyncWithRetry(action, data, maxRetries = 3) {
+        if (!this._isBackendRpcConfigured()) {
+            throw new Error('خادم SQL غير مفعل');
+        }
+
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                Utils.safeLog(`🔄 محاولة ${attempt}/${maxRetries} للـ ${action}...`);
+
+                const result = await this.sendToAppsScript(action, data);
+
+                if (result && result.success) {
+                    Utils.safeLog(`✅ تم بنجاح ${action} في المحاولة ${attempt}`);
+                    return result;
+                }
+
+                lastError = new Error(result?.message || 'فشل المزامنة');
+                Utils.safeWarn(`⚠️ فشل ${action} في المحاولة ${attempt}: ${result?.message}`);
+
+                if (result?.message && result.message.includes('invalid')) {
+                    return result;
+                }
+
+            } catch (error) {
+                lastError = error;
+                Utils.safeWarn(`❌ خطأ في ${action} (محاولة ${attempt}/${maxRetries}):`, error.message);
+            }
+            
+            if (attempt < maxRetries) {
+                const waitTime = 500 * attempt;
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
+        }
+
+        throw lastError || new Error('فشل المزامنة بعد استنفاذ جميع المحاولات');
+    },
+
+    /**
+     * تطبيع رابط Web App (/dev → /exec) قبل الطلب
+     */
+    _resolveScriptUrl() {
+        const fromGasConfig = (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function')
+            ? String(Utils.getAppsScriptScriptUrl() || '').trim()
+            : String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
+        if (fromGasConfig && fromGasConfig.indexOf('script.google.com') !== -1) {
+            return fromGasConfig.replace(/\/dev(\?|#|$)/, '/exec$1');
+        }
+        if (typeof getEffectiveApiUrl === 'function') {
+            const live = String(getEffectiveApiUrl() || '').trim();
+            if (live && live.indexOf('script.google.com') !== -1) return live;
+        }
+        if (fromGasConfig) return fromGasConfig;
+        if (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL) {
+            return String(window.HSE_DEFAULT_GAS_URL);
+        }
+        return '';
+    },
+
+    /**
+     * التحقق من صحة رابط الباك إند (خادم SQL أو SQL Serverless / Tunnel)
+     */
+    isValidGoogleAppsScriptUrl(url) {
+        try {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            if (trimmed.startsWith('/') || trimmed.startsWith('./')) return true;
+            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
+            const urlObj = new URL(trimmed, base);
+            const host = urlObj.hostname.toLowerCase();
+            const path = urlObj.pathname || '';
+            if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
+                return path.endsWith('/exec');
+            }
+            if (host.includes('safety-icapp.com') || host.includes('safetyicapp-ecru')) return false;
+            if (host.includes('vercel.app') && (path === '/api/exec' || path.endsWith('/api/exec'))) return false;
+            if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    /**
+     * التحقق من هل هو CSRF Token
+     */
+    getOrCreateCSRFToken() {
+        let token = sessionStorage.getItem('csrf_token');
+        if (!token) {
+            // لا يوجد token - يتم توليده
+            const array = new Uint8Array(32);
+            crypto.getRandomValues(array);
+            token = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+            sessionStorage.setItem('csrf_token', token);
+        }
+        return token;
+    },
+
+    /**
+     * معرف جلسة عميل بسيط لربط CSRF بالجلسة على الخادم
+     */
+    getOrCreateClientSessionId() {
+        let sessionId = sessionStorage.getItem('client_session_id');
+        if (!sessionId) {
+            const randomPart = Math.random().toString(36).slice(2, 10);
+            sessionId = `sid_${Date.now().toString(36)}_${randomPart}`;
+            sessionStorage.setItem('client_session_id', sessionId);
+        }
+        return sessionId;
+    },
+
+    /**
+     * ============================================
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     * ============================================
+     */
+
+    // Request Queue System
+    _requestQueue: [],
+    _isProcessingQueue: false,
+    _queueWorkers: 0,
+    _maxQueueWorkers: 3,
+    _lastRequestTime: null,
+    _minQueueDelayMs: 40,
+    _authRpcActions: ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'],
+
+    _isAuthRpcAction(action) {
+        return typeof action === 'string' && this._authRpcActions.includes(action);
+    },
+
+    _isClinicAttendanceRpcAction(action) {
+        return action === 'recordClinicStaffLogin' || action === 'recordClinicStaffLogout';
+    },
+
+    _shouldBypassRequestQueue(action) {
+        return this._isAuthRpcAction(action)
+            || this._isClinicAttendanceRpcAction(action)
+            || action === 'warmup'
+            || this._isCriticalUserMutation(action);
+    },
+
+    /** عمليات إدارية حرجة — لا تُحجب بـ Circuit Breaker */
+    _isCriticalUserMutation(action) {
+        const critical = new Set([
+            'deleteIncident',
+            'deleteObservation',
+            'deleteNearMiss',
+            'deletePTW',
+            'deleteEmployee',
+            'saveFormSettings',
+            'getFormSettings',
+            'getCompanySettings',
+            'saveCompanySettings'
+        ]);
+        return critical.has(action);
+    },
+
+    // Circuit Breaker
+    _circuitBreaker: {
+        isOpen: false,
+        failureCount: 0,
+        lastFailureTime: null,
+        openUntil: null,
+        successCount: 0
+    },
+
+    // Request deduplication
+    _activeRequests: new Map(), // التحقق من هل هو activeRequests
+
+    // API Rate Limiting
+    _rateLimiter: {
+        requests: [],
+        maxRequests: 100, // 100 طلب
+        windowMs: 60000, // في 60 ثانية
+        blockDuration: 300000 // حظر 5 دقائق عند تجاوز الحد
+    },
+
+    // Data Caching System
+    _cache: {
+        data: new Map(),
+        timestamps: new Map(),
+        defaultTTL: 5 * 60 * 1000, // 5 دقائق افتراضياً
+        maxSize: 100 // أقصى 100 عنصر في الـ cache
+    },
+
+    /**
+     * الحصول على بيانات من الـ cache
+     */
+    _getCachedData(key) {
+        const cached = this._cache.data.get(key);
+        const timestamp = this._cache.timestamps.get(key);
+
+        if (!cached || !timestamp) {
+            return null;
+        }
+
+        // التحقق من انتهاء صلاحية الـ cache
+        const now = Date.now();
+        const age = now - timestamp;
+        const ttl = this._cache.defaultTTL;
+
+        if (age > ttl) {
+            // انتهت صلاحية الـ cache
+            this._cache.data.delete(key);
+            this._cache.timestamps.delete(key);
+            return null;
+        }
+
+        return cached;
+    },
+
+    /**
+     * حفظ بيانات في الـ cache
+     */
+    _setCachedData(key, data, ttl = null) {
+        // التحقق من حجم الـ cache
+        if (this._cache.data.size >= this._cache.maxSize) {
+            // حذف أقدم عنصر
+            const oldestKey = this._cache.timestamps.entries()
+                .sort((a, b) => a[1] - b[1])[0]?.[0];
+            if (oldestKey) {
+                this._cache.data.delete(oldestKey);
+                this._cache.timestamps.delete(oldestKey);
+            }
+        }
+
+        this._cache.data.set(key, data);
+        this._cache.timestamps.set(key, Date.now());
+    },
+
+    /**
+     * مسح الـ cache
+     */
+    clearCache(pattern = null) {
+        if (!pattern) {
+            this._cache.data.clear();
+            this._cache.timestamps.clear();
+            return;
+        }
+
+        // مسح العناصر المطابقة للنمط
+        for (const key of this._cache.data.keys()) {
+            if (key.includes(pattern)) {
+                this._cache.data.delete(key);
+                this._cache.timestamps.delete(key);
+            }
+        }
+    },
+
+    /**
+     * إبطال نتائج readFromSheet المخزنة مؤقتاً لشيت محدد (بعد append/update من Apps Script).
+     * بدون ذلك قد تبقى الواجهة تعرض قائمة قديمة رغم نجاح الحفظ في الشيت.
+     */
+    invalidateReadFromSheetCacheForSheets(sheetNames) {
+        const list = Array.isArray(sheetNames) ? sheetNames : [sheetNames];
+        const userPermissions = this._getCurrentUserPermissions();
+        const userId = AppState?.currentUser?.id;
+        list.forEach((sheetName) => {
+            if (!sheetName) return;
+            const data = { sheetName: String(sheetName) };
+            try {
+                const legacyKey = `readFromSheet_${JSON.stringify(data)}`;
+                this._cache.data.delete(legacyKey);
+                this._cache.timestamps.delete(legacyKey);
+            } catch (e) { /* ignore */ }
+            if (typeof SmartCache !== 'undefined' && SmartCache.getCacheKey) {
+                try {
+                    const sk = SmartCache.getCacheKey('readFromSheet', data, userId, userPermissions);
+                    localStorage.removeItem(`hse_smart_cache_${sk}`);
+                } catch (e) { /* ignore */ }
+            }
+            this.clearCache(String(sheetName));
+        });
+    },
+
+    /**
+     * التحقق من Rate Limiting للـ API
+     */
+    _checkRateLimit() {
+        const now = Date.now();
+        const windowStart = now - this._rateLimiter.windowMs;
+
+        // إزالة الطلبات القديمة خارج النافذة
+        this._rateLimiter.requests = this._rateLimiter.requests.filter(
+            timestamp => timestamp > windowStart
+        );
+
+        // التحقق من تجاوز الحد
+        if (this._rateLimiter.requests.length >= this._rateLimiter.maxRequests) {
+            const oldestRequest = this._rateLimiter.requests[0];
+            const timeUntilReset = this._rateLimiter.windowMs - (now - oldestRequest);
+            throw new Error(`تم تجاوز حد الطلبات المسموح بها. يرجى المحاولة بعد ${Math.ceil(timeUntilReset / 1000)} ثانية.`);
+        }
+
+        // إضافة الطلب الحالي
+        this._rateLimiter.requests.push(now);
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _openCircuitBreaker() {
+        this._circuitBreaker.isOpen = true;
+        this._circuitBreaker.openUntil = Date.now() + 30000; // 30 ثانية
+        Utils.safeWarn('⚠️ Circuit Breaker مفتوح - تم تعطيل الاتصال مؤقتاً بسبب فشل متكرر');
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _closeCircuitBreaker() {
+        if (this._circuitBreaker.isOpen) {
+            this._circuitBreaker.isOpen = false;
+            this._circuitBreaker.failureCount = 0;
+            this._circuitBreaker.openUntil = null;
+            Utils.safeLog('✅ تم إغلاق Circuit Breaker - الاتصال متاح مرة أخرى');
+        }
+    },
+
+    /** إعادة تعيين Circuit Breaker يدوياً (مثلاً عند تحديث لوحة إدارية) */
+    resetCircuitBreaker() {
+        this._closeCircuitBreaker();
+        this._circuitBreaker.successCount = 0;
+        this._circuitBreaker.lastFailureTime = null;
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _checkCircuitBreaker() {
+        if (this._circuitBreaker.isOpen) {
+            if (this._circuitBreaker.openUntil && Date.now() < this._circuitBreaker.openUntil) {
+                const remainingTime = Math.ceil((this._circuitBreaker.openUntil - Date.now()) / 1000);
+                throw new Error(`Circuit Breaker مفتوح - سيتم إعادة المحاولة بعد ${remainingTime} ثانية`);
+            } else {
+                // انتهت فترة Circuit Breaker - إغلاقه
+                this._closeCircuitBreaker();
+            }
+        }
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _recordSuccess() {
+        this._circuitBreaker.successCount++;
+        if (this._circuitBreaker.successCount >= 3) {
+            this._closeCircuitBreaker();
+            this._circuitBreaker.successCount = 0;
+        }
+        this._circuitBreaker.failureCount = 0;
+    },
+
+    /**
+     * Circuit Breaker: التحقق من هل هو Circuit Breaker
+     */
+    _recordFailure() {
+        this._circuitBreaker.failureCount++;
+        this._circuitBreaker.lastFailureTime = Date.now();
+        this._circuitBreaker.successCount = 0;
+
+        // فتح Circuit Breaker بعد 5 محاولات فاشلة
+        if (this._circuitBreaker.failureCount >= 5) {
+            this._openCircuitBreaker();
+        }
+    },
+
+    /**
+     * التحقق من هل هو getRequestKey
+     */
+    _getRequestKey(action, data) {
+        // استبعاد حقول التحكم في النقل (__timeoutMs/__highPriority/__deadline...) من المفتاح
+        // حتى لا تُنشئ نفس القراءة عدة مفاتيح مختلفة فيضيع الدمج/الكاش (readFromSheets بمهل مختلفة).
+        let keyData = data || {};
+        if (keyData && typeof keyData === 'object' && !Array.isArray(keyData)) {
+            const clean = {};
+            for (const k of Object.keys(keyData)) {
+                if (k.indexOf('__') === 0) continue; // تخطي حقول التحكم
+                clean[k] = keyData[k];
+            }
+            keyData = clean;
+        }
+        let dataStr;
+        try {
+            dataStr = JSON.stringify(keyData);
+        } catch (_e) {
+            dataStr = String(action);
+        }
+        return `${action}_${dataStr}`;
+    },
+
+    /**
+     * التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+     */
+    async _processRequestQueue() {
+        if (this._requestQueue.length === 0) {
+            return;
+        }
+        if (this._queueWorkers >= this._maxQueueWorkers) {
+            return;
+        }
+
+        this._isProcessingQueue = true;
+        this._queueWorkers += 1;
+
+        try {
+            while (this._requestQueue.length > 0) {
+                const request = this._requestQueue.shift();
+
+            const requestKey = this._getRequestKey(request.action, request.data);
+
+            try {
+                // التحقق من هل هو Circuit Breaker
+                this._checkCircuitBreaker();
+
+                // Throttling: التحقق من هل هو Throttling
+                if (this._lastRequestTime) {
+                    const timeSinceLastRequest = Date.now() - this._lastRequestTime;
+                    const minDelay = this._minQueueDelayMs;
+                    if (timeSinceLastRequest < minDelay) {
+                        await new Promise(resolve => setTimeout(resolve, minDelay - timeSinceLastRequest));
+                    }
+                }
+                this._lastRequestTime = Date.now();
+
+                // التحقق من المزامنة في التقدم باستخدام قاعدة SQL
+                const result = await this._executeRequest(request.action, request.data, request.retryCount || 0);
+
+                // التحقق من هل هو recordSuccess
+                this._recordSuccess();
+
+                // التحقق من هل هو pendingPromises
+                if (request.pendingPromises) {
+                    request.pendingPromises.forEach(({ resolve }) => resolve(result));
+                }
+
+            } catch (error) {
+                const errorMsg = (error?.message || error?.toString() || String(error) || '').toLowerCase();
+
+                // ✅ لا نزيد عداد الفشل في الحالات المتوقعة حتى لا يفتح Circuit Breaker بشكل خاطئ
+                // - عندما يكون Circuit Breaker نفسه هو سبب الرفض
+                // - أخطاء الإعداد/التكوين (Apps Script غير مفعل/URL غير صالح/SpreadsheetId غير مضبوط)
+                const isCircuitBreakerError = errorMsg.includes('circuit breaker');
+                const isConfigError =
+                    errorMsg.includes('google apps script غير') ||
+                    errorMsg.includes('غير مفعل') ||
+                    errorMsg.includes('url غير') ||
+                    errorMsg.includes('scripturl') ||
+                    errorMsg.includes('spreadsheet') ||
+                    errorMsg.includes('معرف google sheets');
+                const isTransientNetworkError =
+                    errorMsg.includes('failed to fetch') ||
+                    errorMsg.includes('networkerror') ||
+                    errorMsg.includes('network request failed') ||
+                    errorMsg.includes('انتهت مهلة') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    errorMsg.includes('aborterror') ||
+                    errorMsg.includes('aborted') ||
+                    errorMsg.includes('فشل الاتصال مع google apps script بسبب cors') ||
+                    errorMsg.includes('cors') ||
+                    errorMsg.includes('ازدحام') ||
+                    errorMsg.includes('too many concurrent') ||
+                    errorMsg.includes('service invoked too many times') ||
+                    errorMsg.includes('server error') ||
+                    errorMsg.includes('limit exceeded') ||
+                    errorMsg.includes('rate limit') ||
+                    // تذبذب تسليم Google (404/HTML/doGet): عابر ولا يجوز أن يفتح Circuit Breaker
+                    // ويحجب كل الطلبات بعد عدة محاولات دخول متعثرة.
+                    errorMsg.includes('html بدل json') ||
+                    errorMsg.includes('تعذّر تسليم') ||
+                    errorMsg.includes('doget') ||
+                    errorMsg.includes('نشر web app');
+                const isAuthOrPermissionError =
+                    errorMsg.includes('csrf') ||
+                    errorMsg.includes('actor_identity') ||
+                    errorMsg.includes('actor_not_registered') ||
+                    errorMsg.includes('actor_inactive') ||
+                    errorMsg.includes('admin_only') ||
+                    errorMsg.includes('permission_denied') ||
+                    errorMsg.includes('strict_admin_denied') ||
+                    errorMsg.includes('رفض أمني') ||
+                    errorMsg.includes('غير مسجل') ||
+                    errorMsg.includes('رفض قراءة') ||
+                    errorMsg.includes('الإجراء غير معروف') ||
+                    errorMsg.includes('action_not_recognized') ||
+                    errorMsg.includes('صلاحية');
+
+                const isAppError = error && error.isAppError === true;
+                const isKnownServerError = error && (
+                    error.errorCode === 'ACTION_NOT_RECOGNIZED' ||
+                    error.errorCode === 'INTERNAL_SERVER_ERROR' ||
+                    error.errorCode === 'PERMISSION_DENIED' ||
+                    error.errorCode === 'DUPLICATE_ENTRY'
+                );
+                if (!isAppError && !isKnownServerError && !isCircuitBreakerError && !isConfigError && !isTransientNetworkError && !isAuthOrPermissionError) {
+                    Utils.safeError('❌ خطأ غير معالج في مزامنة Google - هذا السبب الحقيقي لفتح Circuit Breaker:', error);
+                    this._recordFailure();
+                }
+
+                if (request.pendingPromises) {
+                    request.pendingPromises.forEach(({ reject }) => reject(error));
+                }
+            } finally {
+                this._activeRequests.delete(requestKey);
+            }
+            }
+        } finally {
+            this._queueWorkers = Math.max(0, this._queueWorkers - 1);
+            this._isProcessingQueue = this._queueWorkers > 0;
+
+            if (this._requestQueue.length > 0) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل متابعة معالجة طابور الطلبات:', err);
+                });
+            }
+        }
+    },
+
+    async _addToQueue(action, data, retryCount = 0) {
+        return new Promise((resolve, reject) => {
+            const requestKey = this._getRequestKey(action, data);
+
+            // التحقق من هل هو existingRequest
+            const existingRequest = this._requestQueue.find(r => this._getRequestKey(r.action, r.data) === requestKey);
+            if (existingRequest) {
+                // التحقق من هل هو pendingPromises
+                existingRequest.pendingPromises.push({ resolve, reject });
+                return;
+            }
+
+            // التحقق من هل هو activeRequests
+            if (this._activeRequests.has(requestKey)) {
+                // التحقق من هل هو activeRequest
+                const activeRequest = this._activeRequests.get(requestKey);
+                if (activeRequest && activeRequest.pendingPromises) {
+                    activeRequest.pendingPromises.push({ resolve, reject });
+                    return;
+                }
+            }
+
+            // التحقق من هل هو request
+            const request = {
+                action,
+                data,
+                retryCount,
+                pendingPromises: [{ resolve, reject }],
+                timestamp: Date.now()
+            };
+
+            // أولوية عالية: مصادقة + علم __highPriority صريح (زيارات العيادة تمرّر العلم سياقياً فقط)
+            const isAuthRpc = this._isAuthRpcAction(action);
+            const bypassQueue = this._shouldBypassRequestQueue(action);
+            const isHighPriority = !!(
+                isAuthRpc
+                || bypassQueue
+                || (data && typeof data === 'object' && data.__highPriority === true)
+            );
+
+            // MFA/login/حضور العيادة: نفّذ فوراً خارج سقف عمال الطابور — لا تنتظر clinic/training (90ث)
+            if (bypassQueue) {
+                this._activeRequests.set(requestKey, request);
+                (async () => {
+                    try {
+                        const result = await this._executeRequest(action, data, retryCount || 0);
+                        this._recordSuccess();
+                        request.pendingPromises.forEach(({ resolve: ok }) => ok(result));
+                    } catch (error) {
+                        request.pendingPromises.forEach(({ reject: fail }) => fail(error));
+                    } finally {
+                        this._activeRequests.delete(requestKey);
+                    }
+                })();
+                return;
+            }
+
+            if (isHighPriority) {
+                this._requestQueue.unshift(request);
+            } else {
+                this._requestQueue.push(request);
+            }
+            this._activeRequests.set(requestKey, request);
+
+            // التحقق من هل هو processRequestQueue
+            this._processRequestQueue().catch(err => {
+                Utils.safeError('فشل المزامنة في التقدم باستخدام قاعدة SQL:', err);
+            });
+            if (this._queueWorkers < this._maxQueueWorkers) {
+                this._processRequestQueue().catch(err => {
+                    Utils.safeError('فشل تشغيل عامل إضافي لطابور الطلبات:', err);
+                });
+            }
+        });
+    },
+
+    /**
+     * التحقق من هل هو executeRequest
+     */
+    _emitAuthRetryProgress_(action, attempt, max) {
+        try {
+            window.dispatchEvent(new CustomEvent('authRetryProgress', {
+                detail: { action, attempt, max }
+            }));
+        } catch (_e) { /* الواجهة اختيارية */ }
+    },
+
+    async _executeRequest(action, data, retryCount = 0, dogetRetry = 0, deadlineAt = 0) {
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مُتهيأ أو غير مفعّل'));
+        }
+
+        const scriptUrl = this._resolveScriptUrl();
+
+        if (!this.isValidGoogleAppsScriptUrl(scriptUrl)) {
+            throw new Error('رابط Web App غير صالح. يجب أن يكون https://script.google.com/macros/s/.../exec');
+        }
+
+        // سقف زمني إجمالي للمصادقة يشمل كل إعادات الإرسال والمحاولات.
+        // بدونه كانت المهلة تُحسب لكل محاولة على حدة، فتبقى شاشة «جاري التحقق»
+        // معلّقة دقائق بلا أي رسالة عند تكرار تذبذب Google.
+        const AUTH_TOTAL_BUDGET_MS = 75000;
+        const isAuthRpc = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+        const effectiveDeadline = isAuthRpc ? (deadlineAt || (Date.now() + AUTH_TOTAL_BUDGET_MS)) : 0;
+        const canRetryWithinBudget = () => !effectiveDeadline || (effectiveDeadline - Date.now()) > 5000;
+
+        try {
+            // التحقق من Rate Limiting قبل تنفيذ الطلب
+            this._checkRateLimit();
+
+            // التحقق من هل هو CSRF Token
+            const csrfToken = this.getOrCreateCSRFToken();
+            const clientSessionId = this.getOrCreateClientSessionId();
+
+            // التحقق من هل هو payload
+            // خادم SQL غير مفعل - التحقق من هل هو valid خادم SQL URL
+            const cleanData = (data && typeof data === 'object')
+                ? { ...data }
+                : data;
+            // عمليات المصادقة دائماً فشل مُهيكل — رفض الخادم ليس خطأ اتصال ولا يجوز أن يقود لمسار محلي
+            const isAuthRpcAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+            const allowStructuredFailure = isAuthRpcAction ||
+                !!(cleanData && typeof cleanData === 'object' && cleanData.__allowStructuredFailure === true);
+            if (cleanData && typeof cleanData === 'object' && '__timeoutMs' in cleanData) {
+                delete cleanData.__timeoutMs;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__highPriority' in cleanData) {
+                delete cleanData.__highPriority;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__allowStructuredFailure' in cleanData) {
+                delete cleanData.__allowStructuredFailure;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__silent' in cleanData) {
+                delete cleanData.__silent;
+            }
+            let snapshotActor = null;
+            let snapshotSessionToken = '';
+            if (cleanData && typeof cleanData === 'object' && cleanData.__actorUserData) {
+                snapshotActor = cleanData.__actorUserData;
+                delete cleanData.__actorUserData;
+            }
+            if (cleanData && typeof cleanData === 'object' && '__sessionToken' in cleanData) {
+                snapshotSessionToken = String(cleanData.__sessionToken || '');
+                delete cleanData.__sessionToken;
+            }
+
+            const payload = {
+                action,
+                data: cleanData,
+                csrfToken,
+                clientSessionId,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const st = sessionStorage.getItem('hse_server_session_token') ||
+                    localStorage.getItem('hse_server_session_token') ||
+                    (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.serverSessionToken) ||
+                    snapshotSessionToken;
+                if (st) payload.sessionToken = st;
+            } catch (_stErr) {
+                if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;
+            }
+
+            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
+            // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                const cu = AppState.currentUser;
+                const envelope = {
+                    email: String(cu.email || '').trim(),
+                    id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',
+                    name: String(cu.name || '').trim(),
+                    role: String(cu.role || '').trim()
+                };
+                // مطابقة hasAccess/getEffectivePermissions: الجلسة قد لا تعكس صلاحيات الجدول بعد
+                if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                    try {
+                        const eff = Permissions.getEffectivePermissions(cu);
+                        if (eff && typeof eff === 'object') {
+                            envelope.permissions = eff;
+                        }
+                    } catch (_e) { /* ignore */ }
+                } else if (cu.permissions) {
+                    envelope.permissions = cu.permissions;
+                }
+                payload.userData = envelope;
+            } else if (snapshotActor && (snapshotActor.email || snapshotActor.id)) {
+                payload.userData = {
+                    email: String(snapshotActor.email || '').trim(),
+                    id: snapshotActor.id != null ? String(snapshotActor.id).trim() : '',
+                    name: String(snapshotActor.name || '').trim(),
+                    role: String(snapshotActor.role || '').trim()
+                };
+            }
+
+            // التحقق من هل هو spreadsheetId
+            // التحقق من هل هو AppState
+            let spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId;
+
+            // التحقق من هل هو data
+            if (data && typeof data === 'object' && data.spreadsheetId) {
+                spreadsheetId = data.spreadsheetId;
+            }
+
+            // التحقق من هل هو spreadsheetId
+            if (spreadsheetId && spreadsheetId.trim() !== '' && spreadsheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+                payload.spreadsheetId = spreadsheetId.trim();
+                // التحقق من هل هو _spreadsheetId
+                payload._spreadsheetId = spreadsheetId.trim();
+            } else if (action !== 'initializeSheets') {
+                // التحقق من هل هو initializeSheets
+                // التحقق من هل هو spreadsheetId
+                // التحقق من هل هو actions
+                const actionsRequiringSpreadsheetId = [
+                    'saveToSheet', 'appendToSheet', 'readFromSheet'
+                ];
+
+                // التحقق من هل هو action
+                const requiresSpreadsheetId = actionsRequiringSpreadsheetId.includes(action) ||
+                    action.startsWith('add') ||
+                    action.startsWith('save') ||
+                    action.startsWith('update');
+
+                if (requiresSpreadsheetId) {
+                    // التحقق من هل هو getSpreadsheetId
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو getSpreadsheetId');
+                } else {
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
+                }
+            }
+
+            // التحقق من هل هو timeout
+            // تحديد timeout ديناميكي حسب نوع العملية
+            // العمليات الثقيلة (قراءة/كتابة البيانات): 90 ثانية
+            // عمليات المصادقة والـ MFA: 25 ثانية لضمان إكمال cold-start بدون إجهاض مبكر
+            const heavyOperations = [
+                'readFromSheet', 'saveToSheet', 'appendToSheet',
+                'getAllData', 'syncData', 'initializeSheets',
+                'getClinicData', 'getFireEquipmentData', 'getPPEData',
+                'getPeriodicInspectionsData', 'getViolationsData',
+                'getActionTrackingData', 'getBehaviorMonitoringData',
+                'saveOrUpdate', 'getAll', 'import',
+                'batchReadSheets', 'batchRead',
+                'getAllClinicVisits',
+                'getAllEmployees',
+                'getUserVersionsDashboard', 'getAllUserVersions', 'getUserVersionStats',
+                'saveFormSettings', 'getFormSettings', 'deleteSite', 'deletePlace', 'initFormSettingsTables',
+                'exportDailyObservationsPptReport', 'createDefaultDailyObservationsPptTemplate', 'exportPpt',
+                'updateClinicStaffAttendance'
+            ];
+            const mediumOperations = [
+                'getData', 'readData', 'loadData', 'fetchData', 'add', 'update'
+            ];
+            // عمليات المصادقة والـ MFA: 60 ثانية (cold-start + ضغط الشيت)
+            const authActions = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'];
+            const isAuthAction = typeof action === 'string' && authActions.includes(action);
+            const isDeleteOperation = typeof action === 'string' && action.indexOf('delete') === 0;
+
+            const isHeavyOperation = heavyOperations.some((op) => {
+                if (action === op) return true;
+                if (op === 'getAll') {
+                    return action === 'getAll' || action === 'getAllData';
+                }
+                return action.includes(op);
+            });
+            const isMediumOperation = mediumOperations.some(op => action.includes(op) || action === op) || isDeleteOperation;
+
+            // مهلة MFA/login افتراضياً 90ث — تذبذب توجيه Google (doGet/404) يحتاج هامشاً لإعادة الإرسال
+            let timeoutDuration = Number(data?.__timeoutMs) > 0
+                ? Number(data.__timeoutMs)
+                : (action === 'saveFormSettings' ? 120000
+                    : (isAuthAction ? 90000
+                        : (isHeavyOperation ? 90000 : (isMediumOperation ? 45000 : 15000))));
+            if (effectiveDeadline) {
+                timeoutDuration = Math.min(timeoutDuration, Math.max(8000, effectiveDeadline - Date.now()));
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                if (!controller.signal.aborted) {
+                    controller.abort();
+                }
+            }, timeoutDuration);
+
+            let response;
+            try {
+                const fetchHeaders = {
+                    'Content-Type': 'text/plain;charset=utf-8',
+                };
+                // التحقق من هل هو fetch
+                // التحقق من هل هو CSRF Token
+                // التحقق من هل هو payload
+                // التحقق من هل هو headers
+                // التحقق من هل هو preflight requests
+                response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    headers: fetchHeaders,
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                }).catch(error => {
+                    // التحقق من هل هو AbortController
+                    if (error.name === 'AbortError') {
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو AbortError');
+                    }
+                    // التحقق من هل هو Chrome Extensions
+                    if (error.message && (
+                        error.message.includes('runtime.lastError') ||
+                        error.message.includes('message port closed') ||
+                        error.message.includes('Receiving end does not exist') ||
+                        error.message.includes('Could not establish connection') ||
+                        error.message.includes('Extension context invalidated')
+                    )) {
+                        // التحقق من هل هو Chrome Extensions
+                        throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
+                    }
+                    throw error;
+                });
+
+                // التحقق من هل هو timeout
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+            } catch (fetchError) {
+                // التحقق من هل هو timeout
+                if (timeoutId) {
+                    clearTimeout(timeoutId);
+                }
+
+                // التحقق من هل هو connection timeout
+                const errorMsg = fetchError.message || fetchError.toString() || '';
+                const errorStr = errorMsg.toLowerCase();
+                
+                // ✅ إصلاح: معالجة أخطاء الشهادة (Certificate errors)
+                const isCertificateError = 
+                    errorStr.includes('err_cert_authority_invalid') ||
+                    errorStr.includes('cert_authority_invalid') ||
+                    errorStr.includes('certificate') ||
+                    errorStr.includes('cert authority') ||
+                    errorStr.includes('ssl') ||
+                    errorStr.includes('tls') ||
+                    errorStr.includes('net::err_cert') ||
+                    (fetchError.name && fetchError.name.toLowerCase().includes('certificate')) ||
+                    (fetchError.code && (fetchError.code === 'CERT_AUTHORITY_INVALID' || fetchError.code === 'ERR_CERT_AUTHORITY_INVALID'));
+                
+                if (isCertificateError) {
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ خطأ في شهادة الأمان (SSL/TLS)!\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. إعدادات التاريخ والوقت في النظام\n` +
+                        `2. إعدادات جدار الحماية ومضاد الفيروسات\n` +
+                        `3. إعدادات المتصفح (قد تحتاج لتحديث المتصفح)\n` +
+                        `4. الاتصال بالإنترنت (قد تكون هناك مشكلة في الشبكة)`);
+                }
+
+                const isAbortOrTimeoutError =
+                    fetchError.name === 'AbortError' ||
+                    errorStr.includes('aborterror') ||
+                    errorStr.includes('aborted') ||
+                    errorStr.includes('timeout') ||
+                    errorStr.includes('timed out') ||
+                    errorStr.includes('err_connection_timed_out') ||
+                    errorStr.includes('connection_timed_out');
+
+                if (isAbortOrTimeoutError) {
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    // login/MFA: لا إعادة محاولة بعد timeout — الطلب قد نجح على الخادم ويستهلك OTP
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
+                        maxRetries = 3;
+                    }
+
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
+                        Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+
+                    const timeStr = new Date().toLocaleString('ar-SA');
+                    const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                    throw new Error(`⚠️ انتهت مهلة الاتصال بخادم خادم SQL (${timeoutSeconds} ثانية).\n` +
+                        `العملية: ${action}\n` +
+                        `الوقت: ${timeStr}\n\n` +
+                        `جرّب:\n` +
+                        `1. الضغط على «تحديث» بعد 30 ثانية\n` +
+                        `2. التأكد من نشر السكربت برابط ينتهي بـ /exec\n` +
+                        `3. التحقق من سرعة الإنترنت أو إعادة تحميل الصفحة`);
+                }
+
+                const isGenericNetworkError =
+                    (fetchError.name === 'TypeError' && errorStr.includes('failed to fetch')) ||
+                    fetchError.name === 'NetworkError' ||
+                    errorStr.includes('network request failed') ||
+                    (errorStr.includes('networkerror') && (errorStr.includes('fetch') || errorStr.includes('resource'))) ||
+                    (errorStr.includes('err_failed') && (errorStr.includes('script.google.com') || errorStr.includes('google.com/macros')));
+
+                if (isGenericNetworkError) {
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ تعذّر الاتصال بخادم خادم SQL.\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `العملية: ${action}\n\n` +
+                        `قد يكون السبب بطء الخادم أو انقطاع الشبكة — وليس بالضرورة CORS.\n` +
+                        `يرجى:\n` +
+                        `1. إعادة المحاولة بعد نصف دقيقة\n` +
+                        `2. التأكد من رابط Web App (ينتهي بـ /exec)\n` +
+                        `3. التحقق من نشر السكربت: Execute as: Me / Who has access: Anyone`);
+                }
+                
+                // معالجة أخطاء CORS الحقيقية فقط (رسالة المتصفح تذكر CORS صراحة)
+                const isCorsError = 
+                    errorStr.includes('cors') ||
+                    errorStr.includes('cross-origin request blocked') ||
+                    errorStr.includes('access-control-allow-origin') ||
+                    errorStr.includes('has been blocked by cors policy') ||
+                    errorStr.includes('no \'access-control-allow-origin\' header') ||
+                    errorStr.includes('same origin policy') ||
+                    errorStr.includes('same-origin policy') ||
+                    (fetchError.message && fetchError.message.toLowerCase().includes('cors')) ||
+                    (fetchError.message && fetchError.message.toLowerCase().includes('cross-origin')) ||
+                    (fetchError.message && fetchError.message.includes('Access-Control-Allow-Origin'));
+                
+                if (isCorsError) {
+                    // CORS error - قد يكون بسبب إعدادات خادم SQL
+                    const timeStr = new Date().toLocaleTimeString('ar-EG');
+                    throw new Error(`⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
+                        `الوقت: ${timeStr}\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
+                        `   - اضغط Deploy > Manage Deployments\n` +
+                        `   - اضغط Edit (أيقونة القلم) على Deployment الحالي\n` +
+                        `   - تأكد من:\n` +
+                        `     * Execute as: Me\n` +
+                        `     * Who has access: Anyone (مهم جداً!)\n` +
+                        `   - اضغط Deploy\n` +
+                        `   - انسخ الرابط الجديد (يجب أن ينتهي بـ /exec)\n` +
+                        `2. تأكد من أن الرابط ينتهي بـ /exec وليس /dev\n` +
+                        `3. بعد clasp push نفّذ clasp deploy -i <deploymentId> لتحديث النشر الحالي\n` +
+                        `4. تأكد من أن doOptions() موجودة في Code.gs`);
+                }
+                
+                if (errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    fetchError.name === 'AbortError' ||
+                    fetchError.message?.includes('aborted')) {
+
+                    const isAuthAction = authActions.includes(action) || action === 'login';
+                    if (isAuthAction) {
+                        const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                        throw new Error(`⚠️ انتهت مهلة الاتصال بخادم المصادقة (${timeoutSeconds} ثانية).\n` +
+                            `لا تُعد إدخال نفس رمز MFA فوراً.\n` +
+                            `انتظر 30 ثانية، ثم سجّل الدخول من جديد واطلب رمزاً جديداً.`);
+                    }
+
+                    // إعادة محاولات محدودة لتقليل التأخير التراكمي
+                    const isWriteOperation = action === 'saveToSheet' || action === 'appendToSheet' ||
+                        action.startsWith('save') || action.startsWith('update') || action.startsWith('add') ||
+                        isDeleteOperation;
+                    // appendToSheet غير Idempotent — لا نعيد المحاولة عند timeout لأن الطلب قد نُفذ على الخادم
+                    const isAppend = action === 'appendToSheet';
+                    let maxRetries = (isWriteOperation && !isAppend) ? 2 : 1;
+                    if (isHeavyOperation && isWriteOperation && !isAppend) {
+                        maxRetries = 3;
+                    }
+
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        // تأخير تصاعدي أقصر لتجنب الحجز الطويل للطابور
+                        const delay = Math.min(Math.pow(2, retryCount + 1) * 700, 3000);
+                        Utils.safeLog(`⏱️ انتهت مهلة الاتصال للخادم (${Math.round(timeoutDuration / 1000)}s). إعادة المحاولة بعد ${delay / 1000} ثانية (المحاولة ${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+
+                        // إعادة المحاولة مع أمر بزيادة المهلة داخلياً إذا أمكن
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+
+                    const timeStr = new Date().toLocaleString('ar-SA');
+                    const timeoutSeconds = Math.round(timeoutDuration / 1000);
+                    const timeoutMinutes = Math.round(timeoutSeconds / 60);
+                    const operationType = isHeavyOperation ? 'عملية ثقيلة' : (isMediumOperation ? 'عملية متوسطة' : 'عملية عادية');
+                    
+                    // رسالة خطأ مبسطة وأكثر وضوحاً
+                    // التحقق من إذا كانت هذه عملية مراقبة (قراءة بسيطة من Users بدون محاولات إعادة)
+                    const isMonitoringCheck = action === 'readFromSheet' && 
+                                             data?.sheetName === 'Users' && 
+                                             retryCount === 0;
+                    
+                    if (isMonitoringCheck) {
+                        // رسالة مبسطة لفحوصات المراقبة
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                            `الخطأ: انتهت مهلة الاتصال\n` +
+                            `الوقت: ${timeStr}\n\n` +
+                            `يرجى التحقق من:\n` +
+                            `1. إعدادات خادم SQL\n` +
+                            `2. معرف قاعدة SQL\n` +
+                            `3. الاتصال بالإنترنت`);
+                    } else {
+                        // رسالة مفصلة للعمليات الأخرى
+                        throw new Error(`⚠️ فقدان الاتصال مع قاعدة SQL!\n\n` +
+                            `الخطأ: انتهت مهلة الاتصال (${timeoutSeconds} ثانية / ${timeoutMinutes} دقيقة)\n` +
+                            `نوع العملية: ${operationType}\n` +
+                            `العملية: ${action}\n` +
+                            `عدد المحاولات: ${retryCount + 1}/${maxRetries + 1}\n` +
+                            `الوقت: ${timeStr}\n\n` +
+                            `يرجى التحقق من:\n` +
+                            `1. إعدادات خادم SQL:\n` +
+                            `   - تأكد من أن السكربت منشور ومفعّل\n` +
+                            `   - افتح خادم SQL Editor\n` +
+                            `   - اضغط Deploy > Manage Deployments\n` +
+                            `   - تأكد من أن Deployment نشط ويبدأ بـ /exec\n` +
+                            `   - تأكد من أن "Who has access" = "Anyone"\n` +
+                            `2. معرف قاعدة SQL:\n` +
+                            `   - تأكد من أن معرف قاعدة SQL صحيح\n` +
+                            `   - تأكد من أن الجداول موجودة وقابلة للوصول\n` +
+                            `3. الاتصال بالإنترنت:\n` +
+                            `   - تحقق من سرعة الاتصال (قد يكون بطيئاً)\n` +
+                            `   - تحقق من جدار الحماية أو VPN\n` +
+                            `   - جرب تحديث الصفحة وإعادة المحاولة\n\n` +
+                            `💡 نصيحة: إذا استمرت المشكلة، حاول تقليل حجم البيانات المرسلة أو تقسيم العملية إلى أجزاء أصغر.`);
+                    }
+                }
+
+                // التحقق من هل هو Chrome Extensions
+                if (fetchError.message && (
+                    fetchError.message.includes('runtime.lastError') ||
+                    fetchError.message.includes('message port closed') ||
+                    fetchError.message.includes('Receiving end does not exist') ||
+                    fetchError.message.includes('Could not establish connection') ||
+                    fetchError.message.includes('Extension context invalidated')
+                )) {
+                    // التحقق من هل هو Chrome Extensions
+                    throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome Extensions');
+                }
+
+                throw fetchError;
+            }
+
+            // التحقق من هل هو response
+            if (!response || !response.ok) {
+                const status = response?.status || 0;
+
+                // 429 Too Many Requests — إعادة المحاولة بتأخير تصاعدي
+                if (status === 429) {
+                    const maxRetries = 3;
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.pow(2, retryCount + 1) * 1000;
+                        Utils.safeWarn(`429 Too Many Requests - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+                    throw new Error('تجاوز حد الطلبات (429). يرجى الانتظار دقيقة ثم إعادة المحاولة.');
+                }
+
+                // 503 Service Unavailable / 502 Bad Gateway / 504 Gateway Timeout — الخدمة مؤقتاً غير متاحة
+                if (status === 503 || status === 502 || status === 504) {
+                    const maxRetries = 3;
+                    if (retryCount < maxRetries && canRetryWithinBudget()) {
+                        const delay = Math.pow(2, retryCount + 1) * 1000;
+                        Utils.safeWarn(`الخادم غير متاح (${status}) - إعادة المحاولة بعد ${delay / 1000}s (${retryCount + 1}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                    }
+                    const statusText = status === 503 ? 'الخدمة مؤقتاً غير متاحة (503)' : status === 502 ? 'خطأ في البوابة (502)' : 'انتهت مهلة البوابة (504)';
+                    throw new Error(`⚠️ ${statusText}\n\nالخادم لا يستجيب حالياً. جرّب:\n1. تحديث الصفحة بعد دقيقة.\n2. التأكد من أن خادم SQL منشور وأن الرابط ينتهي بـ /exec.\n3. إن كان السكربت على Google: تحقق من صفحة حالة خدمات Google.`);
+                }
+
+                // 404 من script.googleusercontent.com: محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة لكل العمليات (لا كتابة ولا استهلاك OTP حدث).
+                // المصادقة: حتى 5 محاولات بتأخير قصير — تذبذب Google شائع على /exec.
+                const max404Retries = isAuthAction ? 5 : 3;
+                if (status === 404 && dogetRetry < max404Retries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ 404 لمحتوى التحويل (${action}) — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${max404Retries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, max404Retries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+
+                // باقي الأخطاء
+                let errorMessage = `HTTP error! status: ${status}`;
+                try {
+                    const errorData = await response.text();
+                    if (errorData && errorData.trim() !== '') {
+                        try {
+                            const parsed = JSON.parse(errorData);
+                            errorMessage = parsed.message || errorMessage;
+                        } catch (parseError) {
+                            errorMessage = this.sanitizeGasErrorText(
+                                errorData,
+                                `HTTP error! status: ${status}`
+                            );
+                        }
+                    }
+                } catch (e) {
+                    // التحقق من هل هو e
+                }
+
+                throw new Error(errorMessage);
+            }
+
+            const resultText = await response.text();
+
+            if (!resultText || resultText.trim() === '') {
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو resultText');
+            }
+
+            let result;
+            let isHtmlBody = false;
+            try {
+                let trimmedText = String(resultText || '').replace(/^\uFEFF/, '').trim();
+                if (this.looksLikeGasHtmlResponse(trimmedText)) {
+                    isHtmlBody = true;
+                    throw new Error(this.sanitizeGasErrorText(trimmedText));
+                }
+                result = JSON.parse(trimmedText);
+            } catch (e) {
+                // صفحة HTML من Google تعني أن محتوى تحويل 302 لم يُسلَّم — doPost لم يُنفَّذ.
+                // إعادة الإرسال آمنة (لا كتابة ولا استهلاك OTP حدث على الخادم).
+                const maxHtmlRetries = isAuthAction ? 5 : 3;
+                if (isHtmlBody && dogetRetry < maxHtmlRetries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ استجابة HTML للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxHtmlRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxHtmlRetries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+                if (e && e.message && (e.message.includes('HTML بدل JSON') || e.message.includes('نشر Web App'))) throw e;
+                const safePreview = this.sanitizeGasErrorText(resultText, 'استجابة غير صالحة من الخادم');
+                throw new Error(
+                    safePreview.indexOf('HTML') !== -1 || safePreview.indexOf('نشر Web') !== -1
+                        ? safePreview
+                        : `استجابة غير صالحة من الخادم: ${safePreview}`
+                );
+            }
+
+            if (!result || typeof result !== 'object') {
+                throw new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو result');
+            }
+
+            // فحص إجابات doGet التي ترجع عند توجيه POST أو غياب إذن الوصول "Anyone"
+            const isDoGetStatus = result.errorCode === 'REACHED_DOGET_STATUS' ||
+                result.errorCode === 'WRONG_URL_ENDPOINT' ||
+                (result.status === 'active' && result.message && result.message.includes('running successfully'));
+            if (isDoGetStatus) {
+                // رد doGet يعني أن doPost لم ينفَّذ إطلاقاً (Google أعادت استدعاء السكربت كـ GET
+                // عند تعذّر تسليم محتوى التحويل 302). لذلك إعادة الإرسال آمنة لكل العمليات —
+                // بما فيها verifyMfaLogin: لم يُستهلك أي رمز OTP على الخادم.
+                const maxDogetRetries = isAuthAction ? 5 : 3;
+                if (dogetRetry < maxDogetRetries && canRetryWithinBudget()) {
+                    const delay = isAuthAction ? (300 + dogetRetry * 500) : (800 + (dogetRetry * 1200));
+                    Utils.safeWarn(`↩️ رد doGet للعملية ${action} — الطلب لم يُنفَّذ. إعادة الإرسال (${dogetRetry + 1}/${maxDogetRetries}) بعد ${delay}ms`);
+                    this._emitAuthRetryProgress_(action, dogetRetry + 1, maxDogetRetries);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount, dogetRetry + 1, effectiveDeadline);
+                }
+
+                const dogetMsg = 'تعذّر تسليم الطلب إلى الخادم (تذبذب مؤقت في Google).\n' +
+                    'لم يُنفَّذ الطلب — لم تُستهلك كلمة المرور ولا رمز MFA.\n' +
+                    'انتظر ثانيتين ثم أعد المحاولة.';
+                if (!allowStructuredFailure) {
+                    throw new Error(dogetMsg);
+                }
+                return { success: false, message: dogetMsg, errorCode: 'REACHED_DOGET_STATUS' };
+            }
+
+            if (result.success === false) {
+                if (allowStructuredFailure) {
+                    return result;
+                }
+                const errorCode = result.errorCode ? String(result.errorCode) : '';
+                const errorMessage = result.message || 'فشل المزامنة في التقدم باستخدام قاعدة SQL';
+                if (errorMessage.includes('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو errorMessage')) {
+                    Utils.safeWarn('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو spreadsheetId');
+                    const err = new Error(errorMessage);
+                    err.isAppError = true;
+                    err.errorCode = errorCode;
+                    throw err;
+                }
+                const err = new Error(errorMessage);
+                err.isAppError = true;
+                err.errorCode = errorCode;
+                throw err;
+            }
+
+            return result;
+        } catch (error) {
+            // التحقق من هل هو Chrome extensions
+            const chromeExtensionErrors = [
+                'runtime.lastError',
+                'message port closed',  // التحقق من هل هو message port closed
+                'Extension context invalidated',  // التحقق من هل هو Extension context invalidated
+                'Receiving end does not exist',  // التحقق من هل هو Receiving end does not exist
+                'Could not establish connection',  // التحقق من هل هو Could not establish connection
+                'The message port closed before a response was received',  // التحقق من هل هو The message port closed before a response was received
+                'Unchecked runtime.lastError'
+            ];
+
+            const errorMessage = error?.message || error?.toString() || '';
+            const isChromeExtensionError = chromeExtensionErrors.some(err =>
+                errorMessage.includes(err)
+            );
+
+            if (isChromeExtensionError) {
+                // التحقق من هل هو Chrome extensions
+                // فقط نعيد الخطأ بدون تسجيل
+                return Promise.reject(new Error('فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو Chrome extensions'));
+            }
+
+            // تسجيل الخطأ فقط إذا لم يكن خطأ متوقع أو عندما يكون خادم SQL مفعّل
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+
+            // تجاهل أخطاء getPublicIP بصمت (هذه عملية غير حرجة)
+            const isGetPublicIPError = action === 'getPublicIP' || 
+                errorMsg.includes('getting public IP') || 
+                errorMsg.includes('getPublicIP') ||
+                errorMsg.includes('Server error while getting public IP');
+            
+            const isExpectedError = isGetPublicIPError ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                errorMsg.includes('خادم SQL') ||
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+
+            if (!isExpectedError && isBackendRpcConfigured && !isGetPublicIPError) {
+                // Extract meaningful error message instead of logging raw object
+                const displayError = error?.message || error?.toString() || JSON.stringify(error) || 'خطأ غير معروف';
+                
+                // Suppress detailed CORS error logging (handled with user-friendly message)
+                if (!displayError.includes('CORS') && 
+                    !displayError.includes('Cross-Origin Request Blocked') &&
+                    !displayError.includes('Access-Control-Allow-Origin') &&
+                    !displayError.includes('Same Origin Policy')) {
+                    // استخدام safeError مع التحقق الإضافي (تخطي CORS errors التي يتم التعامل معها)
+                    Utils.safeError('❌ خطأ في طلب قاعدة SQL:', displayError);
+                }
+            }
+            // إذا كان الخطأ متوقعاً أو قاعدة SQL غير مفعّلة، لا نسجل أي شيء
+
+            // استخدام رسالة الخطأ من الكائن
+            const finalErrorMsg = errorMsg || 'خطأ غير معروف';
+
+            // إصلاح ذاتي لأخطاء CSRF: تدوير token + sessionId مرة واحدة ثم إعادة المحاولة
+            const isCsrfValidationError = finalErrorMsg.includes('CSRF_TOKEN_VALIDATION_FAILED') ||
+                finalErrorMsg.includes('فشل التحقق من CSRF token') ||
+                finalErrorMsg.includes('CSRF token مفقود') ||
+                finalErrorMsg.includes('CSRF_TOKEN_MISSING') ||
+                finalErrorMsg.includes('CSRF_TOKEN_INVALID');
+            if (isCsrfValidationError && retryCount < 1) {
+                try {
+                    sessionStorage.removeItem('csrf_token');
+                    sessionStorage.removeItem('client_session_id');
+                    Utils.safeWarn('🔐 تم اكتشاف خطأ CSRF؛ إعادة تهيئة جلسة الأمان وإعادة المحاولة...');
+                } catch (_e) { /* ignore */ }
+                return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+            }
+
+            // منطق إعادة المحاولة
+            const maxRetries = 2;
+            if (retryCount < maxRetries && canRetryWithinBudget()) {
+                // إعادة المحاولة فقط للأخطاء الشبكية
+                if (errorMsg && (
+                    errorMsg.includes('Failed to fetch') ||
+                    errorMsg.includes('NetworkError') ||
+                    errorMsg.includes('Network request failed') ||
+                    errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                    errorMsg.includes('timeout') ||
+                    errorMsg.includes('timed out') ||
+                    errorMsg.includes('429') ||
+                    errorMsg.includes('Too Many Requests')
+                )) {
+                    const delay = Math.pow(2, retryCount + 1) * 1000; // 2s, 4s
+                    Utils.safeLog(`🔄 إعادة المحاولة بعد ${delay}ms (المحاولة ${retryCount + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this._executeRequest(action, data, retryCount + 1, dogetRetry, effectiveDeadline);
+                }
+            }
+
+            // التحقق من هل هو errorMsg
+            let finalErrorMessage = errorMsg;
+
+            // التحقق من هل هو connection timeout
+            if (errorMsg && (
+                errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                (errorMsg.includes('timeout') && errorMsg.includes('connection'))
+            )) {
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من:\n' +
+                    '1. الاتصال بالإنترنت\n' +
+                    '2. رابط خادم SQL صحيح (يجب أن ينتهي بـ /exec)\n' +
+                    '3. خادم SQL مفعّل ومُنشَر\n' +
+                    '4. عدم وجود قيود على الشبكة';
+            } else if (errorMsg && (
+                errorMsg.includes('Failed to fetch') ||
+                errorMsg.includes('NetworkError') ||
+                errorMsg.includes('CORS') ||
+                errorMsg.includes('blocked by CORS policy') ||
+                errorMsg.includes('Access-Control-Allow-Origin') ||
+                errorMsg.includes('Cross-Origin Request Blocked') ||
+                errorMsg.includes('Same Origin Policy') ||
+                error.name === 'TypeError' ||
+                errorMsg.includes('Network request failed') ||
+                errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')
+            )) {
+                // CORS error - use the detailed message if already set, otherwise create one
+                if (errorMsg.includes('فشل الاتصال مع خادم SQL بسبب CORS')) {
+                    finalErrorMessage = errorMsg; // Use the detailed message from catch block
+                } else {
+                    finalErrorMessage = `⚠️ فشل الاتصال مع خادم SQL بسبب CORS!\n` +
+                        `يرجى التحقق من:\n` +
+                        `1. نشر خادم SQL بشكل صحيح:\n` +
+                        `   - افتح خادم SQL Editor\n` +
+                        `   - اضغط Deploy > New Deployment\n` +
+                        `   - اختر Type: Web app\n` +
+                        `   - Execute as: Me\n` +
+                        `   - Who has access: Anyone (مهم جداً!)\n` +
+                        `   - اضغط Deploy وقم بنسخ الرابط الجديد\n` +
+                        `2. تأكد من أن الرابط ينتهي بـ /exec وليس /dev\n` +
+                        `3. إذا قمت بتحديث السكربت، يجب إنشاء deployment جديد`;
+                }
+            } else if (errorMsg && (
+                errorMsg.includes('429') ||
+                errorMsg.includes('Too Many Requests')
+            )) {
+                // التحقق من هل هو 429
+                finalErrorMessage = 'فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو 429';
+            } else if (errorMsg && errorMsg.includes('HTTP error')) {
+                finalErrorMessage = `فشل المزامنة في التقدم باستخدام قاعدة SQL - التحقق من هل هو HTTP error`;
+            } else if (errorMsg && (errorMsg.includes('AbortError') || errorMsg.includes('aborted'))) {
+                finalErrorMessage = 'انتهت مهلة الاتصال بخادم خادم SQL. يرجى التحقق من الاتصال بالإنترنت وإعدادات خادم SQL';
+            }
+
+            return Promise.reject(new Error(finalErrorMessage));
+        }
+    },
+
+    /**
+     * التحقق من هل هو sendToAppsScript
+     */
+    async sendToAppsScript(action, data, retryCount = 0) {
+        // المصادقة وحضور العيادة لا تُحجب بـ Circuit Breaker
+        if (!this._shouldBypassRequestQueue(action)) {
+            try {
+                this._checkCircuitBreaker();
+            } catch (error) {
+                const localData = this.getLocalData(action, data);
+                if (localData !== null && !this._isWriteMutationAction(action)) {
+                    Utils.safeLog(`⚠️ Circuit Breaker مفتوح - تم تخطي العملية: ${action}`);
+                    return localData;
+                }
+                if (localData !== null && this._isWriteMutationAction(action)) {
+                    Utils.safeWarn(`⚠️ Circuit Breaker: لن تُستخدم نسخة محلية قديمة لعملية كتابة (${action})`);
+                }
+                return Promise.reject(error);
+            }
+        }
+
+        return this._addToQueue(action, data, retryCount);
+    },
+
+    _isTransientRpcError(errorMessage = '') {
+        const msg = String(errorMessage || '').toLowerCase();
+        return msg.includes('timeout') ||
+            msg.includes('timed out') ||
+            msg.includes('aborterror') ||
+            msg.includes('aborted') ||
+            msg.includes('network request failed') ||
+            msg.includes('failed to fetch') ||
+            msg.includes('networkerror') ||
+            msg.includes('انتهت مهلة');
+    },
+
+    /**
+     * تجاوز SmartCache/localStorage لقراءات يجب أن تكون حديثة (طلبات اعتماد المقاولين…)
+     */
+    _shouldBypassReadCache_(action, data = {}) {
+        if (data.skipCache === true || data.forceRefresh === true) return true;
+        if (action === 'readFromSheet' || action === 'batchReadSheets') {
+            const sheet = String(data.sheetName || '').trim();
+            const sheets = Array.isArray(data.sheetNames) ? data.sheetNames.map((s) => String(s || '').trim()) : [];
+            const volatileSheets = new Set([
+                'ContractorApprovalRequests',
+                'ContractorEvaluationApprovalRequests',
+                'ContractorDeletionRequests',
+                'ApprovedContractors'
+            ]);
+            if (volatileSheets.has(sheet)) return true;
+            if (sheets.some((s) => volatileSheets.has(s))) return true;
+        }
+        if (action === 'getAllContractorApprovalRequests' || action === 'getAllContractorEvaluationApprovalRequests' || action === 'getAllContractorDeletionRequests') {
+            return true;
+        }
+        return false;
+    },
+
+    _invalidateSmartCacheForRead_(action, data = {}) {
+        if (typeof SmartCache === 'undefined' || typeof SmartCache.getCacheKey !== 'function') return;
+        try {
+            const userPermissions = this._getCurrentUserPermissions();
+            const dataType = this._getDataTypeForAction(action);
+            const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+            localStorage.removeItem(`hse_smart_cache_${cacheKey}`);
+        } catch (_e) { /* ignore */ }
+    },
+
+    /**
+     * دوال ربط ومعالجة خادم SQL (wrapper حول sendToAppsScript)
+     * التعامل مع البيانات والعمليات المرتبطة بالنماذج، قواعد البيانات،
+     * والتكامل مع قاعدة SQL بشكل آمن ومستقر.
+     *
+     * الوظائف تشمل:
+     * - إرسال واستقبال البيانات بين الويب وApps Script
+     * - معالجة النتائج مع التحقق من الأخطاء
+     * - إعادة المحاولة عند الفشل (Retry + Circuit Breaker)
+     * - دعم حفظ البيانات والمزامنة التلقائية
+     */
+    async sendRequest(requestData) {
+        const { action, data } = requestData;
+        if (!action) {
+            throw new Error('يجب إدخال action في الطلب');
+        }
+
+        // فشل مُهيكل: المستدعي يريد { success:false, message } بدل استثناء.
+        // بدون هذا كان رفض الخادم (كلمة مرور خاطئة، رمز MFA غير صحيح…) يُرمى كخطأ اتصال
+        // فيسقط الدخول إلى التحقق المحلي، والحساب المُفعّل عليه MFA يُرفض محلياً.
+        const wantsStructuredFailure = !!(data && typeof data === 'object' && data.__allowStructuredFailure === true);
+        const isAuthAction = ['login', 'verifyMfaLogin', 'confirmMfaEnrollment', 'startMfaEnrollment', 'disableMfa', 'changePassword'].includes(action);
+
+        // Actions التي يمكن cache-ها (عمليات قراءة فقط)
+        const cacheableActions = ['readFromSheet', 'batchReadSheets', 'getData', 'getSafetyTeamMembers',
+            'getSafetyTeamMember', 'getOrganizationalStructure', 'getJobDescription',
+            'getSafetyTeamKPIs', 'getSafetyHealthManagementSettings', 'getActionTrackingSettings',
+            'getAllActionTracking', 'getActionTracking',
+            'getAllApprovedContractors', 'getAllContractors', 'getAllEmployees', 'getAllAppEmergencyNumbers'];
+
+        const bypassReadCache = this._shouldBypassReadCache_(action, data || {});
+        const isCacheable = cacheableActions.includes(action) && !bypassReadCache;
+
+        if (bypassReadCache) {
+            this._invalidateSmartCacheForRead_(action, data || {});
+            try {
+                const legacyKey = `${action}_${JSON.stringify(data || {})}`;
+                this._cache?.data?.delete(legacyKey);
+                this._cache?.timestamps?.delete(legacyKey);
+                localStorage.removeItem(this._buildLocalDataStorageKey(action, data || {}));
+            } catch (_purgeErr) { /* ignore */ }
+        }
+
+        // محاولة الحصول من Smart Cache أولاً
+        if (isCacheable && typeof SmartCache !== 'undefined') {
+            const userPermissions = this._getCurrentUserPermissions();
+            const dataType = this._getDataTypeForAction(action);
+            const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+
+            const cached = SmartCache.getCache(cacheKey, userPermissions, dataType);
+            if (cached !== null) {
+                if (AppState?.debugMode) Utils?.safeLog(`✅ تم استخدام البيانات من Smart Cache للعملية: ${action}`);
+                return cached;
+            }
+        }
+
+        // محاولة الحصول من الـ cache القديم كـ fallback
+        if (isCacheable) {
+            const cacheKey = `${action}_${JSON.stringify(data || {})}`;
+            const cached = this._getCachedData(cacheKey);
+            if (cached !== null) {
+                if (AppState?.debugMode) Utils?.safeLog(`✅ تم استخدام البيانات من الـ cache القديم للعملية: ${action}`);
+                return cached;
+            }
+        }
+
+        if (!this._isBackendRpcConfigured()) {
+            const localData = this.getLocalData(action, data);
+            if (localData !== null) {
+                Utils.safeLog(`✅ تم استخدام البيانات المحلية من التخزين المؤقت للعملية: ${action}`);
+                return localData;
+            }
+            throw new Error('الخادم الخلفي غير مُهيأ. يرجى ضبط رابط الاتصال في الإعدادات.');
+        }
+
+        try {
+            // تنفيذ الطلب عبر sendToAppsScript
+            const result = await this.sendToAppsScript(action, data || {});
+
+            // حفظ في Smart Cache إذا كانت العملية قابلة للـ cache
+            if (isCacheable && result && result.success !== false && typeof SmartCache !== 'undefined') {
+                const userPermissions = this._getCurrentUserPermissions();
+                const dataType = this._getDataTypeForAction(action);
+                const cacheKey = SmartCache.getCacheKey(action, data, AppState?.currentUser?.id, userPermissions);
+                SmartCache.setCache(cacheKey, result, userPermissions, dataType);
+            }
+
+            // حفظ في الـ cache القديم كـ fallback
+            if (isCacheable && result && result.success !== false) {
+                const cacheKey = `${action}_${JSON.stringify(data || {})}`;
+                this._setCachedData(cacheKey, result);
+            }
+
+            // في حال رجع الرد ولم يكن ناجحاً
+            if (result && typeof result === 'object') {
+                if (result.success === false) {
+                    // ردّ الخادم وصل فعلاً — أعِده كما هو للمستدعي بدل تحويله إلى خطأ اتصال
+                    if (wantsStructuredFailure || isAuthAction) {
+                        return result;
+                    }
+                    if (this._shouldSkipLocalFallbackForRead_(action, result)) {
+                        const errCode = result.errorCode ? String(result.errorCode) : '';
+                        if (/SESSION/i.test(errCode) && typeof Auth !== 'undefined' && typeof Auth.handleServerSessionInvalid === 'function') {
+                            Auth.handleServerSessionInvalid(result.message, errCode);
+                        }
+                        throw new Error(result.message || 'رفض قراءة البيانات من الخادم');
+                    }
+                    const localData = this.getLocalData(action, data);
+                    if (localData !== null && !this._isWriteMutationAction(action)) {
+                        Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل المزامنة: ${action}`);
+                        return localData;
+                    }
+                    const appErr = new Error(result.message || 'فشل في المزامنة مع خادم SQL');
+                    appErr.isAppError = true;
+                    if (result.errorCode) appErr.errorCode = result.errorCode;
+                    throw appErr;
+                }
+            }
+
+            // Save successful data to local storage as cache
+            if (!bypassReadCache) {
+                this.saveLocalData(action, result, data);
+            }
+
+            return result;
+        } catch (error) {
+            // معالجة الأخطاء وإرجاع رسالة واضحة
+            const errorMessage = error.message || 'حدث خطأ غير معروف أثناء تنفيذ الطلب';
+
+                // Check if it's an "Action not recognized" error from خادم SQL
+            if (errorMessage.includes('الإجراء غير معروف') || errorMessage.includes('Action not recognized') || errorMessage.includes('ACTION_NOT_RECOGNIZED')) {
+                const detailedMessage = errorMessage;
+                Utils.safeError(`Request Failed (${action}): ${detailedMessage}`);
+                const appErr = new Error(detailedMessage);
+                appErr.isAppError = true;
+                appErr.errorCode = 'ACTION_NOT_RECOGNIZED';
+                throw appErr;
+            }
+
+            // Try local data as fallback if خادم SQL fails due to network/connection issues
+            if (errorMessage.includes('خادم SQL غير متاح') ||
+                errorMessage.includes('Failed to fetch') ||
+                errorMessage.includes('NetworkError') ||
+                errorMessage.includes('CORS') ||
+                errorMessage.includes('blocked by CORS policy') ||
+                errorMessage.includes('Access-Control-Allow-Origin') ||
+                errorMessage.includes('429') ||
+                errorMessage.includes('Too Many Requests') ||
+                errorMessage.includes('فشل الاتصال بالشبكة') ||
+                errorMessage.includes('Network request failed')) {
+                if (this._shouldSkipLocalFallbackForRead_(action, null, errorMessage)) {
+                    throw new Error(errorMessage);
+                }
+                const localData = this.getLocalData(action, data);
+                if (localData !== null && !this._isWriteMutationAction(action)) {
+                    Utils.safeLog(`تم استخدام البيانات المحلية كبديل عند فشل الاتصال: ${action} (الخطأ: ${errorMessage.substring(0, 50)})`);
+                    return localData;
+                }
+            }
+
+            // استدعاء دوال الطوارئ والنسخ الاحتياطي
+            // في حال حدوث خطأ أثناء تنفيذ الطلب سيتم تسجيله عبر safeError
+            // ثم يتم إعادة رمي الخطأ ليتم التعامل معه في المستوى الأعلى
+
+            // تقليل الضوضاء في الكونسول - Circuit Breaker أخطاء متوقعة
+            if (errorMessage && errorMessage.includes('Circuit Breaker مفتوح')) {
+                // تسجيل كتحذير بدلاً من خطأ، وتقليل التكرار
+                const lastCircuitBreakerLog = this._lastCircuitBreakerLog || {};
+                const now = Date.now();
+                if (!lastCircuitBreakerLog[action] || (now - lastCircuitBreakerLog[action] > 10000)) {
+                    Utils.safeWarn(`⚠️ Circuit Breaker مفتوح - سيتم إعادة المحاولة بعد فترة (${action})`);
+                    if (!this._lastCircuitBreakerLog) this._lastCircuitBreakerLog = {};
+                    this._lastCircuitBreakerLog[action] = now;
+                }
+            } else {
+                // أخطاء timeout/الشبكة المتقطعة متوقعة في الـ batch والقراءات الكبيرة:
+                // نسجلها كتحذير مقنن بدلاً من error متكرر يسبب ضوضاء.
+                if (this._isTransientRpcError(errorMessage) &&
+                    (action === 'batchReadSheets' || action === 'readFromSheet' || action === 'getAllData')) {
+                    const key = `${action}:${String(errorMessage).slice(0, 60)}`;
+                    const now = Date.now();
+                    this._transientWarnAt = this._transientWarnAt || {};
+                    const last = this._transientWarnAt[key] || 0;
+                    if (now - last > 15000) {
+                        Utils.safeWarn(`⚠️ تعذر إكمال ${action} حالياً (اتصال/مهلة). سيتم استخدام fallback عند الإمكان.`);
+                        this._transientWarnAt[key] = now;
+                    }
+                } else {
+                    Utils.safeError(`sendRequest (${action}):`, errorMessage);
+                }
+            }
+            throw new Error(errorMessage);
+        }
+    },
+
+    /**
+     * مفتاح تخزين محلي لكل action — readFromSheet/batchReadSheets لكل ورقة/دفعة على حدة
+     * (تجنّب إرجاع بيانات ورقة A عند فشل قراءة ورقة B — كان يسبب نفس العدد 345 في كل الموديولات)
+     */
+    _buildLocalDataStorageKey(action, data) {
+        const base = `hse_local_${action}`;
+        if (action === 'readFromSheet' && data && data.sheetName) {
+            return `${base}_${String(data.sheetName).trim()}`;
+        }
+        if (action === 'batchReadSheets' && data && Array.isArray(data.sheetNames) && data.sheetNames.length) {
+            return `${base}_${data.sheetNames.slice().sort().join('|')}`;
+        }
+        return base;
+    },
+
+    _purgeLegacyReadFromSheetLocalCache_() {
+        this._purgeAllSheetReadLocalCache_();
+    },
+
+    _purgeAllSheetReadLocalCache_() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('hse_local_readFromSheet') || k.startsWith('hse_local_batchReadSheets'))) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
+        } catch (e) { /* ignore */ }
+    },
+
+    _shouldSkipLocalFallbackForRead_(action, result, errorMessage) {
+        if (action !== 'readFromSheet' && action !== 'batchReadSheets') return false;
+        const code = result && result.errorCode ? String(result.errorCode) : '';
+        const msg = String((result && result.message) || errorMessage || '');
+        const authPatterns = [
+            'ACTOR_IDENTITY_REQUIRED', 'ACTOR_NOT_REGISTERED', 'ACTOR_INACTIVE',
+            'CSRF_TOKEN', 'STRICT_ADMIN_DENIED', 'READ_DENIED', 'PERMISSION_DENIED',
+            'GET_READ_DISABLED', 'SESSION_EXPIRED', 'SESSION_TOKEN_MISSING', 'SESSION_USER_MISMATCH',
+            'SESSION_REQUIRED', 'رفض أمني', 'غير مسجل', 'CSRF', 'انتهت صلاحية الجلسة'
+        ];
+        return authPatterns.some((p) => code.includes(p) || msg.includes(p));
+    },
+
+    /**
+     * جلب البيانات المحلية من localStorage
+     */
+    getLocalData(action, data) {
+        try {
+            const storageKey = this._buildLocalDataStorageKey(action, data);
+            const stored = localStorage.getItem(storageKey);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                // Check if data is still valid (not older than 24 hours)
+                if (parsed.timestamp && (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000)) {
+                    return parsed.data;
+                }
+            }
+        } catch (error) {
+            Utils.safeWarn('خطأ في قراءة البيانات المحلية من localStorage:', error);
+        }
+        return null;
+    },
+
+    /**
+     * حفظ البيانات المحلية في localStorage
+     */
+    saveLocalData(action, result, data) {
+        try {
+            const storageKey = this._buildLocalDataStorageKey(action, data);
+            const dataToStore = {
+                data: result,
+                timestamp: Date.now()
+            };
+            localStorage.setItem(storageKey, JSON.stringify(dataToStore));
+        } catch (error) {
+            Utils.safeWarn('خطأ في حفظ البيانات المحلية في localStorage:', error);
+        }
+    },
+
+    /**
+     * قراءة البيانات من قاعدة SQL باستخدام Apps Script
+     * @param {string} sheetName
+     * @param {number|object} timeoutOrOptions - رقم المهلة بالمللي، أو { timeout, observationsRequestContext }
+     */
+    async readFromSheets(sheetName, timeoutOrOptions = 15000) {
+        if (!this._isBackendRpcConfigured()) {
+            return null;
+        }
+
+        if (!this._isCurrentUserEffectiveAdmin_() && this.ADMIN_ONLY_READ_SHEETS.includes(String(sheetName || '').trim())) {
+            return null;
+        }
+
+        if (String(sheetName || '').trim() === 'Users' && !this._canReadUsersSheet_()) {
+            if (typeof this.fetchUsersForApp === 'function') {
+                return await this.fetchUsersForApp({ timeout: typeof timeoutOrOptions === 'number' ? timeoutOrOptions : (timeoutOrOptions?.timeout || 15000) });
+            }
+            return null;
+        }
+
+        let timeout = 15000;
+        let observationsRequestContext = null;
+        if (typeof timeoutOrOptions === 'number') {
+            timeout = timeoutOrOptions;
+        } else if (timeoutOrOptions && typeof timeoutOrOptions === 'object') {
+            timeout = timeoutOrOptions.timeout ?? 15000;
+            observationsRequestContext = timeoutOrOptions.observationsRequestContext ?? null;
+        }
+
+        // استخدام timeout للطلب
+        try {
+            const payload = {
+                action: 'readFromSheet',
+                data: {
+                    sheetName: sheetName
+                }
+            };
+
+            if (sheetName === 'ContractorApprovalRequests' ||
+                sheetName === 'ContractorEvaluationApprovalRequests' ||
+                sheetName === 'ContractorDeletionRequests' ||
+                sheetName === 'ApprovedContractors') {
+                payload.data.skipCache = true;
+            }
+
+            if (AppState.googleConfig.sheets?.spreadsheetId) {
+                payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+            if (sheetName === 'DailyObservations' && observationsRequestContext) {
+                payload.data.observationsRequestContext = observationsRequestContext;
+            }
+
+            // تمرير timeout مباشرة لطبقة الشبكة حتى لا يظل الطلب معلقاً في الطابور
+            payload.data.__timeoutMs = timeout;
+            const result = await this.sendRequest(payload);
+
+            if (result && result.success && result.data !== undefined) {
+                return Array.isArray(result.data) ? result.data : [];
+            } else if (result && result.success && Array.isArray(result)) {
+                return result;
+            }
+
+            return null;
+        } catch (error) {
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+
+            const isExpectedError = !isBackendRpcConfigured ||
+                this._isExpectedReadError_(errorMsg) ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                errorMsg.includes('الخادم الخلفي غير مُهيأ') ||
+                errorMsg.includes('انتهت مهلة قراءة البيانات') ||
+                errorMsg.includes('timeout') ||
+                errorMsg.includes('Timeout') ||
+                errorMsg.includes('not found') ||
+                errorMsg.includes('غير موجود') ||
+                errorMsg.includes('Failed to fetch') ||
+                errorMsg.includes('NetworkError') ||
+                errorMsg.includes('Network request failed');
+
+            // عرض التحذير فقط للأخطاء غير المتوقعة وفي وضع التطوير
+            if (!isExpectedError && AppState.debugMode) {
+                Utils.safeWarn(`⚠️ فشل قراءة البيانات من ${sheetName}:`, error.message || error);
+            }
+            return null;
+        }
+    },
+
+    /**
+     * ✅ NEW: قراءة بيانات من عدة أوراق في طلب واحد (Batch Read)
+     * يقلل عدد الطلبات من 70+ إلى 5-6 طلبات فقط
+     * @param {Array<string>} sheetNames - أسماء الأوراق المراد قراءتها
+     * @param {Object} options - خيارات إضافية
+     * @returns {Promise<Object>} - كائن يحتوي على جميع البيانات { sheetName: data }
+     */
+    async batchReadFromSheets(sheetNames, options = {}) {
+        const {
+            timeout = 30000,
+            batchSize = 12, // Default batch size (max 15 supported by backend)
+            skipCache = false
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مُهيأ - لا يمكن استخدام القراءة المجمعة');
+            return {};
+        }
+
+        if (!Array.isArray(sheetNames) || sheetNames.length === 0) {
+            return {};
+        }
+
+        sheetNames = this._filterSheetsForCurrentUser(sheetNames);
+        if (sheetNames.length === 0) {
+            return { data: {}, failedSheets: [], totalSheets: 0, successfulSheets: 0 };
+        }
+
+        const results = {};
+        const failedSheets = [];
+
+        // تقسيم الأوراق إلى مجموعات بحجم batchSize
+        const batches = [];
+        for (let i = 0; i < sheetNames.length; i += batchSize) {
+            batches.push(sheetNames.slice(i, i + batchSize));
+        }
+
+        Utils.safeLog(`📦 Batch Read: ${sheetNames.length} sheets in ${batches.length} batches`);
+
+        // معالجة كل batch على حدة
+        for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+            const batch = batches[batchIndex];
+            
+            try {
+                const payload = {
+                    action: 'batchReadSheets',
+                    data: {
+                        sheetNames: batch
+                    }
+                };
+
+                if (AppState.googleConfig.sheets?.spreadsheetId) {
+                    payload.data.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+                }
+
+                // إضافة context خاص لـ DailyObservations إذا كان في الباتش
+                if (batch.includes('DailyObservations') && options.observationsRequestContext) {
+                    payload.data.observationsRequestContext = options.observationsRequestContext;
+                }
+                if (skipCache) {
+                    payload.data.skipCache = true;
+                }
+
+                payload.data.__timeoutMs = timeout;
+                const result = await this.sendRequest(payload);
+
+                if (result && result.success && result.data) {
+                    // دمج النتائج
+                    Object.assign(results, result.data);
+                    
+                    // تسجيل الأوراق الفاشلة
+                    if (result.failedSheets && result.failedSheets.length > 0) {
+                        result.failedSheets.forEach(failed => {
+                            const failedName = failed.sheet || failed.sheetName;
+                            if (failedName) failedSheets.push(failedName);
+                            Utils.safeWarn(`⚠️ فشل قراءة ${failedName || '?'}: ${failed.error}`);
+                        });
+                    }
+
+                    Utils.safeLog(`✅ Batch ${batchIndex + 1}/${batches.length}: ${result.successfulSheets}/${result.totalSheets} sheets loaded`);
+                } else {
+                    throw new Error(result?.message || 'فشل في القراءة المجمعة');
+                }
+            } catch (error) {
+                Utils.safeWarn(`⚠️ فشل batch ${batchIndex + 1}، جاري fallback للقراءة المنفصلة`);
+                // fallback: قراءة كل ورقة منفصلة بدلاً من فشل الباتش بالكامل
+                for (let i = 0; i < batch.length; i++) {
+                    const sheetName = batch[i];
+                    try {
+                        const sheetData = await this.readFromSheets(sheetName, {
+                            timeout: Math.min(timeout, 15000),
+                            observationsRequestContext: options.observationsRequestContext || null
+                        });
+                        results[sheetName] = Array.isArray(sheetData) ? sheetData : [];
+                    } catch (fallbackError) {
+                        failedSheets.push(sheetName);
+                        if (AppState?.debugMode) {
+                            Utils.safeWarn(`⚠️ fallback failed for ${sheetName}: ${fallbackError?.message || fallbackError}`);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (failedSheets.length > 0) {
+            Utils.safeWarn(`⚠️ Batch Read: ${failedSheets.length}/${sheetNames.length} sheets failed`);
+        }
+
+        return {
+            data: results,
+            failedSheets: failedSheets,
+            totalSheets: sheetNames.length,
+            successfulSheets: sheetNames.length - failedSheets.length
+        };
+    },
+
+
+    /**
+     * جلب البيانات من خادم SQL (خادم SQL)
+     * sendToAppsScript تم استبدالها بـ sendRequest (خادم SQL)
+     */
+    async fetchData(action, data = {}) {
+        try {
+            const result = await this.sendToAppsScript(action, data);
+            return result;
+        } catch (error) {
+            // تجاهل أخطاء Circuit Breaker و خادم SQL غير المفعل
+            const errorMsg = String(error?.message || '').toLowerCase();
+            if (errorMsg.includes('circuit breaker') ||
+                errorMsg.includes('google apps script غير مفعل') ||
+                errorMsg.includes('غير مفعل')) {
+                // هذه أخطاء متوقعة - إعادة رميها بدون تسجيل
+                throw error;
+            }
+            // تسجيل الأخطاء الأخرى فقط
+            Utils.safeError('Error in fetchData:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * استدعاء الدالة في الخادم (خادم SQL)
+     * wrapper لـ sendRequest تم استبدالها بـ sendRequest (خادم SQL)
+     * @param {string} action - اسم الإجراء
+     * @param {object} data - البيانات المرسلة
+     * @returns {Promise<object>} - النتيجة المستلمة
+     */
+    async callBackend(action, data = {}) {
+        try {
+            return await this.sendRequest({ action, data });
+        } catch (error) {
+            Utils.safeError(`خطأ في callBackend (${action}):`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * رفع ملف إلى الخادم من Base64 أو نص
+     * @param {string} base64Data - البيانات بصيغة Base64
+     * @param {string} fileName - اسم الملف
+     * @param {string} mimeType - نوع الملف
+     * @param {string} moduleName - اسم الوحدة (اختياري)
+     * @returns {Promise<object>} {success, fileId, directLink, shareableLink}
+     */
+    async uploadFileToDrive(base64Data, fileName, mimeType, moduleName = null, options = null) {
+        try {
+            if (!base64Data || !fileName || !mimeType) {
+                throw new Error('معاملات غير كافية. يجب توفير base64Data, fileName, و mimeType');
+            }
+
+            if (typeof Loading !== 'undefined' && Loading.show) {
+                Loading.show('جاري رفع الملف إلى الخادم...');
+            }
+
+            const payload = {
+                base64Data: base64Data,
+                fileName: fileName,
+                mimeType: mimeType,
+                moduleName: moduleName
+            };
+            if (options && typeof options === 'object') {
+                if (options.ownerUserId || options.userId) {
+                    payload.ownerUserId = options.ownerUserId || options.userId;
+                }
+            }
+
+            const result = await this.sendToAppsScript('uploadFileToDrive', payload);
+
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+
+            if (result && result.success) {
+                return {
+                    success: true,
+                    fileId: result.fileId,
+                    directLink: result.directLink,
+                    shareableLink: result.shareableLink,
+                    publicUrl: result.publicUrl || result.shareableLink || '',
+                    fileName: result.fileName,
+                    storage: result.storage || ''
+                };
+            } else {
+                throw new Error(result?.message || 'فشل رفع الملف إلى الخادم');
+            }
+        } catch (error) {
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في رفع الملف إلى الخادم:', error);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * رفع عدة ملفات إلى الخادم
+     * @param {Array} files - مصفوفة الملفات [{base64Data, fileName, mimeType}, ...]
+     * @param {string} moduleName - اسم الوحدة (اختياري)
+     * @returns {Promise<object>} {success, uploadedFiles, failedFiles}
+     */
+    async uploadMultipleFilesToDrive(files, moduleName = null) {
+        try {
+            if (!Array.isArray(files) || files.length === 0) {
+                throw new Error('يجب توفير مصفوفة من الملفات');
+            }
+
+            if (typeof Loading !== 'undefined' && Loading.show) {
+                Loading.show(`جاري رفع ${files.length} ملف إلى الخادم...`);
+            }
+
+            const result = await this.sendToAppsScript('uploadFileToDrive', {
+                files: files,
+                moduleName: moduleName
+            });
+
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+
+            return result;
+        } catch (error) {
+            if (typeof Loading !== 'undefined' && Loading.hide) {
+                Loading.hide();
+            }
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في رفع الملفات إلى الخادم:', error);
+            }
+            throw error;
+        }
+    },
+
+    /**
+     * معالجة attachments - تحويل Base64 إلى روابط الخادم
+     * @param {Array} attachments - مصفوفة المرفقات
+     * @param {string} moduleName - اسم الوحدة
+     * @returns {Promise<Array>} مصفوفة المرفقات مع روابط الخادم بدلاً من Base64
+     */
+    async processAttachments(attachments, moduleName) {
+        try {
+            if (!Array.isArray(attachments) || attachments.length === 0) {
+                return [];
+            }
+
+            const processedAttachments = [];
+
+            for (const attachment of attachments) {
+                // إذا كان المرفق يحتوي على رابط موجود (لا يحتاج رفع)
+                if (attachment.directLink || attachment.shareableLink || attachment.cloudLink) {
+                    processedAttachments.push({
+                        id: attachment.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('ATT') : 'ATT_' + Date.now()),
+                        name: attachment.name || 'attachment',
+                        type: attachment.type || 'application/octet-stream',
+                        directLink: attachment.directLink || attachment.shareableLink || attachment.cloudLink?.url,
+                        shareableLink: attachment.shareableLink || attachment.cloudLink?.url || attachment.directLink,
+                        fileId: attachment.fileId || attachment.cloudLink?.id,
+                        size: attachment.size || 0,
+                        uploadedAt: attachment.uploadedAt || new Date().toISOString()
+                    });
+                    continue;
+                }
+
+                // إذا كان المرفق يحتوي على Base64، ارفعه إلى الخادم
+                if (attachment.data || attachment.base64Data) {
+                    try {
+                        const uploadResult = await this.uploadFileToDrive(
+                            attachment.data || attachment.base64Data,
+                            attachment.name || 'attachment',
+                            attachment.type || 'application/octet-stream',
+                            moduleName
+                        );
+
+                        if (uploadResult.success) {
+                            processedAttachments.push({
+                                id: attachment.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('ATT') : 'ATT_' + Date.now()),
+                                name: uploadResult.fileName || attachment.name,
+                                type: attachment.type || 'application/octet-stream',
+                                directLink: uploadResult.directLink,
+                                shareableLink: uploadResult.shareableLink,
+                                fileId: uploadResult.fileId,
+                                size: attachment.size || 0,
+                                uploadedAt: new Date().toISOString()
+                            });
+                        } else {
+                            // في حالة الفشل، نحتفظ بالمرفق بصيغة Base64
+                            if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                                Utils.safeWarn('فشل رفع المرفق إلى الخادم:', attachment.name);
+                            }
+                            processedAttachments.push(attachment);
+                        }
+                    } catch (uploadError) {
+                        if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                            Utils.safeWarn('خطأ في رفع المرفق إلى الخادم:', uploadError);
+                        }
+                        // في حالة الخطأ، نحتفظ بالمرفق بصيغة Base64
+                        processedAttachments.push(attachment);
+                    }
+                } else {
+                    // إذا لم يكن هناك Base64 أو رابط، نحتفظ بالمرفق كما هو
+                    processedAttachments.push(attachment);
+                }
+            }
+
+            return processedAttachments;
+        } catch (error) {
+            if (typeof Utils !== 'undefined' && Utils.safeError) {
+                Utils.safeError('خطأ في معالجة المرفقات:', error);
+            }
+            // في حالة الخطأ، نعيد المرفقات الأصلية
+            return attachments;
+        }
+    },
+
+    /**
+     * حفظ البيانات في قاعدة SQL (قاعدة SQL)
+     */
+    async saveToSheets(sheetName, data) {
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            const preparedData = this.prepareSheetPayload(sheetName, data);
+            const payload = {
+                sheetName,
+                data: preparedData
+            };
+            if (AppState.googleConfig.sheets.spreadsheetId) {
+                payload.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+            const result = await this.sendToAppsScript('saveToSheet', payload);
+            return result;
+        } catch (error) {
+            Utils.safeWarn('فشل حفظ البيانات في قاعدة SQL:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * إضافة البيانات الجديدة إلى قاعدة SQL (بدون استبدال)
+     */
+    async appendToSheets(sheetName, data) {
+        if (!this._isBackendRpcConfigured()) {
+            Utils.safeWarn('الخادم الخلفي غير مفعّل');
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            // إضافة spreadsheetId إذا كان موجوداً في الإعدادات
+            const preparedData = this.prepareSheetPayload(sheetName, data);
+            const payload = {
+                sheetName,
+                data: preparedData
+            };
+
+            if (AppState.googleConfig.sheets.spreadsheetId) {
+                payload.spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+            }
+
+            const result = await this.sendToAppsScript('appendToSheet', payload);
+
+            if (result && result.success) {
+                Utils.safeLog(`✅ تم إضافة البيانات إلى قاعدة SQL: ${sheetName}`);
+            } else {
+                Utils.safeWarn(`⚠️ فشل إضافة البيانات إلى قاعدة SQL: ${sheetName}:`, result?.message || 'خطأ غير معروف');
+            }
+
+            return result;
+        } catch (error) {
+            Utils.safeWarn('⚠️ فشل إضافة البيانات إلى قاعدة SQL:', error);
+            return { success: false, message: error.message };
+        }
+    },
+
+    async syncUsers(force = false) {
+        if (!this._isBackendRpcConfigured()) {
+            return false;
+        }
+
+        // إيقاف نظام عدم النشاط أثناء مزامنة المستخدمين
+        let inactivityWasPaused = false;
+        if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
+            inactivityWasPaused = InactivityManager.isPaused;
+            if (!inactivityWasPaused) {
+                InactivityManager.pause('مزامنة المستخدمين مع قاعدة SQL');
+            }
+        }
+
+        // التحقق من المزامنة الجارية
+        if (this.isSyncing('users')) {
+            Utils.safeLog('⏳ مزامنة المستخدمين جارية بالفعل، في انتظار اكتمالها...');
+            // انتظار المزامنة الجارية (بحد أقصى 30 ثانية)
+            const maxWait = 30000;
+            const startWait = Date.now();
+            while (this.isSyncing('users') && (Date.now() - startWait) < maxWait) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            if (this.isSyncing('users')) {
+                Utils.safeWarn('⚠️ انتهت مهلة انتظار المزامنة الجارية');
+                // إعادة تشغيل نظام عدم النشاط
+                if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                    InactivityManager.resume();
+                }
+                return false;
+            }
+        }
+
+        const now = Date.now();
+        const lastSync = AppState.syncMeta?.users || 0;
+        const hasUsers = Array.isArray(AppState.appData.users) && AppState.appData.users.length > 0;
+        const CACHE_TTL = 2 * 60 * 1000; // 2 دقيقة - محسّن ليتناسب مع فترة المزامنة
+
+        if (!force && hasUsers && (now - lastSync) < CACHE_TTL) {
+            Utils.safeLog('✅ البيانات موجودة في الكاش، لا حاجة للمزامنة');
+            return true;
+        }
+
+        // تعيين حالة المزامنة
+        this._setSyncState('users', true);
+
+        // مسح Cache القديم من localStorage
+        Utils.safeLog('🔄 مسح Cache القديم من localStorage...');
+        AppState.syncMeta = AppState.syncMeta || {};
+        AppState.syncMeta.users = 0; // مسح timestamp القديم قبل بدء المزامنة
+
+        // مسح أي بيانات محفوظة في localStorage/sessionStorage
+        try {
+            const cachedUsers = localStorage.getItem('hse_cached_users');
+            if (cachedUsers) {
+                localStorage.removeItem('hse_cached_users');
+                Utils.safeLog('✅ تم مسح Cache القديم من localStorage');
+            }
+        } catch (e) {
+            Utils.safeWarn('⚠️ خطأ في مسح Cache من localStorage:', e);
+        }
+
+        const previousUsersMap = {};
+        // ⚠️ إنتاج: لا نحتفظ/نُدمج أي حسابات افتراضية. 
+        // نزيل فقط "الحسابات المحلية" الوهمية (legacy) التي كانت تُزرع قديماً (مثل نطاق @hse.local).
+        const isLegacyDefaultEmail = (email) => {
+            try {
+                const e = String(email || '').toLowerCase().trim();
+                return e.endsWith('@hse.local');
+            } catch (err) {
+                return false;
+            }
+        };
+
+        // حفظ نسخة احتياطية من جميع البيانات المحلية قبل المزامنة
+        const localUsersBackup = Array.isArray(AppState.appData.users)
+            ? AppState.appData.users.map(u => ({ ...u }))
+            : [];
+
+        if (Array.isArray(AppState.appData.users)) {
+            AppState.appData.users.forEach(user => {
+                const emailKey = user?.email ? user.email.toLowerCase().trim() : '';
+                if (emailKey) {
+                    previousUsersMap[emailKey] = user;
+                }
+            });
+        }
+
+        try {
+            Utils.safeLog('🔄 جاري قراءة المستخدمين من قاعدة SQL...');
+            let data = null;
+            if (this._canReadUsersSheet_() && this._isCurrentUserEffectiveAdmin_()) {
+                data = await this.readFromSheets('Users');
+            } else {
+                data = await this.fetchUsersForApp({ timeout: 20000 });
+            }
+
+            // التحقق من وجود البيانات المستلمة
+            if (!data) {
+                Utils.safeWarn('⚠️ البيانات المستلمة من قاعدة SQL كانت null');
+                // استخدام البيانات المحلية الاحتياطية إذا كانت متوفرة
+                if (localUsersBackup.length > 0) {
+                    Utils.safeLog('⚠️ استخدام البيانات المحلية الاحتياطية...');
+                    AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+                    AppState.syncMeta = AppState.syncMeta || {};
+                    AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت
+                    try {
+                        DataManager.save();
+                        Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                    } catch (saveError) {
+                        Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                    }
+                    this._setSyncState('users', false);
+                    if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                        InactivityManager.resume();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            if (!Array.isArray(data)) {
+                Utils.safeWarn('⚠️ البيانات المستلمة ليست مصفوفة:', typeof data);
+                // استخدام البيانات المحلية الاحتياطية إذا كانت متوفرة
+                if (localUsersBackup.length > 0) {
+                    Utils.safeLog('⚠️ استخدام البيانات المحلية الاحتياطية...');
+                    AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+                    AppState.syncMeta = AppState.syncMeta || {};
+                    AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت
+                    try {
+                        DataManager.save();
+                        Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                    } catch (saveError) {
+                        Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                    }
+                    this._setSyncState('users', false);
+                    if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                        InactivityManager.resume();
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            Utils.safeLog('📊 البيانات المستلمة من قاعدة SQL:', {
+                dataType: 'array',
+                dataLength: data.length,
+                firstUserSample: data.length > 0 ? {
+                    email: data[0].email || 'غير محدد',
+                    hasId: !!data[0].id,
+                    hasName: !!data[0].name,
+                    hasEmail: !!data[0].email,
+                    hasPasswordHash: !!data[0].passwordHash,
+                    passwordHashLength: data[0].passwordHash?.length || 0,
+                    passwordHashPrefix: data[0].passwordHash && typeof data[0].passwordHash === 'string' ? (data[0].passwordHash.substring(0, 20) + '...') : 'غير محدد',
+                    hasPassword: !!data[0].password,
+                    passwordValue: data[0].password && typeof data[0].password === 'string' ? (data[0].password.substring(0, 10) + '...') : (typeof data[0].password),
+                    keys: Object.keys(data[0] || {}),
+                    allKeys: Object.keys(data[0] || {})
+                } : null,
+                sampleUsers: data.slice(0, 3).map(u => ({
+                    email: u.email || 'غير محدد',
+                    hasPasswordHash: !!u.passwordHash,
+                    passwordHashLength: u.passwordHash?.length || 0
+                }))
+            });
+
+            if (Array.isArray(data) && data.length > 0) {
+                let restoredPasswords = false;
+
+                // تصفية المستخدمين الصالحين (الذين لديهم email صحيح)
+                const validUsers = data.filter(user => {
+                    if (!user || typeof user !== 'object') {
+                        Utils.safeWarn('⚠️ مستخدم غير صالح (ليس كائن):', user);
+                        return false;
+                    }
+                    const email = user.email ? String(user.email).trim() : '';
+                    if (!email || email === '') {
+                        Utils.safeWarn('⚠️ مستخدم بدون email:', user);
+                        return false;
+                    }
+                    return true;
+                });
+
+                if (validUsers.length === 0) {
+                    Utils.safeWarn('⚠️ لا يوجد مستخدمين صالحين في البيانات المستلمة');
+                    return false;
+                }
+
+                Utils.safeLog(`✅ تم تصفية ${validUsers.length} مستخدم صالح من ${data.length} مستخدم`);
+
+                let normalizedUsers = await Promise.all(validUsers.map(async user => {
+                    // تحويل المستخدم إلى كائن معين
+                    const normalized = {};
+                    Object.keys(user).forEach(key => {
+                        normalized[key] = user[key];
+                    });
+
+                    // تطبيع email
+                    if (normalized.email) {
+                        normalized.email = String(normalized.email).trim().toLowerCase();
+                    }
+
+                    // ✅ تطبيع name - التحقق من أنه string وليس object
+                    if (normalized.name) {
+                        let nameValue = normalized.name;
+                        // إذا كان name object (مثل {value: "Yasser"})، استخرج القيمة
+                        if (typeof nameValue === 'object' && nameValue !== null) {
+                            if (nameValue.value) {
+                                nameValue = String(nameValue.value).trim();
+                            } else {
+                                const values = Object.values(nameValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    nameValue = String(values[0]).trim();
+                                } else {
+                                    nameValue = String(nameValue).trim();
+                                }
+                            }
+                            Utils.safeLog(`✅ تم تحويل name من object إلى string: ${nameValue}`);
+                        } else if (typeof nameValue === 'string') {
+                            nameValue = nameValue.trim();
+                        }
+                        normalized.name = nameValue;
+                    }
+
+                    // ✅ تطبيع displayName أيضاً
+                    if (normalized.displayName) {
+                        let displayNameValue = normalized.displayName;
+                        if (typeof displayNameValue === 'object' && displayNameValue !== null) {
+                            if (displayNameValue.value) {
+                                displayNameValue = String(displayNameValue.value).trim();
+                            } else {
+                                const values = Object.values(displayNameValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    displayNameValue = String(values[0]).trim();
+                                }
+                            }
+                        } else if (typeof displayNameValue === 'string') {
+                            displayNameValue = displayNameValue.trim();
+                        }
+                        normalized.displayName = displayNameValue;
+                    }
+
+                    const emailKey = normalized.email || '';
+                    const previous = previousUsersMap[emailKey];
+
+                    // التحقق من وجود Utils ودالة isSha256Hex
+                    const canCheckHash = typeof Utils !== 'undefined' && Utils && typeof Utils.isSha256Hex === 'function';
+                    // التحقق من وجود passwordHash
+                    let incomingHash = '';
+
+                    // 1. التحقق من وجود passwordHash
+                    if (normalized.passwordHash) {
+                        let hashValue = normalized.passwordHash;
+
+                        // ??? ??? passwordHash object? ?????? ?????? ???
+                        if (typeof hashValue === 'object' && hashValue !== null) {
+                            if (hashValue.value) {
+                                hashValue = String(hashValue.value).trim();
+                                Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`); // التحقق من وجود Utils ودالة isSha256Hex والتحقق من وجود passwordHash      
+                            } else {
+                                // التحقق من وجود القيم في الكائن
+                                const values = Object.values(hashValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    hashValue = String(values[0]).trim();
+                                    Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`);
+                                } else {
+                                    hashValue = String(hashValue).trim();
+                                }
+                            }
+                        } else if (typeof hashValue === 'string') {
+                            hashValue = hashValue.trim();
+                        }
+
+                        if (hashValue && hashValue !== '' && hashValue !== '***') {
+                            if (canCheckHash && Utils.isSha256Hex(hashValue)) {
+                                incomingHash = hashValue;
+                            } else {
+                                Utils.safeWarn(`?? passwordHash ??? ???? ????????: ${normalized.email} - ????? ??? ????`);
+                            }
+                        }
+                    }
+
+                    // 2. التحقق من وجود passwordHash
+                    if (!incomingHash && normalized.password && normalized.password !== '***') {
+                        let passwordValue = normalized.password;
+
+                        // التحقق من وجود password object
+                        if (typeof passwordValue === 'object' && passwordValue !== null) {
+                            if (passwordValue.value) {
+                                passwordValue = String(passwordValue.value).trim();
+                                Utils.safeLog(`تم تحويل password إلى String: ${normalized.email}`);
+                            } else {
+                                const values = Object.values(passwordValue);
+                                if (values.length === 1 && typeof values[0] === 'string') {
+                                    passwordValue = String(values[0]).trim();
+                                    Utils.safeLog(`تم تحويل password إلى String: ${normalized.email}`);
+                                } else {
+                                    passwordValue = String(passwordValue).trim();
+                                }
+                            }
+                        } else if (typeof passwordValue === 'string') {
+                            passwordValue = passwordValue.trim();
+                        }
+
+                        if (canCheckHash && Utils.isSha256Hex(passwordValue)) {
+                            incomingHash = passwordValue;
+                            Utils.safeLog(`تم تحويل passwordHash إلى String: ${normalized.email}`);
+                        }
+                    }
+
+                    // 3. التحقق من وجود previousHash
+                    let previousHash = '';
+                    if (previous) {
+                        if (previous.passwordHash && previous.passwordHash.trim() !== '' && previous.passwordHash.trim() !== '***') {
+                            const prevHashValue = previous.passwordHash.trim();
+                            if (canCheckHash && Utils.isSha256Hex(prevHashValue)) {
+                                previousHash = prevHashValue;
+                            }
+                        } else if (previous.password && previous.password !== '***') {
+                            const prevPasswordValue = previous.password.trim();
+                            if (canCheckHash && Utils.isSha256Hex(prevPasswordValue)) {
+                                previousHash = prevPasswordValue;
+                            }
+                        }
+                    }
+
+                    // التحقق من وجود incomingHash
+                    if (!incomingHash && normalized.password && normalized.password !== '***' && !Utils.isSha256Hex(normalized.password)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود incomingHash: ${normalized.email}`);
+                        incomingHash = await Utils.hashPassword(normalized.password);
+                        restoredPasswords = true;
+                    }
+
+                    if (!previousHash && previous?.password && previous.password !== '***' && !Utils.isSha256Hex(previous.password)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود previousHash: ${previous.email}`);
+                        previousHash = await Utils.hashPassword(previous.password);
+                        restoredPasswords = true;
+                    }
+
+                    // التحقق من وجود incomingHash
+                    if (incomingHash && !Utils.isSha256Hex(incomingHash)) {
+                        Utils.safeWarn(`خطأ في التحقق من وجود incomingHash: ${normalized.email} - خطأ في التحقق من وجود hash`);
+                        incomingHash = '';
+                    }
+
+                    let resolvedHash = incomingHash || previousHash || '';
+
+                    Utils.safeLog(`?? ??? passwordHash ???????? ${normalized.email}:`, {
+                        hasIncomingHash: !!incomingHash,
+                        incomingHashLength: incomingHash?.length || 0,
+                        incomingHashPrefix: incomingHash ? (incomingHash.substring(0, 20) + '...') : '????',
+                        incomingHashSuffix: incomingHash ? ('...' + incomingHash.substring(incomingHash.length - 10)) : '????',
+                        isIncomingHashValid: incomingHash ? Utils.isSha256Hex(incomingHash) : false,
+                        hasPreviousHash: !!previousHash,
+                        previousHashLength: previousHash?.length || 0,
+                        previousHashPrefix: previousHash ? (previousHash.substring(0, 20) + '...') : '????',
+                        previousHashSuffix: previousHash ? ('...' + previousHash.substring(previousHash.length - 10)) : '????',
+                        isPreviousHashValid: previousHash ? Utils.isSha256Hex(previousHash) : false,
+                        resolvedHash: resolvedHash ? (resolvedHash.substring(0, 20) + '...') : '????',
+                        resolvedHashLength: resolvedHash?.length || 0,
+                        resolvedHashSuffix: resolvedHash ? ('...' + resolvedHash.substring(resolvedHash.length - 10)) : '????',
+                        isResolvedHashValid: resolvedHash ? Utils.isSha256Hex(resolvedHash) : false,
+                        normalizedKeys: Object.keys(normalized),
+                        hasPasswordHashInNormalized: 'passwordHash' in normalized,
+                        hasPasswordInNormalized: 'password' in normalized
+                    });
+
+                    // ?????? ???? ?????? ???????? hash ?????????? ?????? ?????????? ?????? ???? ???????? ???????????? ?????????? ?????? ?????????? ??????????
+                    if (!resolvedHash || !Utils.isSha256Hex(resolvedHash)) {
+                        normalized.forcePasswordChange = true;
+                        Utils.safeWarn(`?????? ???????????????? ${normalized.email} ?????????? ?????? ?????????? ?????????? ???????? ????????????`);
+                    }
+
+                    if ((!normalized.createdAt || normalized.createdAt === '') && previous?.createdAt) {
+                        normalized.createdAt = previous.createdAt;
+                    }
+
+                    if ((!normalized.updatedAt || normalized.updatedAt === '') && previous?.updatedAt) {
+                        normalized.updatedAt = previous.updatedAt;
+                    }
+
+                    if (!normalized.loginHistory && previous?.loginHistory) {
+                        normalized.loginHistory = previous.loginHistory;
+                    }
+
+                    // ?????? ?? ?? passwordHash ???? ??? ?????
+                    if (resolvedHash && Utils.isSha256Hex(resolvedHash)) {
+                        normalized.passwordHash = resolvedHash;
+                        normalized.password = '***';
+                        normalized.forcePasswordChange = normalized.forcePasswordChange ?? previous?.forcePasswordChange ?? false;
+                        normalized.passwordChanged = normalized.passwordChanged ?? previous?.passwordChanged ?? false;
+
+                        Utils.safeLog(`? ?? ????? passwordHash ???????? ${normalized.email}:`, {
+                            passwordHashLength: normalized.passwordHash?.length || 0,
+                            passwordHashPrefix: normalized.passwordHash ? (normalized.passwordHash.substring(0, 20) + '...') : '????',
+                            isPasswordHashValid: true,
+                            forcePasswordChange: normalized.forcePasswordChange
+                        });
+                    } else {
+                        // ??? ?? ??? ???? passwordHash ????? ??? ????? ??? ?????? ?????? ???? ??????
+                        normalized.passwordHash = '';
+                        normalized.password = '***';
+                        normalized.forcePasswordChange = true;
+                        normalized.passwordChanged = false;
+
+                        Utils.safeWarn(`?? ???????? ${normalized.email} ?? ???? passwordHash ???? - ?????? ??? ????? ????? ???? ??????`);
+                    }
+
+                    if (typeof normalized.permissions === 'string' && normalized.permissions.trim() !== '') {
+                        try {
+                            normalized.permissions = JSON.parse(normalized.permissions);
+                        } catch (error) {
+                            Utils.safeWarn('??? ?????? ?????????? ?????????????? ???????????????? ?????????? ????????????????:', error);
+                        }
+                    }
+
+                    if (typeof normalized.loginHistory === 'string' && normalized.loginHistory.trim() !== '') {
+                        try {
+                            normalized.loginHistory = JSON.parse(normalized.loginHistory);
+                        } catch (error) {
+                            Utils.safeWarn('??? ?????? ?????????? ?????? ???????????? ???????????????? ?????????? ????????????????:', error);
+                            normalized.loginHistory = [];
+                        }
+                    }
+
+                    return normalized;
+                }));
+
+                // ✅ إنتاج: إزالة أي حسابات افتراضية legacy من نتيجة المزامنة
+                const beforeFilterCount = normalizedUsers.length;
+                normalizedUsers = normalizedUsers.filter(u => !isLegacyDefaultEmail(u?.email));
+                const removedLegacyDefaults = beforeFilterCount - normalizedUsers.length;
+
+                // النتيجة النهائية: المستخدمون من قاعدة SQL فقط (بدون أي دمج افتراضي)
+                const finalUsers = normalizedUsers;
+
+                // تحديث AppState.appData.users - نسخ عميقة لتجنب التعديلات المباشرة
+                AppState.appData.users = finalUsers.map(u => ({ ...u }));
+
+                // تحديث timestamp المزامنة
+                AppState.syncMeta = AppState.syncMeta || {};
+                AppState.syncMeta.users = now;
+
+                // حفظ البيانات محلياً
+                try {
+                    DataManager.save();
+                    Utils.safeLog('✅ تم حفظ البيانات المستخدمين محلياً');
+                } catch (saveError) {
+                    Utils.safeWarn('⚠️ خطأ في حفظ البيانات المستخدمين محلياً:', saveError);
+                }
+
+                // مسح Cache القديم من التخزين المحلي
+                try {
+                    // مسح من localStorage
+                    localStorage.removeItem('hse_cached_users');
+                    // مسح من sessionStorage (إن وجد)
+                    sessionStorage.removeItem('hse_cached_users');
+                    Utils.safeLog('✅ تم مسح Cache القديم من التخزين المحلي');
+                } catch (cacheError) {
+                    Utils.safeWarn('⚠️ خطأ في مسح Cache:', cacheError);
+                }
+
+                // سجل المزامنة
+                Utils.safeLog(`✅ ===== اكتملت مزامنة المستخدمين =====`, {
+                    totalUsers: finalUsers.length,
+                    fromGoogleSheets: normalizedUsers.length,
+                    removedLegacyDefaults,
+                    syncTimestamp: new Date(now).toISOString(),
+                    usersList: finalUsers.map(u => ({
+                        email: u.email,
+                        hasPasswordHash: !!u.passwordHash && u.passwordHash !== '***',
+                        passwordHashValid: u.passwordHash ? Utils.isSha256Hex(u.passwordHash) : false
+                    })).slice(0, 5) // أول 5 مستخدمين فقط
+                });
+
+                // إلغاء حالة المزامنة
+                this._setSyncState('users', false);
+
+                Utils.safeLog(`✅ اكتملت مزامنة المستخدمين (${normalizedUsers.length} من قاعدة SQL)`);
+
+                // تحديث passwordHash في قاعدة SQL إذا لزم الأمر
+                // تحديث البيانات في قاعدة SQL إذا تم إنشاء hash جديد
+                // ⚠️ إصلاح: لا نُعيد كتابة كل المستخدمين عند كل مزامنة.
+                // الشرط القديم كان دائم true (سيرفر لا يرسل passwordHash في البيانات المصفّاة)
+                // → autoSave('Users') كاملة بلا هاش → مع النسخ القديمة غير المحمية كانت تمسح الهاش لجميع المستخدمين.
+                // الآن الكتابة فقط عند استعادة كلمات مرور نصية فعلية من الكاش المحلي.
+                const needsPasswordUpdate = restoredPasswords === true;
+
+                if (needsPasswordUpdate) {
+                    setTimeout(() => {
+                        // تنظيف البيانات قبل الحفظ (إزالة password غير مشفر)
+                        const cleanedUsers = AppState.appData.users.map(user => {
+                            const cleaned = { ...user };
+                            if (cleaned.password && cleaned.password !== '***') {
+                                delete cleaned.password;
+                            }
+                            return cleaned;
+                        });
+
+                        this.autoSave('Users', cleanedUsers).catch(err => {
+                            Utils.safeWarn('⚠️ فشل تحديث passwordHash في قاعدة SQL بعد المزامنة:', err);
+                        });
+                    }, 500);
+                }
+
+                // إعادة تشغيل نظام عدم النشاط بعد اكتمال المزامنة
+                if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                    InactivityManager.resume();
+                }
+
+                // تحديث زر حالة الاتصال للمستخدم بعد المزامنة
+                if (typeof UI !== 'undefined' && typeof UI.updateUserConnectionStatus === 'function') {
+                    setTimeout(() => {
+                        UI.updateUserConnectionStatus();
+                        // التأكد من أن التحديث التلقائي يعمل بعد المزامنة
+                        if (typeof UI.startAutoRefreshConnectionStatus === 'function' && AppState.currentUser) {
+                            UI.startAutoRefreshConnectionStatus();
+                        }
+                    }, 300);
+                }
+
+                // إلغاء حالة المزامنة
+                this._setSyncState('users', false);
+
+                // ✅ Bootstrap hard-disable after first successful Users sync (real users exist)
+                try {
+                    if (typeof window !== 'undefined' && window.Auth && typeof window.Auth.handleUsersSyncSuccess === 'function') {
+                        window.Auth.handleUsersSyncSuccess();
+                    }
+                } catch (e) { /* ignore */ }
+
+                return true;
+            }
+
+            // إعادة تشغيل نظام عدم النشاط
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            // إلغاء حالة المزامنة - لا توجد بيانات
+            this._setSyncState('users', false);
+            return false;
+        } catch (error) {
+            // إعادة تشغيل نظام عدم النشاط حتى في حالة الخطأ
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            // إلغاء حالة المزامنة - خطأ
+            this._setSyncState('users', false);
+
+            // التحقق من نوع الخطأ
+            const errorMsg = error?.message || error?.toString() || '';
+            const isTimeoutError = errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('CONNECTION_TIMED_OUT') ||
+                errorMsg.includes('timeout') ||
+                errorMsg.includes('timed out') ||
+                errorMsg.includes('AbortError');
+
+            // إذا كان هناك بيانات محلية احتياطية، نستخدمها
+            if (localUsersBackup.length > 0) {
+                Utils.safeLog('⚠️ فشلت المزامنة، استخدام البيانات المحلية الاحتياطية...');
+
+                // استعادة البيانات المحلية
+                AppState.appData.users = localUsersBackup.map(u => ({ ...u }));
+
+                // تحديث timestamp المزامنة (لكن بعلامة فشل)
+                AppState.syncMeta = AppState.syncMeta || {};
+                AppState.syncMeta.users = Date.now() - (10 * 60 * 1000); // 10 دقائق مضت (لإجبار المزامنة التالية)
+
+                // حفظ البيانات المحلية للتأكد من استمراريتها
+                try {
+                    DataManager.save();
+                    Utils.safeLog('✅ تم حفظ البيانات المحلية الاحتياطية');
+                } catch (saveError) {
+                    Utils.safeWarn('⚠️ خطأ في حفظ البيانات المحلية الاحتياطية:', saveError);
+                }
+
+                if (isTimeoutError) {
+                    Utils.safeWarn('⚠️ انتهت مهلة الاتصال أثناء مزامنة المستخدمين. تم استخدام البيانات المحلية المحفوظة.');
+                } else {
+                    Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL. تم استخدام البيانات المحلية المحفوظة:', error);
+                }
+
+                // إرجاع true لأن البيانات المحلية متوفرة
+                return true;
+            }
+
+            // إذا لم تكن هناك بيانات محلية، نعيد false
+            Utils.safeWarn('⚠️ فشل مزامنة المستخدمين من قاعدة SQL:', error);
+            Utils.safeError('❌ خطأ في مزامنة المستخدمين:', {
+                errorMessage: error.message,
+                errorStack: error.stack,
+                timestamp: new Date().toISOString(),
+                isTimeoutError: isTimeoutError
+            });
+
+            return false;
+        }
+    },
+
+    /**
+     * ?????? ???????? ???????????????? ???? قاعدة SQL (?????????????? ????????)
+     */
+    async saveAllToSheets() {
+        if (!this._isBackendRpcConfigured()) {
+            return { success: false, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        try {
+            Loading.show();
+            const sheets = {
+                'Users': AppState.appData.users || [],
+                'Incidents': AppState.appData.incidents || [],
+                'NearMiss': AppState.appData.nearmiss || [],
+                'PTW': AppState.appData.ptw || [],
+                'Training': AppState.appData.training || [],
+                'EmployeeTrainingMatrix': AppState.appData.employeeTrainingMatrix || [],
+                'TrainingAttendance': AppState.appData.trainingAttendance || [],
+                'ClinicVisits': AppState.appData.clinicVisits || [],
+                'Medications': AppState.appData.medications || [],
+                'SickLeave': AppState.appData.sickLeave || [],
+                'Injuries': AppState.appData.injuries || [],
+                'ClinicInventory': AppState.appData.clinicInventory || [],
+                'FireEquipment': AppState.appData.fireEquipment || [],
+                'FireEquipmentAssets': AppState.appData.fireEquipmentAssets || [],
+                'FireEquipmentInspections': AppState.appData.fireEquipmentInspections || [],
+                'PeriodicInspectionCategories': AppState.appData.periodicInspectionCategories || [],
+                'PeriodicInspectionRecords': AppState.appData.periodicInspectionRecords || [],
+                'PeriodicInspectionSchedules': AppState.appData.periodicInspectionSchedules || [],
+                'PeriodicInspectionChecklists': AppState.appData.periodicInspectionChecklists || [],
+                'PeriodicEquipmentTypes': AppState.appData.periodicEquipmentTypes || [],
+                'PeriodicEquipmentAssets': AppState.appData.periodicEquipmentAssets || [],
+                'PeriodicEquipmentInspections': AppState.appData.periodicEquipmentInspections || [],
+                'PPE': AppState.appData.ppe || [],
+                'ViolationTypes': AppState.appData.violationTypes || [],
+                'Violations': AppState.appData.violations || [],
+                'Blacklist_Register': AppState.appData.blacklistRegister || [],
+                'Contractors': AppState.appData.contractors || [],
+                'ApprovedContractors': AppState.appData.approvedContractors || [],
+                'ContractorEvaluations': AppState.appData.contractorEvaluations || [],
+                'Employees': AppState.appData.employees || [],
+                'ExternalWorkforceMonthly': AppState.appData.externalWorkforceMonthly || [],
+                'BehaviorMonitoring': AppState.appData.behaviorMonitoring || [],
+                'ContractorBehaviorMonitoring': AppState.appData.contractorBehaviorMonitoring || [],
+                'ChemicalSafety': AppState.appData.chemicalSafety || [],
+                'DailyObservations': AppState.appData.dailyObservations || [],
+                'DailySafetyCheckList': AppState.appData.dailySafetyCheckList || [],
+                'ISODocuments': AppState.appData.isoDocuments || [],
+                'ISOProcedures': AppState.appData.isoProcedures || [],
+                'ISOForms': AppState.appData.isoForms || [],
+                'SOPJHA': AppState.appData.sopJHA || [],
+                'RiskAssessments': AppState.appData.riskAssessments || [],
+                'LegalDocuments': AppState.appData.legalDocuments || [],
+                'HSEAudits': AppState.appData.hseAudits || [],
+                'HSENonConformities': AppState.appData.hseNonConformities || [],
+                'HSECorrectiveActions': AppState.appData.hseCorrectiveActions || [],
+                'HSEObjectives': AppState.appData.hseObjectives || [],
+                'HSERiskAssessments': AppState.appData.hseRiskAssessments || [],
+                'EnvironmentalAspects': AppState.appData.environmentalAspects || [],
+                'EnvironmentalMonitoring': AppState.appData.environmentalMonitoring || [],
+                'Sustainability': AppState.appData.sustainability || [],
+                'CarbonFootprint': AppState.appData.carbonFootprint || [],
+                'WasteManagement': AppState.appData.wasteManagement || [],
+                'EnergyEfficiency': AppState.appData.energyEfficiency || [],
+                'WaterManagement': AppState.appData.waterManagement || [],
+                'RecyclingPrograms': AppState.appData.recyclingPrograms || [],
+                'EmergencyAlerts': AppState.appData.emergencyAlerts || [],
+                'EmergencyPlans': AppState.appData.emergencyPlans || [],
+                'EmergencyPlansUpdates': AppState.appData.emergencyPlansUpdates || [],
+                'SafetyTeamMembers': AppState.appData.safetyTeamMembers || [],
+                'SafetyOrganizationalStructure': AppState.appData.safetyOrganizationalStructure || [],
+                'SafetyJobDescriptions': AppState.appData.safetyJobDescriptions || [],
+                'SafetyTeamKPIs': AppState.appData.safetyTeamKPIs || [],
+                'SafetyTeamAttendance': AppState.appData.safetyTeamAttendance || [],
+                'SafetyTeamLeaves': AppState.appData.safetyTeamLeaves || [],
+                'SafetyTeamTasks': AppState.appData.safetyTeamTasks || [],
+                'SafetyBudgets': AppState.appData.safetyBudgets || [],
+                'SafetyBudgetTransactions': AppState.appData.safetyBudgetTransactions || [],
+                'SafetyBudgetPurchaseOrders': AppState.appData.safetyBudgetPurchaseOrders || [],
+                'SafetyPerformanceKPIs': AppState.appData.safetyPerformanceKPIs || [],
+                'ActionTrackingRegister': AppState.appData.actionTrackingRegister || [],
+                'UserActivityLog': AppState.appData.user_activity_log || [],
+                'SafetyCalendarCustomEvents': AppState.appData.safetyCalendarCustomEvents || []
+            };
+
+            let successCount = 0;
+            let failCount = 0;
+
+            const spreadsheetId = AppState.googleConfig.sheets.spreadsheetId;
+
+            if (!spreadsheetId || spreadsheetId.trim() === '') {
+                Loading.hide();
+                Notification.error('???????? ?????????? ???????? قاعدة SQL ???? ?????????????????? ??????????');
+                return { success: false, message: '?????? قاعدة SQL ?????? ????????' };
+            }
+
+            for (const [sheetName, data] of Object.entries(sheets)) {
+                try {
+                    await this.sendToAppsScript('saveToSheet', {
+                        sheetName,
+                        data,
+                        spreadsheetId: spreadsheetId.trim()
+                    });
+                    successCount++;
+                } catch (error) {
+                    Utils.safeWarn(`?????? ?????? ${sheetName}:`, error);
+                    failCount++;
+                }
+            }
+
+            Loading.hide();
+
+            if (failCount === 0) {
+                Notification.success(`???? ?????? ???????? ???????????????? ???? قاعدة SQL ??????????`);
+                return { success: true };
+            } else {
+                Notification.warning(`???? ?????? ${successCount} ?????????? ???? ${failCount} ????????`);
+                return { success: false, message: `?????? ???? ${failCount} ????????` };
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('?????? ???? ????????????????: ' + error.message);
+            return { success: false, message: error.message };
+        }
+    },
+
+    /**
+     * ?????????? ???????? ?????????????? ???????????????? ???????????????? ?? قاعدة SQL
+     */
+    async initializeSheets() {
+        if (!this._isBackendRpcConfigured()) {
+            return Promise.reject(new Error('الخادم الخلفي غير مفعّل'));
+        }
+
+        try {
+            Loading.show();
+            const spreadsheetId = AppState.googleConfig.sheets.spreadsheetId || '';
+
+            const result = await this.sendToAppsScript('initializeSheets', {
+                spreadsheetId: spreadsheetId || undefined
+            });
+
+            Loading.hide();
+            if (result.success) {
+                Notification.success('???? ?????????? ???????? ?????????????? ??????????');
+                return true;
+            } else {
+                Notification.error('?????? ?????????? ??????????????: ' + result.message);
+                return false;
+            }
+        } catch (error) {
+            Loading.hide();
+            Notification.error('?????? ?????????? ??????????????: ' + error.message);
+            return Promise.reject(error);
+        }
+    },
+
+    /**
+     * أوراق سجلات استهلاك الموارد (مياه / كهرباء / غاز) — تُخزَّن في AppState.appData.resourceConsumption وليس كمفتاح مستقل في appData.
+     */
+    getResourceConsumptionRecordSlot(sheetName) {
+        const RECORD_SLOTS = {
+            'WaterManagement_Records': 'water',
+            'ElectricityManagement_Records': 'electricity',
+            'GasManagement_Records': 'gas'
+        };
+        return RECORD_SLOTS[sheetName] || null;
+    },
+
+    /**
+     * دمج نتيجة قراءة ورقة سجلات الاستهلاك أثناء المزامنة (syncData / SyncImprovements).
+     * @returns {{ handled: boolean, syncedRecords: number, failed: boolean } | null} null إذا لم تكن الورقة من نوع سجلات الاستهلاك
+     */
+    applyResourceConsumptionSheetSyncResult(sheetName, payload) {
+        const slot = this.getResourceConsumptionRecordSlot(sheetName);
+        if (!slot) return null;
+
+        const { data, error, success } = payload || {};
+
+        if (!AppState.appData) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!AppState.appData.resourceConsumption) {
+            AppState.appData.resourceConsumption = {
+                water: [],
+                electricity: [],
+                gas: []
+            };
+        }
+
+        if (!AppState.syncMeta) {
+            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+        }
+        if (!AppState.syncMeta.sheets) {
+            AppState.syncMeta.sheets = {};
+        }
+
+        if (!success || error) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        if (!Array.isArray(data)) {
+            return { handled: true, syncedRecords: 0, failed: true };
+        }
+
+        const normalizeRow = (row) => {
+            try {
+                if (typeof Sustainability !== 'undefined' && typeof Sustainability.normalizeResourceConsumptionRecord === 'function') {
+                    return Sustainability.normalizeResourceConsumptionRecord(row);
+                }
+            } catch (_e) { /* ignore */ }
+            return row && typeof row === 'object' ? row : null;
+        };
+
+        const normalized = data.map(normalizeRow).filter(Boolean);
+
+        const oldData = Array.isArray(AppState.appData.resourceConsumption[slot])
+            ? AppState.appData.resourceConsumption[slot]
+            : [];
+
+        const shouldKeepOld = normalized.length === 0 && oldData.length > 0;
+        const effectiveData = shouldKeepOld ? oldData : normalized;
+
+        if (!shouldKeepOld) {
+            AppState.appData.resourceConsumption[slot] = normalized;
+            AppState.syncMeta.sheets[sheetName] = Date.now();
+            AppState.syncMeta.lastSyncTime = Date.now();
+        }
+
+        return {
+            handled: true,
+            syncedRecords: effectiveData.length,
+            failed: false
+        };
+    },
+
+    /**
+     * تحديد الأوراق غير المكتملة (التي لم يتم تحميلها أو فشل تحميلها)
+     * @returns {Array|null} قائمة غير مكتملة، [] إذا اكتمل الكل، أو null لتحميل الكل
+     */
+    getIncompleteSheets(sheetMapping, allSheets) {
+        try {
+            // التأكد من تهيئة syncMeta
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            if (!AppState.syncMeta.sheets) {
+                AppState.syncMeta.sheets = {};
+            }
+            
+            // التحقق من تغيير المستخدم
+            const currentUserEmail = AppState.currentUser?.email || null;
+            if (AppState.syncMeta.userEmail !== currentUserEmail) {
+                // تغيير المستخدم - نعيد جميع الأوراق
+                return null;
+            }
+            
+            const incompleteSheets = [];
+            const currentTime = Date.now();
+            const syncTimeout = 2 * 60 * 1000; // 2 دقيقة - انتهاء صلاحية البيانات (محسّن ليتناسب مع فترة المزامنة)
+            
+            // التحقق من كل ورقة
+            allSheets.forEach(sheetName => {
+                const rcSlot = this.getResourceConsumptionRecordSlot(sheetName);
+                if (rcSlot) {
+                    const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
+                    const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
+                    const arr = AppState.appData && AppState.appData.resourceConsumption
+                        ? AppState.appData.resourceConsumption[rcSlot]
+                        : null;
+                    const hasStructure = Array.isArray(arr);
+                    const attempted = lastSync > 0;
+                    if (!attempted || isExpired || !hasStructure) {
+                        incompleteSheets.push(sheetName);
+                    }
+                    return;
+                }
+
+                const lastSync = AppState.syncMeta.sheets[sheetName] || 0;
+                const isExpired = lastSync > 0 && (currentTime - lastSync) > syncTimeout;
+                const key = sheetMapping[sheetName];
+                const hasData = key && AppState.appData && AppState.appData[key];
+                const isLoaded = Array.isArray(hasData) && hasData.length > 0;
+
+                const isApprovalSheet = sheetName === 'ContractorApprovalRequests' || sheetName === 'ContractorEvaluationApprovalRequests' || sheetName === 'ContractorDeletionRequests';
+                const isApprovedSheet = sheetName === 'ApprovedContractors';
+                const isAdminUser = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                    && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                    && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+                const needsAdminApprovalRefresh = isApprovalSheet && isAdminUser && lastSync > 0
+                    && (currentTime - lastSync) > 30000;
+                const hasContractorsAccess = !!(typeof Permissions !== 'undefined'
+                    && typeof Permissions.hasAccess === 'function'
+                    && Permissions.hasAccess('contractors'));
+                const needsApprovedRefresh = isApprovedSheet && (isAdminUser || hasContractorsAccess)
+                    && lastSync > 0 && (currentTime - lastSync) > 30000;
+                
+                // إذا لم يتم تحميلها أو انتهت صلاحيتها أو لا توجد بيانات
+                if (!lastSync || isExpired || !isLoaded || needsAdminApprovalRefresh || needsApprovedRefresh) {
+                    incompleteSheets.push(sheetName);
+                }
+            });
+            
+            return incompleteSheets;
+        } catch (error) {
+            Utils.safeWarn('⚠️ خطأ في تحديد الأوراق غير المكتملة:', error);
+            return null; // في حالة الخطأ، نعيد جميع الأوراق
+        }
+    },
+
+    /**
+     * ???????????? ???????????????? ???? قاعدة SQL
+     */
+    async syncData(options = {}) {
+        const {
+            silent = false,
+            showLoader = false,
+            notifyOnSuccess = !silent,
+            notifyOnError = !silent,
+            includeUsersSheet = true,
+            sheets: requestedSheets = null, // ✅ إضافة دعم sheets في options
+            incremental = false, // ✅ جديد: تحميل تدريجي
+            forceRefresh = false // ✅ إجبار قراءة الخادم دون الاحتفاظ ببيانات قديمة عند الفراغ/الفشل
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            if (!silent) {
+                Utils.safeLog('الخادم الخلفي غير مُهيأ - سيتم استخدام البيانات المحلية فقط');
+                Notification.warning('الخادم الخلفي غير مُهيأ. سيتم استخدام البيانات المحلية فقط.');
+            }
+            return false;
+        }
+
+        // منع المزامنة المتزامنة — إعادة التحميل تنتظر القفل أو تصفّر القفل القديم
+        if (this._syncInProgress.global) {
+            const startedAt = Number(this._syncInProgress.lastSyncStart || 0);
+            const stale = !startedAt || (Date.now() - startedAt) > 180000;
+            if (stale) {
+                this._syncInProgress.global = false;
+            } else if (forceRefresh) {
+                const waitStart = Date.now();
+                while (this._syncInProgress.global && (Date.now() - waitStart) < 60000) {
+                    await new Promise((resolve) => setTimeout(resolve, 250));
+                    const age = Date.now() - Number(this._syncInProgress.lastSyncStart || Date.now());
+                    if (age > 180000) {
+                        this._syncInProgress.global = false;
+                        break;
+                    }
+                }
+            }
+            if (this._syncInProgress.global) {
+                this._lastSyncBusy = true;
+                this._lastSyncError = '';
+                if (!silent) {
+                    Notification.info('جاري المزامنة بالفعل، يرجى الانتظار...');
+                }
+                return false;
+            }
+        }
+
+        this._syncInProgress.global = true;
+        this._syncInProgress.lastSyncStart = Date.now();
+        this._lastSyncBusy = false;
+        this._lastSyncError = null;
+        if (typeof this.resetCircuitBreaker === 'function') {
+            this.resetCircuitBreaker();
+        }
+
+        this._currentSyncForceRefresh = !!forceRefresh;
+        if (forceRefresh) {
+            // لا تفرّغ AppState ولا كاش القراءة — العرض يبقى من المحلي حتى تصل الشبكة
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+        }
+
+        // إيقاف نظام عدم النشاط أثناء المزامنة
+        let inactivityWasPaused = false;
+        if (typeof InactivityManager !== 'undefined' && AppState.currentUser) {
+            inactivityWasPaused = InactivityManager.isPaused;
+            if (!inactivityWasPaused) {
+                InactivityManager.pause('مزامنة البيانات مع قاعدة SQL');
+            }
+        }
+
+        try {
+            const shouldLog = AppState.debugMode && !silent;
+            if (shouldLog) {
+                Utils.safeLog('🔄 بدء مزامنة البيانات مع قاعدة SQL...');
+            }
+
+            // بعد الدخول لا طبقة عالمية — المزامنة خلفية والصلاحية تبقى للمستخدم.
+            if (showLoader && typeof Loading !== 'undefined') {
+                const appActive = typeof document !== 'undefined' && document.body && document.body.classList.contains('app-active');
+                if (!appActive) {
+                    Loading.show('جاري تحميل البيانات', 0);
+                }
+            }
+
+            // ✅ إصلاح: تقسيم الأوراق إلى أولوية عالية ومنخفضة لتسريع التحميل
+            const prioritySheets = [
+                'Users', // الأهم - يجب تحميله أولاً
+                'Employees', // مهم جداً - يستخدم في معظم الموديولات
+                'ExternalWorkforceMonthly',
+                'Contractors', // مهم - يستخدم في عدة موديولات
+                'ApprovedContractors' // مهم - يستخدم في عدة موديولات
+            ];
+            
+            const baseSheets = [
+                'Contractors',              // ✅ إضافة المقاولين
+                'ApprovedContractors',      // ✅ إضافة المقاولين المعتمدين
+                'Incidents',
+                'NearMiss',
+                'PTW',
+                'PTWRegistry',
+                'Training',
+                'TrainingAttendance',
+                'TrainingAnalysisData',
+                'ClinicVisits',
+                'Medications',
+                'ExternalWorkforceMonthly',
+                'SickLeave',
+                'Injuries',
+                'ClinicInventory',
+                'FireEquipment',
+                'FireEquipmentAssets',
+                'FireEquipmentInspections',
+                'PeriodicInspectionCategories',
+                'PeriodicInspectionRecords',
+                'PeriodicInspectionSchedules',
+                'PeriodicInspectionChecklists',
+                'PeriodicEquipmentTypes',
+                'PeriodicEquipmentAssets',
+                'PeriodicEquipmentInspections',
+                'PPE',
+                'ViolationTypes',
+                'Violations',
+                'Blacklist_Register',
+                'ContractorEvaluations',
+                'ContractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests', // ✅ طلبات اعتماد التقييمات
+                'ContractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
+                'BehaviorMonitoring',
+                'ContractorBehaviorMonitoring',
+                'ChemicalSafety',
+                'DailyObservations',
+                'DailySafetyCheckList',
+                'ISODocuments',
+                'ISOProcedures',
+                'ISOForms',
+                'SOPJHA',
+                'RiskAssessments',
+                'LegalDocuments',
+                'HSEAudits',
+                'HSENonConformities',
+                'HSECorrectiveActions',
+                'HSEObjectives',
+                'HSERiskAssessments',
+                'EnvironmentalAspects',
+                'EnvironmentalMonitoring',
+                'Sustainability',
+                'CarbonFootprint',
+                'WasteManagement',
+                'EnergyEfficiency',
+                'WaterManagement',
+                'WaterManagement_Records',
+                'GasManagement_Records',
+                'ElectricityManagement_Records',
+                'RecyclingPrograms',
+                'EmergencyAlerts',
+                'EmergencyPlans',
+                'EmergencyPlansUpdates',
+                'SafetyTeamMembers',
+                'SafetyOrganizationalStructure',
+                'SafetyJobDescriptions',
+                'SafetyTeamKPIs',
+                'SafetyTeamAttendance',
+                'SafetyTeamLeaves',
+                'SafetyTeamTasks',
+                'SafetyBudgets',
+                'SafetyBudgetTransactions',
+                'SafetyBudgetPurchaseOrders',
+                'SafetyPerformanceKPIs',
+                'ActionTrackingRegister',
+                'UserActivityLog',
+                'SafetyCalendarCustomEvents'
+            ];
+
+            let sheets = baseSheets.slice();
+            
+            // ✅ إذا تم تحديد sheets في options، استخدامها بدلاً من baseSheets
+            if (requestedSheets && Array.isArray(requestedSheets) && requestedSheets.length > 0) {
+                sheets = requestedSheets;
+                if (shouldLog) {
+                    Utils.safeLog(`✅ استخدام الأوراق المحددة في options: ${requestedSheets.join(', ')}`);
+                }
+            }
+            
+            const sheetMapping = {
+                'Users': 'users',
+                'Incidents': 'incidents',
+                'NearMiss': 'nearmiss',
+                'PTW': 'ptw',
+                'PTWRegistry': 'ptwRegistry',
+                'Training': 'training',
+                'ClinicVisits': 'clinicVisits',
+                'ClinicContractorVisits': 'clinicContractorVisits',
+                'Medications': 'medications',
+                'SickLeave': 'sickLeave',
+                'Injuries': 'injuries',
+                'ClinicContractorInjuries': 'clinicContractorInjuries',
+                'ClinicInventory': 'clinicInventory',
+                'FireEquipment': 'fireEquipment',
+                'FireEquipmentAssets': 'fireEquipmentAssets',
+                'FireEquipmentInspections': 'fireEquipmentInspections',
+                'PeriodicInspectionCategories': 'periodicInspectionCategories',
+                'PeriodicInspectionRecords': 'periodicInspectionRecords',
+                'PeriodicInspectionSchedules': 'periodicInspectionSchedules',
+                'PeriodicInspectionChecklists': 'periodicInspectionChecklists',
+                'PeriodicEquipmentTypes': 'periodicEquipmentTypes',
+                'PeriodicEquipmentAssets': 'periodicEquipmentAssets',
+                'PeriodicEquipmentInspections': 'periodicEquipmentInspections',
+                'PPE': 'ppe',
+                'ViolationTypes': 'violationTypes',
+                'Violations': 'violations',
+                'Blacklist_Register': 'blacklistRegister',
+                'Contractors': 'contractors',
+                'ApprovedContractors': 'approvedContractors',
+                'ContractorEvaluations': 'contractorEvaluations',
+                'ContractorApprovalRequests': 'contractorApprovalRequests', // ✅ إضافة طلبات اعتماد المقاولين
+                'ContractorEvaluationApprovalRequests': 'contractorEvaluationApprovalRequests',
+                'ContractorDeletionRequests': 'contractorDeletionRequests', // ✅ إضافة طلبات حذف المقاولين
+                'Employees': 'employees',
+                'ExternalWorkforceMonthly': 'externalWorkforceMonthly',
+                'BehaviorMonitoring': 'behaviorMonitoring',
+                'ContractorBehaviorMonitoring': 'contractorBehaviorMonitoring',
+                'ChemicalSafety': 'chemicalSafety',
+                'Chemical_Register': 'chemicalRegister',
+                'DailyObservations': 'dailyObservations',
+                'DailySafetyCheckList': 'dailySafetyCheckList',
+                'ISODocuments': 'isoDocuments',
+                'ISOProcedures': 'isoProcedures',
+                'ISOForms': 'isoForms',
+                'SOPJHA': 'sopJHA',
+                'RiskAssessments': 'riskAssessments',
+                'LegalDocuments': 'legalDocuments',
+                'HSEAudits': 'hseAudits',
+                'HSENonConformities': 'hseNonConformities',
+                'HSECorrectiveActions': 'hseCorrectiveActions',
+                'HSEObjectives': 'hseObjectives',
+                'HSERiskAssessments': 'hseRiskAssessments',
+                'EnvironmentalAspects': 'environmentalAspects',
+                'EnvironmentalMonitoring': 'environmentalMonitoring',
+                'Sustainability': 'sustainability',
+                'CarbonFootprint': 'carbonFootprint',
+                'WasteManagement': 'wasteManagement',
+                'EnergyEfficiency': 'energyEfficiency',
+                'WaterManagement': 'waterManagement',
+                'RecyclingPrograms': 'recyclingPrograms',
+                'EmergencyAlerts': 'emergencyAlerts',
+                'EmergencyPlans': 'emergencyPlans',
+                'EmergencyPlansUpdates': 'emergencyPlansUpdates',
+                'SafetyTeamMembers': 'safetyTeamMembers',
+                'SafetyOrganizationalStructure': 'safetyOrganizationalStructure',
+                'SafetyJobDescriptions': 'safetyJobDescriptions',
+                'SafetyTeamKPIs': 'safetyTeamKPIs',
+                'SafetyTeamAttendance': 'safetyTeamAttendance',
+                'SafetyTeamLeaves': 'safetyTeamLeaves',
+                'SafetyTeamTasks': 'safetyTeamTasks',
+                'SafetyBudgets': 'safetyBudgets',
+                'SafetyBudgetTransactions': 'safetyBudgetTransactions',
+                'SafetyBudgetPurchaseOrders': 'safetyBudgetPurchaseOrders',
+                'SafetyPerformanceKPIs': 'safetyPerformanceKPIs',
+                'ActionTrackingRegister': 'actionTrackingRegister',
+                'UserActivityLog': 'user_activity_log',
+                'SafetyCalendarCustomEvents': 'safetyCalendarCustomEvents'
+            };
+
+            const moduleSheetsMap = {
+                'dashboard': [],
+                'users': ['Users'],
+                'incidents': ['Incidents'],
+                'nearmiss': ['NearMiss'],
+                'ptw': ['PTW', 'PTWRegistry'],
+                'training': ['Training', 'EmployeeTrainingMatrix'],
+                'clinic': ['ClinicVisits', 'ClinicContractorVisits', 'Medications', 'SickLeave', 'Injuries', 'ClinicContractorInjuries', 'ClinicInventory'],
+                'fire-equipment': ['FireEquipment', 'FireEquipmentAssets', 'FireEquipmentInspections'],
+                'periodic-inspections': ['PeriodicInspectionCategories', 'PeriodicInspectionRecords', 'PeriodicInspectionSchedules', 'PeriodicInspectionChecklists', 'DailySafetyCheckList', 'PeriodicEquipmentTypes', 'PeriodicEquipmentAssets', 'PeriodicEquipmentInspections'],
+                'ppe': ['PPE'],
+                'violations': ['Violations', 'ViolationTypes', 'Blacklist_Register'],
+                'contractors': ['Contractors', 'ApprovedContractors', 'ContractorEvaluations', 'ContractorApprovalRequests', 'ContractorEvaluationApprovalRequests', 'ContractorDeletionRequests'], // ✅ إضافة طلبات المقاولين
+                'employees': ['Employees', 'ExternalWorkforceMonthly'],
+                'behavior-monitoring': ['BehaviorMonitoring', 'ContractorBehaviorMonitoring'],
+                'chemical-safety': ['ChemicalSafety', 'Chemical_Register'],
+                'daily-observations': ['DailyObservations'],
+                'iso': ['ISODocuments', 'ISOProcedures', 'ISOForms', 'HSEAudits'],
+                'sop-jha': ['SOPJHA'],
+                'risk-assessment': ['RiskAssessments', 'HSERiskAssessments'],
+                'legal-documents': ['LegalDocuments'],
+                'sustainability': ['Sustainability', 'EnvironmentalAspects', 'EnvironmentalMonitoring', 'CarbonFootprint', 'WasteManagement', 'EnergyEfficiency', 'WaterManagement', 'WaterManagement_Records', 'GasManagement_Records', 'ElectricityManagement_Records', 'RecyclingPrograms'],
+                'emergency': ['EmergencyAlerts', 'EmergencyPlans', 'EmergencyPlansUpdates'],
+                'safety-budget': ['SafetyBudgets', 'SafetyBudgetTransactions', 'SafetyBudgetPurchaseOrders'],
+                'safety-performance-kpis': ['SafetyPerformanceKPIs', 'SafetyTeamKPIs'],
+                'safety-health-management': ['SafetyTeamMembers', 'SafetyOrganizationalStructure', 'SafetyJobDescriptions', 'SafetyTeamKPIs', 'SafetyTeamAttendance', 'SafetyTeamLeaves', 'SafetyTeamTasks'],
+                'action-tracking': ['ActionTrackingRegister', 'HSECorrectiveActions', 'HSENonConformities', 'HSEObjectives'],
+                'safety-calendar': ['SafetyCalendarCustomEvents']
+            };
+
+            const isEffectiveAdmin = !!(AppState.currentUser && typeof Permissions !== 'undefined'
+                && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+
+            if (AppState.currentUser && !isEffectiveAdmin) {
+                const accessibleModules = Permissions.getAccessibleModules(true);
+                // ⚠️ أمان: لا يتم السماح بقراءة ورقة Users إلا لمن لديه صلاحية users صراحةً
+                const allowedSheets = new Set();
+                if (includeUsersSheet && Permissions.hasAccess('users')) {
+                    allowedSheets.add('Users');
+                }
+
+                accessibleModules.forEach(module => {
+                    const moduleSheets = moduleSheetsMap[module];
+                    if (Array.isArray(moduleSheets)) {
+                        moduleSheets.forEach(sheet => allowedSheets.add(sheet));
+                    }
+                });
+
+                // ✅ أنواع المخالفات تُدار من الإعدادات أيضاً — نضمن السماح بتحميلها لمن لديه صلاحية وصول للمخالفات
+                if (Permissions.hasAccess('violations')) {
+                    allowedSheets.add('ViolationTypes');
+                }
+
+                // ✅ إصلاح: إضافة أوراق المقاولين تلقائياً عند وجود صلاحيات لمديولات تحتاجها
+                // المديولات التي تحتاج قائمة المقاولين (dropdown/select):
+                // - clinic: تسجيل تردد المقاولين بالعيادة
+                // - training: تسجيل تدريب للمقاولين
+                // - ptw: إضافة مقاولين في تصاريح العمل (teamMembers, authorizedParty)
+                // - violations: تسجيل مخالفات للمقاولين
+                const modulesNeedingContractors = ['clinic', 'training', 'ptw', 'violations', 'behavior-monitoring'];
+                const needsContractors = modulesNeedingContractors.some(module => accessibleModules.includes(module));
+                
+                if (needsContractors && !accessibleModules.includes('contractors')) {
+                    // إضافة أوراق المقاولين الأساسية فقط (بدون التقييمات وطلبات الموافقة)
+                    const contractorSheets = ['Contractors', 'ApprovedContractors'];
+                    contractorSheets.forEach(sheet => {
+                        // إضافة الورقة إلى sheets إذا لم تكن موجودة
+                        if (!sheets.includes(sheet)) {
+                            sheets.push(sheet);
+                        }
+                        // إضافة الورقة إلى allowedSheets
+                        allowedSheets.add(sheet);
+                    });
+                    if (shouldLog) {
+                        Utils.safeLog('✅ إضافة أوراق المقاولين تلقائياً للمديولات التي تحتاجها');
+                    }
+                }
+
+                // ✅ إضافة أوراق طلبات الاعتماد لمن لديه صلاحية موديول المقاولين
+                if (Permissions.hasAccess('contractors')) {
+                    allowedSheets.add('ContractorApprovalRequests');
+                    allowedSheets.add('ContractorEvaluationApprovalRequests');
+                    allowedSheets.add('ContractorDeletionRequests');
+                }
+
+                sheets = sheets.filter(sheet => allowedSheets.has(sheet));
+
+                if (shouldLog) {
+                    Utils.safeLog('Checking sheets:', sheets);
+                }
+            } else if (includeUsersSheet && !sheets.includes('Users')) {
+                sheets.unshift('Users');
+            }
+
+            // ✅ إضافة: تهيئة syncMeta إذا لم يكن موجوداً
+            if (!AppState.syncMeta) {
+                AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+            }
+            if (!AppState.syncMeta.sheets) {
+                AppState.syncMeta.sheets = {};
+            }
+            
+            // ✅ إضافة: التحقق من التحميل التدريجي (بعد تعريف sheetMapping)
+            if (incremental && !requestedSheets) {
+                const allSheetsList = [...prioritySheets, ...sheets];
+                const incompleteSheets = this.getIncompleteSheets(sheetMapping, allSheetsList);
+                if (incompleteSheets && incompleteSheets.length > 0) {
+                    sheets = incompleteSheets;
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ تحميل تدريجي: ${incompleteSheets.length} ورقة غير مكتملة`);
+                    }
+                } else if (incompleteSheets !== null) {
+                    // جميع الأوراق مكتملة
+                    if (showLoader && typeof Loading !== 'undefined') {
+                        Loading.hide();
+                    }
+                    if (notifyOnSuccess) {
+                        Notification.success('جميع البيانات محدثة');
+                    }
+                    this._syncInProgress.global = false;
+                    this._currentSyncForceRefresh = false;
+                    return true;
+                }
+            }
+            
+            // ✅ إضافة: تحديث userEmail في syncMeta
+            AppState.syncMeta.userEmail = AppState.currentUser?.email || null;
+
+            if (sheets.length === 0) {
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.hide();
+                }
+                if (shouldLog) {
+                    Utils.safeLog('لا يوجد وراق لقراءة البيانات من قاعدة SQL');
+                }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
+                return true;
+            }
+
+            sheets = this._filterSheetsForCurrentUser(sheets);
+
+            if (!requestedSheets) {
+                const ownedHeavy = ['ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ExternalWorkforceMonthly', 'PTW', 'PTWRegistry', 'DailyObservations', 'UserActivityLog', 'EmployeeTrainingMatrix', 'SecurityAuditLog'];
+                sheets = sheets.filter((sheet) => !ownedHeavy.includes(sheet));
+            }
+
+            if (sheets.length === 0) {
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.hide();
+                }
+                if (shouldLog) {
+                    Utils.safeLog('لا توجد أوراق مسموح قراءتها للمستخدم الحالي');
+                }
+                this._syncInProgress.global = false;
+                this._currentSyncForceRefresh = false;
+                return true;
+            }
+
+            // ✅ إصلاح: تحميل البيانات الأساسية أولاً بشكل منفصل ومتوازي
+            const prioritySheetsInList = prioritySheets.filter(sheet => sheets.includes(sheet));
+            const remainingSheets = sheets.filter(sheet => !prioritySheets.includes(sheet));
+            
+            let syncedCount = 0;
+            const failedSheets = [];
+            const results = [];
+
+            // تحميل البيانات الأساسية أولاً بشكل متوازي (بدون batches)
+            if (prioritySheetsInList.length > 0) {
+                if (shouldLog) {
+                    Utils.safeLog(`🚀 تحميل البيانات الأساسية أولاً: ${prioritySheetsInList.join(', ')}`);
+                }
+                
+                if (showLoader && typeof Loading !== 'undefined') {
+                    Loading.setProgress(10, 'جاري تحميل البيانات');
+                }
+
+                // تحميل البيانات الأساسية بشكل متوازي تماماً
+                const priorityResults = await Promise.allSettled(
+                    prioritySheetsInList.map(sheetName =>
+                        this.readFromSheets(sheetName)
+                            .then(data => ({ sheetName, data, success: true }))
+                            .catch(error => ({ sheetName, error, success: false }))
+                    )
+                );
+
+                // ✅ تحسين: معالجة نتائج البيانات الأساسية فوراً مع معالجة أفضل للأخطاء
+                priorityResults.forEach((result, idx) => {
+                    const sheetName = prioritySheetsInList[idx];
+                    if (result.status === 'fulfilled') {
+                        const { data, error, success } = result.value;
+                        if (success && !error && data) {
+                            const key = sheetMapping[sheetName];
+                            if (key) {
+                                // ✅ التأكد من أن البيانات هي array
+                                if (Array.isArray(data)) {
+                                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة (عند نجاح القراءة لكن بدون محتوى)
+                                    const shouldKeepOld = data.length === 0 && oldData.length > 0;
+                                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                                    if (!shouldKeepOld) {
+                                        AppState.appData[key] = data;
+                                        if (!AppState.syncMeta.sheets) AppState.syncMeta.sheets = {};
+                                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                                        AppState.syncMeta.lastSyncTime = Date.now();
+                                    }
+
+                                    if (effectiveData.length > 0) {
+                                        syncedCount++;
+                                        if (shouldLog) {
+                                            Utils.safeLog(`✅ تم تحميل ${sheetName}: ${effectiveData.length} سجل`);
+                                        }
+                                    } else if (shouldLog) {
+                                        Utils.safeLog(shouldKeepOld
+                                            ? `⚠️ ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                                            : `✅ ${sheetName} فارغة (تم التحميل بنجاح)`);
+                                    }
+                                } else {
+                                    // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
+                                    const oldData = AppState.appData[key] || [];
+                                    if (oldData.length > 0) {
+                                        // الاحتفاظ بالبيانات القديمة
+                                        if (shouldLog) {
+                                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array - الاحتفاظ بالبيانات الحالية (${oldData.length} سجل)`);
+                                        }
+                                    } else {
+                                        // فقط إذا لم تكن هناك بيانات قديمة، نستخدم مصفوفة فارغة
+                                        AppState.appData[key] = [];
+                                        if (shouldLog) {
+                                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array ولا توجد بيانات قديمة - تم تعيينها إلى array فارغة`);
+                                        }
+                                    }
+                                }
+                            } else if (shouldLog) {
+                                Utils.safeWarn(`⚠️ لم يتم العثور على mapping لـ ${sheetName}`);
+                            }
+                            results.push({ sheetName, data: Array.isArray(data) ? data : [], success: true });
+                        } else {
+                            failedSheets.push(sheetName);
+                            const errorMsg = error?.message || error || 'خطأ غير معروف';
+                            if (shouldLog) {
+                                Utils.safeWarn(`⚠️ فشل تحميل ${sheetName}:`, errorMsg);
+                            }
+                            results.push({ sheetName, error: errorMsg, success: false });
+                        }
+                    } else {
+                        failedSheets.push(sheetName);
+                        const errorMsg = result.reason?.message || result.reason || 'خطأ غير معروف';
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ فشل تحميل ${sheetName}:`, errorMsg);
+                        }
+                        results.push({ 
+                            sheetName, 
+                            error: errorMsg, 
+                            success: false 
+                        });
+                    }
+                });
+
+                // حفظ البيانات الأساسية فوراً
+                if (syncedCount > 0) {
+                    DataManager.save();
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ تم حفظ البيانات الأساسية: ${syncedCount} ورقة`);
+                    }
+                }
+
+                // ✅ إصلاح: تحديث الجلسة بعد تحميل بيانات المستخدمين
+                if (prioritySheetsInList.includes('Users') && AppState.currentUser) {
+                    setTimeout(() => {
+                        if (typeof window.Auth !== 'undefined' && typeof window.Auth.updateUserSession === 'function') {
+                            window.Auth.updateUserSession();
+                            if (shouldLog) {
+                                Utils.safeLog('✅ تم تحديث الجلسة بعد تحميل بيانات المستخدمين');
+                            }
+                        }
+                    }, 100);
+                }
+            }
+
+            // ✅ تحسين: تحميل جميع الأوراق المتبقية باستخدام Batch Reading (أسرع 10x)
+            const totalSheets = remainingSheets.length;
+
+            // ✅ إصلاح: تعريف baseProgress مرة واحدة قبل الحلقة لتجنب إعادة التعريف
+            const baseProgress = prioritySheetsInList.length > 0 ? 30 : 10;
+
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(baseProgress, 'جاري تحميل البيانات');
+            }
+
+            // ✅ NEW: استخدام Batch Reading لتقليل عدد الطلبات من 70+ إلى 5-6 فقط
+            if (remainingSheets.length > 0) {
+                if (shouldLog) {
+                    Utils.safeLog(`📦 تحميل ${remainingSheets.length} ورقة باستخدام Batch Reading...`);
+                }
+
+                try {
+                    // تحميل الأوراق المتبقية باستخدام batch reading
+                    const batchResult = await this.batchReadFromSheets(remainingSheets, {
+                        batchSize: 12, // 12 sheets per request
+                        timeout: 30000, // 30 seconds timeout
+                        observationsRequestContext: null,
+                        skipCache: !!this._currentSyncForceRefresh
+                    });
+
+                    // تحويل النتائج إلى format موحد
+                    const batchData = batchResult.data || {};
+                    const normalizedRemainingResults = remainingSheets.map(sheetName => {
+                        if (batchData[sheetName] !== undefined && batchData[sheetName] !== null) {
+                            return {
+                                sheetName: sheetName,
+                                data: batchData[sheetName],
+                                success: true
+                            };
+                        } else {
+                            return {
+                                sheetName: sheetName,
+                                error: 'فشل في تحميل البيانات',
+                                success: false
+                            };
+                        }
+                    });
+
+                    results.push(...normalizedRemainingResults);
+
+                    if (shouldLog) {
+                        Utils.safeLog(`✅ Batch Read: ${batchResult.successfulSheets}/${batchResult.totalSheets} sheets loaded successfully`);
+                    }
+
+                    // تحديث شريط التقدم بعد اكتمال التحميل
+                    if (showLoader && typeof Loading !== 'undefined') {
+                        Loading.setProgress(90, 'جاري تحميل البيانات');
+                    }
+                } catch (batchError) {
+                    Utils.safeError('❌ فشل Batch Read:', batchError);
+                    // Fallback: تحميل فردي (لكن هذا لن يحدث إلا في حالات نادرة)
+                    if (shouldLog) {
+                        Utils.safeLog('⚠️ Fallback: تحميل فردي للأوراق...');
+                    }
+                    
+                    const fallbackResults = await Promise.allSettled(
+                        remainingSheets.map(sheetName =>
+                            this.readFromSheets(sheetName)
+                                .then(data => ({ sheetName, data, success: true }))
+                                .catch(error => ({ sheetName, error, success: false }))
+                        )
+                    );
+
+                    const normalizedFallbackResults = fallbackResults.map((result, idx) => {
+                        if (result.status === 'fulfilled') {
+                            return result.value;
+                        } else {
+                            return {
+                                sheetName: remainingSheets[idx],
+                                error: result.reason?.message || result.reason || 'خطأ غير معروف',
+                                success: false
+                            };
+                        }
+                    });
+
+                    results.push(...normalizedFallbackResults);
+                }
+            }
+
+            // ✅ تحسين: معالجة النتائج وتحديث الحالة مع معالجة أفضل للأخطاء
+            results.forEach((result, index) => {
+                // النتائج الآن في format موحد: { sheetName, data, error, success }
+                const { sheetName, data, error, success } = result;
+
+                const rcMerge = this.applyResourceConsumptionSheetSyncResult(sheetName, { data, error, success });
+                if (rcMerge && rcMerge.handled) {
+                    if (rcMerge.failed) {
+                        if (!failedSheets.includes(sheetName)) {
+                            failedSheets.push(sheetName);
+                        }
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ فشل استرجاع بيانات الورقة ${sheetName}:`, error || 'خطأ غير معروف');
+                        }
+                    } else if (rcMerge.syncedRecords > 0) {
+                        syncedCount++;
+                    }
+                    return;
+                }
+
+                const key = sheetMapping[sheetName];
+
+                if (!key) {
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠️ لم يتم العثور على ربط (mapping) للورقة: ${sheetName}`);
+                    }
+                    return;
+                }
+
+                // ✅ تحسين: معالجة الأخطاء بشكل أفضل
+                if (error || !success) {
+                    if (!failedSheets.includes(sheetName)) {
+                        failedSheets.push(sheetName);
+                    }
+                    const errorMsg = error?.message || error || 'خطأ غير معروف';
+                    if (shouldLog) {
+                        Utils.safeWarn(`⚠️ فشل استرجاع بيانات الورقة ${sheetName}:`, errorMsg);
+                    }
+                    // ✅ تحسين: الاحتفاظ بالبيانات المحلية إذا فشل التحميل
+                    if (!AppState.appData[key] || !Array.isArray(AppState.appData[key])) {
+                        // فقط إذا لم تكن هناك بيانات محلية، نستخدم مصفوفة فارغة
+                        const oldData = AppState.appData[key];
+                        if (!oldData || (Array.isArray(oldData) && oldData.length === 0)) {
+                            AppState.appData[key] = [];
+                        } else {
+                            // الاحتفاظ بالبيانات القديمة
+                            if (shouldLog) {
+                                Utils.safeLog(`ℹ️ ${sheetName}: الاحتفاظ بالبيانات المحلية (${oldData.length} سجل) بعد فشل التحميل`);
+                            }
+                        }
+                    } else {
+                        // البيانات المحلية موجودة - الاحتفاظ بها
+                        if (shouldLog) {
+                            Utils.safeLog(`ℹ️ ${sheetName}: الاحتفاظ بالبيانات المحلية (${AppState.appData[key].length} سجل) بعد فشل التحميل`);
+                        }
+                    }
+                    return;
+                }
+
+                // ✅ تحسين: التأكد من أن البيانات هي array قبل التحديث
+                if (Array.isArray(data)) {
+                    const oldData = Array.isArray(AppState.appData[key]) ? AppState.appData[key] : [];
+                    // ✅ حماية: لا نُبدّل البيانات المحلية بمصفوفة فارغة
+                    // ملاحظة: ورقة ViolationTypes يجب أن تعكس الشيت بدقة. لا نحتفظ بالقديم إذا كانت القراءة ناجحة لكنها فارغة.
+                    const shouldKeepOld = sheetName !== 'ViolationTypes'
+                        && data.length === 0
+                        && oldData.length > 0;
+                    const effectiveData = shouldKeepOld ? oldData : data;
+
+                    if (!shouldKeepOld) {
+                        AppState.appData[key] = data;
+                        if (key === 'contractorApprovalRequests' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovalRequestsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovalRequestsFromSync(data, { refreshUi: true });
+                            } catch (_carSync) { /* ignore */ }
+                        }
+                        if (key === 'approvedContractors' &&
+                            Array.isArray(data) && data.length > 0 &&
+                            typeof Contractors !== 'undefined' &&
+                            typeof Contractors.ingestApprovedContractorsFromSync === 'function') {
+                            try {
+                                Contractors.ingestApprovedContractorsFromSync(data, { refreshUi: true });
+                            } catch (_acSync) { /* ignore */ }
+                        }
+                        if (!AppState.syncMeta) {
+                            AppState.syncMeta = { sheets: {}, lastSyncTime: 0, userEmail: null };
+                        }
+                        if (!AppState.syncMeta.sheets) {
+                            AppState.syncMeta.sheets = {};
+                        }
+                        AppState.syncMeta.sheets[sheetName] = Date.now();
+                        AppState.syncMeta.lastSyncTime = Date.now();
+                    }
+
+                    if (effectiveData.length > 0) {
+                        syncedCount++;
+                        if (shouldLog) {
+                            Utils.safeLog(`✅ تم تحديث بيانات الورقة ${sheetName} بنجاح: ${effectiveData.length} سجل`);
+                        }
+                    } else if (shouldLog) {
+                        Utils.safeLog(shouldKeepOld
+                            ? `⚠️ الورقة ${sheetName} فارغة من الخادم — بيانات محلية قديمة (${oldData.length})`
+                            : `✅ الورقة ${sheetName} فارغة في قاعدة SQL`);
+                    }
+                } else {
+                    // ✅ تحسين: إذا لم تكن array، نستخدم البيانات القديمة بدلاً من استبدالها بمصفوفة فارغة
+                    const oldData = AppState.appData[key] || [];
+                    if (oldData.length > 0) {
+                        // الاحتفاظ بالبيانات القديمة
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array - الاحتفاظ بالبيانات الحالية (${oldData.length} سجل)`);
+                        }
+                    } else {
+                        // فقط إذا لم تكن هناك بيانات قديمة، نستخدم مصفوفة فارغة
+                        AppState.appData[key] = [];
+                        if (shouldLog) {
+                            Utils.safeWarn(`⚠️ ${sheetName} لم تُرجع array ولا توجد بيانات قديمة - تم تعيينها إلى array فارغة`);
+                        }
+                    }
+                }
+            });
+
+            // حفظ البيانات في localStorage
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(95, 'جاري تحميل البيانات');
+            }
+
+            ViolationTypesManager.ensureInitialized();
+            PeriodicInspectionStore.ensureInitialized();
+            if (typeof PeriodicEquipmentStore !== 'undefined') {
+                PeriodicEquipmentStore.ensureInitialized();
+            }
+
+            DataManager.save();
+
+            try {
+                if (typeof Dashboard !== 'undefined' && typeof Dashboard.updateReportsStatistics === 'function') {
+                    Dashboard.updateReportsStatistics();
+                }
+            } catch (_dashRc) { /* ignore */ }
+
+            // ✅ إضافة: إرسال حدث لإعلام الموديولات باكتمال المزامنة
+            // نرسل الحدث بعد حفظ البيانات للتأكد من تحديث الموديولات بالبيانات الجديدة
+            if (typeof window !== 'undefined') {
+                // استخدام setTimeout للتأكد من اكتمال حفظ البيانات
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('syncDataCompleted', {
+                        detail: { 
+                            syncedCount,
+                            failedSheets,
+                            sheets: Object.keys(sheetMapping).filter(sheet => 
+                                sheets.includes(sheet) && AppState.appData[sheetMapping[sheet]]
+                            )
+                        }
+                    }));
+                }, 100);
+            }
+
+            // ✅ إصلاح: تحميل إعدادات الشركة (بما في ذلك الشعار) من قاعدة البيانات
+            if (typeof DataManager !== 'undefined' && DataManager.loadCompanySettings) {
+                try {
+                    await DataManager.loadCompanySettings();
+
+                    // تحديث الشعار في جميع الأماكن المخصصة بعد تحميله
+                    if (typeof UI !== 'undefined') {
+                        if (UI.updateCompanyLogoHeader) {
+                            UI.updateCompanyLogoHeader();
+                        }
+                        if (UI.updateLoginLogo) {
+                            UI.updateLoginLogo();
+                        }
+                        if (UI.updateDashboardLogo) {
+                            UI.updateDashboardLogo();
+                        }
+                        if (UI.updateCompanyBranding) {
+                            UI.updateCompanyBranding();
+                        }
+                    }
+
+                    // إرسال حدث لتحديث الشعار
+                    if (AppState.companyLogo) {
+                        window.dispatchEvent(new CustomEvent('companyLogoUpdated', {
+                            detail: { logoUrl: AppState.companyLogo }
+                        }));
+                    }
+
+                    if (shouldLog) {
+                        Utils.safeLog('✅ تم تحميل إعدادات الشركة والشعار من قاعدة البيانات');
+                    }
+                } catch (error) {
+                    Utils.safeWarn('⚠️ فشل تحميل إعدادات الشركة أثناء المزامنة:', error);
+                }
+            }
+
+            // ✅ إصلاح: تحميل إعدادات النماذج (المواقع والمواقع الفرعية) بعد اكتمال المزامنة
+            // هذا يضمن تحميل المواقع لجميع المستخدمين بعد المزامنة
+            if (typeof Permissions !== 'undefined' && typeof Permissions.initFormSettingsState === 'function') {
+                try {
+                    await Permissions.initFormSettingsState();
+                    if (shouldLog) {
+                        const sitesCount = AppState.appData?.observationSites?.length || 0;
+                        Utils.safeLog(`✅ تم تحميل إعدادات النماذج (${sitesCount} موقع) بعد المزامنة`);
+                    }
+                } catch (error) {
+                    Utils.safeWarn('⚠️ فشل تحميل إعدادات النماذج بعد المزامنة:', error);
+                }
+            }
+
+            // اكتمال المزامنة — إخفاء فوري (كان تأخير 1s يُبقي الشاشة مغطاة بلا داع)
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.setProgress(100, 'جاري تحميل البيانات');
+                Loading.hide();
+            }
+
+            const success = failedSheets.length === 0;
+            const anyOk = results.some((r) => r && r.success);
+
+            if (success) {
+                if (notifyOnSuccess && syncedCount > 0) {
+                    Notification.success(`تمت مزامنة ${syncedCount} جداول من قاعدة SQL بنجاح`);
+                } else if (shouldLog) {
+                    Utils.safeLog(`اكتملت المزامنة بنجاح: ${syncedCount} جداول تم تحديثها`);
+                }
+            } else {
+                this._lastSyncError = failedSheets.length
+                    ? ('فشلت أوراق: ' + failedSheets.filter(Boolean).slice(0, 8).join(', ') + (failedSheets.length > 8 ? '...' : ''))
+                    : 'لم تُحمَّل أي بيانات من الخادم';
+                if (notifyOnError) {
+                    Notification.warning(`فشل مزامنة بعض الجداول: ${failedSheets.filter(Boolean).join(', ')}`);
+                }
+                if (shouldLog) {
+                    Utils.safeWarn('فشل مزامنة بعض الجداول:', failedSheets);
+                }
+            }
+
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
+            return success || syncedCount > 0 || anyOk;
+        } catch (error) {
+            this._syncInProgress.global = false;
+            this._currentSyncForceRefresh = false;
+            if (showLoader && typeof Loading !== 'undefined') {
+                Loading.hide();
+            }
+
+            if (typeof InactivityManager !== 'undefined' && AppState.currentUser && !inactivityWasPaused) {
+                InactivityManager.resume();
+            }
+
+            this._lastSyncError = error.message || String(error);
+
+            const errorMsg = error.message || 'خطأ غير معروف';
+            const isBackendRpcConfigured = this._isBackendRpcConfigured();
+            const isExpectedError = !isBackendRpcConfigured ||
+                errorMsg.includes('معرف قاعدة SQL غير محدد') ||
+                errorMsg.includes('قاعدة SQL غير مفعّل') ||
+                (!isBackendRpcConfigured && (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')));
+
+            if (!isExpectedError) {
+                Utils.safeError('❌ خطأ في مزامنة البيانات:', error);
+            }
+
+            if (notifyOnError && !isExpectedError) {
+                Notification.error('خطأ في المزامنة مع الخادم: ' + error.message);
+            }
+            return false;
+        }
+    },
+
+    /**
+     * يتم حفظ البيانات إلى قاعدة SQL عند توفر الاتصال
+     * @param {string} sheetName - اسم الورقة في قاعدة SQL
+     * @param {Array|Object} data - البيانات المراد حفظها
+     * @param {Object} options - خيارات الحفظ
+     * @returns {Promise<Object>} نتيجة الحفظ
+     */
+    async autoSave(sheetName, data, options = {}) {
+        const {
+            retryCount = 3,
+            silent = true,
+            useQueue = false
+        } = options;
+
+        if (!this._isBackendRpcConfigured()) {
+            if (!silent) {
+                Utils.safeWarn('الخادم الخلفي غير مفعّل - سيتم حفظ البيانات محلياً');
+            }
+            // إضافة البيانات إلى قائمة الانتظار للمزامنة
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+            return { success: false, shouldDefer: true, message: 'الخادم الخلفي غير مفعّل' };
+        }
+
+        // التحقق من spreadsheetId — إذا كان غير محدد في الـ Frontend نتركه للـ Backend
+        // الـ Backend يملك معرّفه الخاص في دالة getSpreadsheetId() في Config.gs
+        const spreadsheetId = AppState.googleConfig.sheets?.spreadsheetId?.trim();
+        const hasLocalSpreadsheetId = spreadsheetId && spreadsheetId !== '' && spreadsheetId !== 'YOUR_SPREADSHEET_ID_HERE';
+
+        const preparedData = this.prepareSheetPayload(sheetName, data);
+
+        try {
+            // محاولة الحفظ مع إعادة المحاولة
+            let lastError = null;
+
+            for (let attempt = 1; attempt <= retryCount; attempt++) {
+                try {
+                    // بناء payload الطلب — نمرر spreadsheetId فقط إذا كان محددًا في الـ Frontend
+                    // إذا لم يكن محددًا، يستخدم الـ Backend قيمته الخاصة من getSpreadsheetId() في Config.gs
+                    const requestData = {
+                        sheetName: sheetName,
+                        data: preparedData
+                    };
+                    if (hasLocalSpreadsheetId) {
+                        requestData.spreadsheetId = spreadsheetId;
+                    }
+                    const result = await this.sendRequest({
+                        action: 'saveToSheet',
+                        data: requestData
+                    });
+
+                    if (result && result.success) {
+                        // نجحت العملية - إزالة من قائمة الانتظار إن وجدت
+                        if (typeof DataManager !== 'undefined' && DataManager.removeFromPendingSync) {
+                            DataManager.removeFromPendingSync(sheetName);
+                        }
+
+                        this.clearCache(sheetName);
+
+                        if (!silent) {
+                            Utils.safeLog(`✅ تم حفظ ${sheetName} في قاعدة SQL بنجاح`);
+                        }
+
+                        return Object.assign({ message: 'تم الحفظ بنجاح' }, result);
+                    } else {
+                        lastError = result?.message || 'خطأ غير معروف';
+
+                        if (attempt < retryCount) {
+                            // انتظار قبل إعادة المحاولة (exponential backoff)
+                            const delay = Math.pow(2, attempt) * 500; // 500ms, 1s, 2s
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                        }
+                    }
+                } catch (attemptError) {
+                    lastError = attemptError;
+
+                    if (attempt < retryCount) {
+                        const delay = Math.pow(2, attempt) * 500;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            // فشلت جميع المحاولات - إضافة إلى قائمة الانتظار
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+
+            if (!silent) {
+                Utils.safeWarn(`⚠️ فشل حفظ ${sheetName} بعد ${retryCount} محاولات - سيتم المحاولة لاحقاً`);
+            }
+
+            return {
+                success: false,
+                shouldDefer: true,
+                message: lastError?.message || lastError?.toString() || 'فشل الحفظ بعد المحاولات'
+            };
+
+        } catch (error) {
+            // في حالة الخطأ، إضافة إلى قائمة الانتظار
+            if (typeof DataManager !== 'undefined' && DataManager.addToPendingSync) {
+                DataManager.addToPendingSync(sheetName, data);
+            }
+
+            if (!silent) {
+                Utils.safeError('❌ خطأ في autoSave:', error);
+            }
+
+            return {
+                success: false,
+                shouldDefer: true,
+                message: error.message || error.toString()
+            };
+        }
+    },
+
+    /**
+     * الحصول على صلاحيات المستخدم الحالي
+     */
+    _getCurrentUserPermissions() {
+        try {
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
+                return Permissions.getCurrentUserPermissions();
+            }
+            if (typeof Permissions !== 'undefined' && typeof Permissions.getEffectivePermissions === 'function') {
+                return Permissions.getEffectivePermissions(AppState?.currentUser);
+            }
+            return AppState?.currentUser?.permissions || {};
+        } catch (e) {
+            return {};
+        }
+    },
+
+    /**
+     * تحديد نوع البيانات للـ action
+     */
+    _getDataTypeForAction(action) {
+        const actionDataTypes = {
+            // بيانات المستخدم الخاصة
+            'getUserData': 'user_specific',
+            'getUserTasks': 'user_specific',
+            'getUserNotifications': 'user_specific',
+
+            // بيانات مشتركة
+            'getAllApprovedContractors': 'shared_data',
+            'getAllEmployees': 'shared_data',
+            'getAllContractors': 'shared_data',
+
+            // بيانات ثابتة
+            'getOrganizationalStructure': 'static_data',
+            'getJobDescription': 'static_data',
+            'getSafetyHealthManagementSettings': 'static_data',
+
+            // بيانات تتحدث كثيراً
+            'getAllIncidents': 'frequent_updates',
+            'getAllNearMiss': 'frequent_updates',
+            'getAllViolations': 'frequent_updates'
+        };
+
+        return actionDataTypes[action] || 'static_data';
+    },
+
+    /**
+     * مزامنة طلبات معتمدة بدون سجل في ApprovedContractors
+     * fallback: إعادة approveContractorApprovalRequest إذا action جديد غير منشور بعد
+     */
+    async reconcileMissingApprovedContractors(options = {}) {
+        const sheetId = AppState?.googleConfig?.sheets?.spreadsheetId;
+        const data = { forceRefresh: true, ...(options || {}) };
+        if (sheetId && String(sheetId).trim() && sheetId !== 'YOUR_SPREADSHEET_ID_HERE') {
+            data.spreadsheetId = String(sheetId).trim();
+        }
+        if (!data.userData && AppState?.currentUser) {
+            data.userData = AppState.currentUser;
+        }
+        try {
+            return await this.sendRequest({ action: 'reconcileMissingApprovedContractors', data });
+        } catch (err) {
+            const msg = String(err?.message || err || '');
+            const requestId = options?.requestId || options?.id;
+            if (requestId && (msg.includes('غير معترف') || msg.includes('ACTION_NOT_RECOGNIZED'))) {
+                return await this.sendRequest({
+                    action: 'approveContractorApprovalRequest',
+                    data: { requestId, userData: AppState.currentUser }
+                });
+            }
+            throw err;
+        }
+    },
+
+    async refreshApprovedContractorsFromSheet() {
+        const rows = await this.readFromSheets('ApprovedContractors', 45000);
+        if (Array.isArray(rows) && AppState?.appData) {
+            AppState.appData.approvedContractors = rows;
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+            if (typeof Contractors !== 'undefined' && typeof Contractors.refreshApprovedEntitiesList === 'function') {
+                Contractors.refreshApprovedEntitiesList();
+            }
+        }
+        return rows;
+    }
+};
+
+// تصدير للواجهة — الاسم التاريخي GoogleIntegration؛ BackendRpc للوحدات الجديدة
+if (typeof window !== 'undefined') {
+    window.GoogleIntegration = GoogleIntegration;
+    window.BackendRpc = GoogleIntegration;
+    /**
+     * استرجاع صف/صفوف من جدول إجابات فورم المرور اليومي إلى DailySafetyCheckList.
+     * يتطلب تسجيل دخول بصلاحية مدير.
+     * مثال من كونسول المتصفح: reprocessDailySafetyFormRows(492, 492)
+     */
+    window.reprocessDailySafetyFormRows = async function reprocessDailySafetyFormRows(fromRow, toRow) {
+        const payload = {
+            fromRow,
+            toRow: toRow != null ? toRow : fromRow
+        };
+        if (typeof AppState !== 'undefined' && AppState?.currentUser) {
+            payload.userData = AppState.currentUser;
+        }
+        const result = await GoogleIntegration.sendRequest({
+            action: 'reprocessDailySafetyFormRows',
+            data: payload
+        });
+        if (typeof Utils !== 'undefined' && Utils.safeLog) {
+            Utils.safeLog('reprocessDailySafetyFormRows:', result);
+        } else {
+            console.log('reprocessDailySafetyFormRows:', result);
+        }
+        return result;
+    };
+    try {
+        GoogleIntegration._purgeLegacyReadFromSheetLocalCache_();
+    } catch (e) { /* ignore */ }
+}

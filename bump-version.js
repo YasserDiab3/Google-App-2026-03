@@ -1,0 +1,207 @@
+#!/usr/bin/env node
+/**
+ * bump-version.js — توحيد إصدار التطبيق عبر كل المواضع بأمر واحد.
+ *
+ * يحدّث (في كل من Frontend/ و vercel-deploy/frontend/):
+ *   1) version.json                         → "version": "X.Y.Z"   ← يقود إشعار التحديث
+ *   2) service-worker.js  CACHE_VERSION      → hse-app-vX.Y.Z-YYYYMMDD
+ *   3) index.html         __SW_REGISTER_QUERY→ v=hse-app-vX.Y.Z-YYYYMMDD
+ *   4) js/modules/app-utils.js  appVersion   → 'X.Y.Z'
+ *
+ * الاستخدام:
+ *   node bump-version.js              → يزيد آخر رقم تلقائياً (1.0.37 → 1.0.38)
+ *   node bump-version.js 1.0.40       → يضبط إصداراً محدداً
+ *   node bump-version.js minor        → 1.0.x → 1.1.0
+ *   node bump-version.js major        → x.y.z → (x+1).0.0
+ *
+ * بعد التشغيل: راجع git diff ثم commit + push (Vercel ينشر تلقائياً، وإشعار التحديث يظهر للمستخدمين).
+ *
+ * pre-push hook (مرة واحدة): node scripts/install-git-hooks.mjs
+ * يمنع push واجهة بدون تحديث الإصدار — انظر scripts/check-version-bump.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOTS = [
+    path.join(__dirname, 'Frontend'),
+    path.join(__dirname, 'vercel-deploy', 'frontend'),
+];
+
+function readJSONVersion(versionJsonPath) {
+    try {
+        let raw = fs.readFileSync(versionJsonPath, 'utf8');
+        // رفض BOM — كان يسبب parse fail ثم سقوط خاطئ إلى 1.0.0 → 1.0.1
+        if (raw.charCodeAt(0) === 0xFEFF) {
+            raw = raw.slice(1);
+        }
+        const obj = JSON.parse(raw);
+        const v = String(obj.version || '').trim();
+        if (!/^\d+\.\d+\.\d+$/.test(v)) {
+            throw new Error(`إصدار غير صالح في ${versionJsonPath}: "${v}"`);
+        }
+        return v;
+    } catch (e) {
+        console.error(`❌ فشل قراءة الإصدار من ${versionJsonPath}:`, e.message || e);
+        return '';
+    }
+}
+
+function computeNewVersion(current, arg) {
+    const parts = (current || '1.0.0').split('.').map(n => parseInt(n, 10) || 0);
+    while (parts.length < 3) parts.push(0);
+    let [maj, min, pat] = parts;
+
+    if (!arg || arg === 'patch') { pat += 1; }
+    else if (arg === 'minor')    { min += 1; pat = 0; }
+    else if (arg === 'major')    { maj += 1; min = 0; pat = 0; }
+    else if (/^\d+\.\d+\.\d+$/.test(arg)) { return arg; } // إصدار صريح
+    else { pat += 1; } // افتراضي آمن
+
+    return `${maj}.${min}.${pat}`;
+}
+
+function dateStamp() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}${m}${day}`;
+}
+
+function replaceInFile(filePath, replacer, label) {
+    if (!fs.existsSync(filePath)) {
+        console.log(`  ⏭️  تخطّي (غير موجود): ${label}`);
+        return false;
+    }
+    const before = fs.readFileSync(filePath, 'utf8');
+    const after = replacer(before);
+    if (after === before) {
+        console.log(`  ⚠️  لا تغيير: ${label}`);
+        return false;
+    }
+    fs.writeFileSync(filePath, after, 'utf8');
+    console.log(`  ✅ ${label}`);
+    return true;
+}
+
+function bumpRoot(root, newVersion, cacheVersion) {
+    const rootName = path.relative(__dirname, root) || root;
+    console.log(`\n📁 ${rootName}`);
+
+    // 1) version.json
+    replaceInFile(
+        path.join(root, 'version.json'),
+        (content) => {
+            try {
+                let raw = content;
+                if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+                const parsed = JSON.parse(raw);
+                parsed.version = newVersion;
+                return JSON.stringify(parsed, null, 2) + '\n';
+            } catch (e) {
+                throw new Error(`فشل تحديث version.json (لن يُستبدل بـ {version} فقط): ${e.message || e}`);
+            }
+        },
+        `version.json → ${newVersion}`
+    );
+
+    // 2) service-worker.js  CACHE_VERSION
+    replaceInFile(
+        path.join(root, 'service-worker.js'),
+        (c) => c.replace(
+            /const CACHE_VERSION = '[^']*';/,
+            `const CACHE_VERSION = '${cacheVersion}';`
+        ),
+        `service-worker.js CACHE_VERSION → ${cacheVersion}`
+    );
+
+    // 3) index.html  __SW_REGISTER_QUERY & كل ?v= على سكربتات js/
+    replaceInFile(
+        path.join(root, 'index.html'),
+        (c) => {
+            let updated = c.replace(
+                /const __SW_REGISTER_QUERY = "[^"]*";/,
+                `const __SW_REGISTER_QUERY = "v=${cacheVersion}";`
+            );
+            updated = updated.replace(
+                /<meta name="app-version" content="[^"]*"\s*\/?>/,
+                `<meta name="app-version" content="${newVersion}" />`
+            );
+            updated = updated.replace(
+                /src="(js\/[^"]+\.js)\?v=[^"]*"/g,
+                `src="$1?v=${cacheVersion}"`
+            );
+            return updated;
+        },
+        `index.html __SW_REGISTER_QUERY & module script queries → v=${cacheVersion}`
+    );
+
+    // 4) app-utils.js  appVersion
+    replaceInFile(
+        path.join(root, 'js', 'modules', 'app-utils.js'),
+        (c) => c.replace(
+            /appVersion:\s*'[^']*',/,
+            `appVersion: '${newVersion}',`
+        ),
+        `app-utils.js appVersion → ${newVersion}`
+    );
+}
+
+function main() {
+    const arg = (process.argv[2] || '').trim();
+
+    // الإصدار الحالي من أول version.json موجود
+    let current = '';
+    let sourcePath = '';
+    for (const root of ROOTS) {
+        const p = path.join(root, 'version.json');
+        current = readJSONVersion(p);
+        if (current) {
+            sourcePath = p;
+            break;
+        }
+    }
+    if (!current) {
+        console.error('❌ تعذر قراءة version.json صالح (BOM/تلف؟). أوقف bump — لن يُخفَّض الإصدار إلى 1.0.0.');
+        process.exit(1);
+    }
+
+    const newVersion = computeNewVersion(current, arg);
+    const cacheVersion = `hse-app-v${newVersion}-${dateStamp()}`;
+
+    console.log('════════════════════════════════════════');
+    console.log(`📂 المصدر         : ${sourcePath}`);
+    console.log(`🔢 الإصدار الحالي : ${current}`);
+    console.log(`🚀 الإصدار الجديد : ${newVersion}`);
+    console.log(`🗂️  cache version  : ${cacheVersion}`);
+    console.log('════════════════════════════════════════');
+
+    ROOTS.forEach(root => bumpRoot(root, newVersion, cacheVersion));
+
+    // Extra standalone version.json (vercel-deploy/version.json)
+    const extraVersionFiles = [
+        path.join(__dirname, 'vercel-deploy', 'version.json')
+    ];
+    extraVersionFiles.forEach(vFile => {
+        if (fs.existsSync(vFile)) {
+            replaceInFile(
+                vFile,
+                (content) => {
+                    let raw = content;
+                    if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+                    const parsed = JSON.parse(raw);
+                    parsed.version = newVersion;
+                    return JSON.stringify(parsed, null, 2) + '\n';
+                },
+                `${path.relative(__dirname, vFile)} → ${newVersion}`
+            );
+        }
+    });
+
+    console.log('\n✅ تم توحيد الإصدار في جميع المواضع.');
+    console.log('⚠️  مهم: bump يحدّث رقم الإصدار فقط — أعد كتابة highlights.ar / highlights.en في version.json لتطابق تغييرات هذا الرفع (لا تترك نبذة قديمة).');
+    console.log('📌 ثم: commit + push (كلمة «رفع») — Vercel ينشر وإشعار التحديث يظهر بالنص الجديد.\n');
+}
+
+main();
