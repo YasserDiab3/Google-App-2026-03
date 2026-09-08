@@ -109,13 +109,7 @@ const HEAVY_LIST_FIELDS = {
         'heightWorkDetails', 'preStartChecklist', 'governmentPermits', 'gasTesting',
         'mocRequest', 'requiredPPE'
     ],
-    NearMiss: ['attachments'],
-    Training: ['participants', 'topics'],
-    ContractorTrainings: ['participants', 'topics', 'notes'],
-    LegalTrainings: ['attachments', 'notes'],
-    LegalTrainingAttendees: ['certificateImage', 'notes'],
-    AnnualTrainingPlans: ['plans'],
-    ApprovedContractors: ['notes']
+    NearMiss: ['attachments']
 };
 
 function isListModeRead(filter, options) {
@@ -318,13 +312,6 @@ function initDatabase(overridePath = null) {
                         }
                     }
 
-                    if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                        const lim = options.limit;
-                        const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                        const offset = (page - 1) * lim;
-                        sql += ` LIMIT ${lim} OFFSET ${offset}`;
-                    }
-
                     let rows;
                     try {
                         rows = this.all(sql, params).map(hydrateSheetRow);
@@ -332,12 +319,6 @@ function initDatabase(overridePath = null) {
                         if (!listMode) throw queryErr;
                         sql = `SELECT * FROM ${tableName}`;
                         if (params.length) sql += ' WHERE ' + Object.keys(filter).map((key) => `"${sanitizeIdentifier(key)}" = ?`).join(' AND ');
-                        if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                            const lim = options.limit;
-                            const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                            const offset = (page - 1) * lim;
-                            sql += ` LIMIT ${lim} OFFSET ${offset}`;
-                        }
                         rows = this.all(sql, params).map(hydrateSheetRow);
                     }
                     const slim = listMode ? slimRowsForList(sheetName, rows) : rows;
@@ -510,15 +491,9 @@ function initDatabase(overridePath = null) {
             all() { return []; },
             readFromSheet(sheetName, filter = null, options = {}) {
                 const list = (getStore(sheetName) || []).map(hydrateSheetRow);
-                let filtered = !filter
+                const filtered = !filter
                     ? list
                     : list.filter(row => Object.entries(filter).every(([k, v]) => String(row[k]) === String(v)));
-                if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                    const lim = options.limit;
-                    const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                    const start = (page - 1) * lim;
-                    filtered = filtered.slice(start, start + lim);
-                }
                 const slim = isListModeRead(filter, options) ? slimRowsForList(sheetName, filtered) : filtered;
                 return isListModeRead(filter, options) ? capRowsForRpc(slim) : slim;
             },

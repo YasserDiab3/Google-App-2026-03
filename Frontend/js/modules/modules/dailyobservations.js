@@ -614,8 +614,12 @@ const DailyObservations = {
         Notification?.info?.('سيتم رفع الصورة تلقائياً عند الاختيار', 3000);
     },
 
-    /** ✅ تحويل ملف إلى Base64 */
+    /** ✅ تحويل ملف إلى Base64 مع الضغط التلقائي للصور (Client-Side Compression < 300KB) */
     _fileToBase64(file) {
+        if (!file) return Promise.resolve('');
+        if (file.type && file.type.startsWith('image/') && typeof Utils !== 'undefined' && typeof Utils.compressImage === 'function') {
+            return Utils.compressImage(file, { maxBytes: 300 * 1024, maxWidth: 1280, maxHeight: 1280 });
+        }
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);

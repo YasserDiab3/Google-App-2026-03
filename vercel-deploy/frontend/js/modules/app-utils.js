@@ -6599,6 +6599,74 @@ const Utils = {
             return Math.floor(base64.length * 0.75);
         },
 
+        /**
+         * ضغط صور المتصفح قبل الرفع (Client-Side Image Compression)
+         * يقلل حجم الصورة من 5-10MB إلى أقل من 300KB لتسريع رفع المرفقات 10 أضعاف
+         */
+        compressImage(source, options = {}) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const maxWidth = options.maxWidth || 1280;
+                    const maxHeight = options.maxHeight || 1280;
+                    const maxBytes = options.maxBytes || 300 * 1024;
+                    let initialQuality = options.quality || 0.78;
+
+                    const processImg = (img) => {
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > maxWidth) {
+                            height = Math.round(height * (maxWidth / width));
+                            width = maxWidth;
+                        }
+                        if (height > maxHeight) {
+                            width = Math.round(width * (maxHeight / height));
+                            height = maxHeight;
+                        }
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, width, height);
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        let quality = initialQuality;
+                        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+
+                        while (quality > 0.35 && (dataUrl.length * 0.75) > maxBytes) {
+                            quality -= 0.08;
+                            dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        }
+
+                        resolve(dataUrl);
+                    };
+
+                    if (typeof source === 'string' && source.startsWith('data:')) {
+                        const img = new Image();
+                        img.onload = () => processImg(img);
+                        img.onerror = () => resolve(source);
+                        img.src = source;
+                    } else if (source instanceof Blob || (typeof File !== 'undefined' && source instanceof File)) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = new Image();
+                            img.onload = () => processImg(img);
+                            img.onerror = () => resolve(e.target.result);
+                            img.src = e.target.result;
+                        };
+                        reader.onerror = () => reject(new Error('FileReader error'));
+                        reader.readAsDataURL(source);
+                    } else {
+                        resolve(source);
+                    }
+                } catch (err) {
+                    resolve(source);
+                }
+            });
+        },
+
         canvasToJpegDataUrl(canvas, quality = this.DEFAULT_JPEG_QUALITY) {
             try {
                 return canvas.toDataURL('image/jpeg', quality);

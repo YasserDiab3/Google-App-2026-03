@@ -74,10 +74,62 @@ function syncVercelServerlessBundle() {
     }
 }
 
+function syncObservationAndFormsMirrors() {
+    const obsSrc = path.join(frontendRoot, 'public-observation.html');
+    if (fs.existsSync(obsSrc)) {
+        const targets = [
+            path.join(frontendRoot, 'public-observation', 'index.html'),
+            path.join(frontendRoot, 'observation', 'index.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'public-observation.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'public-observation', 'index.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'observation', 'index.html'),
+        ];
+        for (const t of targets) {
+            try {
+                fs.mkdirSync(path.dirname(t), { recursive: true });
+                fs.copyFileSync(obsSrc, t);
+            } catch (_) {}
+        }
+    }
+    const formsSrc = path.join(frontendRoot, 'forms-hub.html');
+    if (fs.existsSync(formsSrc)) {
+        const targets = [
+            path.join(frontendRoot, 'forms-hub', 'index.html'),
+            path.join(frontendRoot, 'forms', 'index.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms-hub.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms-hub', 'index.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms', 'index.html'),
+        ];
+        for (const t of targets) {
+            try {
+                fs.mkdirSync(path.dirname(t), { recursive: true });
+                fs.copyFileSync(formsSrc, t);
+            } catch (_) {}
+        }
+    }
+    const versionSrc = path.join(frontendRoot, 'version.json');
+    if (fs.existsSync(versionSrc)) {
+        const targets = [
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'version.json'),
+            path.join(repoRoot, 'vercel-deploy', 'version.json'),
+            path.join(repoRoot, 'dist', 'version.json'),
+            path.join(repoRoot, 'vercel-deploy', 'dist', 'version.json'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', 'dist', 'version.json'),
+        ];
+        for (const t of targets) {
+            try {
+                fs.mkdirSync(path.dirname(t), { recursive: true });
+                fs.copyFileSync(versionSrc, t);
+            } catch (_) {}
+        }
+    }
+}
+
 console.log('HSE Frontend production build');
 console.log('Source:', frontendRoot);
 console.log('Output:', distRoot);
 
+syncObservationAndFormsMirrors();
 syncVercelServerlessBundle();
 
 rmrf(distRoot);

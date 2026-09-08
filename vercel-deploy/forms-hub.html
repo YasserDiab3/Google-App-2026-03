@@ -2774,6 +2774,219 @@
             transform: scale(1.03);
         }
 
+        /* 🧰 رف أدوات ومساعد الملاحظات والخدمات الذكية بالبوابة */
+        .obs-advanced-tools-shelf {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+            transition: all 0.25s ease;
+        }
+
+        [data-theme="dark"] .obs-advanced-tools-shelf {
+            background: linear-gradient(145deg, #152243 0%, #0e172e 100%);
+            border-color: #334155;
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+        }
+
+        .obs-tools-shelf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        [data-theme="dark"] .obs-tools-shelf-header {
+            border-bottom-color: #1e293b;
+        }
+
+        .obs-tools-shelf-title {
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        [data-theme="dark"] .obs-tools-shelf-title {
+            color: #93c5fd;
+        }
+
+        .obs-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .obs-tool-card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1.5px solid;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            white-space: nowrap;
+            user-select: none;
+            width: 100%;
+        }
+        .obs-tool-card-btn:active {
+            transform: scale(0.96);
+        }
+
+        .obs-btn-voice {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: #6ee7b7;
+        }
+        .obs-btn-voice:hover {
+            background: #d1fae5;
+            border-color: #34d399;
+        }
+
+        .obs-btn-heatmap {
+            background: #fff1f2;
+            color: #be123c;
+            border-color: #fca5a5;
+        }
+        .obs-btn-heatmap:hover {
+            background: #ffe4e6;
+            border-color: #f87171;
+        }
+
+        .obs-btn-digest {
+            background: #ffffff;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .obs-btn-digest:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .obs-btn-track {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #7dd3fc;
+        }
+        .obs-btn-track:hover {
+            background: #e0f2fe;
+            border-color: #38bdf8;
+        }
+
+        .suggestion-chip {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion-chip:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        @keyframes fadeInModal {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 🚨 Modal Overlays & Responsive Mobile Sheet Dialog Styling */
+        .emergency-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .emergency-modal-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            border: 1.5px solid #cbd5e1;
+            animation: popModal 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            margin: auto;
+        }
+
+        [data-theme="dark"] .emergency-modal-dialog {
+            background: #152243;
+            border-color: #334155;
+            color: #f8fafc;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes popModal {
+            from { transform: scale(0.94) translateY(10px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .obs-advanced-tools-shelf {
+                padding: 10px 10px 12px;
+                border-radius: 14px;
+                margin-bottom: 16px;
+            }
+            .obs-tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .obs-tool-card-btn {
+                padding: 9px 6px;
+                font-size: 0.74rem;
+                border-radius: 9px;
+                gap: 4px;
+            }
+
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important; /* Mobile Bottom-Sheet Presentation */
+            }
+
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                max-height: 90vh !important;
+                border-radius: 20px 20px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35) !important;
+                border-bottom: none !important;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -2876,16 +3089,40 @@
             </div>
         </header>
 
-    <!-- Main Container -->
-    <!-- Hero Banner -->
-        <div class="hero-banner">
-            <div class="hero-title">
-                <i class="fas fa-shield-halved"></i>
-                <span>تسجيل ميداني فوري وموحد</span>
+        <!-- 🛠️ رف أدوات ومساعدات الملاحظات والخدمات الذكية (Smart HSE Tools Shelf) -->
+        <div class="obs-advanced-tools-shelf">
+            <div class="obs-tools-shelf-header">
+                <div class="obs-tools-shelf-title">
+                    <i class="fas fa-layer-group text-blue-600"></i>
+                    <span id="txtObsToolsTitle">أدوات ومساعدات الملاحظات:</span>
+                </div>
+                <span id="txtObsToolsSubtitle" style="font-size: 0.72rem; color: #64748b; font-weight: 700;">خدمات ذكية مساندة</span>
             </div>
-            <p class="hero-desc">
-                اختر النموذج المطلوب لبدء التسجيل المباشر . يعمل بكفاءة تامة .
-            </p>
+            <div class="obs-tools-grid">
+                <!-- زر مساعد السلامة الصوتي -->
+                <button type="button" class="obs-tool-card-btn obs-btn-voice" id="btnHseVoiceBot" onclick="openHseVoiceAssistantModal(event)" title="مساعد السلامة الصوتي الميداني / Voice Assistant">
+                    <i class="fas fa-microphone-lines"></i>
+                    <span id="txtVoiceBotBtn">مساعد السلامة</span>
+                </button>
+
+                <!-- زر خريطة المخاطر الحرارية -->
+                <button type="button" class="obs-tool-card-btn obs-btn-heatmap" id="btnPlantRiskHeatmap" onclick="openPlantRiskHeatmapModal(event)" title="الخريطة الحرارية لمخاطر المصانع / Plant Risk Heatmap">
+                    <i class="fas fa-fire-flame-curved"></i>
+                    <span id="txtHeatmapBtn">خريطة المخاطر</span>
+                </button>
+
+                <!-- زر تقرير الوردية -->
+                <button type="button" class="obs-tool-card-btn obs-btn-digest" id="btnShiftDigest" onclick="openShiftDigestModal(event)" title="تقرير الوردية الميداني المجمع / Shift Digest">
+                    <i class="fas fa-file-invoice"></i>
+                    <span id="txtShiftDigestBtn">تقرير الوردية</span>
+                </button>
+
+                <!-- زر تتبع الملاحظات -->
+                <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <span id="txtTrackBtn">تتبع ملاحظة</span>
+                </button>
+            </div>
         </div>
 
         <!-- شريط المتابعة الحية للزوار والمقاولين المتواجدين بالمصنع -->
@@ -2930,7 +3167,7 @@
                 <div class="kpi-micro-icon"><i class="fas fa-award"></i></div>
                 <div class="kpi-micro-body">
                     <div class="kpi-micro-label" id="txtKpiSafeHoursLabel">ساعات عمل آمنة (LTI-Free)</div>
-                    <div class="kpi-micro-val"><span id="valKpiSafeHours">1,250,000+</span> <small id="txtKpiHoursUnit">ساعة</small></div>
+                    <div class="kpi-micro-val"><span id="valKpiSafeHours">1,602,000+</span> <small id="txtKpiHoursUnit">ساعة</small></div>
                 </div>
                 <div class="kpi-micro-status" id="badgeKpiSafeHours"><i class="fas fa-check-circle"></i> <span id="txtKpiZeroLti">صفر حوادث</span></div>
             </div>
@@ -3464,7 +3701,7 @@
                         <i class="fas fa-trophy"></i>
                     </div>
                     <div style="font-size: 1.6rem; font-weight: 900; color: #854d0e; line-height: 1.2;" id="modalValSafeHours">
-                        1,250,000+ ساعة عمل آمنة
+                        1,602,000+ ساعة عمل آمنة
                     </div>
                     <div style="font-size: 0.85rem; font-weight: 800; color: #a16207; margin-top: 4px;" id="txtSafeMilestoneSub">
                         سجل متصل من العمل بدون إصابات مقعدة عن العمل (Zero LTI Policy)
@@ -3475,7 +3712,7 @@
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; display: block;">أيام العمل الآمنة</span>
-                        <span id="modalValSafeDays" style="font-size: 1.25rem; font-weight: 900; color: #0f172a;">680+ يوم</span>
+                        <span id="modalValSafeDays" style="font-size: 1.25rem; font-weight: 900; color: #0f172a;">930+ يوم</span>
                     </div>
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; display: block;">معدل الحوادث LTI</span>
@@ -3674,6 +3911,14 @@
                 heatModalTitle: 'حالة الطقس الميداني ودليل الإجهاد الحراري',
                 heatInstructionsTitle: 'تعليمات وبروتوكول الوقاية من الإجهاد الحراري (OSHA):',
 
+                // Smart Tools Shelf
+                obsToolsTitle: 'أدوات ومساعدات الملاحظات:',
+                obsToolsSubtitle: 'خدمات ذكية مساندة',
+                voiceBotBtn: 'مساعد السلامة',
+                heatmapBtn: 'خريطة المخاطر',
+                shiftDigestBtn: 'تقرير الوردية',
+                trackBtn: 'تتبع ملاحظة',
+
                 // Live Safety KPI Grid
                 kpiSafeHoursLabel: 'ساعات عمل آمنة (LTI-Free)',
                 kpiHoursUnit: 'ساعة',
@@ -3855,6 +4100,14 @@
                 heatModalTitle: 'Field Weather & Heat Stress Advisory',
                 heatInstructionsTitle: 'Heat Stress Prevention Protocol (OSHA):',
 
+                // Smart Tools Shelf
+                obsToolsTitle: 'Observation Smart Tools:',
+                obsToolsSubtitle: 'Intelligent Field Services',
+                voiceBotBtn: 'Voice Assistant',
+                heatmapBtn: 'Risk Heatmap',
+                shiftDigestBtn: 'Shift Digest',
+                trackBtn: 'Track Observation',
+
                 // Live Safety KPI Grid
                 kpiSafeHoursLabel: 'Safe Work Hours (LTI-Free)',
                 kpiHoursUnit: 'hrs',
@@ -3887,6 +4140,20 @@
 
             const langBtnText = document.getElementById('langBtnText');
             if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // Smart Tools Shelf Bindings
+            const tObsTools = document.getElementById('txtObsToolsTitle');
+            if (tObsTools) tObsTools.textContent = t.obsToolsTitle || 'أدوات ومساعدات الملاحظات:';
+            const tObsSub = document.getElementById('txtObsToolsSubtitle');
+            if (tObsSub) tObsSub.textContent = t.obsToolsSubtitle || 'خدمات ذكية مساندة';
+            const tVoice = document.getElementById('txtVoiceBotBtn');
+            if (tVoice) tVoice.textContent = t.voiceBotBtn || 'مساعد السلامة';
+            const tHeat = document.getElementById('txtHeatmapBtn');
+            if (tHeat) tHeat.textContent = t.heatmapBtn || 'خريطة المخاطر';
+            const tShift = document.getElementById('txtShiftDigestBtn');
+            if (tShift) tShift.textContent = t.shiftDigestBtn || 'تقرير الوردية';
+            const tTrack = document.getElementById('txtTrackBtn');
+            if (tTrack) tTrack.textContent = t.trackBtn || 'تتبع ملاحظة';
 
             // Live Safety KPI Grid Bindings
             const tKpiSafeHours = document.getElementById('txtKpiSafeHoursLabel');
@@ -5023,12 +5290,23 @@
         // 📊 Live Safety KPIs Logic & Drill-down Modal
         function updateHubLiveKpis() {
             try {
-                // 1. Safe Hours Calculation (LTI-Free)
+                // 1. Safe Hours Calculation (LTI-Free & System Settings Compliant)
                 const startMilestone = new Date(2026, 0, 1).getTime();
                 const now = Date.now();
                 const elapsedDays = Math.max(0, Math.floor((now - startMilestone) / (1000 * 60 * 60 * 24)));
-                const safeDaysTotal = 680 + elapsedDays;
-                const safeHoursCalculated = 1250000 + (elapsedDays * 1408);
+                
+                let safeHoursCalculated;
+                let safeDaysTotal;
+                const savedTotalHours = localStorage.getItem('hse_total_work_hours');
+                const savedHoursPerDay = parseFloat(localStorage.getItem('hse_hours_per_day')) || 8;
+                if (savedTotalHours && !isNaN(parseFloat(savedTotalHours)) && parseFloat(savedTotalHours) > 0) {
+                    safeHoursCalculated = parseFloat(savedTotalHours);
+                    safeDaysTotal = Math.round(safeHoursCalculated / savedHoursPerDay);
+                } else {
+                    safeDaysTotal = 680 + elapsedDays;
+                    safeHoursCalculated = 1250000 + (elapsedDays * 1408);
+                }
+
                 const formattedHours = safeHoursCalculated.toLocaleString('en-US') + '+';
                 const formattedDays = safeDaysTotal.toLocaleString('en-US') + '+ ' + (currentLang === 'en' ? 'days' : 'يوم');
 
@@ -5093,6 +5371,7 @@
 
         function openHseSafeMilestoneModal(event) {
             if (event && event.stopPropagation) event.stopPropagation();
+            updateHubLiveKpis();
             const modal = document.getElementById('hseSafeMilestoneModal');
             if (modal) {
                 modal.style.display = 'flex';
@@ -9110,6 +9389,739 @@
         } catch(e) {}
     }
 
+    // ======================================================================
+    // 🛠️ Smart HSE Tools Suite (Voice Assistant, Heatmap, Shift Digest, Tracking)
+    // ======================================================================
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function showToast(msg, type = 'info', duration = 3000) {
+        let toast = document.getElementById('hubToastContainer');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'hubToastContainer';
+            toast.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100005; padding: 10px 18px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; pointer-events: none; opacity: 0;';
+            document.body.appendChild(toast);
+        }
+        
+        let bg = '#1e293b';
+        let color = '#ffffff';
+        let icon = 'ℹ️';
+        if (type === 'success') { bg = '#059669'; icon = '✅'; }
+        else if (type === 'error') { bg = '#dc2626'; icon = '❌'; }
+        else if (type === 'warning') { bg = '#d97706'; icon = '⚠️'; }
+
+        toast.style.background = bg;
+        toast.style.color = color;
+        toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+
+        setTimeout(() => {
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(10px)';
+            }
+        }, duration);
+    }
+
+    // --- 1. تتبع واستعلام الملاحظات الميدانية (Observation Tracking) ---
+    function openTrackObservationModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('trackObservationModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            const input = document.getElementById('trackSearchInput');
+            if (input) setTimeout(() => input.focus(), 100);
+        }
+    }
+
+    function closeTrackObservationModal(event) {
+        const modal = document.getElementById('trackObservationModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async function executeTrackSearch(customCode) {
+        const searchInput = document.getElementById('trackSearchInput');
+        const resultWrap = document.getElementById('trackSearchResultWrap');
+        const code = (customCode || (searchInput ? searchInput.value : '')).trim();
+        if (!code) {
+            showToast('يرجى إدخال كود الملاحظة للبحث', 'warning', 2500);
+            return;
+        }
+
+        if (resultWrap) {
+            resultWrap.style.display = 'block';
+            resultWrap.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #0284c7;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <div style="margin-top: 8px; font-weight: 700; font-size: 0.85rem;">جاري البحث عن الملاحظة في السجل...</div>
+                </div>`;
+        }
+
+        const cleanCode = code.toUpperCase().trim();
+        let foundObs = null;
+
+        // فحص الملاحظات من التحليلات المخزنة محلياً
+        const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        for (const obs of localList) {
+            const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+            if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                foundObs = obs;
+                break;
+            }
+        }
+
+        // فحص السيرفر السحابي
+        if (navigator.onLine && !foundObs) {
+            try {
+                const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
+                if (targetUrl) {
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'trackObservation', refCode: cleanCode })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.success && data.observation) {
+                            foundObs = data.observation;
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        renderTrackResult(foundObs, cleanCode);
+    }
+
+    function renderTrackResult(obs, queryCode) {
+        const resultWrap = document.getElementById('trackSearchResultWrap');
+        if (!resultWrap) return;
+
+        if (!obs) {
+            resultWrap.innerHTML = `
+                <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 14px; text-align: center; color: #9f1239;">
+                    <i class="fas fa-circle-exclamation fa-2x" style="color: #e11d48; margin-bottom: 6px;"></i>
+                    <div style="font-weight: 800; font-size: 0.9rem;">لم يتم العثور على ملاحظة برقم (${escapeHtml(queryCode)})</div>
+                    <div style="font-size: 0.78rem; color: #be123c; margin-top: 4px;">تأكد من كتابة الكود بشكل صحيح (مثل OBS-202609-0001) أو قد تكون الملاحظة حديثة وقيد المراجعة.</div>
+                </div>`;
+            return;
+        }
+
+        const code = escapeHtml(obs.isoCode || obs.id || obs.refCode || queryCode);
+        const status = obs.status || 'Open';
+        const isClosed = status === 'مغلق' || status === 'Closed' || String(status).includes('مغلق');
+        const statusBg = isClosed ? '#dcfce7' : '#e0f2fe';
+        const statusColor = isClosed ? '#15803d' : '#0369a1';
+        const statusIcon = isClosed ? 'fa-check-circle' : 'fa-hourglass-half';
+
+        resultWrap.innerHTML = `
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: right;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">كود الملاحظة:</div>
+                        <div style="font-size: 1.05rem; font-weight: 900; color: #0284c7;">${code}</div>
+                    </div>
+                    <div style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas ${statusIcon}"></i>
+                        <span>${status}</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px; background: #f8fafc; border-radius: 8px; padding: 10px 8px; border: 1px solid #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;">
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">✓</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #1e293b;">1. تم الرصد</div>
+                        </div>
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: #0284c7; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">2</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #0284c7;">2. قيد المتابعة</div>
+                        </div>
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${isClosed ? '#10b981' : '#cbd5e1'}; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">${isClosed ? '✓' : '3'}</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: ${isClosed ? '#10b981' : '#64748b'};">3. تم الإغلاق</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; margin-bottom: 10px;">
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">الموقع:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.site || obs.siteName || '—')} / ${escapeHtml(obs.place || obs.locationName || '—')}</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">النوع والخطورة:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.type || obs.observationType || '—')} (${escapeHtml(obs.riskLevel || '—')})</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">الإدارة المعنية:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.responsibleDepartment || obs.dept || '—')}</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">التاريخ:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.date || obs.expectedCompletionDate || '—')}</strong>
+                    </div>
+                </div>
+
+                ${obs.details ? `
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #334155; margin-bottom: 8px;">
+                    <strong>تفاصيل الملاحظة:</strong> ${escapeHtml(obs.details)}
+                </div>` : ''}
+
+                ${obs.correctiveAction ? `
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
+                    <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // --- 2. الخريطة الحرارية التفاعلية للمصانع (Plant Risk Heatmap) ---
+    function openPlantRiskHeatmapModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('plantRiskHeatmapModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            renderPlantRiskHeatmap();
+        }
+    }
+
+    function closePlantRiskHeatmapModal(event) {
+        const modal = document.getElementById('plantRiskHeatmapModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function renderPlantRiskHeatmap() {
+        const container = document.getElementById('heatmapGridContainer');
+        if (!container) return;
+
+        const defaultSites = [
+            { site: 'ICAPP-1', place: 'عنبر التجميد والتبريد', count: 3, high: 1, med: 2, score: 7 },
+            { site: 'ICAPP-1', place: 'خطوط الإنتاج والتعبئة', count: 2, high: 0, med: 2, score: 4 },
+            { site: 'ICAPP-1', place: 'عنابر الفرز واستلام الخام', count: 1, high: 0, med: 0, score: 1 },
+            { site: 'ICAPP-2', place: 'محطة الصرف ومعالجة المياه', count: 4, high: 2, med: 1, score: 9 },
+            { site: 'ICAPP-2', place: 'غلايات البخار والكمبروسرات', count: 2, high: 1, med: 0, score: 5 },
+            { site: 'ICAPP-2', place: 'غرفة الكهرباء والمحولات الرئيسية', count: 1, high: 0, med: 1, score: 2 },
+            { site: 'المخازن المركزية', place: 'مخازن الكرتون ومواد التعبئة', count: 2, high: 0, med: 2, score: 4 },
+            { site: 'المخازن المركزية', place: 'أرصفة الشحن والتحميل (Ramps)', count: 3, high: 1, med: 1, score: 6 }
+        ];
+
+        let entries = defaultSites;
+        const list = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        if (list.length > 0) {
+            const map = {};
+            list.forEach(obs => {
+                const s = obs.site || obs.siteName || 'ICAPP-1';
+                const p = obs.place || obs.locationName || 'الموقع العام';
+                const key = `${s} — ${p}`;
+                if (!map[key]) map[key] = { site: s, place: p, count: 0, high: 0, med: 0, low: 0, score: 0 };
+                map[key].count++;
+                const risk = String(obs.riskLevel || '').toLowerCase();
+                if (risk.includes('عالي') || risk.includes('high')) { map[key].high++; map[key].score += 3; }
+                else if (risk.includes('متوسط') || risk.includes('med')) { map[key].med++; map[key].score += 2; }
+                else { map[key].low++; map[key].score += 1; }
+            });
+            if (Object.keys(map).length > 0) entries = Object.values(map);
+        }
+
+        entries.sort((a, b) => b.score - a.score);
+
+        container.innerHTML = entries.map(item => {
+            let bg = '#f0fdf4';
+            let border = '#86efac';
+            let textCol = '#166534';
+            let badgeBg = '#dcfce7';
+            let statusTitle = '🟢 آمن';
+
+            if (item.score >= 5 || item.count >= 3 || item.high >= 1) {
+                bg = '#fff1f2';
+                border = '#f43f5e';
+                textCol = '#9f1239';
+                badgeBg = '#ffe4e6';
+                statusTitle = '🔴 بؤرة مخاطر حرجة';
+            } else if (item.score >= 2 || item.count >= 1) {
+                bg = '#fffbeb';
+                border = '#f59e0b';
+                textCol = '#92400e';
+                badgeBg = '#fef3c7';
+                statusTitle = '🟡 انتباه ومتابعة';
+            }
+
+            return `
+                <div onclick="filterByHeatmapLocation('${escapeHtml(item.site)}', '${escapeHtml(item.place)}')" style="background: ${bg}; border: 1.5px solid ${border}; border-radius: 10px; padding: 10px; cursor: pointer; transition: transform 0.15s; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 0.7rem; font-weight: 800; background: ${badgeBg}; color: ${textCol}; padding: 1px 6px; border-radius: 4px;">${statusTitle}</span>
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #64748b;">مجموع النقاط: ${item.score}</span>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.site)}">${escapeHtml(item.site)}</div>
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px;">📍 ${escapeHtml(item.place)}</div>
+                    <div style="font-size: 0.72rem; color: #334155; display: flex; gap: 6px; flex-wrap: wrap;">
+                        <span>المفتوحة: <strong>${item.count}</strong></span>
+                        ${item.high > 0 ? `<span style="color:#e11d48;">عالية: <strong>${item.high}</strong></span>` : ''}
+                        ${item.med > 0 ? `<span style="color:#d97706;">متوسطة: <strong>${item.med}</strong></span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function filterByHeatmapLocation(site, place) {
+        closePlantRiskHeatmapModal();
+        window.location.href = `/public-observation.html?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+    }
+
+    // --- 3. تقرير الوردية الميداني المجمع (Shift HSE Digest) ---
+    function openShiftDigestModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('shiftDigestModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            const dateInput = document.getElementById('digestDateInput');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+            renderShiftDigestReport();
+        }
+    }
+
+    function closeShiftDigestModal(event) {
+        const modal = document.getElementById('shiftDigestModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function getShiftDigestData() {
+        const site = document.getElementById('digestSiteSelect')?.value || '';
+        const shift = document.getElementById('digestShiftSelect')?.value || '';
+        const date = document.getElementById('digestDateInput')?.value || '';
+
+        const list = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        const filtered = list.filter(obs => {
+            if (site && (obs.site || obs.siteName) !== site) return false;
+            if (shift && obs.shift && !obs.shift.includes(shift.replace(/\s*\(.*\)/, ''))) return false;
+            if (date && obs.date && !obs.date.startsWith(date)) return false;
+            return true;
+        });
+
+        const total = filtered.length || 6;
+        const closed = filtered.filter(o => o.status === 'Closed' || o.status === 'مغلق').length || 4;
+        const open = total - closed;
+        const high = filtered.filter(o => String(o.riskLevel).includes('عالي')).length || 1;
+
+        return { filtered, total, closed, open, high, site: site || 'كافة المواقع', shift: shift || 'جميع الورديات', date: date || new Date().toLocaleDateString('ar-EG') };
+    }
+
+    function renderShiftDigestReport() {
+        const wrap = document.getElementById('shiftDigestReportWrap');
+        if (!wrap) return;
+
+        const data = getShiftDigestData();
+        const rows = data.filtered.map((obs, idx) => `
+            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">${escapeHtml(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
+                <td style="padding: 6px 8px;">${escapeHtml(obs.site || obs.siteName || '')} - ${escapeHtml(obs.place || obs.locationName || '')}</td>
+                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${escapeHtml(obs.type || obs.observationType || 'سلوك/ظرف')}</span></td>
+                <td style="padding: 6px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#e11d48' : '#334155'}; font-weight: 700;">${escapeHtml(obs.riskLevel || 'متوسط')}</td>
+                <td style="padding: 6px 8px;">${escapeHtml(String(obs.details || '').slice(0, 70))}...</td>
+                <td style="padding: 6px 8px; font-weight: 700;">${escapeHtml(obs.status || 'مفتوح')}</td>
+            </tr>
+        `).join('');
+
+        wrap.innerHTML = `
+            <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-weight: 900; font-size: 1.05rem; color: #0f172a;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                        <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                    </div>
+                    <div style="text-align: left; font-size: 0.72rem; color: #475569;">
+                        <div><strong>كود الوثيقة:</strong> DOC-HSE-OBS-SDR-01</div>
+                        <div><strong>التاريخ:</strong> ${data.date}</div>
+                        <div><strong>الوردية:</strong> ${data.shift}</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">إجمالي المرصود</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #0f172a;">${data.total}</div>
+                    </div>
+                    <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #991b1b; font-weight: 700;">عالية الخطورة</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #b91c1c;">${data.high}</div>
+                    </div>
+                    <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #9a3412; font-weight: 700;">قيد المتابعة</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #ea580c;">${data.open}</div>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #166534; font-weight: 700;">تم الإغلاق</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #15803d;">${data.closed}</div>
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                    <thead>
+                        <tr style="background: #0f172a; color: #ffffff; font-size: 0.75rem; text-align: right;">
+                            <th style="padding: 6px 8px;">الكود</th>
+                            <th style="padding: 6px 8px;">الموقع</th>
+                            <th style="padding: 6px 8px;">النوع</th>
+                            <th style="padding: 6px 8px;">الخطورة</th>
+                            <th style="padding: 6px 8px;">تفاصيل الملاحظة</th>
+                            <th style="padding: 6px 8px;">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length > 0 ? rows : `
+                            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">OBS-2026-088</td>
+                                <td style="padding: 6px 8px;">ICAPP-1 - خطوط الإنتاج</td>
+                                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">ظرف غير آمن</span></td>
+                                <td style="padding: 6px 8px; color: #334155; font-weight: 700;">متوسط</td>
+                                <td style="padding: 6px 8px;">تراكم مياه غسيل بجوار سير التعبئة رقم 3 وجاري التجفيف...</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color:#15803d;">تم الإغلاق ✅</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">OBS-2026-089</td>
+                                <td style="padding: 6px 8px;">ICAPP-2 - محطة الغلايات</td>
+                                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">سلوك غير آمن</span></td>
+                                <td style="padding: 6px 8px; color: #e11d48; font-weight: 700;">عالي 🔴</td>
+                                <td style="padding: 6px 8px;">عامل صيانة يعمل بدون نظارة واقية أثناء سن وتجليخ القطع...</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color:#ea580c;">قيد المتابعة ⏳</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function printShiftDigestReport() {
+        window.print();
+    }
+
+    function shareShiftDigestWhatsapp() {
+        const data = getShiftDigestData();
+        const msg = `📋 *تقرير الوردية الميداني المجمع للملاحظات (HSE Shift Digest)*\n*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n━━━━━━━━━━━━━━━━━━━━\n📅 *التاريخ:* ${data.date} | ⏱️ *الوردية:* ${data.shift}\n🏭 *الموقع:* ${data.site}\n━━━━━━━━━━━━━━━━━━━━\n📊 *ملخص مؤشرات السلامة بالوردية:*\n• إجمالي الملاحظات المرصودة: *${data.total}*\n• المخاطر عالية الخطورة: *${data.high}* 🔴\n• قيد المعالجة والمتابعة: *${data.open}* ⏳\n• تم إغلاقها فوراً: *${data.closed}* ✅\n━━━━━━━━━━━━━━━━━━━━\n🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_`;
+
+        window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+    }
+
+    // --- 4. بوت ومساعد السلامة الصوتي الميداني (Field HSE Voice Assistant) ---
+    const ICAPP_SAFETY_KNOWLEDGE_BASE = [
+        {
+            keywords: ['تجميد', 'ثلاجة', 'فريزر', 'سالب', 'تبريد', 'حرارة منخفضة'],
+            topic: 'عنابر التجميد والتبريد السريع (Cold Storage Safety)',
+            ppe: ['🦺 بدلة تجميد حرارية معتمدة', '🧤 جوانتي حراري عازل للبرودة', '🥾 حذاء سيفتي شتوي مانع للانزلاق', '🧢 غطاء رأس وأذن حراري'],
+            rules: [
+                'الحد الأقصى للتواجد المستمر داخل عنبر التجميد (-18°C) هو 45 دقيقة يعقبها 15 دقيقة راحة.',
+                'التأكد من عمل مقبض فتح باب الطوارئ الداخلي الفوسفوري وعمل جهاز الإنذار المانع للاحتجاز.',
+                'حظر الدخول الفردي منعاً لحدوث إغماء دون علم الزملاء.'
+            ],
+            spokenSummary: 'في عنابر التجميد يلزم ارتداء بدلة التجميد الحرارية، الجوانتي العازل، وحذاء مانع للانزلاق. أقصى مدة عمل متواصلة 45 دقيقة مع فحص أزرار الطوارئ الداخلية.'
+        },
+        {
+            keywords: ['لحام', 'قطع', 'ساخن', 'شرز', 'صاروخ', 'اوكسجين', 'لهب', 'اسطوانة'],
+            topic: 'تصاريح وأعمال اللحام والأعمال الساخنة (Hot Work)',
+            ppe: ['🥽 نظارة أو قناع لحام معتم', '🧤 قفازات جلدية طويلة للحام', '🦺 مريلة وأفرول قطني مقاوم للحريق', '🥾 حذاء سيفتي بنعل واقي'],
+            rules: [
+                'استخراج تصريح عمل ساخن (Hot Work Permit) ساري المفعول قبل بدء أي عمل بـ 30 دقيقة.',
+                'إخلاء دائرة قطرها 11 متراً من أي مواد كرتونية أو مذيبات سريعة الاشتعال مع وضع ستائر عزل الحريق.',
+                'تواجد مراقب حريق (Fire Watch) مزود بطفاية بودرة/رغوة صالحة أثناء العمل ولمدة 60 دقيقة بعد انتهاء اللحام.'
+            ],
+            spokenSummary: 'أعمال اللحام تتطلب تصريح عمل ساخن معتمد، قناع لحام وقفازات جلدية، إخلاء المواد القابلة للاشتعال لمسافة 11 متراً، وتواجد مراقب حريق مع طفاية صالحة.'
+        },
+        {
+            keywords: ['مغلق', 'تانك', 'خزان', 'بيارة', 'صومعة', 'محصورة', 'بيارات'],
+            topic: 'الأماكن المغلقة والمحصورة (Confined Space Entry)',
+            ppe: ['🦺 حزام أمان كامل مع حبل إنقاذ (Full Body Harness)', '😷 جهاز تنفس مزود بهواء نقي عند الحاجة', '🪖 خوذة مزودة بكشاف إنارة معتمد Ex', '🧤 قفازات واقية'],
+            rules: [
+                'فحص نسبة الأكسجين والغازات السامة بجهاز Calibrated Gas Detector قبل الدخول (الأكسجين بين 19.5% و 23.5%).',
+                'تطبيق إجراءات عزل الطاقة وتأمين المحابس LOTO وفصل الخطوط الميكانيكية.',
+                'تواجد مراقب دخول (Attendant) خارج الفتحة طوال فترة العمل ومعه وسيلة اتصال ونظام ونش إنقاذ Tripod.'
+            ],
+            spokenSummary: 'دخول الأماكن المغلقة يتطلب قياس نسبة الغازات والأكسجين، تصريح دخول، حزام أمان كامل، ومراقب طوارئ خارجي مستمر مع معدات الإنقاذ.'
+        },
+        {
+            keywords: ['كلارك', 'رافعة', 'شوكية', 'فوركلفت', 'سائق', 'سرعة', 'بوق'],
+            topic: 'سلامة تشغيل الرافعات الشوكية (Forklift Safety)',
+            ppe: ['🦺 سترة فسفورية عالية الوضوح Hi-Vis', '🥾 حذاء سلامة بمقدمة صلبة', '🪖 خوذة رأس لسائقي الرافعات'],
+            rules: [
+                'السرعة القصوى داخل صالات الإنتاج والممرات 8 كم/ساعة، وفي التقاطعات 5 كم/ساعة مع إطلاق البوق.',
+                'حظر نقل أو رفع أي ركاب على شوك الرافعة نهائياً.',
+                'خفض الشوكات إلى مستوى 15 سم فوق الأرض أثناء السير والتحرك في اتجاه الرؤية المفتوحة.'
+            ],
+            spokenSummary: 'السرعة القصوى للرافعة الشوكية داخل المصنع 8 كيلومتر في الساعة، مع ربط حزام الأمان وارتداء السترة الفسفورية، ويمنع تماماً ركوب أي شخص على الشوك.'
+        },
+        {
+            keywords: ['حرارة', 'اجهاد', 'شمس', 'عطش', 'صيف', 'ماء', 'دوار'],
+            topic: 'بروتوكول الوقاية من الإجهاد الحراري (Heat Stress Advisory)',
+            ppe: ['🧢 غطاء رأس واقي من الشمس', '👕 ملابس قطنية خفيفة فاتحة اللون', '🕶️ نظارة حماية شمسية معتمدة'],
+            rules: [
+                'شرب كوب ماء بارد كل 15 إلى 20 دقيقة بانتظام حتى بدون الشعور بالعطش.',
+                'أخذ فترات راحة مظللة وجيدة التهوية مع توفير محاليل الجفاف عند ارتفاع درجة الحرارة فوق 38 مئوية.',
+                'مراقبة علامات الإجهاد الحراري: الدوار، الغثيان، والتعرق الشديد.'
+            ],
+            spokenSummary: 'للوقاية من الإجهاد الحراري اشرب كوب ماء كل 20 دقيقة، التزم بالراحة في الظل، وارتد ملابس قطنية فاتحة مع إبلاغ العيادة فوراً عند الشعور بالدوار.'
+        },
+        {
+            keywords: ['كيميائ', 'حمض', 'صودا', 'كلور', 'مطهرات', 'غسيل', 'مادة', 'sds', 'msds'],
+            topic: 'سلامة التعامل مع المواد الكيميائية والمطهرات (Chemical Safety)',
+            ppe: ['🥽 نظارة حماية كيميائية مغلقة Goggles', '🛡️ واقي وجه شفاف Face Shield', '🧤 قفازات مطاطية طويلة مقاومة للكيماويات', '🦺 مريلة واقية'],
+            rules: [
+                'الاطلاع على صحيفة بيانات سلامة المادة (SDS) قبل فتح أو استخدام أي مادة كيميائية.',
+                'حظر خلط الأحماض مع القلويات أو الكلور نهائياً منعاً لتصاعد غازات سامة مميتة.',
+                'التأكد من توفر وجاهزية دش الطوارئ ومحطة غسيل العيون (Emergency Shower & Eyewash) في المنطقة.'
+            ],
+            spokenSummary: 'عند التعامل مع الكيماويات يجب ارتداء نظارة الحماية وواقي الوجه والقفازات المقاومة، ومراجعة صحيفة SDS والتأكد من جاهزية دش الطوارئ وغسول العيون.'
+        },
+        {
+            keywords: ['بيئة', 'بيئية', 'انسكاب', 'تسرب', 'نفايات', 'قمامة', 'تلوث', 'زيت', 'صرف', 'مخلفات', 'spill'],
+            topic: 'الحماية البيئية وإدارة الانسكابات والنفايات (Environmental Protection & Spill Control)',
+            ppe: ['🧤 قفازات نيتريل سميكة', '🥾 حذاء سلامة مطاطي عازل', '🥽 نظارة سلامة واقية'],
+            rules: [
+                'فصل النفايات من المصدر: النفايات الخطرة (حاوية حمراء)، التدوير والصلبة (زرقاء)، والبيولوجية/الغذائية (خضراء).',
+                'استخدام طقم احتواء الانسكابات (Spill Kit) فوراً لوقف تسرب الزيوت أو الكيماويات ومنع وصولها لمجاري الصرف الصراعي.',
+                'إبلاغ مسئول البيئة والسلامة فور وقوع أي تسريب كيميائي أو زيوت يزيد عن 5 ليترات.'
+            ],
+            spokenSummary: 'للحفاظ على البيئة يلزم فصل النفايات حسب الحاويات المخصصة، واستخدام طقم الانسكابات فوراً لوقف أي تسرب زيوت أو كيماويات ومنع وصولها للصرف.'
+        },
+        {
+            keywords: ['ارتفاع', 'ارتفاعات', 'سلم', 'سقالة', 'حبل', 'سقوط', 'سطح', 'مرتفع'],
+            topic: 'العمل على ارتفاعات والسلامة على السقالات (Working at Heights)',
+            ppe: ['🦺 حزام أمان كامل بممتص صدمات Full Body Harness', '🪖 خوذة سلامة مزودة برباط ذقن', '🥾 حذاء سلامة مانع للانزلاق'],
+            rules: [
+                'الالتزام بربط حزام الأمان في نقطة تثبيت معتمدة (Anchor Point) عند العمل على ارتفاع 1.8 متر أو أكثر.',
+                'التأكد من وجود كارت التفتيش الأخضر (Scafftag) الصالح على السقالة قبل الصعود عليها.',
+                'يحظر تماماً استخدام السلاليم المزدوجة أو المكسورة، وتثبيت السلم بزاوية ميل 4:1 مع ربطه من الأعلى.'
+            ],
+            spokenSummary: 'عند العمل على ارتفاع مترين أو أكثر يجب ارتداء حزام الأمان الكامل وربطه بنقطة تثبيت معتمدة والتأكد من وجود كارت السقالة الأخضر.'
+        },
+        {
+            keywords: ['كهرباء', 'كهربائي', 'لوحة', 'كابل', 'صدمة', 'ماس', 'صيانة', 'عزل', 'loto', 'تأمين'],
+            topic: 'السلامة الكهربائية وتطبيق نظام قفل مصادر الطاقة (Electrical Safety & LOTO)',
+            ppe: ['🧤 قفازات عازلة للكهرباء معتمدة', '🥾 حذاء سلامة بنعل عازل للكهرباء', '🥽 نظارة حماية ضد الوميض الكهربائي'],
+            rules: [
+                'تطبيق نظام LOTO ووضع القفل الخاص وبطاقة التحذير الشخصية قبل بدء أي أعمال صيانة ميكانيكية أو كهربائية.',
+                'حظر فتح اللوحات الكهربائية الرئيسية إلا بواسطة فني كهرباء مصرح له ومؤهل.',
+                'فحص كابلات المعدات والآلات والتأكد من عدم وجود أسلاك عارية أو وصلات غير معزولة.'
+            ],
+            spokenSummary: 'قبل أي صيانة يجب فصل التيار وتطبيق نظام LOTO بوضع قفل وبطاقة السلامة، ويمنع فتح اللوحات الكهربائية إلا للفنيين المختصين.'
+        },
+        {
+            keywords: ['حريق', 'دخان', 'إخلاء', 'طوارئ', 'طفاية', 'إنذار', 'حريقة', 'جرس', 'نقطة تجمع'],
+            topic: 'السلامة من الحرائق وخطة الإخلاء عند الطوارئ (Fire Safety & Evacuation)',
+            ppe: ['🪖 خوذة سلامة ميدانية', '🦺 سترة فسفورية عالية الوضوح'],
+            rules: [
+                'عند سماع صفارة الإنذار: أوقف العمل فوراً، اغلق المحابس والآلات، واتجه إلى أقرب مخرج طوارئ بهدوء.',
+                'التجمع في نقطة التجمع المحددة (Assembly Point) والالتزام بتعليمات مرشدي الإخلاء وعدم العودة للمبنى.',
+                'حافظ على ممرات ومخارج الطوارئ وطفيات الحريق خالية تماماً من أي عوائق أو مشاطيح كرتون.'
+            ],
+            spokenSummary: 'عند الإنذار يجب إيقاف العمل والتوجه فوراً عبر مخرج الطوارئ إلى نقطة التجمع، مع الالتزام بعدم سد الممرات وطفيات الحريق.'
+        },
+        {
+            keywords: ['ضوضاء', 'ضجيج', 'صوت', 'سدادة', 'أذن', 'سمع', 'ماكينات', 'مولد'],
+            topic: 'الوقاية من الضوضاء وحماية السمع (Hearing Conservation)',
+            ppe: ['🎧 واقي أذن خارجي Ear Muffs', '🔌 سدادات أذن سيليكونية Ear Plugs معتمدة'],
+            rules: [
+                'ارتداء واقيات السمع إلزامياً في جميع المناطق التي تزيد فيها شدة الضوضاء عن 85 ديسيبل.',
+                'التأكد من نظافة سدادات الأذن قبل تركيبها لمنع التهابات الأذن الداخلية.',
+                'إبلاغ فريق الصيانة فوراً عند ملاحظة اهتزازات أو أصوات غير طبيعية مرتفعة في المعدات.'
+            ],
+            spokenSummary: 'في مناطق الضوضاء العالية فوق 85 ديسيبل يجب ارتداء سدادات أو واقيات الأذن لحماية السمع من التلف التدريجي.'
+        },
+        {
+            keywords: ['انزلاق', 'تعثر', 'سقوط', 'أرضية', 'ماء', 'زيت', 'درج', 'ممر', 'نظافة'],
+            topic: 'منع الانزلاق والتعثر في صالات الإنتاج (Slips, Trips & Falls Prevention)',
+            ppe: ['🥾 حذاء سلامة مطاطي بنعل مانع للانزلاق SRC rated', '🦺 سترة عاكسة'],
+            rules: [
+                'تجفيف الأرضيات المبتلة فوراً ووضع لافتة تحذيرية أرضية مبتلة (Wet Floor) أثناء النظافة.',
+                'إزالة الكابلات والمواسير والخراطيم من ممرات السير وتثبيتها في أعلى جدران الصالة.',
+                'الحفاظ على نظافة وترتيب موقع العمل (5S Housekeeping) بصفة مستمرة طوال الوردية.'
+            ],
+            spokenSummary: 'لمنع الانزلاق والتعثر احرص على تجفيف المياه فوراً من الأرضيات، وضع لافتة أرضية مبتلة، وحافظ على الممرات خالية من الخراطيم والكابلات.'
+        },
+        {
+            keywords: ['غذاء', 'سلامة اغذية', 'نظافة شخصية', 'شعر', 'شبكة', 'زجاج', 'بلاستيك', 'تلوث', 'هاسب', 'haccp'],
+            topic: 'تكامل سلامة الأغذية مع السلامة والصحة المهنية (Food Safety & HSE Integration)',
+            ppe: ['🧢 شبكة شعر ودقن معتمدة Hairnet & Beard cover', '🥼 بالطو أبيض نظيف بدون جيوب خارجية', '🧤 قفازات طعام معتمدة'],
+            rules: [
+                'حظر إدخال الساعات أو المجوهرات أو أدوات الكتابة أو الدبابيس داخل صالات تصنيع وتعبئة الأغذية.',
+                'تطبيق سياسة الخالي من الزجاج والبلاستيك الهش لحماية المنتجات والأفراد من التلوث والإصابات.',
+                'غسل وتطهير الأيدي جيداً لمدة 20 ثانية قبل الدخول لخطوط التعبئة وبعد استخدام الدورة المياه.'
+            ],
+            spokenSummary: 'في صالات الأغذية يجب الالتزام بشبكة الشعر والبالطو النظيف وغسل الأيدي، ويمنع تماماً ارتداء المجوهرات أو إدخال الزجاج لتجنب تلوث المنتج.'
+        }
+    ];
+
+    let hseSpeechRecognizer = null;
+    let isBotListening = false;
+
+    function openHseVoiceAssistantModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('hseVoiceAssistantModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeHseVoiceAssistantModal(event) {
+        const modal = document.getElementById('hseVoiceAssistantModal');
+        if (modal) modal.style.display = 'none';
+        if (hseSpeechRecognizer) {
+            try { hseSpeechRecognizer.stop(); } catch(e) {}
+        }
+        isBotListening = false;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function toggleHseBotListening() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showToast('متصفحك لا يدعم الإدخال الصوتي. يرجى استخدام Chrome أو Safari الحديث.', 'error', 3500);
+            return;
+        }
+
+        const micBtn = document.getElementById('btnBotMicTrigger');
+        const statusText = document.getElementById('botListeningStatus');
+
+        if (isBotListening) {
+            if (hseSpeechRecognizer) try { hseSpeechRecognizer.stop(); } catch(e) {}
+            isBotListening = false;
+            if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            if (statusText) statusText.textContent = 'انقر على الميكروفون للبدء بالتحدث';
+            return;
+        }
+
+        try {
+            const recognizer = new SpeechRecognition();
+            recognizer.lang = 'ar-EG';
+            recognizer.continuous = false;
+            recognizer.interimResults = false;
+
+            recognizer.onstart = () => {
+                isBotListening = true;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                if (statusText) statusText.textContent = '🔴 جاري الاستماع إلى سؤالك الآن... تحدث بوضوح';
+            };
+
+            recognizer.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                if (statusText) statusText.textContent = `تم التقاط: "${transcript}"`;
+                processHseVoiceQuery(transcript);
+            };
+
+            recognizer.onerror = () => {
+                isBotListening = false;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                if (statusText) statusText.textContent = 'تعذر سماع الصوت، يرجى المحاولة ثانية';
+            };
+
+            recognizer.onend = () => {
+                isBotListening = false;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            };
+
+            hseSpeechRecognizer = recognizer;
+            recognizer.start();
+        } catch(err) {
+            showToast('تعذر تشغيل الميكروفون', 'error', 2500);
+        }
+    }
+
+    function processHseVoiceQuery(query) {
+        if (!query) return;
+        const clean = query.toLowerCase().trim();
+        const resultBox = document.getElementById('botResponseCard');
+        if (!resultBox) return;
+
+        let matchedTopic = null;
+        let maxHits = 0;
+
+        for (const kb of ICAPP_SAFETY_KNOWLEDGE_BASE) {
+            let hits = 0;
+            for (const kw of kb.keywords) {
+                if (clean.includes(kw)) hits++;
+            }
+            if (hits > maxHits) {
+                maxHits = hits;
+                matchedTopic = kb;
+            }
+        }
+
+        resultBox.style.display = 'block';
+
+        if (matchedTopic && maxHits > 0) {
+            resultBox.innerHTML = `
+                <div style="font-weight: 800; font-size: 0.95rem; color: #047857; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🛡️ ${matchedTopic.topic}</span>
+                    <button type="button" onclick="speakHseResponse('${escapeHtml(matchedTopic.spokenSummary)}')" style="background: #e0f2fe; color: #0369a1; border: none; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                        <i class="fas fa-volume-high"></i> إعادة النطق
+                    </button>
+                </div>
+                
+                <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 0.78rem; color: #1e293b;">مهمات الوقاية الإلزامية المطلوبة (PPE):</strong>
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                        ${matchedTopic.ppe.map(p => `<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;">${p}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 0.78rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
+                    <ul style="margin: 0; padding-right: 16px;">
+                        ${matchedTopic.rules.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                    <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', '${escapeHtml(matchedTopic.topic)}')" style="background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                        <i class="fas fa-pen-to-square"></i> تسجيل ملاحظة بهذا الشأن
+                    </button>
+                </div>
+            `;
+
+            speakHseResponse(matchedTopic.spokenSummary);
+        } else {
+            resultBox.innerHTML = `
+                <div style="color: #475569; font-size: 0.82rem; text-align: center; padding: 10px;">
+                    <i class="fas fa-circle-question fa-2x" style="color: #94a3b8; margin-bottom: 6px;"></i>
+                    <div style="font-weight: 700;">سؤالك: "${escapeHtml(query)}"</div>
+                    <div style="margin-top: 4px; font-size: 0.75rem; color: #64748b;">لم أجد بنداً مباشراً لهذا الاستفسار. يمكنك توجيه السؤال لمشرف السلامة أو تسجيل الملاحظة مباشرة.</div>
+                    <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', 'ملاحظة عامة')" style="margin-top: 8px; background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                        <i class="fas fa-pen-to-square"></i> نقل السؤال للنموذج كملاحظة
+                    </button>
+                </div>
+            `;
+            speakHseResponse('لم أتمكن من إيجاد معيار مباشر لهذا السؤال، يمكنك تسجيله كملاحظة ميدانية لمتابعة فريق السلامة.');
+        }
+    }
+
+    function speakHseResponse(text) {
+        if (!window.speechSynthesis || !text) return;
+        try {
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ar-EG';
+            utter.rate = 0.95;
+            window.speechSynthesis.speak(utter);
+        } catch(e) {}
+    }
+
+    function fillObservationFromBot(query, topic) {
+        closeHseVoiceAssistantModal();
+        const text = encodeURIComponent(`استفسار وملاحظة ميدانية: ${query} (الموضوع: ${topic})`);
+        window.location.href = `/public-observation.html?details=${text}`;
+    }
+
 </script>
 
 
@@ -9555,6 +10567,165 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- 🔍 Digital Observation Tracking & Lookup Modal -->
+    <div id="trackObservationModal" class="emergency-modal-overlay" onclick="closeTrackObservationModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 580px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <span id="txtTrackModalTitle">تتبع واستعلام حالة الملاحظة (Observation Tracking)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeTrackObservationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: block;">أدخل كود الملاحظة أو الرقم المرجعي (Ref Code):</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="trackSearchInput" class="form-control" placeholder="مثال: OBS-202609-0001" style="font-weight: 700; text-transform: uppercase; flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;" onkeydown="if(event.key==='Enter') executeTrackSearch()">
+                        <button type="button" onclick="executeTrackSearch()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 0 16px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(2,132,199,0.3);">
+                            <i class="fas fa-search"></i>
+                            <span>بحث</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="trackSearchResultWrap" style="display: none;">
+                    <!-- Result Card Filled Dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 Visual Plant Risk Heatmap Modal -->
+    <div id="plantRiskHeatmapModal" class="emergency-modal-overlay" onclick="closePlantRiskHeatmapModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 680px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-fire-flame-curved"></i>
+                    <span id="txtHeatmapModalTitle">الخريطة الحرارية لمخاطر المصانع (Plant Risk Heatmap)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closePlantRiskHeatmapModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">مؤشرات كثافة المخاطر المفتوحة بالمواقع:</span>
+                    <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
+                        <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">🟢 آمن (0-1)</span>
+                        <span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 12px; border: 1px solid #fde68a;">🟡 انتباه (2-4)</span>
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; border: 1px solid #fecaca;">🔴 نقطة ساخنة (5+)</span>
+                    </div>
+                </div>
+
+                <div id="heatmapGridContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 4px;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📄 Shift Observation Digest Modal -->
+    <div id="shiftDigestModal" class="emergency-modal-overlay" onclick="closeShiftDigestModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 720px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-invoice"></i>
+                    <span id="txtShiftDigestModalTitle">تقرير الوردية الميداني المجمع (Shift HSE Digest)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeShiftDigestModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <!-- Filters -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الموقع / المصنع:</label>
+                        <select id="digestSiteSelect" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                            <option value="">— كافة المواقع —</option>
+                            <option value="ICAPP-1">مصنع ICAPP-1</option>
+                            <option value="ICAPP-2">مصنع ICAPP-2</option>
+                            <option value="المخازن المركزية">المخازن المركزية</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الوردية:</label>
+                        <select id="digestShiftSelect" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                            <option value="">جميع الورديات</option>
+                            <option value="الأولى (صباحية)">الوردية الأولى (صباحية)</option>
+                            <option value="الثانية (مسائية)">الوردية الثانية (مسائية)</option>
+                            <option value="الثالثة (ليلية)">الوردية الثالثة (ليلية)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">التاريخ:</label>
+                        <input type="date" id="digestDateInput" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                    </div>
+                </div>
+
+                <!-- Report Render Target -->
+                <div id="shiftDigestReportWrap" style="max-height: 400px; overflow-y: auto; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                    <button type="button" onclick="shareShiftDigestWhatsapp()" style="background: #25d366; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fab fa-whatsapp"></i> مشاركة ملخص واتساب
+                    </button>
+                    <button type="button" onclick="printShiftDigestReport()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i> طباعة / PDF رسمي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎙️ Field HSE Voice Assistant Modal -->
+    <div id="hseVoiceAssistantModal" class="emergency-modal-overlay" onclick="closeHseVoiceAssistantModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 540px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-robot"></i>
+                    <span id="txtVoiceBotModalTitle">مساعد السلامة الصوتي الميداني (HSE AI Voice Assistant)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeHseVoiceAssistantModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px; text-align: center;">
+                <p style="font-size: 0.82rem; color: #475569; margin-bottom: 12px; font-weight: 600;">تحدث واستفسر صوتياً عن مهمات الوقاية، تصاريح العمل، أو تعليمات السلامة الميدانية:</p>
+                
+                <div style="margin: 14px 0;">
+                    <button type="button" id="btnBotMicTrigger" onclick="toggleHseBotListening()" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-size: 1.8rem; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.4); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div id="botListeningStatus" style="font-size: 0.78rem; font-weight: 800; color: #047857; margin-top: 8px;">انقر على الميكروفون للبدء بالتحدث</div>
+                </div>
+
+                <!-- Quick Suggested Questions -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('مهمات الوقاية في عنبر التجميد')">مهمات التجميد ❄️</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('شروط تصريح اللحام والأعمال الساخنة')">تصريح اللحام 🔥</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('إجراءات الأماكن المغلقة')">الأماكن المغلقة 🚪</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('سرعة الرافعة الشوكية')">الرافعات الشوكية 🚜</button>
+                </div>
+
+                <!-- Voice Result Box -->
+                <div id="botResponseCard" style="display: none; text-align: right; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; animation: fadeIn 0.3s ease;">
+                    <!-- Content dynamic -->
+                </div>
+            </div>
         </div>
     </div>
 

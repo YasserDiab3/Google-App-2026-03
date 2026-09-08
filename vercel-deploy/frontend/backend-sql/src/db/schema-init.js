@@ -31,7 +31,7 @@ function initSchema(db = getDatabase()) {
         }
 
         // Create index on primary identifier and high-frequency query columns
-        const highFrequencyCols = ['id', 'userId', 'createdAt', 'date', 'status', 'riskLevel', 'observerName', 'siteName', 'permitId', 'entryDate'];
+        const highFrequencyCols = ['id', 'userId', 'createdAt', 'date', 'status', 'riskLevel', 'observerName', 'siteName', 'permitId', 'entryDate', 'responsibleDepartment'];
         for (const col of highFrequencyCols) {
             if (columns.includes(col)) {
                 try {
@@ -40,6 +40,12 @@ function initSchema(db = getDatabase()) {
             }
         }
     }
+
+    // إضافة فهارس فريدة تمنع تكرار المعرفات في جدول DailyObservations
+    try {
+        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "idx_DailyObservations_id_unique" ON "DailyObservations" ("id") WHERE "id" IS NOT NULL AND "id" != '';`);
+        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "idx_DailyObservations_iso_unique" ON "DailyObservations" ("isoCode") WHERE "isoCode" IS NOT NULL AND "isoCode" != '';`);
+    } catch (_) {}
 
     // دفع DDL (CREATE TABLE/INDEX) إلى Turso إن كان المحرك embedded replica
     try { if (db && typeof db.syncNow === 'function') db.syncNow(); } catch (_) {}

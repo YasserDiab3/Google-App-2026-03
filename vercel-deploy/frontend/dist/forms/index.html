@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>بوابة النماذج الميدانية | إدارة السلامة والصحة المهنية - ICAPP</title>
     
     <!-- PWA Settings -->
@@ -1721,6 +1721,473 @@
                 font-size: 0.78rem !important;
                 height: 38px !important;
             }
+
+            /* ⚡ رادار تصاريح العمل الميدانية المتطور (Live PTW Radar Pro Mobile) */
+            .live-visitors-modal {
+                padding: 0 !important;
+                align-items: stretch !important;
+            }
+            #livePtwModal .ptw-radar-dialog {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+            }
+            .ptw-radar-header {
+                padding: 8px 12px !important;
+                padding-top: calc(8px + env(safe-area-inset-top, 0px)) !important;
+                gap: 6px !important;
+            }
+            .ptw-radar-title {
+                font-size: 0.88rem !important;
+            }
+            .ptw-radar-subtitle {
+                font-size: 0.62rem !important;
+            }
+            .ptw-header-btn-label {
+                display: none !important;
+            }
+            .ptw-hbtn {
+                width: 32px !important;
+                height: 32px !important;
+                padding: 0 !important;
+                font-size: 0.82rem !important;
+            }
+            .ptw-period-strip {
+                padding: 5px 10px !important;
+                gap: 5px !important;
+            }
+            .ptw-period-chip {
+                padding: 3px 8px !important;
+                font-size: 0.7rem !important;
+            }
+            .ptw-status-strip {
+                padding: 5px 10px !important;
+                gap: 5px !important;
+            }
+            .ptw-status-pill {
+                padding: 3px 8px !important;
+                font-size: 0.7rem !important;
+            }
+            .ptw-kpi-bar {
+                padding: 6px 10px !important;
+                gap: 4px !important;
+            }
+            .ptw-kpi-chip {
+                padding: 4px 4px !important;
+                border-radius: 6px !important;
+            }
+            .ptw-kpi-chip-title {
+                font-size: 0.6rem !important;
+            }
+            .ptw-kpi-chip-num {
+                font-size: 1.05rem !important;
+            }
+            .ptw-risk-strip {
+                padding: 4px 10px !important;
+                gap: 4px !important;
+            }
+            .ptw-risk-item {
+                font-size: 0.62rem !important;
+                padding: 2px 4px !important;
+            }
+            .ptw-filter-row {
+                padding: 6px 10px !important;
+                gap: 6px !important;
+            }
+            .ptw-search-wrap {
+                min-width: 100% !important;
+                flex: 1 1 100% !important;
+            }
+            .ptw-search-inp {
+                height: 34px !important;
+                font-size: 0.78rem !important;
+            }
+            .ptw-select-filter {
+                font-size: 0.72rem !important;
+                height: 34px !important;
+                min-width: calc(50% - 3px) !important;
+                flex: 1 !important;
+            }
+            #livePtwCardsContainer {
+                padding: 8px 10px calc(14px + env(safe-area-inset-bottom, 0px)) !important;
+                gap: 8px !important;
+            }
+            .ptw-card-pro {
+                padding: 9px 10px !important;
+                border-radius: 10px !important;
+                gap: 5px !important;
+            }
+            .ptw-card-meta-grid {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 4px !important;
+            }
+            .form-card {
+                padding: 12px !important;
+                gap: 10px !important;
+            }
+            .form-card-desc {
+                white-space: normal !important;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+            .form-action-btn {
+                min-width: 44px;
+                min-height: 44px;
+            }
+        }
+
+        /* ⚡ PTW Radar Classes for Desktop & General */
+        .ptw-radar-dialog {
+            background: #f8fafc;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            width: 100%;
+            max-width: 900px;
+            max-height: 92vh;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .ptw-radar-header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #1e3a8a 100%);
+            color: #fff;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .ptw-pulse-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            flex-shrink: 0;
+            position: relative;
+        }
+        .ptw-pulse-dot {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 9px;
+            height: 9px;
+            background: #22c55e;
+            border: 2px solid #0f172a;
+            border-radius: 50%;
+            animation: ptwPulse 1.8s infinite;
+        }
+        @keyframes ptwPulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.2); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .ptw-hbtn {
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            border: none;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .ptw-hbtn-print {
+            background: #059669;
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+        }
+        .ptw-hbtn-refresh {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+        .ptw-hbtn-close {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            width: 32px;
+            padding: 0;
+            font-size: 0.9rem;
+        }
+        .ptw-period-strip {
+            background: #1e1b4b;
+            padding: 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            flex-shrink: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .ptw-period-strip::-webkit-scrollbar { display: none; }
+        .ptw-period-chip {
+            padding: 3px 10px;
+            border-radius: 14px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .ptw-period-chip.active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #60a5fa;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+            font-weight: 800;
+        }
+        .ptw-status-strip {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 6px 14px;
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .ptw-status-strip::-webkit-scrollbar { display: none; }
+        .ptw-status-pill {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.73rem;
+            font-weight: 700;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ptw-status-pill.active {
+            background: #1e3a8a;
+            color: #fff;
+            border-color: #1e3a8a;
+            font-weight: 800;
+            box-shadow: 0 2px 6px rgba(30, 58, 138, 0.25);
+        }
+        .ptw-kpi-bar {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 14px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .ptw-kpi-chip {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 6px 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .ptw-kpi-chip:hover {
+            transform: translateY(-1px);
+        }
+        .ptw-risk-strip {
+            background: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 5px 14px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .ptw-risk-item {
+            border-radius: 6px;
+            padding: 3px 6px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.68rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .ptw-filter-row {
+            padding: 8px 14px;
+            background: #fff;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .ptw-search-wrap {
+            flex: 2;
+            min-width: 180px;
+            position: relative;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .ptw-search-inp {
+            width: 100%;
+            height: 34px;
+            padding: 0 28px 0 10px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            box-sizing: border-box;
+            outline: none;
+            background: #f8fafc;
+        }
+        .ptw-search-inp:focus {
+            border-color: #3b82f6;
+            background: #fff;
+        }
+        .ptw-qr-btn {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            border: none;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .ptw-select-filter {
+            height: 34px;
+            padding: 0 8px;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1e293b;
+            background: #fff;
+            outline: none;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        /* 📇 PTW Card Pro Architecture */
+        .ptw-card-pro {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .ptw-card-pro:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border-color: #cbd5e1;
+        }
+        .ptw-card-pro.type-hot { border-right: 4px solid #ef4444; }
+        .ptw-card-pro.type-height { border-right: 4px solid #f59e0b; }
+        .ptw-card-pro.type-confined { border-right: 4px solid #8b5cf6; }
+        .ptw-card-pro.type-electrical { border-right: 4px solid #0284c7; }
+        .ptw-card-pro.type-cold { border-right: 4px solid #64748b; }
+        .ptw-card-pro.type-general { border-right: 4px solid #10b981; }
+
+        .ptw-card-head-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .ptw-badge-id {
+            font-weight: 900;
+            font-size: 0.86rem;
+            color: #1e3a8a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 2px 7px;
+            border-radius: 6px;
+        }
+        .ptw-badge-type {
+            font-size: 0.72rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .ptw-badge-site {
+            background: #0f172a;
+            color: #fbbf24;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+        .ptw-card-loc {
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            line-height: 1.3;
+        }
+        .ptw-card-desc-box {
+            font-size: 0.76rem;
+            color: #334155;
+            background: #f8fafc;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #f1f5f9;
+            line-height: 1.45;
+        }
+        .ptw-card-meta-grid {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            border-top: 1px dashed #e2e8f0;
+            padding-top: 7px;
+            font-size: 0.74rem;
+        }
         }
 
 
@@ -2307,6 +2774,219 @@
             transform: scale(1.03);
         }
 
+        /* 🧰 رف أدوات ومساعد الملاحظات والخدمات الذكية بالبوابة */
+        .obs-advanced-tools-shelf {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+            transition: all 0.25s ease;
+        }
+
+        [data-theme="dark"] .obs-advanced-tools-shelf {
+            background: linear-gradient(145deg, #152243 0%, #0e172e 100%);
+            border-color: #334155;
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+        }
+
+        .obs-tools-shelf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        [data-theme="dark"] .obs-tools-shelf-header {
+            border-bottom-color: #1e293b;
+        }
+
+        .obs-tools-shelf-title {
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        [data-theme="dark"] .obs-tools-shelf-title {
+            color: #93c5fd;
+        }
+
+        .obs-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .obs-tool-card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1.5px solid;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            white-space: nowrap;
+            user-select: none;
+            width: 100%;
+        }
+        .obs-tool-card-btn:active {
+            transform: scale(0.96);
+        }
+
+        .obs-btn-voice {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: #6ee7b7;
+        }
+        .obs-btn-voice:hover {
+            background: #d1fae5;
+            border-color: #34d399;
+        }
+
+        .obs-btn-heatmap {
+            background: #fff1f2;
+            color: #be123c;
+            border-color: #fca5a5;
+        }
+        .obs-btn-heatmap:hover {
+            background: #ffe4e6;
+            border-color: #f87171;
+        }
+
+        .obs-btn-digest {
+            background: #ffffff;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .obs-btn-digest:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .obs-btn-track {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #7dd3fc;
+        }
+        .obs-btn-track:hover {
+            background: #e0f2fe;
+            border-color: #38bdf8;
+        }
+
+        .suggestion-chip {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion-chip:hover {
+            background: #e2e8f0;
+            border-color: #94a3b8;
+        }
+
+        @keyframes fadeInModal {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* 🚨 Modal Overlays & Responsive Mobile Sheet Dialog Styling */
+        .emergency-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.78);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            z-index: 100000;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .emergency-modal-dialog {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+            overflow: hidden;
+            border: 1.5px solid #cbd5e1;
+            animation: popModal 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            margin: auto;
+        }
+
+        [data-theme="dark"] .emergency-modal-dialog {
+            background: #152243;
+            border-color: #334155;
+            color: #f8fafc;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes popModal {
+            from { transform: scale(0.94) translateY(10px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        @media (max-width: 640px) {
+            .obs-advanced-tools-shelf {
+                padding: 10px 10px 12px;
+                border-radius: 14px;
+                margin-bottom: 16px;
+            }
+            .obs-tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .obs-tool-card-btn {
+                padding: 9px 6px;
+                font-size: 0.74rem;
+                border-radius: 9px;
+                gap: 4px;
+            }
+
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important; /* Mobile Bottom-Sheet Presentation */
+            }
+
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                max-height: 90vh !important;
+                border-radius: 20px 20px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35) !important;
+                border-bottom: none !important;
+            }
+        }
+
 </style>
 </head>
 <body>
@@ -2345,6 +3025,10 @@
                     <button type="button" id="hubRefreshBtn" onclick="triggerHubManualRefresh()" title="تحديث البيانات فورياً من السحابة" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #2563eb; font-weight: 800; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                         <i class="fas fa-rotate" id="hubRefreshIcon"></i>
                         <span id="txtHubRefreshBtn">تحديث</span>
+                    </button>
+                    <button type="button" class="install-btn" id="pwaInstallBtn" style="display: none; padding: 4px 10px; font-size: 0.78rem;" title="تثبيت التطبيق على الجهاز">
+                        <i class="fas fa-download"></i>
+                        <span id="pwaInstallText">تثبيت</span>
                     </button>
                     <button type="button" id="themeToggleBtn" onclick="toggleHubTheme()" title="تبديل الثيم" style="padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; font-size: 0.8rem;">
                         <i class="fas fa-moon" id="themeIcon"></i>
@@ -2405,16 +3089,40 @@
             </div>
         </header>
 
-    <!-- Main Container -->
-    <!-- Hero Banner -->
-        <div class="hero-banner">
-            <div class="hero-title">
-                <i class="fas fa-shield-halved"></i>
-                <span>تسجيل ميداني فوري وموحد</span>
+        <!-- 🛠️ رف أدوات ومساعدات الملاحظات والخدمات الذكية (Smart HSE Tools Shelf) -->
+        <div class="obs-advanced-tools-shelf">
+            <div class="obs-tools-shelf-header">
+                <div class="obs-tools-shelf-title">
+                    <i class="fas fa-layer-group text-blue-600"></i>
+                    <span id="txtObsToolsTitle">أدوات ومساعدات الملاحظات:</span>
+                </div>
+                <span id="txtObsToolsSubtitle" style="font-size: 0.72rem; color: #64748b; font-weight: 700;">خدمات ذكية مساندة</span>
             </div>
-            <p class="hero-desc">
-                اختر النموذج المطلوب لبدء التسجيل المباشر . يعمل بكفاءة تامة .
-            </p>
+            <div class="obs-tools-grid">
+                <!-- زر مساعد السلامة الصوتي -->
+                <button type="button" class="obs-tool-card-btn obs-btn-voice" id="btnHseVoiceBot" onclick="openHseVoiceAssistantModal(event)" title="مساعد السلامة الصوتي الميداني / Voice Assistant">
+                    <i class="fas fa-microphone-lines"></i>
+                    <span id="txtVoiceBotBtn">مساعد السلامة</span>
+                </button>
+
+                <!-- زر خريطة المخاطر الحرارية -->
+                <button type="button" class="obs-tool-card-btn obs-btn-heatmap" id="btnPlantRiskHeatmap" onclick="openPlantRiskHeatmapModal(event)" title="الخريطة الحرارية لمخاطر المصانع / Plant Risk Heatmap">
+                    <i class="fas fa-fire-flame-curved"></i>
+                    <span id="txtHeatmapBtn">خريطة المخاطر</span>
+                </button>
+
+                <!-- زر تقرير الوردية -->
+                <button type="button" class="obs-tool-card-btn obs-btn-digest" id="btnShiftDigest" onclick="openShiftDigestModal(event)" title="تقرير الوردية الميداني المجمع / Shift Digest">
+                    <i class="fas fa-file-invoice"></i>
+                    <span id="txtShiftDigestBtn">تقرير الوردية</span>
+                </button>
+
+                <!-- زر تتبع الملاحظات -->
+                <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <span id="txtTrackBtn">تتبع ملاحظة</span>
+                </button>
+            </div>
         </div>
 
         <!-- شريط المتابعة الحية للزوار والمقاولين المتواجدين بالمصنع -->
@@ -2459,7 +3167,7 @@
                 <div class="kpi-micro-icon"><i class="fas fa-award"></i></div>
                 <div class="kpi-micro-body">
                     <div class="kpi-micro-label" id="txtKpiSafeHoursLabel">ساعات عمل آمنة (LTI-Free)</div>
-                    <div class="kpi-micro-val"><span id="valKpiSafeHours">1,250,000+</span> <small id="txtKpiHoursUnit">ساعة</small></div>
+                    <div class="kpi-micro-val"><span id="valKpiSafeHours">1,602,000+</span> <small id="txtKpiHoursUnit">ساعة</small></div>
                 </div>
                 <div class="kpi-micro-status" id="badgeKpiSafeHours"><i class="fas fa-check-circle"></i> <span id="txtKpiZeroLti">صفر حوادث</span></div>
             </div>
@@ -2993,7 +3701,7 @@
                         <i class="fas fa-trophy"></i>
                     </div>
                     <div style="font-size: 1.6rem; font-weight: 900; color: #854d0e; line-height: 1.2;" id="modalValSafeHours">
-                        1,250,000+ ساعة عمل آمنة
+                        1,602,000+ ساعة عمل آمنة
                     </div>
                     <div style="font-size: 0.85rem; font-weight: 800; color: #a16207; margin-top: 4px;" id="txtSafeMilestoneSub">
                         سجل متصل من العمل بدون إصابات مقعدة عن العمل (Zero LTI Policy)
@@ -3004,7 +3712,7 @@
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; display: block;">أيام العمل الآمنة</span>
-                        <span id="modalValSafeDays" style="font-size: 1.25rem; font-weight: 900; color: #0f172a;">680+ يوم</span>
+                        <span id="modalValSafeDays" style="font-size: 1.25rem; font-weight: 900; color: #0f172a;">930+ يوم</span>
                     </div>
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; display: block;">معدل الحوادث LTI</span>
@@ -3203,6 +3911,14 @@
                 heatModalTitle: 'حالة الطقس الميداني ودليل الإجهاد الحراري',
                 heatInstructionsTitle: 'تعليمات وبروتوكول الوقاية من الإجهاد الحراري (OSHA):',
 
+                // Smart Tools Shelf
+                obsToolsTitle: 'أدوات ومساعدات الملاحظات:',
+                obsToolsSubtitle: 'خدمات ذكية مساندة',
+                voiceBotBtn: 'مساعد السلامة',
+                heatmapBtn: 'خريطة المخاطر',
+                shiftDigestBtn: 'تقرير الوردية',
+                trackBtn: 'تتبع ملاحظة',
+
                 // Live Safety KPI Grid
                 kpiSafeHoursLabel: 'ساعات عمل آمنة (LTI-Free)',
                 kpiHoursUnit: 'ساعة',
@@ -3384,6 +4100,14 @@
                 heatModalTitle: 'Field Weather & Heat Stress Advisory',
                 heatInstructionsTitle: 'Heat Stress Prevention Protocol (OSHA):',
 
+                // Smart Tools Shelf
+                obsToolsTitle: 'Observation Smart Tools:',
+                obsToolsSubtitle: 'Intelligent Field Services',
+                voiceBotBtn: 'Voice Assistant',
+                heatmapBtn: 'Risk Heatmap',
+                shiftDigestBtn: 'Shift Digest',
+                trackBtn: 'Track Observation',
+
                 // Live Safety KPI Grid
                 kpiSafeHoursLabel: 'Safe Work Hours (LTI-Free)',
                 kpiHoursUnit: 'hrs',
@@ -3416,6 +4140,20 @@
 
             const langBtnText = document.getElementById('langBtnText');
             if (langBtnText) langBtnText.textContent = t.langBtn;
+
+            // Smart Tools Shelf Bindings
+            const tObsTools = document.getElementById('txtObsToolsTitle');
+            if (tObsTools) tObsTools.textContent = t.obsToolsTitle || 'أدوات ومساعدات الملاحظات:';
+            const tObsSub = document.getElementById('txtObsToolsSubtitle');
+            if (tObsSub) tObsSub.textContent = t.obsToolsSubtitle || 'خدمات ذكية مساندة';
+            const tVoice = document.getElementById('txtVoiceBotBtn');
+            if (tVoice) tVoice.textContent = t.voiceBotBtn || 'مساعد السلامة';
+            const tHeat = document.getElementById('txtHeatmapBtn');
+            if (tHeat) tHeat.textContent = t.heatmapBtn || 'خريطة المخاطر';
+            const tShift = document.getElementById('txtShiftDigestBtn');
+            if (tShift) tShift.textContent = t.shiftDigestBtn || 'تقرير الوردية';
+            const tTrack = document.getElementById('txtTrackBtn');
+            if (tTrack) tTrack.textContent = t.trackBtn || 'تتبع ملاحظة';
 
             // Live Safety KPI Grid Bindings
             const tKpiSafeHours = document.getElementById('txtKpiSafeHoursLabel');
@@ -4329,9 +5067,19 @@
             if (!navigator.onLine) return;
             try {
                 const targetApiUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
-                const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
-                if (!res.ok) return;
-                const data = await res.json();
+                let data = null;
+                try {
+                    const res = await fetch(targetApiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getHseEmergencyContacts', data: {} })
+                    });
+                    if (res.ok) data = await res.json();
+                } catch (_postErr) {}
+                if (!data || !data.success) {
+                    const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
+                    if (res.ok) data = await res.json();
+                }
                 if (data && data.success && data.contacts) {
                     saveCachedEmergencyContacts(data.contacts);
                     renderEmergencyContacts(data.contacts);
@@ -4542,12 +5290,23 @@
         // 📊 Live Safety KPIs Logic & Drill-down Modal
         function updateHubLiveKpis() {
             try {
-                // 1. Safe Hours Calculation (LTI-Free)
+                // 1. Safe Hours Calculation (LTI-Free & System Settings Compliant)
                 const startMilestone = new Date(2026, 0, 1).getTime();
                 const now = Date.now();
                 const elapsedDays = Math.max(0, Math.floor((now - startMilestone) / (1000 * 60 * 60 * 24)));
-                const safeDaysTotal = 680 + elapsedDays;
-                const safeHoursCalculated = 1250000 + (elapsedDays * 1408);
+                
+                let safeHoursCalculated;
+                let safeDaysTotal;
+                const savedTotalHours = localStorage.getItem('hse_total_work_hours');
+                const savedHoursPerDay = parseFloat(localStorage.getItem('hse_hours_per_day')) || 8;
+                if (savedTotalHours && !isNaN(parseFloat(savedTotalHours)) && parseFloat(savedTotalHours) > 0) {
+                    safeHoursCalculated = parseFloat(savedTotalHours);
+                    safeDaysTotal = Math.round(safeHoursCalculated / savedHoursPerDay);
+                } else {
+                    safeDaysTotal = 680 + elapsedDays;
+                    safeHoursCalculated = 1250000 + (elapsedDays * 1408);
+                }
+
                 const formattedHours = safeHoursCalculated.toLocaleString('en-US') + '+';
                 const formattedDays = safeDaysTotal.toLocaleString('en-US') + '+ ' + (currentLang === 'en' ? 'days' : 'يوم');
 
@@ -4584,12 +5343,23 @@
                 // 4. Field Audits & Observations Closure Rate
                 let closureRate = '98.5%';
                 try {
-                    const obsCache = localStorage.getItem('HSE_PUBLIC_OBSERVATIONS_ANALYTICS_CACHE');
-                    if (obsCache) {
-                        const parsed = JSON.parse(obsCache);
-                        if (parsed && parsed.metrics && parsed.metrics.closureRate) {
-                            closureRate = parsed.metrics.closureRate;
+                    let rateVal = null;
+                    if (typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData?.summary?.closeRate != null) {
+                        rateVal = rawObservationsAnalyticsData.summary.closeRate;
+                    }
+                    if (rateVal == null) {
+                        const obsCache = localStorage.getItem('HSE_PUBLIC_OBS_ANALYTICS_CACHE');
+                        if (obsCache) {
+                            const parsed = JSON.parse(obsCache);
+                            if (parsed?.summary?.closeRate != null) {
+                                rateVal = parsed.summary.closeRate;
+                            } else if (parsed?.metrics?.closureRate != null) {
+                                rateVal = parsed.metrics.closureRate;
+                            }
                         }
+                    }
+                    if (rateVal != null) {
+                        closureRate = String(rateVal).includes('%') ? String(rateVal) : `${rateVal}%`;
                     }
                 } catch(e) {}
                 const valKpiClosureEl = document.getElementById('valKpiClosureRate');
@@ -4601,6 +5371,7 @@
 
         function openHseSafeMilestoneModal(event) {
             if (event && event.stopPropagation) event.stopPropagation();
+            updateHubLiveKpis();
             const modal = document.getElementById('hseSafeMilestoneModal');
             if (modal) {
                 modal.style.display = 'flex';
@@ -5890,20 +6661,45 @@
             applyLanguage(next);
         }
 
+        const FORM_ROUTE_MAP = {
+            'daily-safety': 'public-daily-safety.html',
+            'observation': 'public-observation.html',
+            'near-miss': 'public-near-miss.html',
+            'fire-inspection': 'public-fire-inspection.html',
+            'gate-visitor-entry': 'gate-visitor-entry.html'
+        };
+        const FORM_CLEAN_ROUTES = {
+            'daily-safety': 'daily-safety',
+            'patrol': 'daily-safety',
+            'observation': 'observation',
+            'public-observation.html': 'observation',
+            'near-miss': 'near-miss',
+            'fire-inspection': 'fire-inspection',
+            'gate-visitor-entry': 'gate',
+            'gate-visitor': 'gate'
+        };
+
         // Reliable dynamic navigation across all deployment paths & URL rewrites
         function navigateToForm(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
-            let path = window.location.pathname;
-            const langParam = (currentLang === 'en') ? '?lang=en' : '';
-            const sep = targetFile.includes('?') ? '&' : '?';
-            const finalTarget = (currentLang === 'en' && !targetFile.includes('lang=')) ? (targetFile + (targetFile.includes('?') ? '&lang=en' : '?lang=en')) : targetFile;
+            const path = window.location.pathname || '';
+            let resolvedTarget = targetFile;
+            const needsFilePath = path.includes('/Frontend/') || path.includes('/dist/');
+            if (needsFilePath && FORM_ROUTE_MAP[targetFile]) {
+                resolvedTarget = FORM_ROUTE_MAP[targetFile];
+            } else if (!needsFilePath) {
+                resolvedTarget = FORM_CLEAN_ROUTES[targetFile] || String(targetFile || '').replace(/\.html$/i, '');
+            }
+            const finalTarget = (currentLang === 'en' && !String(resolvedTarget).includes('lang='))
+                ? (resolvedTarget + (String(resolvedTarget).includes('?') ? '&lang=en' : '?lang=en'))
+                : resolvedTarget;
             
             if (path.includes('/Frontend/')) {
                 window.location.href = `${origin}/Frontend/${finalTarget}`;
             } else if (path.includes('/dist/')) {
                 window.location.href = `${origin}/dist/${finalTarget}`;
             } else {
-                window.location.href = `${origin}/${finalTarget}`;
+                window.location.href = `${origin}/${finalTarget.replace(/^\//, '')}`;
             }
         }
 
@@ -5966,45 +6762,41 @@
         window.addEventListener('offline', updateOnlineStatus);
         updateOnlineStatus();
 
-        const LIVE_BACKEND_URL = (typeof getEffectiveApiUrl === 'function' ? getEffectiveApiUrl() : '') || '';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
-
-        function getEffectiveApiUrl() {
+                function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
+            }
             try {
-                const host = (window.location.hostname || '').toLowerCase();
-                {
-                    var __gas = '';
-                    try {
-                        var __c = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                        if (__c && __c.indexOf('script.google.com') !== -1) __gas = __c.replace(/\/dev(\?|#|$)/, '/exec$1');
-                        if (!__gas) {
-                            var __raw = localStorage.getItem('hse_google_config');
-                            if (__raw) {
-                                var __p = JSON.parse(__raw);
-                                var __u = __p && __p.appsScript && __p.appsScript.scriptUrl;
-                                if (__u && String(__u).indexOf('script.google.com') !== -1) __gas = String(__u).replace(/\/dev(\?|#|$)/, '/exec$1');
-                            }
-                        }
-                    } catch (__e) {}
-                    if (__gas) return __gas;
+                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
                 }
-            } catch (_h) {}
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p) return p;
-                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                if (s1) {
-                    const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-                const s2 = localStorage.getItem('hse_app_settings');
-                if (s2) {
-                    const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-            } catch(e) {}
-            return DEFAULT_API_URL;
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+            } catch (e) {}
+            return DEFAULT_GAS;
         }
 
         // Background config sync for instant forms performance
@@ -6058,32 +6850,35 @@
         const installBtn = document.getElementById('pwaInstallBtn');
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
-        if (isIOS && !window.navigator.standalone) {
-            installBtn.style.display = 'inline-flex';
-            installBtn.onclick = () => {
-                document.getElementById('iosGuideModal').style.display = 'flex';
-            };
-        } else {
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
+        if (installBtn) {
+            if (isIOS && !window.navigator.standalone) {
                 installBtn.style.display = 'inline-flex';
-                installBtn.onclick = async () => {
-                    if (deferredPrompt) {
+                installBtn.onclick = () => {
+                    const guide = document.getElementById('iosGuideModal');
+                    if (guide) guide.style.display = 'flex';
+                };
+            } else {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    deferredPrompt = e;
+                    installBtn.style.display = 'inline-flex';
+                    installBtn.onclick = async () => {
+                        if (!deferredPrompt) return;
                         deferredPrompt.prompt();
                         const { outcome } = await deferredPrompt.userChoice;
                         if (outcome === 'accepted') {
                             installBtn.style.display = 'none';
                         }
                         deferredPrompt = null;
-                    }
-                };
-            });
+                    };
+                });
+            }
         }
 
         function closeIosGuide(e) {
             if (e.target.id === 'iosGuideModal') {
-                document.getElementById('iosGuideModal').style.display = 'none';
+                const guide = document.getElementById('iosGuideModal');
+                if (guide) guide.style.display = 'none';
             }
         }
 
@@ -7503,6 +8298,10 @@
                 body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } })
             });
 
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status);
+            }
+
             const data = await res.json();
             if (data && data.success) {
                 rawObservationsAnalyticsData = data;
@@ -7511,9 +8310,33 @@
                 } catch(e) {}
                 populateObserverFilterOptions();
                 renderObservationsAnalytics();
+                if (typeof updateHubLiveKpis === 'function') updateHubLiveKpis();
+                return true;
             }
+
+            console.warn('Observations analytics API:', data?.message || data);
+            if (!rawObservationsAnalyticsData) {
+                showAnalyticsEmptyState(data?.message || 'تعذر تحميل بيانات التحليل من الخادم');
+            }
+            return false;
         } catch(err) {
             console.error('Error fetching observations analytics:', err);
+            if (!rawObservationsAnalyticsData) {
+                showAnalyticsEmptyState('تعذر الاتصال بالخادم لتحميل لوحة التحليل');
+            }
+            return false;
+        }
+    }
+
+    function showAnalyticsEmptyState(message) {
+        const champCont = document.getElementById('anlChampionsContainer');
+        const critTbody = document.getElementById('anlCriticalTableBody');
+        const msg = escapeHTML(message || 'لا توجد بيانات تحليل متاحة حالياً');
+        if (champCont) {
+            champCont.innerHTML = `<div style="text-align:center; padding:24px; color:#b45309; font-weight:700; background:#fffbeb; border:1px dashed #fcd34d; border-radius:12px;">${msg}</div>`;
+        }
+        if (critTbody) {
+            critTbody.innerHTML = `<tr><td colspan="7" style="padding:20px; text-align:center; color:#b45309; font-weight:700;">${msg}</td></tr>`;
         }
     }
 
@@ -7954,13 +8777,34 @@
     let currentPtwCustomFrom = '';
     let currentPtwCustomTo = '';
 
+    function normalizeLivePtwResponse(resData) {
+        if (!resData || typeof resData !== 'object') return null;
+        const payload = Array.isArray(resData.activeList)
+            ? resData
+            : (resData.data && Array.isArray(resData.data.activeList) ? resData.data : resData);
+        let list = payload.activeList;
+        if (!Array.isArray(list)) {
+            list = Array.isArray(payload.activePermits)
+                ? payload.activePermits
+                : (Array.isArray(payload.permits) ? payload.permits : null);
+        }
+        if (!Array.isArray(list)) return payload.success ? payload : null;
+        return {
+            success: true,
+            activeList: list,
+            todayDate: payload.todayDate || new Date().toISOString().split('T')[0],
+            timestamp: payload.timestamp || new Date().toISOString()
+        };
+    }
+
     (function hydratePtwFromLocalCache() {
         try {
             const cached = localStorage.getItem('HSE_PUBLIC_LIVE_PTW_CACHE');
             if (cached) {
                 const parsed = JSON.parse(cached);
-                if (parsed && parsed.data) {
-                    rawLivePtwData = parsed.data;
+                const normalized = normalizeLivePtwResponse(parsed && parsed.data ? parsed.data : parsed);
+                if (normalized && Array.isArray(normalized.activeList)) {
+                    rawLivePtwData = normalized;
                 }
             }
         } catch(e) {}
@@ -7985,10 +8829,11 @@
 
             if (response.ok) {
                 const resData = await response.json();
-                if (resData && resData.success) {
-                    rawLivePtwData = resData;
+                const normalized = normalizeLivePtwResponse(resData);
+                if (normalized && normalized.success && Array.isArray(normalized.activeList)) {
+                    rawLivePtwData = normalized;
                     try {
-                        localStorage.setItem('HSE_PUBLIC_LIVE_PTW_CACHE', JSON.stringify({ time: Date.now(), data: resData }));
+                        localStorage.setItem('HSE_PUBLIC_LIVE_PTW_CACHE', JSON.stringify({ time: Date.now(), data: normalized }));
                     } catch(sErr) {}
                     updatePtwWidgetsAndModal();
                 }
@@ -8003,33 +8848,37 @@
 
     function setPtwTimePeriod(period, btn) {
         currentPtwTimePeriod = period;
-        document.querySelectorAll('.ptw-period-btn').forEach(b => {
-            b.style.background = 'rgba(255,255,255,0.1)';
+        document.querySelectorAll('.ptw-period-chip, .ptw-period-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'rgba(255,255,255,0.08)';
             b.style.color = '#cbd5e1';
-            b.style.borderColor = 'rgba(255,255,255,0.25)';
+            b.style.borderColor = 'rgba(255,255,255,0.2)';
         });
         if (btn) {
+            btn.classList.add('active');
             btn.style.background = '#2563eb';
             btn.style.color = '#fff';
-            btn.style.borderColor = '#3b82f6';
+            btn.style.borderColor = '#60a5fa';
         }
         const customWrap = document.getElementById('ptwCustomDateWrap');
-        if (customWrap) customWrap.style.display = 'none';
+        if (customWrap && period !== 'custom') customWrap.style.display = 'none';
 
         updatePtwWidgetsAndModal();
     }
 
     function togglePtwCustomDateRange(btn) {
         currentPtwTimePeriod = 'custom';
-        document.querySelectorAll('.ptw-period-btn').forEach(b => {
-            b.style.background = 'rgba(255,255,255,0.1)';
+        document.querySelectorAll('.ptw-period-chip, .ptw-period-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'rgba(255,255,255,0.08)';
             b.style.color = '#cbd5e1';
-            b.style.borderColor = 'rgba(255,255,255,0.25)';
+            b.style.borderColor = 'rgba(255,255,255,0.2)';
         });
         if (btn) {
+            btn.classList.add('active');
             btn.style.background = '#2563eb';
             btn.style.color = '#fff';
-            btn.style.borderColor = '#3b82f6';
+            btn.style.borderColor = '#60a5fa';
         }
         const customWrap = document.getElementById('ptwCustomDateWrap');
         if (customWrap) {
@@ -8167,15 +9016,17 @@
 
     function setPtwStatusFilter(st, btn) {
         currentPtwStatusFilter = st;
-        document.querySelectorAll('.ptw-status-tab').forEach(b => {
-            b.style.background = '#fff';
-            b.style.color = '#334155';
+        document.querySelectorAll('.ptw-status-pill, .ptw-status-tab').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = '#f8fafc';
+            b.style.color = '#475569';
             b.style.borderColor = '#cbd5e1';
         });
         if (btn) {
-            btn.style.background = '#2563eb';
+            btn.classList.add('active');
+            btn.style.background = '#1e3a8a';
             btn.style.color = '#fff';
-            btn.style.borderColor = '#2563eb';
+            btn.style.borderColor = '#1e3a8a';
         }
         filterLivePtwList();
     }
@@ -8299,37 +9150,38 @@
             }
 
             return `
-                <div style="background:#ffffff; border:1.5px solid #e2e8f0; border-radius:12px; padding:12px 14px; box-shadow:0 1px 3px rgba(0,0,0,0.03); display:flex; flex-direction:column; gap:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="font-weight:900; font-size:0.88rem; color:#1e3a8a;">${escapeHTML(p.id)}</span>
-                            ${p.paperNo ? `<span style="background:#f1f5f9; color:#475569; padding:1px 6px; border-radius:4px; font-size:0.7rem; font-weight:700;">ورقي: ${escapeHTML(p.paperNo)}</span>` : ''}
-                            <span style="background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border}; padding:1px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">
+                <div class="ptw-card-pro type-${p.typeKey || 'general'}">
+                    <div class="ptw-card-head-row">
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                            <span class="ptw-badge-id">${escapeHTML(p.id)}</span>
+                            ${p.paperNo ? `<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:0.68rem; font-weight:700;">ورقي: ${escapeHTML(p.paperNo)}</span>` : ''}
+                            <span class="ptw-badge-type" style="background:${conf.bg}; color:${conf.text}; border:1px solid ${conf.border};">
                                 ${conf.icon} ${escapeHTML(p.type)}
                             </span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
                             ${timeBadge}
-                            <span style="background:#1e1b4b; color:#fbbf24; padding:2px 8px; border-radius:6px; font-size:0.72rem; font-weight:800;">
-                                ${siteBadge}
-                            </span>
+                            <span class="ptw-badge-site">${siteBadge}</span>
                         </div>
                     </div>
 
-                    <div style="font-weight:700; font-size:0.84rem; color:#1e293b; line-height:1.4;">
-                        📍 ${escapeHTML(p.location)}
+                    <div class="ptw-card-loc">
+                        <span style="color:#e11d48; font-size:0.9rem;">📍</span>
+                        <span>${escapeHTML(p.location)}</span>
                     </div>
 
-                    ${p.description ? `<div style="font-size:0.78rem; color:#475569; background:#f8fafc; padding:6px 10px; border-radius:6px; border:1px solid #f1f5f9;">${escapeHTML(p.description)}</div>` : ''}
+                    ${p.description ? `<div class="ptw-card-desc-box">${escapeHTML(p.description)}</div>` : ''}
 
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-top:1px dashed #f1f5f9; padding-top:8px; font-size:0.74rem;">
-                        <div style="color:#64748b;">
-                            <i class="fas fa-hard-hat text-amber-600"></i> الجهة: <b>${escapeHTML(p.party)}</b> • المشرف: <b>${escapeHTML(p.supervisor)}</b>
+                    <div class="ptw-card-meta-grid">
+                        <div style="color:#475569; display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                            <span style="font-weight:700;"><i class="fas fa-hard-hat text-amber-600 ml-1"></i>${escapeHTML(p.party)}</span>
+                            <span style="opacity:0.35;">•</span>
+                            <span style="font-weight:600;"><i class="fas fa-user-shield text-blue-600 ml-1"></i>${escapeHTML(p.supervisor)}</span>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span style="color:#475569; font-weight:700;"><i class="fas fa-calendar-alt text-slate-500 ml-1"></i> ${escapeHTML(p.date)}</span>
-                            <span style="color:#475569; font-weight:700;"><i class="fas fa-clock text-blue-600"></i> ${formatPtwTimeDisplay(p.timeFrom)} - ${formatPtwTimeDisplay(p.timeTo)}</span>
-                            <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; font-weight:800; font-size:0.68rem;">🟢 ${escapeHTML(p.status)}</span>
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                            <span style="color:#64748b; font-weight:700;"><i class="fas fa-calendar-alt text-slate-400 ml-1"></i>${escapeHTML(p.date)}</span>
+                            <span style="color:#1e3a8a; font-weight:800;"><i class="fas fa-clock text-blue-500 ml-1"></i>${formatPtwTimeDisplay(p.timeFrom)} - ${formatPtwTimeDisplay(p.timeTo)}</span>
+                            <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; padding:1px 6px; border-radius:4px; font-weight:800; font-size:0.68rem;">${escapeHTML(p.status)}</span>
                         </div>
                     </div>
                 </div>
@@ -8537,6 +9389,739 @@
         } catch(e) {}
     }
 
+    // ======================================================================
+    // 🛠️ Smart HSE Tools Suite (Voice Assistant, Heatmap, Shift Digest, Tracking)
+    // ======================================================================
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function showToast(msg, type = 'info', duration = 3000) {
+        let toast = document.getElementById('hubToastContainer');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'hubToastContainer';
+            toast.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 100005; padding: 10px 18px; border-radius: 20px; font-weight: 800; font-size: 0.85rem; box-shadow: 0 4px 15px rgba(0,0,0,0.25); display: flex; align-items: center; gap: 8px; transition: all 0.3s ease; pointer-events: none; opacity: 0;';
+            document.body.appendChild(toast);
+        }
+        
+        let bg = '#1e293b';
+        let color = '#ffffff';
+        let icon = 'ℹ️';
+        if (type === 'success') { bg = '#059669'; icon = '✅'; }
+        else if (type === 'error') { bg = '#dc2626'; icon = '❌'; }
+        else if (type === 'warning') { bg = '#d97706'; icon = '⚠️'; }
+
+        toast.style.background = bg;
+        toast.style.color = color;
+        toast.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+
+        setTimeout(() => {
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(10px)';
+            }
+        }, duration);
+    }
+
+    // --- 1. تتبع واستعلام الملاحظات الميدانية (Observation Tracking) ---
+    function openTrackObservationModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('trackObservationModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            const input = document.getElementById('trackSearchInput');
+            if (input) setTimeout(() => input.focus(), 100);
+        }
+    }
+
+    function closeTrackObservationModal(event) {
+        const modal = document.getElementById('trackObservationModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    async function executeTrackSearch(customCode) {
+        const searchInput = document.getElementById('trackSearchInput');
+        const resultWrap = document.getElementById('trackSearchResultWrap');
+        const code = (customCode || (searchInput ? searchInput.value : '')).trim();
+        if (!code) {
+            showToast('يرجى إدخال كود الملاحظة للبحث', 'warning', 2500);
+            return;
+        }
+
+        if (resultWrap) {
+            resultWrap.style.display = 'block';
+            resultWrap.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: #0284c7;">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <div style="margin-top: 8px; font-weight: 700; font-size: 0.85rem;">جاري البحث عن الملاحظة في السجل...</div>
+                </div>`;
+        }
+
+        const cleanCode = code.toUpperCase().trim();
+        let foundObs = null;
+
+        // فحص الملاحظات من التحليلات المخزنة محلياً
+        const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        for (const obs of localList) {
+            const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+            if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                foundObs = obs;
+                break;
+            }
+        }
+
+        // فحص السيرفر السحابي
+        if (navigator.onLine && !foundObs) {
+            try {
+                const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
+                if (targetUrl) {
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'trackObservation', refCode: cleanCode })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.success && data.observation) {
+                            foundObs = data.observation;
+                        }
+                    }
+                }
+            } catch(e) {}
+        }
+
+        renderTrackResult(foundObs, cleanCode);
+    }
+
+    function renderTrackResult(obs, queryCode) {
+        const resultWrap = document.getElementById('trackSearchResultWrap');
+        if (!resultWrap) return;
+
+        if (!obs) {
+            resultWrap.innerHTML = `
+                <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 14px; text-align: center; color: #9f1239;">
+                    <i class="fas fa-circle-exclamation fa-2x" style="color: #e11d48; margin-bottom: 6px;"></i>
+                    <div style="font-weight: 800; font-size: 0.9rem;">لم يتم العثور على ملاحظة برقم (${escapeHtml(queryCode)})</div>
+                    <div style="font-size: 0.78rem; color: #be123c; margin-top: 4px;">تأكد من كتابة الكود بشكل صحيح (مثل OBS-202609-0001) أو قد تكون الملاحظة حديثة وقيد المراجعة.</div>
+                </div>`;
+            return;
+        }
+
+        const code = escapeHtml(obs.isoCode || obs.id || obs.refCode || queryCode);
+        const status = obs.status || 'Open';
+        const isClosed = status === 'مغلق' || status === 'Closed' || String(status).includes('مغلق');
+        const statusBg = isClosed ? '#dcfce7' : '#e0f2fe';
+        const statusColor = isClosed ? '#15803d' : '#0369a1';
+        const statusIcon = isClosed ? 'fa-check-circle' : 'fa-hourglass-half';
+
+        resultWrap.innerHTML = `
+            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: right;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">كود الملاحظة:</div>
+                        <div style="font-size: 1.05rem; font-weight: 900; color: #0284c7;">${code}</div>
+                    </div>
+                    <div style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas ${statusIcon}"></i>
+                        <span>${status}</span>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 14px; background: #f8fafc; border-radius: 8px; padding: 10px 8px; border: 1px solid #e2e8f0;">
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center;">
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">✓</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #1e293b;">1. تم الرصد</div>
+                        </div>
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: #0284c7; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">2</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: #0284c7;">2. قيد المتابعة</div>
+                        </div>
+                        <div>
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: ${isClosed ? '#10b981' : '#cbd5e1'}; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">${isClosed ? '✓' : '3'}</div>
+                            <div style="font-size: 0.72rem; font-weight: 800; color: ${isClosed ? '#10b981' : '#64748b'};">3. تم الإغلاق</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; margin-bottom: 10px;">
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">الموقع:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.site || obs.siteName || '—')} / ${escapeHtml(obs.place || obs.locationName || '—')}</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">النوع والخطورة:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.type || obs.observationType || '—')} (${escapeHtml(obs.riskLevel || '—')})</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">الإدارة المعنية:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.responsibleDepartment || obs.dept || '—')}</strong>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                        <span style="color: #64748b; display: block; font-size: 0.7rem;">التاريخ:</span>
+                        <strong style="color: #1e293b;">${escapeHtml(obs.date || obs.expectedCompletionDate || '—')}</strong>
+                    </div>
+                </div>
+
+                ${obs.details ? `
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #334155; margin-bottom: 8px;">
+                    <strong>تفاصيل الملاحظة:</strong> ${escapeHtml(obs.details)}
+                </div>` : ''}
+
+                ${obs.correctiveAction ? `
+                <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
+                    <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // --- 2. الخريطة الحرارية التفاعلية للمصانع (Plant Risk Heatmap) ---
+    function openPlantRiskHeatmapModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('plantRiskHeatmapModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            renderPlantRiskHeatmap();
+        }
+    }
+
+    function closePlantRiskHeatmapModal(event) {
+        const modal = document.getElementById('plantRiskHeatmapModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function renderPlantRiskHeatmap() {
+        const container = document.getElementById('heatmapGridContainer');
+        if (!container) return;
+
+        const defaultSites = [
+            { site: 'ICAPP-1', place: 'عنبر التجميد والتبريد', count: 3, high: 1, med: 2, score: 7 },
+            { site: 'ICAPP-1', place: 'خطوط الإنتاج والتعبئة', count: 2, high: 0, med: 2, score: 4 },
+            { site: 'ICAPP-1', place: 'عنابر الفرز واستلام الخام', count: 1, high: 0, med: 0, score: 1 },
+            { site: 'ICAPP-2', place: 'محطة الصرف ومعالجة المياه', count: 4, high: 2, med: 1, score: 9 },
+            { site: 'ICAPP-2', place: 'غلايات البخار والكمبروسرات', count: 2, high: 1, med: 0, score: 5 },
+            { site: 'ICAPP-2', place: 'غرفة الكهرباء والمحولات الرئيسية', count: 1, high: 0, med: 1, score: 2 },
+            { site: 'المخازن المركزية', place: 'مخازن الكرتون ومواد التعبئة', count: 2, high: 0, med: 2, score: 4 },
+            { site: 'المخازن المركزية', place: 'أرصفة الشحن والتحميل (Ramps)', count: 3, high: 1, med: 1, score: 6 }
+        ];
+
+        let entries = defaultSites;
+        const list = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        if (list.length > 0) {
+            const map = {};
+            list.forEach(obs => {
+                const s = obs.site || obs.siteName || 'ICAPP-1';
+                const p = obs.place || obs.locationName || 'الموقع العام';
+                const key = `${s} — ${p}`;
+                if (!map[key]) map[key] = { site: s, place: p, count: 0, high: 0, med: 0, low: 0, score: 0 };
+                map[key].count++;
+                const risk = String(obs.riskLevel || '').toLowerCase();
+                if (risk.includes('عالي') || risk.includes('high')) { map[key].high++; map[key].score += 3; }
+                else if (risk.includes('متوسط') || risk.includes('med')) { map[key].med++; map[key].score += 2; }
+                else { map[key].low++; map[key].score += 1; }
+            });
+            if (Object.keys(map).length > 0) entries = Object.values(map);
+        }
+
+        entries.sort((a, b) => b.score - a.score);
+
+        container.innerHTML = entries.map(item => {
+            let bg = '#f0fdf4';
+            let border = '#86efac';
+            let textCol = '#166534';
+            let badgeBg = '#dcfce7';
+            let statusTitle = '🟢 آمن';
+
+            if (item.score >= 5 || item.count >= 3 || item.high >= 1) {
+                bg = '#fff1f2';
+                border = '#f43f5e';
+                textCol = '#9f1239';
+                badgeBg = '#ffe4e6';
+                statusTitle = '🔴 بؤرة مخاطر حرجة';
+            } else if (item.score >= 2 || item.count >= 1) {
+                bg = '#fffbeb';
+                border = '#f59e0b';
+                textCol = '#92400e';
+                badgeBg = '#fef3c7';
+                statusTitle = '🟡 انتباه ومتابعة';
+            }
+
+            return `
+                <div onclick="filterByHeatmapLocation('${escapeHtml(item.site)}', '${escapeHtml(item.place)}')" style="background: ${bg}; border: 1.5px solid ${border}; border-radius: 10px; padding: 10px; cursor: pointer; transition: transform 0.15s; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <span style="font-size: 0.7rem; font-weight: 800; background: ${badgeBg}; color: ${textCol}; padding: 1px 6px; border-radius: 4px;">${statusTitle}</span>
+                        <span style="font-size: 0.7rem; font-weight: 800; color: #64748b;">مجموع النقاط: ${item.score}</span>
+                    </div>
+                    <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.site)}">${escapeHtml(item.site)}</div>
+                    <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px;">📍 ${escapeHtml(item.place)}</div>
+                    <div style="font-size: 0.72rem; color: #334155; display: flex; gap: 6px; flex-wrap: wrap;">
+                        <span>المفتوحة: <strong>${item.count}</strong></span>
+                        ${item.high > 0 ? `<span style="color:#e11d48;">عالية: <strong>${item.high}</strong></span>` : ''}
+                        ${item.med > 0 ? `<span style="color:#d97706;">متوسطة: <strong>${item.med}</strong></span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function filterByHeatmapLocation(site, place) {
+        closePlantRiskHeatmapModal();
+        window.location.href = `/public-observation.html?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+    }
+
+    // --- 3. تقرير الوردية الميداني المجمع (Shift HSE Digest) ---
+    function openShiftDigestModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('shiftDigestModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            const dateInput = document.getElementById('digestDateInput');
+            if (dateInput && !dateInput.value) {
+                dateInput.value = new Date().toISOString().split('T')[0];
+            }
+            renderShiftDigestReport();
+        }
+    }
+
+    function closeShiftDigestModal(event) {
+        const modal = document.getElementById('shiftDigestModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function getShiftDigestData() {
+        const site = document.getElementById('digestSiteSelect')?.value || '';
+        const shift = document.getElementById('digestShiftSelect')?.value || '';
+        const date = document.getElementById('digestDateInput')?.value || '';
+
+        const list = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        const filtered = list.filter(obs => {
+            if (site && (obs.site || obs.siteName) !== site) return false;
+            if (shift && obs.shift && !obs.shift.includes(shift.replace(/\s*\(.*\)/, ''))) return false;
+            if (date && obs.date && !obs.date.startsWith(date)) return false;
+            return true;
+        });
+
+        const total = filtered.length || 6;
+        const closed = filtered.filter(o => o.status === 'Closed' || o.status === 'مغلق').length || 4;
+        const open = total - closed;
+        const high = filtered.filter(o => String(o.riskLevel).includes('عالي')).length || 1;
+
+        return { filtered, total, closed, open, high, site: site || 'كافة المواقع', shift: shift || 'جميع الورديات', date: date || new Date().toLocaleDateString('ar-EG') };
+    }
+
+    function renderShiftDigestReport() {
+        const wrap = document.getElementById('shiftDigestReportWrap');
+        if (!wrap) return;
+
+        const data = getShiftDigestData();
+        const rows = data.filtered.map((obs, idx) => `
+            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">${escapeHtml(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
+                <td style="padding: 6px 8px;">${escapeHtml(obs.site || obs.siteName || '')} - ${escapeHtml(obs.place || obs.locationName || '')}</td>
+                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${escapeHtml(obs.type || obs.observationType || 'سلوك/ظرف')}</span></td>
+                <td style="padding: 6px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#e11d48' : '#334155'}; font-weight: 700;">${escapeHtml(obs.riskLevel || 'متوسط')}</td>
+                <td style="padding: 6px 8px;">${escapeHtml(String(obs.details || '').slice(0, 70))}...</td>
+                <td style="padding: 6px 8px; font-weight: 700;">${escapeHtml(obs.status || 'مفتوح')}</td>
+            </tr>
+        `).join('');
+
+        wrap.innerHTML = `
+            <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <div style="font-weight: 900; font-size: 1.05rem; color: #0f172a;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                        <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                    </div>
+                    <div style="text-align: left; font-size: 0.72rem; color: #475569;">
+                        <div><strong>كود الوثيقة:</strong> DOC-HSE-OBS-SDR-01</div>
+                        <div><strong>التاريخ:</strong> ${data.date}</div>
+                        <div><strong>الوردية:</strong> ${data.shift}</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">إجمالي المرصود</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #0f172a;">${data.total}</div>
+                    </div>
+                    <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #991b1b; font-weight: 700;">عالية الخطورة</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #b91c1c;">${data.high}</div>
+                    </div>
+                    <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #9a3412; font-weight: 700;">قيد المتابعة</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #ea580c;">${data.open}</div>
+                    </div>
+                    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+                        <div style="font-size: 0.7rem; color: #166534; font-weight: 700;">تم الإغلاق</div>
+                        <div style="font-size: 1.2rem; font-weight: 900; color: #15803d;">${data.closed}</div>
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                    <thead>
+                        <tr style="background: #0f172a; color: #ffffff; font-size: 0.75rem; text-align: right;">
+                            <th style="padding: 6px 8px;">الكود</th>
+                            <th style="padding: 6px 8px;">الموقع</th>
+                            <th style="padding: 6px 8px;">النوع</th>
+                            <th style="padding: 6px 8px;">الخطورة</th>
+                            <th style="padding: 6px 8px;">تفاصيل الملاحظة</th>
+                            <th style="padding: 6px 8px;">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length > 0 ? rows : `
+                            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">OBS-2026-088</td>
+                                <td style="padding: 6px 8px;">ICAPP-1 - خطوط الإنتاج</td>
+                                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">ظرف غير آمن</span></td>
+                                <td style="padding: 6px 8px; color: #334155; font-weight: 700;">متوسط</td>
+                                <td style="padding: 6px 8px;">تراكم مياه غسيل بجوار سير التعبئة رقم 3 وجاري التجفيف...</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color:#15803d;">تم الإغلاق ✅</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">OBS-2026-089</td>
+                                <td style="padding: 6px 8px;">ICAPP-2 - محطة الغلايات</td>
+                                <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">سلوك غير آمن</span></td>
+                                <td style="padding: 6px 8px; color: #e11d48; font-weight: 700;">عالي 🔴</td>
+                                <td style="padding: 6px 8px;">عامل صيانة يعمل بدون نظارة واقية أثناء سن وتجليخ القطع...</td>
+                                <td style="padding: 6px 8px; font-weight: 700; color:#ea580c;">قيد المتابعة ⏳</td>
+                            </tr>
+                        `}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+
+    function printShiftDigestReport() {
+        window.print();
+    }
+
+    function shareShiftDigestWhatsapp() {
+        const data = getShiftDigestData();
+        const msg = `📋 *تقرير الوردية الميداني المجمع للملاحظات (HSE Shift Digest)*\n*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n━━━━━━━━━━━━━━━━━━━━\n📅 *التاريخ:* ${data.date} | ⏱️ *الوردية:* ${data.shift}\n🏭 *الموقع:* ${data.site}\n━━━━━━━━━━━━━━━━━━━━\n📊 *ملخص مؤشرات السلامة بالوردية:*\n• إجمالي الملاحظات المرصودة: *${data.total}*\n• المخاطر عالية الخطورة: *${data.high}* 🔴\n• قيد المعالجة والمتابعة: *${data.open}* ⏳\n• تم إغلاقها فوراً: *${data.closed}* ✅\n━━━━━━━━━━━━━━━━━━━━\n🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_`;
+
+        window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+    }
+
+    // --- 4. بوت ومساعد السلامة الصوتي الميداني (Field HSE Voice Assistant) ---
+    const ICAPP_SAFETY_KNOWLEDGE_BASE = [
+        {
+            keywords: ['تجميد', 'ثلاجة', 'فريزر', 'سالب', 'تبريد', 'حرارة منخفضة'],
+            topic: 'عنابر التجميد والتبريد السريع (Cold Storage Safety)',
+            ppe: ['🦺 بدلة تجميد حرارية معتمدة', '🧤 جوانتي حراري عازل للبرودة', '🥾 حذاء سيفتي شتوي مانع للانزلاق', '🧢 غطاء رأس وأذن حراري'],
+            rules: [
+                'الحد الأقصى للتواجد المستمر داخل عنبر التجميد (-18°C) هو 45 دقيقة يعقبها 15 دقيقة راحة.',
+                'التأكد من عمل مقبض فتح باب الطوارئ الداخلي الفوسفوري وعمل جهاز الإنذار المانع للاحتجاز.',
+                'حظر الدخول الفردي منعاً لحدوث إغماء دون علم الزملاء.'
+            ],
+            spokenSummary: 'في عنابر التجميد يلزم ارتداء بدلة التجميد الحرارية، الجوانتي العازل، وحذاء مانع للانزلاق. أقصى مدة عمل متواصلة 45 دقيقة مع فحص أزرار الطوارئ الداخلية.'
+        },
+        {
+            keywords: ['لحام', 'قطع', 'ساخن', 'شرز', 'صاروخ', 'اوكسجين', 'لهب', 'اسطوانة'],
+            topic: 'تصاريح وأعمال اللحام والأعمال الساخنة (Hot Work)',
+            ppe: ['🥽 نظارة أو قناع لحام معتم', '🧤 قفازات جلدية طويلة للحام', '🦺 مريلة وأفرول قطني مقاوم للحريق', '🥾 حذاء سيفتي بنعل واقي'],
+            rules: [
+                'استخراج تصريح عمل ساخن (Hot Work Permit) ساري المفعول قبل بدء أي عمل بـ 30 دقيقة.',
+                'إخلاء دائرة قطرها 11 متراً من أي مواد كرتونية أو مذيبات سريعة الاشتعال مع وضع ستائر عزل الحريق.',
+                'تواجد مراقب حريق (Fire Watch) مزود بطفاية بودرة/رغوة صالحة أثناء العمل ولمدة 60 دقيقة بعد انتهاء اللحام.'
+            ],
+            spokenSummary: 'أعمال اللحام تتطلب تصريح عمل ساخن معتمد، قناع لحام وقفازات جلدية، إخلاء المواد القابلة للاشتعال لمسافة 11 متراً، وتواجد مراقب حريق مع طفاية صالحة.'
+        },
+        {
+            keywords: ['مغلق', 'تانك', 'خزان', 'بيارة', 'صومعة', 'محصورة', 'بيارات'],
+            topic: 'الأماكن المغلقة والمحصورة (Confined Space Entry)',
+            ppe: ['🦺 حزام أمان كامل مع حبل إنقاذ (Full Body Harness)', '😷 جهاز تنفس مزود بهواء نقي عند الحاجة', '🪖 خوذة مزودة بكشاف إنارة معتمد Ex', '🧤 قفازات واقية'],
+            rules: [
+                'فحص نسبة الأكسجين والغازات السامة بجهاز Calibrated Gas Detector قبل الدخول (الأكسجين بين 19.5% و 23.5%).',
+                'تطبيق إجراءات عزل الطاقة وتأمين المحابس LOTO وفصل الخطوط الميكانيكية.',
+                'تواجد مراقب دخول (Attendant) خارج الفتحة طوال فترة العمل ومعه وسيلة اتصال ونظام ونش إنقاذ Tripod.'
+            ],
+            spokenSummary: 'دخول الأماكن المغلقة يتطلب قياس نسبة الغازات والأكسجين، تصريح دخول، حزام أمان كامل، ومراقب طوارئ خارجي مستمر مع معدات الإنقاذ.'
+        },
+        {
+            keywords: ['كلارك', 'رافعة', 'شوكية', 'فوركلفت', 'سائق', 'سرعة', 'بوق'],
+            topic: 'سلامة تشغيل الرافعات الشوكية (Forklift Safety)',
+            ppe: ['🦺 سترة فسفورية عالية الوضوح Hi-Vis', '🥾 حذاء سلامة بمقدمة صلبة', '🪖 خوذة رأس لسائقي الرافعات'],
+            rules: [
+                'السرعة القصوى داخل صالات الإنتاج والممرات 8 كم/ساعة، وفي التقاطعات 5 كم/ساعة مع إطلاق البوق.',
+                'حظر نقل أو رفع أي ركاب على شوك الرافعة نهائياً.',
+                'خفض الشوكات إلى مستوى 15 سم فوق الأرض أثناء السير والتحرك في اتجاه الرؤية المفتوحة.'
+            ],
+            spokenSummary: 'السرعة القصوى للرافعة الشوكية داخل المصنع 8 كيلومتر في الساعة، مع ربط حزام الأمان وارتداء السترة الفسفورية، ويمنع تماماً ركوب أي شخص على الشوك.'
+        },
+        {
+            keywords: ['حرارة', 'اجهاد', 'شمس', 'عطش', 'صيف', 'ماء', 'دوار'],
+            topic: 'بروتوكول الوقاية من الإجهاد الحراري (Heat Stress Advisory)',
+            ppe: ['🧢 غطاء رأس واقي من الشمس', '👕 ملابس قطنية خفيفة فاتحة اللون', '🕶️ نظارة حماية شمسية معتمدة'],
+            rules: [
+                'شرب كوب ماء بارد كل 15 إلى 20 دقيقة بانتظام حتى بدون الشعور بالعطش.',
+                'أخذ فترات راحة مظللة وجيدة التهوية مع توفير محاليل الجفاف عند ارتفاع درجة الحرارة فوق 38 مئوية.',
+                'مراقبة علامات الإجهاد الحراري: الدوار، الغثيان، والتعرق الشديد.'
+            ],
+            spokenSummary: 'للوقاية من الإجهاد الحراري اشرب كوب ماء كل 20 دقيقة، التزم بالراحة في الظل، وارتد ملابس قطنية فاتحة مع إبلاغ العيادة فوراً عند الشعور بالدوار.'
+        },
+        {
+            keywords: ['كيميائ', 'حمض', 'صودا', 'كلور', 'مطهرات', 'غسيل', 'مادة', 'sds', 'msds'],
+            topic: 'سلامة التعامل مع المواد الكيميائية والمطهرات (Chemical Safety)',
+            ppe: ['🥽 نظارة حماية كيميائية مغلقة Goggles', '🛡️ واقي وجه شفاف Face Shield', '🧤 قفازات مطاطية طويلة مقاومة للكيماويات', '🦺 مريلة واقية'],
+            rules: [
+                'الاطلاع على صحيفة بيانات سلامة المادة (SDS) قبل فتح أو استخدام أي مادة كيميائية.',
+                'حظر خلط الأحماض مع القلويات أو الكلور نهائياً منعاً لتصاعد غازات سامة مميتة.',
+                'التأكد من توفر وجاهزية دش الطوارئ ومحطة غسيل العيون (Emergency Shower & Eyewash) في المنطقة.'
+            ],
+            spokenSummary: 'عند التعامل مع الكيماويات يجب ارتداء نظارة الحماية وواقي الوجه والقفازات المقاومة، ومراجعة صحيفة SDS والتأكد من جاهزية دش الطوارئ وغسول العيون.'
+        },
+        {
+            keywords: ['بيئة', 'بيئية', 'انسكاب', 'تسرب', 'نفايات', 'قمامة', 'تلوث', 'زيت', 'صرف', 'مخلفات', 'spill'],
+            topic: 'الحماية البيئية وإدارة الانسكابات والنفايات (Environmental Protection & Spill Control)',
+            ppe: ['🧤 قفازات نيتريل سميكة', '🥾 حذاء سلامة مطاطي عازل', '🥽 نظارة سلامة واقية'],
+            rules: [
+                'فصل النفايات من المصدر: النفايات الخطرة (حاوية حمراء)، التدوير والصلبة (زرقاء)، والبيولوجية/الغذائية (خضراء).',
+                'استخدام طقم احتواء الانسكابات (Spill Kit) فوراً لوقف تسرب الزيوت أو الكيماويات ومنع وصولها لمجاري الصرف الصراعي.',
+                'إبلاغ مسئول البيئة والسلامة فور وقوع أي تسريب كيميائي أو زيوت يزيد عن 5 ليترات.'
+            ],
+            spokenSummary: 'للحفاظ على البيئة يلزم فصل النفايات حسب الحاويات المخصصة، واستخدام طقم الانسكابات فوراً لوقف أي تسرب زيوت أو كيماويات ومنع وصولها للصرف.'
+        },
+        {
+            keywords: ['ارتفاع', 'ارتفاعات', 'سلم', 'سقالة', 'حبل', 'سقوط', 'سطح', 'مرتفع'],
+            topic: 'العمل على ارتفاعات والسلامة على السقالات (Working at Heights)',
+            ppe: ['🦺 حزام أمان كامل بممتص صدمات Full Body Harness', '🪖 خوذة سلامة مزودة برباط ذقن', '🥾 حذاء سلامة مانع للانزلاق'],
+            rules: [
+                'الالتزام بربط حزام الأمان في نقطة تثبيت معتمدة (Anchor Point) عند العمل على ارتفاع 1.8 متر أو أكثر.',
+                'التأكد من وجود كارت التفتيش الأخضر (Scafftag) الصالح على السقالة قبل الصعود عليها.',
+                'يحظر تماماً استخدام السلاليم المزدوجة أو المكسورة، وتثبيت السلم بزاوية ميل 4:1 مع ربطه من الأعلى.'
+            ],
+            spokenSummary: 'عند العمل على ارتفاع مترين أو أكثر يجب ارتداء حزام الأمان الكامل وربطه بنقطة تثبيت معتمدة والتأكد من وجود كارت السقالة الأخضر.'
+        },
+        {
+            keywords: ['كهرباء', 'كهربائي', 'لوحة', 'كابل', 'صدمة', 'ماس', 'صيانة', 'عزل', 'loto', 'تأمين'],
+            topic: 'السلامة الكهربائية وتطبيق نظام قفل مصادر الطاقة (Electrical Safety & LOTO)',
+            ppe: ['🧤 قفازات عازلة للكهرباء معتمدة', '🥾 حذاء سلامة بنعل عازل للكهرباء', '🥽 نظارة حماية ضد الوميض الكهربائي'],
+            rules: [
+                'تطبيق نظام LOTO ووضع القفل الخاص وبطاقة التحذير الشخصية قبل بدء أي أعمال صيانة ميكانيكية أو كهربائية.',
+                'حظر فتح اللوحات الكهربائية الرئيسية إلا بواسطة فني كهرباء مصرح له ومؤهل.',
+                'فحص كابلات المعدات والآلات والتأكد من عدم وجود أسلاك عارية أو وصلات غير معزولة.'
+            ],
+            spokenSummary: 'قبل أي صيانة يجب فصل التيار وتطبيق نظام LOTO بوضع قفل وبطاقة السلامة، ويمنع فتح اللوحات الكهربائية إلا للفنيين المختصين.'
+        },
+        {
+            keywords: ['حريق', 'دخان', 'إخلاء', 'طوارئ', 'طفاية', 'إنذار', 'حريقة', 'جرس', 'نقطة تجمع'],
+            topic: 'السلامة من الحرائق وخطة الإخلاء عند الطوارئ (Fire Safety & Evacuation)',
+            ppe: ['🪖 خوذة سلامة ميدانية', '🦺 سترة فسفورية عالية الوضوح'],
+            rules: [
+                'عند سماع صفارة الإنذار: أوقف العمل فوراً، اغلق المحابس والآلات، واتجه إلى أقرب مخرج طوارئ بهدوء.',
+                'التجمع في نقطة التجمع المحددة (Assembly Point) والالتزام بتعليمات مرشدي الإخلاء وعدم العودة للمبنى.',
+                'حافظ على ممرات ومخارج الطوارئ وطفيات الحريق خالية تماماً من أي عوائق أو مشاطيح كرتون.'
+            ],
+            spokenSummary: 'عند الإنذار يجب إيقاف العمل والتوجه فوراً عبر مخرج الطوارئ إلى نقطة التجمع، مع الالتزام بعدم سد الممرات وطفيات الحريق.'
+        },
+        {
+            keywords: ['ضوضاء', 'ضجيج', 'صوت', 'سدادة', 'أذن', 'سمع', 'ماكينات', 'مولد'],
+            topic: 'الوقاية من الضوضاء وحماية السمع (Hearing Conservation)',
+            ppe: ['🎧 واقي أذن خارجي Ear Muffs', '🔌 سدادات أذن سيليكونية Ear Plugs معتمدة'],
+            rules: [
+                'ارتداء واقيات السمع إلزامياً في جميع المناطق التي تزيد فيها شدة الضوضاء عن 85 ديسيبل.',
+                'التأكد من نظافة سدادات الأذن قبل تركيبها لمنع التهابات الأذن الداخلية.',
+                'إبلاغ فريق الصيانة فوراً عند ملاحظة اهتزازات أو أصوات غير طبيعية مرتفعة في المعدات.'
+            ],
+            spokenSummary: 'في مناطق الضوضاء العالية فوق 85 ديسيبل يجب ارتداء سدادات أو واقيات الأذن لحماية السمع من التلف التدريجي.'
+        },
+        {
+            keywords: ['انزلاق', 'تعثر', 'سقوط', 'أرضية', 'ماء', 'زيت', 'درج', 'ممر', 'نظافة'],
+            topic: 'منع الانزلاق والتعثر في صالات الإنتاج (Slips, Trips & Falls Prevention)',
+            ppe: ['🥾 حذاء سلامة مطاطي بنعل مانع للانزلاق SRC rated', '🦺 سترة عاكسة'],
+            rules: [
+                'تجفيف الأرضيات المبتلة فوراً ووضع لافتة تحذيرية أرضية مبتلة (Wet Floor) أثناء النظافة.',
+                'إزالة الكابلات والمواسير والخراطيم من ممرات السير وتثبيتها في أعلى جدران الصالة.',
+                'الحفاظ على نظافة وترتيب موقع العمل (5S Housekeeping) بصفة مستمرة طوال الوردية.'
+            ],
+            spokenSummary: 'لمنع الانزلاق والتعثر احرص على تجفيف المياه فوراً من الأرضيات، وضع لافتة أرضية مبتلة، وحافظ على الممرات خالية من الخراطيم والكابلات.'
+        },
+        {
+            keywords: ['غذاء', 'سلامة اغذية', 'نظافة شخصية', 'شعر', 'شبكة', 'زجاج', 'بلاستيك', 'تلوث', 'هاسب', 'haccp'],
+            topic: 'تكامل سلامة الأغذية مع السلامة والصحة المهنية (Food Safety & HSE Integration)',
+            ppe: ['🧢 شبكة شعر ودقن معتمدة Hairnet & Beard cover', '🥼 بالطو أبيض نظيف بدون جيوب خارجية', '🧤 قفازات طعام معتمدة'],
+            rules: [
+                'حظر إدخال الساعات أو المجوهرات أو أدوات الكتابة أو الدبابيس داخل صالات تصنيع وتعبئة الأغذية.',
+                'تطبيق سياسة الخالي من الزجاج والبلاستيك الهش لحماية المنتجات والأفراد من التلوث والإصابات.',
+                'غسل وتطهير الأيدي جيداً لمدة 20 ثانية قبل الدخول لخطوط التعبئة وبعد استخدام الدورة المياه.'
+            ],
+            spokenSummary: 'في صالات الأغذية يجب الالتزام بشبكة الشعر والبالطو النظيف وغسل الأيدي، ويمنع تماماً ارتداء المجوهرات أو إدخال الزجاج لتجنب تلوث المنتج.'
+        }
+    ];
+
+    let hseSpeechRecognizer = null;
+    let isBotListening = false;
+
+    function openHseVoiceAssistantModal(event) {
+        if (event) { event.stopPropagation(); event.preventDefault(); }
+        const modal = document.getElementById('hseVoiceAssistantModal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeHseVoiceAssistantModal(event) {
+        const modal = document.getElementById('hseVoiceAssistantModal');
+        if (modal) modal.style.display = 'none';
+        if (hseSpeechRecognizer) {
+            try { hseSpeechRecognizer.stop(); } catch(e) {}
+        }
+        isBotListening = false;
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+    }
+
+    function toggleHseBotListening() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showToast('متصفحك لا يدعم الإدخال الصوتي. يرجى استخدام Chrome أو Safari الحديث.', 'error', 3500);
+            return;
+        }
+
+        const micBtn = document.getElementById('btnBotMicTrigger');
+        const statusText = document.getElementById('botListeningStatus');
+
+        if (isBotListening) {
+            if (hseSpeechRecognizer) try { hseSpeechRecognizer.stop(); } catch(e) {}
+            isBotListening = false;
+            if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            if (statusText) statusText.textContent = 'انقر على الميكروفون للبدء بالتحدث';
+            return;
+        }
+
+        try {
+            const recognizer = new SpeechRecognition();
+            recognizer.lang = 'ar-EG';
+            recognizer.continuous = false;
+            recognizer.interimResults = false;
+
+            recognizer.onstart = () => {
+                isBotListening = true;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                if (statusText) statusText.textContent = '🔴 جاري الاستماع إلى سؤالك الآن... تحدث بوضوح';
+            };
+
+            recognizer.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                if (statusText) statusText.textContent = `تم التقاط: "${transcript}"`;
+                processHseVoiceQuery(transcript);
+            };
+
+            recognizer.onerror = () => {
+                isBotListening = false;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                if (statusText) statusText.textContent = 'تعذر سماع الصوت، يرجى المحاولة ثانية';
+            };
+
+            recognizer.onend = () => {
+                isBotListening = false;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+            };
+
+            hseSpeechRecognizer = recognizer;
+            recognizer.start();
+        } catch(err) {
+            showToast('تعذر تشغيل الميكروفون', 'error', 2500);
+        }
+    }
+
+    function processHseVoiceQuery(query) {
+        if (!query) return;
+        const clean = query.toLowerCase().trim();
+        const resultBox = document.getElementById('botResponseCard');
+        if (!resultBox) return;
+
+        let matchedTopic = null;
+        let maxHits = 0;
+
+        for (const kb of ICAPP_SAFETY_KNOWLEDGE_BASE) {
+            let hits = 0;
+            for (const kw of kb.keywords) {
+                if (clean.includes(kw)) hits++;
+            }
+            if (hits > maxHits) {
+                maxHits = hits;
+                matchedTopic = kb;
+            }
+        }
+
+        resultBox.style.display = 'block';
+
+        if (matchedTopic && maxHits > 0) {
+            resultBox.innerHTML = `
+                <div style="font-weight: 800; font-size: 0.95rem; color: #047857; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                    <span>🛡️ ${matchedTopic.topic}</span>
+                    <button type="button" onclick="speakHseResponse('${escapeHtml(matchedTopic.spokenSummary)}')" style="background: #e0f2fe; color: #0369a1; border: none; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                        <i class="fas fa-volume-high"></i> إعادة النطق
+                    </button>
+                </div>
+                
+                <div style="margin-bottom: 8px;">
+                    <strong style="font-size: 0.78rem; color: #1e293b;">مهمات الوقاية الإلزامية المطلوبة (PPE):</strong>
+                    <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                        ${matchedTopic.ppe.map(p => `<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;">${p}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 0.78rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
+                    <ul style="margin: 0; padding-right: 16px;">
+                        ${matchedTopic.rules.map(r => `<li>${r}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                    <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', '${escapeHtml(matchedTopic.topic)}')" style="background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                        <i class="fas fa-pen-to-square"></i> تسجيل ملاحظة بهذا الشأن
+                    </button>
+                </div>
+            `;
+
+            speakHseResponse(matchedTopic.spokenSummary);
+        } else {
+            resultBox.innerHTML = `
+                <div style="color: #475569; font-size: 0.82rem; text-align: center; padding: 10px;">
+                    <i class="fas fa-circle-question fa-2x" style="color: #94a3b8; margin-bottom: 6px;"></i>
+                    <div style="font-weight: 700;">سؤالك: "${escapeHtml(query)}"</div>
+                    <div style="margin-top: 4px; font-size: 0.75rem; color: #64748b;">لم أجد بنداً مباشراً لهذا الاستفسار. يمكنك توجيه السؤال لمشرف السلامة أو تسجيل الملاحظة مباشرة.</div>
+                    <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', 'ملاحظة عامة')" style="margin-top: 8px; background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                        <i class="fas fa-pen-to-square"></i> نقل السؤال للنموذج كملاحظة
+                    </button>
+                </div>
+            `;
+            speakHseResponse('لم أتمكن من إيجاد معيار مباشر لهذا السؤال، يمكنك تسجيله كملاحظة ميدانية لمتابعة فريق السلامة.');
+        }
+    }
+
+    function speakHseResponse(text) {
+        if (!window.speechSynthesis || !text) return;
+        try {
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'ar-EG';
+            utter.rate = 0.95;
+            window.speechSynthesis.speak(utter);
+        } catch(e) {}
+    }
+
+    function fillObservationFromBot(query, topic) {
+        closeHseVoiceAssistantModal();
+        const text = encodeURIComponent(`استفسار وملاحظة ميدانية: ${query} (الموضوع: ${topic})`);
+        window.location.href = `/public-observation.html?details=${text}`;
+    }
+
 </script>
 
 
@@ -8705,172 +10290,167 @@
          نافذة الرادار الحي لتصاريح العمل السارية بالمواقع (Live PTW Modal)
          ====================================================================== -->
     <div id="livePtwModal" class="live-visitors-modal" style="display: none; align-items: center; justify-content: center; z-index: 99999;" onclick="handlePtwBackdropClick(event)">
-        <div class="live-visitors-dialog" style="max-width: 880px; max-height: 92vh; display: flex; flex-direction: column;" onclick="event.stopPropagation()">
+        <div class="ptw-radar-dialog" onclick="event.stopPropagation()">
             
             <!-- رأس النافذة المطور -->
-            <div class="live-visitors-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; flex-shrink: 0; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div style="width: 38px; height: 38px; border-radius: 10px; background: linear-gradient(135deg, #f59e0b, #d97706); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 2px 8px rgba(217,119,6,0.3);">
+            <div class="ptw-radar-header">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                    <div class="ptw-pulse-icon">
                         ⚡
+                        <div class="ptw-pulse-dot"></div>
                     </div>
-                    <div>
-                        <div style="font-weight: 900; font-size: 0.98rem; color: #fde047;">رادار تصاريح العمل الميدانية السارية</div>
-                        <div style="font-size: 0.72rem; color: #cbd5e1;">الشركة العالمية للانتاج والتصنيع الزراعي • ادارة السلامة والصحة المهنية</div>
+                    <div style="min-width: 0;">
+                        <div class="ptw-radar-title" style="font-weight: 900; font-size: 0.96rem; color: #fde047; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            رادار تصاريح العمل الميدانية السارية
+                        </div>
+                        <div class="ptw-radar-subtitle" style="font-size: 0.68rem; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            الشركة العالمية للانتاج والتصنيع الزراعي • إدارة السلامة والصحة المهنية
+                        </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 6px; align-items: center;">
+                <div style="display: flex; gap: 5px; align-items: center; flex-shrink: 0;">
                     <!-- 🖨️ زر طباعة كشف الوردية والطوارئ -->
-                    <button type="button" onclick="printPtwShiftLog()" title="طباعة كشف حصر التصاريح للوردية والطوارئ" style="background: #059669; color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 6px rgba(5,150,105,0.3);">
+                    <button type="button" class="ptw-hbtn ptw-hbtn-print" onclick="printPtwShiftLog()" title="طباعة كشف حصر التصاريح للوردية والطوارئ">
                         <i class="fas fa-print"></i>
-                        <span>كشف الوردية 🖨️</span>
+                        <span class="ptw-header-btn-label">كشف الوردية</span>
                     </button>
-                    <button type="button" onclick="fetchLivePtwData(true)" title="تحديث لحظي من السحابة" style="background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.25); padding: 6px 10px; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <button type="button" class="ptw-hbtn ptw-hbtn-refresh" onclick="fetchLivePtwData(true)" title="تحديث لحظي من السحابة">
                         <i class="fas fa-rotate" id="ptwModalRefreshIcon"></i>
-                        <span>تحديث</span>
+                        <span class="ptw-header-btn-label">تحديث</span>
                     </button>
-                    <button type="button" onclick="closeLivePtwModal()" title="إغلاق" style="background: rgba(239,68,68,0.2); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); width: 32px; height: 32px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <button type="button" class="ptw-hbtn ptw-hbtn-close" onclick="closeLivePtwModal()" title="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
 
-                        <!-- ⏱️ شريط تحديد الفترة الزمنية الذكية (Time Range Selector) -->
-            <div style="background: #1e1b4b; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 7px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; flex-shrink: 0;">
-                <div style="display: flex; align-items: center; gap: 5px; overflow-x: auto;">
-                    <span style="font-weight: 800; font-size: 0.72rem; color: #fbbf24; white-space: nowrap;"><i class="fas fa-calendar-day ml-1"></i> الفترة:</span>
-                    <button type="button" class="ptw-period-btn active" onclick="setPtwTimePeriod('today', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1.5px solid #3b82f6; background: #2563eb; color: #fff; cursor: pointer; white-space: nowrap;">
-                        وردية اليوم
-                    </button>
-                    <button type="button" class="ptw-period-btn" onclick="setPtwTimePeriod('7days', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
-                        آخر 7 أيام
-                    </button>
-                    <button type="button" class="ptw-period-btn" onclick="setPtwTimePeriod('month', this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
-                        الشهر الحالي
-                    </button>
-                    <button type="button" class="ptw-period-btn" onclick="togglePtwCustomDateRange(this)" style="padding: 3px 9px; border-radius: 14px; font-size: 0.72rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: #cbd5e1; cursor: pointer; white-space: nowrap;">
-                        📅 مخصص...
-                    </button>
-                </div>
-                <div id="ptwCustomDateWrap" style="display: none; align-items: center; gap: 6px;">
-                    <input type="date" id="ptwDateFrom" onchange="applyPtwCustomDates()" style="padding: 2px 6px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.7rem; background: #fff; color: #000;">
-                    <span style="color: #cbd5e1; font-size: 0.7rem;">إلى</span>
-                    <input type="date" id="ptwDateTo" onchange="applyPtwCustomDates()" style="padding: 2px 6px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.7rem; background: #fff; color: #000;">
+            <!-- ⏱️ شريط تحديد الفترة الزمنية الذكية (Time Range Selector) -->
+            <div class="ptw-period-strip">
+                <span style="font-weight: 800; font-size: 0.72rem; color: #fbbf24; white-space: nowrap;"><i class="fas fa-calendar-day ml-1"></i> الفترة:</span>
+                <button type="button" class="ptw-period-chip active" onclick="setPtwTimePeriod('today', this)">
+                    وردية اليوم
+                </button>
+                <button type="button" class="ptw-period-chip" onclick="setPtwTimePeriod('7days', this)">
+                    آخر 7 أيام
+                </button>
+                <button type="button" class="ptw-period-chip" onclick="setPtwTimePeriod('month', this)">
+                    الشهر الحالي
+                </button>
+                <button type="button" class="ptw-period-chip" onclick="togglePtwCustomDateRange(this)">
+                    📅 مخصص...
+                </button>
+                <div id="ptwCustomDateWrap" style="display: none; align-items: center; gap: 5px; margin-right: 6px;">
+                    <input type="date" id="ptwDateFrom" onchange="applyPtwCustomDates()" style="padding: 2px 5px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.68rem; background: #fff; color: #000; height: 24px;">
+                    <span style="color: #cbd5e1; font-size: 0.68rem;">إلى</span>
+                    <input type="date" id="ptwDateTo" onchange="applyPtwCustomDates()" style="padding: 2px 5px; border-radius: 6px; border: 1px solid #94a3b8; font-size: 0.68rem; background: #fff; color: #000; height: 24px;">
                 </div>
             </div>
 
             <!-- 📊 مؤشر دورة حياة الحالات التفاعلي (Status Lifecycle Tabs) -->
-            <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 14px; display: flex; gap: 6px; overflow-x: auto; flex-shrink: 0; align-items: center;">
-                <span style="font-weight: 800; font-size: 0.74rem; color: #475569; white-space: nowrap; margin-left: 4px;"><i class="fas fa-filter text-blue-600"></i> الحالة:</span>
-                <button type="button" class="ptw-status-tab active" onclick="setPtwStatusFilter('all', this)" style="padding: 4px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; border: 1.5px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; white-space: nowrap;">
+            <div class="ptw-status-strip">
+                <span style="font-weight: 800; font-size: 0.72rem; color: #475569; white-space: nowrap; margin-left: 2px;"><i class="fas fa-filter text-blue-600"></i> الحالة:</span>
+                <button type="button" class="ptw-status-pill active" onclick="setPtwStatusFilter('all', this)">
                     جميع التصاريح (<span id="ptwTabCountAll">0</span>)
                 </button>
-                <button type="button" class="ptw-status-tab" onclick="setPtwStatusFilter('active', this)" style="padding: 4px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; border: 1.5px solid #cbd5e1; background: #fff; color: #166534; cursor: pointer; white-space: nowrap;">
+                <button type="button" class="ptw-status-pill" onclick="setPtwStatusFilter('active', this)">
                     🟢 سارية ونشطة (<span id="ptwTabCountActive">0</span>)
                 </button>
-                <button type="button" class="ptw-status-tab" onclick="setPtwStatusFilter('expiringSoon', this)" style="padding: 4px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; border: 1.5px solid #cbd5e1; background: #fff; color: #b45309; cursor: pointer; white-space: nowrap;">
+                <button type="button" class="ptw-status-pill" onclick="setPtwStatusFilter('expiringSoon', this)">
                     ⚠️ تنتهي قريباً (<span id="ptwTabCountExpiring">0</span>)
                 </button>
-                <button type="button" class="ptw-status-tab" onclick="setPtwStatusFilter('pending', this)" style="padding: 4px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; border: 1.5px solid #cbd5e1; background: #fff; color: #6d28d9; cursor: pointer; white-space: nowrap;">
+                <button type="button" class="ptw-status-pill" onclick="setPtwStatusFilter('pending', this)">
                     🟡 بانتظار الاعتماد (<span id="ptwTabCountPending">0</span>)
                 </button>
-                <button type="button" class="ptw-status-tab" onclick="setPtwStatusFilter('closed', this)" style="padding: 4px 10px; border-radius: 20px; font-size: 0.74rem; font-weight: 800; border: 1.5px solid #cbd5e1; background: #fff; color: #475569; cursor: pointer; white-space: nowrap;">
-                    🏁 مغلقة اليوم (<span id="ptwTabCountClosed">0</span>)
+                <button type="button" class="ptw-status-pill" onclick="setPtwStatusFilter('closed', this)">
+                    🏁 مغلقة (<span id="ptwTabCountClosed">0</span>)
                 </button>
             </div>
 
             <!-- 📊 بطاقات مؤشرات الإجمالي وتوزيع المصانع الثلاثة المعتمدة -->
-            <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 10px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: 8px; flex-shrink: 0;">
+            <div class="ptw-kpi-bar">
                 <!-- 1. إجمالي التصاريح لجميع المواقع -->
-                <div onclick="setPtwSiteQuickFilter('all')" style="background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #fff; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 2px 6px rgba(30,58,138,0.25);">
-                    <div style="font-size: 0.7rem; color: #bfdbfe; font-weight: 800;">⚡ إجمالي جميع المواقع</div>
-                    <div style="font-size: 1.35rem; font-weight: 900; color: #fde047; margin-top: 1px;" id="ptwKpiTotal">0</div>
-                    <div style="font-size: 0.64rem; color: #dbeafe;">تصريح للفترة المحددة</div>
+                <div class="ptw-kpi-chip" onclick="setPtwSiteQuickFilter('all')" style="background: linear-gradient(135deg, #1e3a8a, #1e40af); color: #fff; border-color: #1e3a8a;">
+                    <div class="ptw-kpi-chip-title" style="font-size: 0.66rem; color: #bfdbfe; font-weight: 800;">⚡ الإجمالي</div>
+                    <div class="ptw-kpi-chip-num" style="font-size: 1.25rem; font-weight: 900; color: #fde047; line-height: 1.15;" id="ptwKpiTotal">0</div>
                 </div>
 
                 <!-- 2. مصنع ICAPP-1 -->
-                <div onclick="setPtwSiteQuickFilter('ICAPP-1')" style="background: #ffffff; border: 1.5px solid #93c5fd; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                    <div style="font-size: 0.7rem; color: #1e40af; font-weight: 800;">🏭 مصنع ICAPP-1</div>
-                    <div style="font-size: 1.35rem; font-weight: 900; color: #1d4ed8; margin-top: 1px;" id="ptwSiteCount1">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
+                <div class="ptw-kpi-chip" onclick="setPtwSiteQuickFilter('ICAPP-1')" style="border-color: #93c5fd; background: #ffffff;">
+                    <div class="ptw-kpi-chip-title" style="font-size: 0.66rem; color: #1e40af; font-weight: 800;">🏭 ICAPP-1</div>
+                    <div class="ptw-kpi-chip-num" style="font-size: 1.25rem; font-weight: 900; color: #1d4ed8; line-height: 1.15;" id="ptwSiteCount1">0</div>
                 </div>
 
                 <!-- 3. مصنع ICAPP-2 -->
-                <div onclick="setPtwSiteQuickFilter('ICAPP-2')" style="background: #ffffff; border: 1.5px solid #a5f3fc; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                    <div style="font-size: 0.7rem; color: #0e7490; font-weight: 800;">🏭 مصنع ICAPP-2</div>
-                    <div style="font-size: 1.35rem; font-weight: 900; color: #0891b2; margin-top: 1px;" id="ptwSiteCount2">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
+                <div class="ptw-kpi-chip" onclick="setPtwSiteQuickFilter('ICAPP-2')" style="border-color: #a5f3fc; background: #ffffff;">
+                    <div class="ptw-kpi-chip-title" style="font-size: 0.66rem; color: #0e7490; font-weight: 800;">🏭 ICAPP-2</div>
+                    <div class="ptw-kpi-chip-num" style="font-size: 1.25rem; font-weight: 900; color: #0891b2; line-height: 1.15;" id="ptwSiteCount2">0</div>
                 </div>
 
                 <!-- 4. المخازن WH -->
-                <div onclick="setPtwSiteQuickFilter('WH')" style="background: #ffffff; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 9px 10px; text-align: center; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
-                    <div style="font-size: 0.7rem; color: #c2410c; font-weight: 800;">📦 المخازن (WH)</div>
-                    <div style="font-size: 1.35rem; font-weight: 900; color: #ea580c; margin-top: 1px;" id="ptwSiteCountWH">0</div>
-                    <div style="font-size: 0.64rem; color: #64748b;">تصريح مسجل</div>
+                <div class="ptw-kpi-chip" onclick="setPtwSiteQuickFilter('WH')" style="border-color: #fed7aa; background: #ffffff;">
+                    <div class="ptw-kpi-chip-title" style="font-size: 0.66rem; color: #c2410c; font-weight: 800;">📦 المخازن WH</div>
+                    <div class="ptw-kpi-chip-num" style="font-size: 1.25rem; font-weight: 900; color: #ea580c; line-height: 1.15;" id="ptwSiteCountWH">0</div>
                 </div>
             </div>
 
             <!-- 🔥 كروت تصنيف الخطورة التفصيلية -->
-            <div style="background: #fafaf9; border-bottom: 1px solid #e2e8f0; padding: 6px 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; flex-shrink: 0;">
-                <div onclick="setPtwTypeQuickFilter('hot')" style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px; padding: 4px 6px; text-align: center; cursor: pointer;">
-                    <span style="font-size: 0.66rem; color: #be123c; font-weight: 800;">🔥 ساخن ولحام: </span>
-                    <b style="font-size: 0.95rem; font-weight: 900; color: #e11d48;" id="ptwKpiHot">0</b>
+            <div class="ptw-risk-strip">
+                <div class="ptw-risk-item" onclick="setPtwTypeQuickFilter('hot')" style="background: #fff1f2; border: 1px solid #fecdd3; color: #be123c;">
+                    <span>🔥 ساخن:</span>
+                    <b id="ptwKpiHot" style="color: #e11d48;">0</b>
                 </div>
-                <div onclick="setPtwTypeQuickFilter('height')" style="background: #fefce8; border: 1px solid #fef08a; border-radius: 6px; padding: 4px 6px; text-align: center; cursor: pointer;">
-                    <span style="font-size: 0.66rem; color: #a16207; font-weight: 800;">🪜 ارتفاعات: </span>
-                    <b style="font-size: 0.95rem; font-weight: 900; color: #ca8a04;" id="ptwKpiHeight">0</b>
+                <div class="ptw-risk-item" onclick="setPtwTypeQuickFilter('height')" style="background: #fefce8; border: 1px solid #fef08a; color: #a16207;">
+                    <span>🪜 ارتفاعات:</span>
+                    <b id="ptwKpiHeight" style="color: #ca8a04;">0</b>
                 </div>
-                <div onclick="setPtwTypeQuickFilter('confined')" style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 6px; padding: 4px 6px; text-align: center; cursor: pointer;">
-                    <span style="font-size: 0.66rem; color: #6d28d9; font-weight: 800;">🕳️ مغلق وكهرباء: </span>
-                    <b style="font-size: 0.95rem; font-weight: 900; color: #7c3aed;" id="ptwKpiConfined">0</b>
+                <div class="ptw-risk-item" onclick="setPtwTypeQuickFilter('confined')" style="background: #f5f3ff; border: 1px solid #ddd6fe; color: #6d28d9;">
+                    <span>🕳️ مغلق/كهرباء:</span>
+                    <b id="ptwKpiConfined" style="color: #7c3aed;">0</b>
                 </div>
-                <div onclick="setPtwTypeQuickFilter('cold')" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 6px; text-align: center; cursor: pointer;">
-                    <span style="font-size: 0.66rem; color: #334155; font-weight: 800;">❄️ بارد وعام: </span>
-                    <b style="font-size: 0.95rem; font-weight: 900; color: #0f172a;" id="ptwKpiCold">0</b>
+                <div class="ptw-risk-item" onclick="setPtwTypeQuickFilter('cold')" style="background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155;">
+                    <span>❄️ بارد/عام:</span>
+                    <b id="ptwKpiCold" style="color: #0f172a;">0</b>
                 </div>
             </div>
 
             <!-- شريط البحث والتصفية المتطورة مع ماسح الـ QR -->
-            <div style="padding: 8px 16px; background: #fff; border-bottom: 1px solid #f1f5f9; display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0;">
-                <div style="flex: 1.5; min-width: 200px; display: flex; gap: 6px; align-items: center;">
+            <div class="ptw-filter-row">
+                <div class="ptw-search-wrap">
                     <div style="position: relative; flex: 1;">
                         <i class="fas fa-search" style="position: absolute; right: 10px; top: 10px; color: #94a3b8; font-size: 0.8rem;"></i>
-                        <input type="text" id="ptwSearchInput" placeholder="بحث برقم التصريح، المقاول، الموقع، الوصف..." oninput="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 30px 0 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; box-sizing: border-box; outline: none;">
+                        <input type="text" id="ptwSearchInput" class="ptw-search-inp" placeholder="بحث برقم التصريح، المقاول، الموقع، الوصف..." oninput="filterLivePtwList()">
                     </div>
-                    <button type="button" onclick="openPtwQrScanner()" title="مسح باركود أو QR التصريح بالكاميرا" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; border: none; width: 36px; height: 34px; border-radius: 8px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 5px rgba(29,78,216,0.3);">
+                    <button type="button" class="ptw-qr-btn" onclick="openPtwQrScanner()" title="مسح باركود أو QR التصريح بالكاميرا">
                         <i class="fas fa-qrcode"></i>
                     </button>
                 </div>
-                <div style="flex: 1; min-width: 120px;">
-                    <select id="ptwSiteFilter" onchange="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none;">
-                        <option value="all">🏢 جميع المصانع</option>
-                        <option value="ICAPP-1">🏭 مصنع ICAPP-1</option>
-                        <option value="ICAPP-2">🏭 مصنع ICAPP-2</option>
-                        <option value="WH">📦 المخازن (WH)</option>
-                    </select>
-                </div>
-                <div style="flex: 1; min-width: 120px;">
-                    <select id="ptwTypeFilter" onchange="filterLivePtwList()" style="width: 100%; height: 34px; padding: 0 8px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.8rem; font-weight: 700; color: #1e293b; outline: none;">
-                        <option value="all">📑 جميع أنواع التصاريح</option>
-                        <option value="hot">🔥 عمل ساخن ولحام</option>
-                        <option value="height">🪜 عمل على ارتفاعات</option>
-                        <option value="confined">🕳️ دخول أماكن مغلقة</option>
-                        <option value="electrical">⚡ أعمال كهربائية</option>
-                        <option value="cold">❄️ أعمال عامة وباردة</option>
-                    </select>
-                </div>
+                <select id="ptwSiteFilter" class="ptw-select-filter" onchange="filterLivePtwList()">
+                    <option value="all">🏢 جميع المصانع</option>
+                    <option value="ICAPP-1">🏭 مصنع ICAPP-1</option>
+                    <option value="ICAPP-2">🏭 مصنع ICAPP-2</option>
+                    <option value="WH">📦 المخازن (WH)</option>
+                </select>
+                <select id="ptwTypeFilter" class="ptw-select-filter" onchange="filterLivePtwList()">
+                    <option value="all">📑 جميع أنواع التصاريح</option>
+                    <option value="hot">🔥 عمل ساخن ولحام</option>
+                    <option value="height">🪜 عمل على ارتفاعات</option>
+                    <option value="confined">🕳️ دخول أماكن مغلقة</option>
+                    <option value="electrical">⚡ أعمال كهربائية</option>
+                    <option value="cold">❄️ أعمال عامة وباردة</option>
+                </select>
             </div>
 
             <!-- قائمة كروت التصاريح مع عداد الصلاحية اللحظي -->
-            <div id="livePtwCardsContainer" style="padding: 12px 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; background: #fafaf9;">
+            <div id="livePtwCardsContainer" style="padding: 12px 14px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 9px; background: #fafaf9; -webkit-overflow-scrolling: touch;">
                 <div style="text-align: center; padding: 24px; color: #64748b;">
                     <i class="fas fa-spinner fa-spin ml-2"></i>جاري استعلام رادار تصاريح العمل...
                 </div>
             </div>
 
             <!-- التذييل -->
-            <div style="padding: 10px 16px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.76rem; color: #64748b;">
-                <span id="ptwListCountText">0 تصريح مطابق للفلتر</span>
-                <button type="button" onclick="closeLivePtwModal()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 6px 16px; border-radius: 8px; font-weight: 800; cursor: pointer;">
+            <div style="padding: 9px 14px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 0.76rem; color: #64748b;">
+                <span id="ptwListCountText" style="font-weight: 700; color: #1e3a8a;">0 تصريح مطابق للفلتر</span>
+                <button type="button" onclick="closeLivePtwModal()" style="background: #f1f5f9; color: #334155; border: 1.5px solid #cbd5e1; padding: 5px 16px; border-radius: 8px; font-weight: 800; font-size: 0.78rem; cursor: pointer;">
                     إغلاق
                 </button>
             </div>
@@ -8987,6 +10567,165 @@
                 </button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- 🔍 Digital Observation Tracking & Lookup Modal -->
+    <div id="trackObservationModal" class="emergency-modal-overlay" onclick="closeTrackObservationModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 580px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <span id="txtTrackModalTitle">تتبع واستعلام حالة الملاحظة (Observation Tracking)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeTrackObservationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: block;">أدخل كود الملاحظة أو الرقم المرجعي (Ref Code):</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="trackSearchInput" class="form-control" placeholder="مثال: OBS-202609-0001" style="font-weight: 700; text-transform: uppercase; flex: 1; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px;" onkeydown="if(event.key==='Enter') executeTrackSearch()">
+                        <button type="button" onclick="executeTrackSearch()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 0 16px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(2,132,199,0.3);">
+                            <i class="fas fa-search"></i>
+                            <span>بحث</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="trackSearchResultWrap" style="display: none;">
+                    <!-- Result Card Filled Dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 Visual Plant Risk Heatmap Modal -->
+    <div id="plantRiskHeatmapModal" class="emergency-modal-overlay" onclick="closePlantRiskHeatmapModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 680px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-fire-flame-curved"></i>
+                    <span id="txtHeatmapModalTitle">الخريطة الحرارية لمخاطر المصانع (Plant Risk Heatmap)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closePlantRiskHeatmapModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">مؤشرات كثافة المخاطر المفتوحة بالمواقع:</span>
+                    <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
+                        <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">🟢 آمن (0-1)</span>
+                        <span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 12px; border: 1px solid #fde68a;">🟡 انتباه (2-4)</span>
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; border: 1px solid #fecaca;">🔴 نقطة ساخنة (5+)</span>
+                    </div>
+                </div>
+
+                <div id="heatmapGridContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 4px;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📄 Shift Observation Digest Modal -->
+    <div id="shiftDigestModal" class="emergency-modal-overlay" onclick="closeShiftDigestModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 720px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-invoice"></i>
+                    <span id="txtShiftDigestModalTitle">تقرير الوردية الميداني المجمع (Shift HSE Digest)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeShiftDigestModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <!-- Filters -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الموقع / المصنع:</label>
+                        <select id="digestSiteSelect" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                            <option value="">— كافة المواقع —</option>
+                            <option value="ICAPP-1">مصنع ICAPP-1</option>
+                            <option value="ICAPP-2">مصنع ICAPP-2</option>
+                            <option value="المخازن المركزية">المخازن المركزية</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الوردية:</label>
+                        <select id="digestShiftSelect" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                            <option value="">جميع الورديات</option>
+                            <option value="الأولى (صباحية)">الوردية الأولى (صباحية)</option>
+                            <option value="الثانية (مسائية)">الوردية الثانية (مسائية)</option>
+                            <option value="الثالثة (ليلية)">الوردية الثالثة (ليلية)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">التاريخ:</label>
+                        <input type="date" id="digestDateInput" class="form-control" style="font-size: 0.8rem; padding: 6px; width: 100%; border-radius: 6px; border: 1px solid #cbd5e1;" onchange="renderShiftDigestReport()">
+                    </div>
+                </div>
+
+                <!-- Report Render Target -->
+                <div id="shiftDigestReportWrap" style="max-height: 400px; overflow-y: auto; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                    <button type="button" onclick="shareShiftDigestWhatsapp()" style="background: #25d366; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fab fa-whatsapp"></i> مشاركة ملخص واتساب
+                    </button>
+                    <button type="button" onclick="printShiftDigestReport()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i> طباعة / PDF رسمي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎙️ Field HSE Voice Assistant Modal -->
+    <div id="hseVoiceAssistantModal" class="emergency-modal-overlay" onclick="closeHseVoiceAssistantModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 540px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-robot"></i>
+                    <span id="txtVoiceBotModalTitle">مساعد السلامة الصوتي الميداني (HSE AI Voice Assistant)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeHseVoiceAssistantModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px; text-align: center;">
+                <p style="font-size: 0.82rem; color: #475569; margin-bottom: 12px; font-weight: 600;">تحدث واستفسر صوتياً عن مهمات الوقاية، تصاريح العمل، أو تعليمات السلامة الميدانية:</p>
+                
+                <div style="margin: 14px 0;">
+                    <button type="button" id="btnBotMicTrigger" onclick="toggleHseBotListening()" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-size: 1.8rem; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.4); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div id="botListeningStatus" style="font-size: 0.78rem; font-weight: 800; color: #047857; margin-top: 8px;">انقر على الميكروفون للبدء بالتحدث</div>
+                </div>
+
+                <!-- Quick Suggested Questions -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('مهمات الوقاية في عنبر التجميد')">مهمات التجميد ❄️</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('شروط تصريح اللحام والأعمال الساخنة')">تصريح اللحام 🔥</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('إجراءات الأماكن المغلقة')">الأماكن المغلقة 🚪</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('سرعة الرافعة الشوكية')">الرافعات الشوكية 🚜</button>
+                </div>
+
+                <!-- Voice Result Box -->
+                <div id="botResponseCard" style="display: none; text-align: right; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; animation: fadeIn 0.3s ease;">
+                    <!-- Content dynamic -->
+                </div>
+            </div>
         </div>
     </div>
 

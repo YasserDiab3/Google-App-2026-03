@@ -2,9 +2,9 @@
 <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8" />
-        <meta name="app-version" content="1.0.1679" />
+        <meta name="app-version" content="1.0.1698" />
         <!-- إعدادات اتصال الخلفية: Google Apps Script + Sheets فقط -->
-        <script src="js/hse-api-url.js?v=hse-app-v1.0.1679-20260907"></script>
+        <script src="js/hse-api-url.js?v=hse-app-v1.0.1698-20260908"></script>
         <script>
             window.__hseHardReloadForUpdate = function (ver, opts) {
                 return (async function () {
@@ -1854,12 +1854,13 @@
                             style="display: none"
                         >
                             <div class="notifications-dropdown-header">
-                                <h3>الإشعارات</h3>
+                                <h3 data-i18n="notifications.title">الإشعارات</h3>
                                 <div class="notifications-dropdown-header-actions">
                                     <button
                                         type="button"
                                         id="notifications-mark-all-read"
                                         class="notifications-mark-all-read-btn"
+                                        data-i18n="notifications.markAllRead"
                                     >
                                         تعليم كمقروء
                                     </button>
@@ -1867,6 +1868,7 @@
                                         id="close-notifications-dropdown"
                                         class="close-notifications-btn"
                                         aria-label="إغلاق"
+                                        data-i18n-aria-label="notifications.close"
                                     >
                                         <i class="fas fa-times"></i>
                                     </button>
@@ -2434,12 +2436,13 @@
                                 style="display: none"
                             >
                                 <div class="notifications-dropdown-header">
-                                    <h3>الإشعارات</h3>
+                                    <h3 data-i18n="notifications.title">الإشعارات</h3>
                                     <div class="notifications-dropdown-header-actions">
                                         <button
                                             type="button"
                                             id="mobile-notifications-mark-all-read"
                                             class="notifications-mark-all-read-btn"
+                                            data-i18n="notifications.markAllRead"
                                         >
                                             تعليم كمقروء
                                         </button>
@@ -2447,6 +2450,7 @@
                                             id="close-mobile-notifications-dropdown"
                                             class="close-notifications-btn"
                                             aria-label="إغلاق"
+                                            data-i18n-aria-label="notifications.close"
                                         >
                                             <i class="fas fa-times"></i>
                                         </button>
@@ -2608,12 +2612,13 @@
                                     style="display: none"
                                 >
                                     <div class="notifications-dropdown-header">
-                                        <h3>الإشعارات</h3>
+                                        <h3 data-i18n="notifications.title">الإشعارات</h3>
                                         <div class="notifications-dropdown-header-actions">
                                             <button
                                                 type="button"
                                                 id="header-notifications-mark-all-read"
                                                 class="notifications-mark-all-read-btn"
+                                                data-i18n="notifications.markAllRead"
                                             >
                                                 تعليم كمقروء
                                             </button>
@@ -2621,6 +2626,7 @@
                                                 id="close-header-notifications-dropdown"
                                                 class="close-notifications-btn"
                                                 aria-label="إغلاق"
+                                                data-i18n-aria-label="notifications.close"
                                             >
                                                 <i class="fas fa-times"></i>
                                             </button>
@@ -4798,7 +4804,7 @@
 
         <!-- Main App - Refactored Modules -->
         <!-- 1. Utils and Constants (must be loaded first) -->
-        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1698-20260908" defer></script>
 
         <!-- 1.1 DOM Safety Utilities (safe DOM access functions) -->
         <script src="js/modules/dom-safety-utils.js" defer></script>
@@ -4813,7 +4819,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -4831,12 +4837,12 @@
             defer
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
-        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/services/stable-loader.js" defer></script>
-        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/services/data-repository.js" defer></script>
         <script src="js/modules/services/smart-cache.js" defer></script>
         <script src="js/modules/services/offline-banner.js" defer></script>
@@ -4849,23 +4855,23 @@
             defer
         ></script>
         <script src="js/modules/services/issue-tracking.js" defer></script>
-        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <!-- Main services loader (ensures all services are available and adds helper functions) -->
         <script src="js/modules/app-services.js" defer></script>
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
-        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
-        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1698-20260908" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
         <!-- تم تقسيم الملف لتحسين الأداء -->
         <!-- تحميل Auth و Dashboard من ملفات منفصلة أولاً -->
-        <script src="js/modules/auth.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/auth.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1698-20260908" defer></script>
         
         <!-- تحميل جميع الموديولات مباشرة (بدلاً من modules-loader.js) -->
         <script src="js/modules/modules/users.js" defer></script>
@@ -4873,34 +4879,34 @@
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
         <script src="js/modules/modules/client-errors-admin.js" defer></script>
         <script src="js/modules/modules/investigation-rca.js" defer></script>
-        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
-        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
-        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/gatesecurity.js" defer></script>
-        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
         <script src="js/modules/modules/chemicalsafety.js" defer></script>
-        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1679-20260907" defer></script>
-        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1698-20260908" defer></script>
+        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/safetybudget.js" defer></script>
         <script src="js/modules/modules/actiontrackingregister.js" defer></script>
         <script src="js/modules/modules/hse.js" defer></script>
         <script src="js/modules/modules/safetyperformancekpis.js" defer></script>
-        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1679-20260907" defer></script>
+        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1698-20260908" defer></script>
         <script src="js/modules/modules/riskassessment.js" defer></script>
         <script src="js/modules/modules/riskmatrix.js" defer></script>
         <script src="js/modules/modules/legaldocuments.js" defer></script>
@@ -4969,45 +4975,12 @@
             // تسجيل Service Worker للتخزين المؤقت وتحسين الأداء
             if ("serviceWorker" in navigator) {
                 navigator.serviceWorker.addEventListener("controllerchange", function () {
-                    if (window.__hseSwControllerReload) return;
-                    window.__hseSwControllerReload = true;
+                    // إعادة التحميل تحدث فقط عند طلب المستخدم «تحديث الصفحة الآن»
+                    if (!window.__hseUserRequestedReload) return;
                     window.location.reload();
                 });
-                window.addEventListener("load", function () {
-                    try {
-                        var origin = window.location.origin;
-                        if (!origin || origin === "null" || String(window.location.protocol).indexOf("file") === 0) return;
-                        fetch(origin + "/version.json?t=" + Date.now(), { cache: "no-store" })
-                            .then(function (r) {
-                                return r && r.ok ? r.json() : null;
-                            })
-                            .then(function (data) {
-                                if (!data || !data.version) return;
-                                var server = String(data.version).trim();
-                                var loaded =
-                                    window.AppState && AppState.appVersion
-                                        ? String(AppState.appVersion).trim()
-                                        : "";
-                                if (!loaded || !server) return;
-                                var pa = server.split(".").map(function (n) { return parseInt(n, 10) || 0; });
-                                var pb = loaded.split(".").map(function (n) { return parseInt(n, 10) || 0; });
-                                var stale = false;
-                                for (var i = 0; i < 3; i++) {
-                                    var na = pa[i] || 0;
-                                    var nb = pb[i] || 0;
-                                    if (na > nb) {
-                                        stale = true;
-                                        break;
-                                    }
-                                    if (na < nb) break;
-                                }
-                                if (stale && typeof window.__hseHardReloadForUpdate === "function") {
-                                    window.__hseHardReloadForUpdate(server);
-                                }
-                            })
-                            .catch(function () {});
-                    } catch (e) {}
-                });
+                // فحص الإصدار يتم حصرياً من _checkServerVersion() في app-ui.js
+                // تم إزالة الفحص المبكر هنا لمنع التكرار والحلقات
                 const __registerHseServiceWorker = async () => {
                     const __isDev =
                         window.location.hostname === "localhost" ||
@@ -5080,7 +5053,7 @@
                     }
 
                     // مطابقة CACHE_VERSION في service-worker.js — تسريع جلب سكربت SW بعد النشر (تجاوز كاش الشبكة/الوسيط)
-                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1679-20260907";
+                    const __SW_REGISTER_QUERY = "v=hse-app-v1.0.1698-20260908";
                     const swUrl =
                         swPath +
                         (swPath.includes("?") ? "&" : "?") +

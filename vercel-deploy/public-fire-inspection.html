@@ -1386,7 +1386,7 @@
                     </button>
 
                     <!-- زر العودة لبوابة النماذج -->
-                    <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <a href="/forms-hub" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                         <i class="fas fa-th-large"></i>
                         <span id="txtBackToHub">البوابة</span>
                     </a>
@@ -1704,7 +1704,7 @@
                 <button type="button" class="btn-outline" onclick="window.print()">
                     <i class="fas fa-print"></i> طباعة إيصال الفحص
                 </button>
-                <a href="forms-hub.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                <a href="/forms-hub" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
                     <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع لبوابة النماذج</span>
                 </a>
             </div>
@@ -2010,28 +2010,44 @@
             applyLanguage(next);
         }
 
-        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
         let allAssets = [];
         let currentPhotoBase64 = '';
 
-        function getEffectiveApiUrl() {
+                function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
+            }
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p) return p;
-                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                if (s1) {
-                    const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
                 }
-                const s2 = localStorage.getItem('hse_app_settings');
-                if (s2) {
-                    const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-            } catch(e) {}
-            return DEFAULT_API_URL;
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+            } catch (e) {}
+            return DEFAULT_GAS;
         }
 
         
@@ -2893,7 +2909,7 @@
             renderEmergencyContacts();
             if (!navigator.onLine) return;
             try {
-                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -3021,7 +3037,7 @@
 
             try {
                 const startTime = performance.now();
-                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
                 const latency = Math.round(performance.now() - startTime);
 
@@ -3052,7 +3068,7 @@
     </script>
 
     <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
-    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+    <a href="/forms-hub" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
         <i class="fas fa-layer-group"></i>
         <span>بوابة النماذج</span>
     </a>

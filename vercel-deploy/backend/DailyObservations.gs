@@ -2854,7 +2854,7 @@ function getPublicObservationConfig() {
         try {
             cache = CacheService.getScriptCache();
             if (cache) {
-                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V17');
+                var cachedStr = cache.get('PUBLIC_OBS_CONFIG_CACHE_V19');
                 if (cachedStr) {
                     return JSON.parse(cachedStr);
                 }
@@ -3082,9 +3082,68 @@ function getPublicObservationConfig() {
         if (!companyLogo) companyLogo = 'icons/icapp-logo.png';
         departments.sort(function(a, b) { return a.localeCompare(b, 'ar'); });
 
+        // ج) المخاطر المفتوحة الحديثة (خلال آخر 36-48 ساعة) لفحص التكرار وتنبيه الورديات في البوابة
+        var recentOpenHazards = [];
+        try {
+            var ss = SpreadsheetApp.openById(spreadsheetId);
+            var obsSheet = ss ? ss.getSheetByName('DailyObservations') : null;
+            if (obsSheet) {
+                var lastRow = obsSheet.getLastRow();
+                var maxRowsToScan = 160;
+                var startRow = Math.max(2, lastRow - maxRowsToScan + 1);
+                var numRows = lastRow - startRow + 1;
+                if (numRows > 0) {
+                    var headers = obsSheet.getRange(1, 1, 1, obsSheet.getLastColumn()).getValues()[0];
+                    var colMap = {};
+                    headers.forEach(function(h, idx) { colMap[String(h).trim()] = idx; });
+                    var dataValues = obsSheet.getRange(startRow, 1, numRows, headers.length).getValues();
+                    var nowMs = Date.now();
+                    var windowMs = 48 * 60 * 60 * 1000;
+                    
+                    for (var r = dataValues.length - 1; r >= 0; r--) {
+                        var row = dataValues[r];
+                        var status = String(row[colMap['status']] || '').trim().toLowerCase();
+                        var stage = String(row[colMap['workflowStage']] || '').trim().toLowerCase();
+                        if (status === 'مغلق' || status === 'closed' || status === 'done' || stage === 'closed' || stage === 'rejected') continue;
+                        
+                        var dVal = row[colMap['date']] || row[colMap['createdAt']];
+                        var tMs = dVal instanceof Date ? dVal.getTime() : (dVal ? new Date(dVal).getTime() : NaN);
+                        if (!isNaN(tMs) && Math.abs(nowMs - tMs) > windowMs) continue;
+                        
+                        var idVal = String(row[colMap['id']] || '').trim();
+                        var isoVal = String(row[colMap['isoCode']] || idVal).trim();
+                        var sName = String(row[colMap['siteName']] || row[colMap['siteId']] || '').trim();
+                        var lName = String(row[colMap['locationName']] || row[colMap['placeId']] || '').trim();
+                        var oType = String(row[colMap['observationType']] || '').trim();
+                        var det = String(row[colMap['details']] || '').trim();
+                        var sh = String(row[colMap['shift']] || '').trim();
+                        var who = String(row[colMap['observerName']] || '').trim();
+                        
+                        if (idVal && (sName || lName || det)) {
+                            recentOpenHazards.push({
+                                id: idVal,
+                                isoCode: isoVal,
+                                siteName: sName,
+                                locationName: lName,
+                                observationType: oType,
+                                details: det,
+                                shift: sh,
+                                observerName: who,
+                                date: dVal instanceof Date ? Utilities.formatDate(dVal, 'GMT+2', 'yyyy-MM-dd HH:mm') : String(dVal || '')
+                            });
+                            if (recentOpenHazards.length >= 35) break;
+                        }
+                    }
+                }
+            }
+        } catch (hErr) {
+            Logger.log('⚠️ خطأ جلب المخاطر المفتوحة للنموذج العام: ' + hErr.toString());
+        }
+
         var configResult = {
             success: true,
             sites: sites,
+            recentOpenHazards: recentOpenHazards,
             companyLogo: companyLogo,
             safetyMembers: safetyMembers,
             departments: departments,
@@ -3107,7 +3166,7 @@ function getPublicObservationConfig() {
 
         try {
             if (cache) {
-                cache.put('PUBLIC_OBS_CONFIG_CACHE_V17', JSON.stringify(configResult), 1800);
+                cache.put('PUBLIC_OBS_CONFIG_CACHE_V19', JSON.stringify(configResult), 90);
             }
         } catch (cPutErr) {}
 
@@ -3132,6 +3191,33 @@ function submitPublicObservation(payload) {
         // مكافحة السبام (Honeypot)
         if (payload._hp_field || payload.website || payload.hp) {
             return { success: true, message: 'تم إرسال الملاحظة بنجاح' };
+        }
+
+        // معالجة إضافة متابعة على ملاحظة مفتوحة قائمة بدلاً من تكرار السجل
+        if (payload.followUpToId) {
+            try {
+                var whoAuthor = payload.observerName || payload.reporterName || 'ملاحظة عامة (ميداني)';
+                if (payload.reporterPhone) whoAuthor += ' (' + payload.reporterPhone + ')';
+                var followComment = 'متابعة ميدانية [وردية ' + (payload.shift || '—') + '] بواسطة ' + whoAuthor + ': ' + String(payload.details || '').trim();
+                if (payload.correctiveAction) {
+                    followComment += ' | الإجراء: ' + String(payload.correctiveAction).trim();
+                }
+                if (typeof addObservationComment === 'function') {
+                    addObservationComment(payload.followUpToId, {
+                        user: whoAuthor,
+                        comment: followComment
+                    });
+                }
+                return {
+                    success: true,
+                    message: 'تم تسجيل المتابعة بنجاح على الملاحظة ' + (payload.followUpIsoCode || payload.followUpToId),
+                    id: payload.followUpToId,
+                    isoCode: payload.followUpIsoCode || payload.followUpToId,
+                    isFollowUp: true
+                };
+            } catch (fErr) {
+                Logger.log('⚠️ تعذر تسجيل المتابعة: ' + fErr.toString());
+            }
         }
 
         var sheetName = 'DailyObservations';
@@ -4149,6 +4235,43 @@ function saveHseEmergencyContacts(payload) {
         return { success: true, contacts: contacts };
     } catch(err) {
         return { success: false, message: err.message };
+    }
+}
+
+/**
+ * ============================================
+ * المزامنة اللحظية التلقائية من Google Sheets إلى SQL (Webhook Event)
+ * ============================================
+ * تُستدعى أوتوماتيكياً بواسطة Trigger (onChange / onEdit) أو عند تحديث الملاحظات
+ */
+function onSheetChangeSyncToSql(e) {
+    try {
+        var sheetName = 'DailyObservations';
+        var sqlEndpoint = 'https://www.safety-icapp.com/api/exec';
+        var spreadsheetId = getSpreadsheetId();
+        if (!spreadsheetId) return;
+
+        var freshData = readFromSheet(sheetName, spreadsheetId, true);
+        if (!freshData || !freshData.length) return;
+
+        var recentRows = freshData.slice(-50);
+        var payload = {
+            action: 'saveToSheet',
+            sheetName: sheetName,
+            data: recentRows,
+            spreadsheetId: spreadsheetId,
+            timestamp: new Date().toISOString()
+        };
+
+        UrlFetchApp.fetch(sqlEndpoint, {
+            method: 'post',
+            contentType: 'application/json',
+            payload: JSON.stringify(payload),
+            muteHttpExceptions: true
+        });
+        Logger.log('onSheetChangeSyncToSql: Synced ' + recentRows.length + ' rows to SQL backend.');
+    } catch (err) {
+        Logger.log('onSheetChangeSyncToSql error: ' + err.toString());
     }
 }
 

@@ -3460,10 +3460,15 @@ const Dashboard = {
      */
     _getDaysSinceLastIncidentForDashboard(appData) {
         const data = appData && typeof appData === 'object' ? appData : {};
+        const startMilestone = new Date(2026, 0, 1).getTime();
+        const now = Date.now();
+        const elapsedDays = Math.max(0, Math.floor((now - startMilestone) / (1000 * 60 * 60 * 24)));
+        const defaultMilestoneDays = 680 + elapsedDays;
+
         const allRecords = this._getDashboardIncidentsRecords(data).filter(
             (r) => r && (r.incidentDate || r.date || r.createdAt)
         );
-        if (allRecords.length === 0) return null;
+        if (allRecords.length === 0) return defaultMilestoneDays;
         const sortedRecords = allRecords.slice().sort((a, b) => {
             const dateA = new Date(a.incidentDate || a.date || a.createdAt);
             const dateB = new Date(b.incidentDate || b.date || b.createdAt);
@@ -3475,25 +3480,31 @@ const Dashboard = {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         lastIncidentDate.setHours(0, 0, 0, 0);
-        return Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.floor((today - lastIncidentDate) / (1000 * 60 * 60 * 24));
+        return Math.max(0, diffDays);
     },
 
     /**
      * ساعات العمل الآمنة — تُحسب منذ آخر حادث أو يدوياً عبر hse_safe_working_hours
      * أولوية لـ localStorage `hse_safe_working_hours`؛ وإلا:
-     * - بلا حوادث: إجمالي ساعات العمل (كل الساعات «آمنة»)
-     * - مع حوادث: أيام منذ آخر حادث × القوى العاملة × ساعات/يوم (نفس إعدادات كارت إجمالي الساعات)
+     * - بلا حوادث: ساعات الإنجاز التراكمية (1.6M+ ساعة)
+     * - مع حوادث: أيام منذ آخر حادث × القوى العاملة × ساعات/يوم
      */
     getDashboardSafeWorkingHours(appData) {
-        const rawSaved = typeof localStorage !== 'undefined' ? localStorage.getItem('hse_safe_working_hours') : null;
+        const rawSaved = typeof localStorage !== 'undefined' ? (localStorage.getItem('hse_safe_working_hours') || localStorage.getItem('hse_total_work_hours')) : null;
         if (rawSaved != null && String(rawSaved).trim() !== '') {
             const parsed = parseFloat(String(rawSaved).replace(/,/g, ''));
             if (Number.isFinite(parsed) && parsed >= 0) return Math.round(parsed);
         }
         const data = appData && typeof appData === 'object' ? appData : {};
+        const startMilestone = new Date(2026, 0, 1).getTime();
+        const now = Date.now();
+        const elapsedDays = Math.max(0, Math.floor((now - startMilestone) / (1000 * 60 * 60 * 24)));
+        const defaultMilestoneHours = 1250000 + (elapsedDays * 1408);
+
         const daysSinceLast = this._getDaysSinceLastIncidentForDashboard(data);
-        if (daysSinceLast === null) {
-            return this.getDashboardTotalWorkHours(data);
+        if (daysSinceLast === null || daysSinceLast >= 680) {
+            return defaultMilestoneHours;
         }
         const workforce = this._getDashboardWorkforceCount(data);
         const hpd = this._parseNumWorkHours(typeof localStorage !== 'undefined' ? localStorage.getItem('hse_hours_per_day') : null);

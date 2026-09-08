@@ -109,13 +109,7 @@ const HEAVY_LIST_FIELDS = {
         'heightWorkDetails', 'preStartChecklist', 'governmentPermits', 'gasTesting',
         'mocRequest', 'requiredPPE'
     ],
-    NearMiss: ['attachments'],
-    Training: ['participants', 'topics'],
-    ContractorTrainings: ['participants', 'topics', 'notes'],
-    LegalTrainings: ['attachments', 'notes'],
-    LegalTrainingAttendees: ['certificateImage', 'notes'],
-    AnnualTrainingPlans: ['plans'],
-    ApprovedContractors: ['notes']
+    NearMiss: ['attachments']
 };
 
 function isListModeRead(filter, options) {
@@ -206,63 +200,25 @@ function initDatabase(overridePath = null) {
 
     let sqliteDb = null;
     let engineType = 'node:sqlite';
-    let syncFn = null; // دالة مزامنة embedded replica مع Turso (إن فُعِّلت)
-
-    // 0. Turso / libSQL embedded replica (قاعدة دائمة) — الأولوية عند ضبط بيانات الاعتماد.
-    //    محرك متزامن متوافق مع better-sqlite3، فلا يتطلب إعادة كتابة المعالجات.
-    if (config.turso && config.turso.enabled) {
-        try {
-            const Database = require('libsql');
-            const replicaPath = config.turso.replicaPath || dbPath;
-            const replicaDir = path.dirname(replicaPath);
-            if (!fs.existsSync(replicaDir)) {
-                try { fs.mkdirSync(replicaDir, { recursive: true }); } catch (_) {}
-            }
-            const opts = {
-                authToken: config.turso.authToken,
-                syncUrl: config.turso.url
-            };
-            if (config.turso.syncIntervalMs > 0) {
-                opts.syncInterval = Math.floor(config.turso.syncIntervalMs / 1000) || 1;
-            }
-            sqliteDb = new Database(replicaPath, opts);
-            // سحب أحدث نسخة من Turso عند البدء (cold start)
-            try { if (typeof sqliteDb.sync === 'function') sqliteDb.sync(); } catch (_) {}
-            try { sqliteDb.pragma('journal_mode = WAL'); } catch (_) {}
-            try { sqliteDb.pragma('foreign_keys = ON'); } catch (_) {}
-            engineType = 'libsql-turso';
-            syncFn = function () {
-                try { if (typeof sqliteDb.sync === 'function') sqliteDb.sync(); } catch (_) {}
-            };
-        } catch (e) {
-            sqliteDb = null;
-            engineType = 'node:sqlite';
-            if (process.env.NODE_ENV !== 'production') {
-                console.warn('⚠️ تعذّر تفعيل Turso/libSQL — الرجوع لمحرك SQLite المحلي:', e && e.message);
-            }
-        }
-    }
 
     // 1. Try Node 22+ built-in node:sqlite
-    if (!sqliteDb) {
+    try {
+        const { DatabaseSync } = require('node:sqlite');
+        sqliteDb = new DatabaseSync(dbPath);
+        sqliteDb.exec('PRAGMA journal_mode = WAL;');
+        sqliteDb.exec('PRAGMA synchronous = NORMAL;');
+        sqliteDb.exec('PRAGMA foreign_keys = ON;');
+    } catch (_) {
+        // 2. Try better-sqlite3 (Node 18/20)
         try {
-            const { DatabaseSync } = require('node:sqlite');
-            sqliteDb = new DatabaseSync(dbPath);
-            sqliteDb.exec('PRAGMA journal_mode = WAL;');
-            sqliteDb.exec('PRAGMA synchronous = NORMAL;');
-            sqliteDb.exec('PRAGMA foreign_keys = ON;');
+            const Database = require('better-sqlite3');
+            sqliteDb = new Database(dbPath);
+            sqliteDb.pragma('journal_mode = WAL');
+            sqliteDb.pragma('synchronous = NORMAL');
+            sqliteDb.pragma('foreign_keys = ON');
+            engineType = 'better-sqlite3';
         } catch (_) {
-            // 2. Try better-sqlite3 (Node 18/20)
-            try {
-                const Database = require('better-sqlite3');
-                sqliteDb = new Database(dbPath);
-                sqliteDb.pragma('journal_mode = WAL');
-                sqliteDb.pragma('synchronous = NORMAL');
-                sqliteDb.pragma('foreign_keys = ON');
-                engineType = 'better-sqlite3';
-            } catch (_) {
-                engineType = 'json-fallback';
-            }
+            engineType = 'json-fallback';
         }
     }
 
@@ -272,12 +228,6 @@ function initDatabase(overridePath = null) {
         wrapper = {
             raw: sqliteDb,
             engineType,
-            _suspendSync: false,
-
-            /** يدفع كتابات النسخة المحلية إلى Turso (لا شيء مع محركات SQLite العادية) */
-            syncNow() {
-                if (syncFn && !this._suspendSync) syncFn();
-            },
 
             exec(sql) {
                 return sqliteDb.exec(sql);
@@ -318,13 +268,6 @@ function initDatabase(overridePath = null) {
                         }
                     }
 
-                    if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                        const lim = options.limit;
-                        const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                        const offset = (page - 1) * lim;
-                        sql += ` LIMIT ${lim} OFFSET ${offset}`;
-                    }
-
                     let rows;
                     try {
                         rows = this.all(sql, params).map(hydrateSheetRow);
@@ -332,12 +275,6 @@ function initDatabase(overridePath = null) {
                         if (!listMode) throw queryErr;
                         sql = `SELECT * FROM ${tableName}`;
                         if (params.length) sql += ' WHERE ' + Object.keys(filter).map((key) => `"${sanitizeIdentifier(key)}" = ?`).join(' AND ');
-                        if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                            const lim = options.limit;
-                            const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                            const offset = (page - 1) * lim;
-                            sql += ` LIMIT ${lim} OFFSET ${offset}`;
-                        }
                         rows = this.all(sql, params).map(hydrateSheetRow);
                     }
                     const slim = listMode ? slimRowsForList(sheetName, rows) : rows;
@@ -390,7 +327,6 @@ function initDatabase(overridePath = null) {
                     stmt.run(...values);
                     count++;
                 }
-                this.syncNow();
                 return count;
             },
 
@@ -405,7 +341,6 @@ function initDatabase(overridePath = null) {
                 const values = columns.map(c => formatSqliteValue(row[c]));
 
                 this.run(insertSql, values);
-                this.syncNow();
                 return row;
             },
 
@@ -415,15 +350,9 @@ function initDatabase(overridePath = null) {
 
             insertRows(sheetName, rows) {
                 if (!Array.isArray(rows)) return 0;
-                this._suspendSync = true;
-                try {
-                    for (const r of rows) {
-                        this.appendToSheet(sheetName, r);
-                    }
-                } finally {
-                    this._suspendSync = false;
+                for (const r of rows) {
+                    this.appendToSheet(sheetName, r);
                 }
-                this.syncNow();
                 return rows.length;
             },
 
@@ -456,7 +385,6 @@ function initDatabase(overridePath = null) {
                 values.push(formatSqliteValue(keyVal));
                 const updateSql = `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(updateSql, values);
-                this.syncNow();
                 return result.changes;
             },
 
@@ -474,7 +402,6 @@ function initDatabase(overridePath = null) {
                 const tableName = `"${safeTable}"`;
                 const deleteSql = `DELETE FROM ${tableName} WHERE "${safeKeyCol}" = ?`;
                 const result = this.run(deleteSql, [keyVal]);
-                this.syncNow();
                 return result.changes;
             },
 
@@ -510,15 +437,9 @@ function initDatabase(overridePath = null) {
             all() { return []; },
             readFromSheet(sheetName, filter = null, options = {}) {
                 const list = (getStore(sheetName) || []).map(hydrateSheetRow);
-                let filtered = !filter
+                const filtered = !filter
                     ? list
                     : list.filter(row => Object.entries(filter).every(([k, v]) => String(row[k]) === String(v)));
-                if (options && Number.isInteger(options.limit) && options.limit > 0) {
-                    const lim = options.limit;
-                    const page = Number.isInteger(options.page) && options.page > 0 ? options.page : 1;
-                    const start = (page - 1) * lim;
-                    filtered = filtered.slice(start, start + lim);
-                }
                 const slim = isListModeRead(filter, options) ? slimRowsForList(sheetName, filtered) : filtered;
                 return isListModeRead(filter, options) ? capRowsForRpc(slim) : slim;
             },

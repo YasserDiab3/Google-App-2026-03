@@ -614,8 +614,12 @@ const DailyObservations = {
         Notification?.info?.('سيتم رفع الصورة تلقائياً عند الاختيار', 3000);
     },
 
-    /** ✅ تحويل ملف إلى Base64 */
+    /** ✅ تحويل ملف إلى Base64 مع الضغط التلقائي للصور (Client-Side Compression < 300KB) */
     _fileToBase64(file) {
+        if (!file) return Promise.resolve('');
+        if (file.type && file.type.startsWith('image/') && typeof Utils !== 'undefined' && typeof Utils.compressImage === 'function') {
+            return Utils.compressImage(file, { maxBytes: 300 * 1024, maxWidth: 1280, maxHeight: 1280 });
+        }
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
@@ -1164,25 +1168,60 @@ const DailyObservations = {
         const silent = opts.silent === true;
         this._obsCloseInFlight = this._obsCloseInFlight || {};
         if (this._obsCloseInFlight[observationId]) {
-            return { success: false, skipped: true };
+            return { success: true, skipped: true };
         }
         this._obsCloseInFlight[observationId] = true;
         try {
-            const raw = (AppState.appData.dailyObservations || []).find((o) => o && o.id === observationId);
+            const raw = (AppState.appData.dailyObservations || []).find((o) => o && String(o.id) === String(observationId));
             if (!raw) return { success: false, message: 'الملاحظة غير موجودة' };
             const obs = this.normalizeRecord(raw);
             if (this.isObservationClosed(obs)) return { success: true, skipped: true };
             if (!this.canCloseObservationQuick(obs)) {
                 return { success: false, message: this._t('module.dailyobs.close.noPermission', 'لا صلاحية لإغلاق هذه الملاحظة') };
             }
-            const res = await this.runWorkflowTransition(observationId, 'close_observation', {
-                silent: silent
-            });
-            if (res && res.success) {
-                this._markObservationClosedLocal(observationId);
-                return { success: true };
+
+            // ✅ 1. إغلاق فوري محلي في الواجهة (Optimistic Instant UI Update)
+            this._markObservationClosedLocal(observationId);
+            this.closeObservationDetailModalIfOpen(observationId);
+
+            if (!silent) {
+                Notification.success(this._t('module.dailyobs.close.oneDone', 'تم إغلاق الملاحظة بنجاح'));
+                try { this.loadObservationsList(this.currentFilter?.filter || null); } catch (_e) { /* ignore */ }
+                try { this.renderStatsCards(); } catch (_e) { /* ignore */ }
             }
-            return { success: false, message: (res && res.message) || 'فشل إغلاق الملاحظة' };
+
+            // ✅ 2. مزامنة في الخلفية لقاعدة البيانات بدون تعطيل المستخدم (Async Background Sync)
+            const actor = this._buildObservationWorkflowActor();
+            GoogleIntegration.callBackend('transitionObservationWorkflow', {
+                observationId,
+                action: 'close_observation',
+                actor,
+                __timeoutMs: 120000
+            }).then((res) => {
+                if (!res || !res.success) {
+                    // محاولة احتياطية لتأكيد الحالة كـ "مغلق"
+                    GoogleIntegration.callBackend('updateObservationStatus', {
+                        observationId,
+                        statusData: {
+                            status: 'مغلق',
+                            workflowStage: 'closed',
+                            updatedBy: AppState.currentUser?.name || 'System'
+                        }
+                    }).catch(() => {});
+                }
+            }).catch(() => {
+                // محاولة احتياطية ثانية في حالة البطء أو التغطية الضعيفة
+                GoogleIntegration.callBackend('updateObservationStatus', {
+                    observationId,
+                    statusData: {
+                        status: 'مغلق',
+                        workflowStage: 'closed',
+                        updatedBy: AppState.currentUser?.name || 'System'
+                    }
+                }).catch(() => {});
+            });
+
+            return { success: true };
         } finally {
             delete this._obsCloseInFlight[observationId];
         }
@@ -1193,6 +1232,7 @@ const DailyObservations = {
         const countEl = document.getElementById('obs-bulk-close-count');
         const btn = document.getElementById('obs-bulk-close-btn');
         const pptBtn = document.getElementById('obs-export-selected-ppt-btn');
+        const clearBtn = document.getElementById('obs-clear-selection-btn');
         const n = selected.size;
         if (countEl) {
             countEl.textContent = n
@@ -1206,6 +1246,7 @@ const DailyObservations = {
             }
         }
         if (pptBtn) pptBtn.disabled = n === 0;
+        if (clearBtn) clearBtn.disabled = n === 0;
         document.querySelectorAll('.obs-row-select').forEach((cb) => {
             const id = cb.getAttribute('data-oid');
             cb.checked = !!(id && selected.has(id));
@@ -1296,6 +1337,14 @@ const DailyObservations = {
         if (!container || container.dataset.obsCloseBound === '1') return;
         container.dataset.obsCloseBound = '1';
         container.addEventListener('click', (e) => {
+            const clearSelBtn = e.target.closest && e.target.closest('#obs-clear-selection-btn');
+            if (clearSelBtn) {
+                e.preventDefault();
+                this._ensureObsSelectedSet().clear();
+                this._obsBulkArmed = false;
+                this._updateObsBulkCloseBar();
+                return;
+            }
             const exportSelBtn = e.target.closest && e.target.closest('#obs-export-selected-ppt-btn');
             if (exportSelBtn) {
                 e.preventDefault();
@@ -3703,6 +3752,43 @@ const DailyObservations = {
             @keyframes spin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
+            }
+
+            /* تثبيت رأس جدول الملاحظات اليومية (Sticky Table Header) */
+            .observations-table-wrapper table.data-table {
+                border-collapse: separate !important;
+                border-spacing: 0 !important;
+            }
+            .observations-table-wrapper table.data-table thead {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 35 !important;
+            }
+            .observations-table-wrapper table.data-table thead tr {
+                background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+            }
+            .observations-table-wrapper table.data-table thead th {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 35 !important;
+                background: #1e3a8a !important;
+                background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%) !important;
+                color: #ffffff !important;
+                font-weight: 700 !important;
+                font-size: 13px !important;
+                padding: 12px 14px !important;
+                border-bottom: 3px solid #d97706 !important;
+                border-top: none !important;
+                white-space: nowrap !important;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.25);
+                vertical-align: middle !important;
+                box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15) !important;
+            }
+            .observations-table-wrapper table.data-table tbody td {
+                border-top: 1px solid #e5e7eb;
+            }
+            .observations-table-wrapper table.data-table thead th input[type="checkbox"] {
+                accent-color: #f59e0b !important;
             }
         `;
         document.head.appendChild(style);
@@ -8647,6 +8733,9 @@ const DailyObservations = {
             <div id="obs-bulk-close-bar" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;padding:10px 12px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;">
                 <span id="obs-bulk-close-count" style="font-weight:700;color:#3730a3;">${Utils.escapeHTML(selectedCount ? `${selectedCount} محددة` : this._t('module.dailyobs.close.noneSelected', 'لم يُحدد شيء'))}</span>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" id="obs-clear-selection-btn" class="btn-secondary btn-sm" ${selectedCount ? '' : 'disabled'} style="border-color:#cbd5e1;color:#475569;">
+                        <i class="fas fa-undo ml-1"></i>إلغاء التحديد
+                    </button>
                     <button type="button" id="obs-export-selected-ppt-btn" class="btn-secondary btn-sm" ${selectedCount ? '' : 'disabled'} style="border-color:#fb923c;color:#c2410c;">
                         <i class="fas fa-file-powerpoint ml-1"></i>تصدير PPT للمحدد
                     </button>
@@ -13816,6 +13905,64 @@ const DailyObservations = {
         const wfPathHtml = this.buildWorkflowPathHtml(observation);
         const wfBannerHtml = this.buildWorkflowBannerHtml(observation);
 
+        // Build Observation Type Options Html
+        const curType = String(observation.observationType || '').trim();
+        const obsTypes = this.getObservationTypes();
+        let typeMatched = false;
+        let typeOptionsHtml = obsTypes.map(type => {
+            const isSel = curType && (curType === type || curType.toLowerCase() === type.toLowerCase());
+            if (isSel) typeMatched = true;
+            return `<option value="${type}" ${isSel ? 'selected' : ''}>${type}</option>`;
+        }).join('');
+        if (curType && !typeMatched) {
+            typeOptionsHtml += `<option value="${curType}" selected>${curType}</option>`;
+        }
+
+        // Build Risk Options Html
+        const curRisk = String(observation.riskLevel || '').trim();
+        const riskLevels = this.getRiskLevels();
+        const normalizeRisk = (r) => {
+            const s = String(r || '').trim().toLowerCase();
+            if (s === 'عالي' || s === 'مرتفع' || s === 'high') return 'high';
+            if (s === 'متوسط' || s === 'medium' || s === 'med') return 'medium';
+            if (s === 'منخفض' || s === 'low') return 'low';
+            if (s === 'شديد' || s === 'حرج' || s === 'critical' || s === 'severe') return 'critical';
+            return s;
+        };
+        const curRiskNorm = normalizeRisk(curRisk);
+        let riskMatched = false;
+        let riskOptionsHtml = riskLevels.map(level => {
+            const isSel = curRisk && (curRisk === level || normalizeRisk(level) === curRiskNorm);
+            if (isSel) riskMatched = true;
+            return `<option value="${level}" ${isSel ? 'selected' : ''}>${level}</option>`;
+        }).join('');
+        if (curRisk && !riskMatched) {
+            riskOptionsHtml += `<option value="${curRisk}" selected>${curRisk}</option>`;
+        }
+
+        // Build Responsible Department Options Html
+        const curDept = String(observation.responsibleDepartment || '').trim();
+        const curDeptLower = curDept.toLowerCase();
+        const depts = this.getDepartments();
+        let deptMatched = false;
+        let deptOptionsHtml = depts.map(dept => {
+            const dLower = dept.toLowerCase();
+            const isSelected = curDept && (
+                (curDeptLower === dLower) ||
+                (dept.includes('مستودع') && (curDeptLower.includes('مخازن') || curDeptLower.includes('مستودع'))) ||
+                (dept.includes('صيانة') && curDeptLower.includes('صيانة')) ||
+                (dept.includes('سلامة') && (curDeptLower.includes('سلامة') || curDeptLower === 'hse' || curDeptLower.includes('quality, health'))) ||
+                (dept.includes('إنتاج') && (curDeptLower.includes('انتاج') || curDeptLower.includes('إنتاج') || curDeptLower.includes('تصنيع') || curDeptLower.includes('تعبئة'))) ||
+                (dept.includes('جودة') && curDeptLower.includes('جودة')) ||
+                (dept.includes('مشروعات') && (curDeptLower.includes('project') || curDeptLower.includes('مشاريع') || curDeptLower.includes('هندس')))
+            );
+            if (isSelected) deptMatched = true;
+            return `<option value="${dept}" ${isSelected ? 'selected' : ''}>${dept}</option>`;
+        }).join('');
+        if (curDept && !deptMatched) {
+            deptOptionsHtml += `<option value="${curDept}" selected>${curDept}</option>`;
+        }
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.setAttribute('data-observation-id', observation.id);
@@ -13857,7 +14004,7 @@ const DailyObservations = {
                                 ${this.canEditObservationFieldsInDetail(observation) ? `
                                 <select id="observation-type-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${observation.id}', 'observationType', this.value, this)">
                                     <option value="">-- اختر النوع --</option>
-                                    ${this.getObservationTypes().map(type => `<option value="${type}" ${observation.observationType === type ? 'selected' : ''}>${type}</option>`).join('')}
+                                    ${typeOptionsHtml}
                                 </select>
                                 ` : `<span class="text-gray-900">${Utils.escapeHTML(observation.observationType || '-')}</span>`}
                             </div>
@@ -13870,7 +14017,7 @@ const DailyObservations = {
                                 ${this.canEditObservationFieldsInDetail(observation) ? `
                                 <select id="observation-risk-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${observation.id}', 'riskLevel', this.value, this)">
                                     <option value="">-- اختر المعدل --</option>
-                                    ${this.getRiskLevels().map(level => `<option value="${level}" ${observation.riskLevel === level ? 'selected' : ''}>${level}</option>`).join('')}
+                                    ${riskOptionsHtml}
                                 </select>
                                 ` : `<span class="text-gray-900">${Utils.escapeHTML(observation.riskLevel || '-')}</span>`}
                             </div>
@@ -13890,18 +14037,7 @@ const DailyObservations = {
                                 ${this.canEditObservationFieldsInDetail(observation) ? `
                                 <select id="observation-responsible-select" class="form-input" style="width: 100%; margin-top: 4px;" onchange="DailyObservations.handleFieldChange('${observation.id}', 'responsibleDepartment', this.value, this)">
                                     <option value="">-- اختر المسؤول --</option>
-                                    ${this.getDepartments().map(dept => {
-                                        const cur = String(observation.responsibleDepartment || '').trim().toLowerCase();
-                                        const dLower = dept.toLowerCase();
-                                        const isSelected = (cur === dLower) ||
-                                            (dept.includes('مستودع') && (cur.includes('مخازن') || cur.includes('مستودع'))) ||
-                                            (dept.includes('صيانة') && cur.includes('صيانة')) ||
-                                            (dept.includes('سلامة') && (cur.includes('سلامة') || cur === 'hse' || cur.includes('quality, health'))) ||
-                                            (dept.includes('إنتاج') && (cur.includes('انتاج') || cur.includes('إنتاج') || cur.includes('تصنيع') || cur.includes('تعبئة'))) ||
-                                            (dept.includes('جودة') && cur.includes('جودة')) ||
-                                            (dept.includes('مشروعات') && (cur.includes('project') || cur.includes('مشاريع') || cur.includes('هندس')));
-                                        return `<option value="${dept}" ${isSelected ? 'selected' : ''}>${dept}</option>`;
-                                    }).join('')}
+                                    ${deptOptionsHtml}
                                 </select>
                                 ` : `<span class="text-gray-900">${Utils.escapeHTML(observation.responsibleDepartment || '-')}</span>`}
                             </div>

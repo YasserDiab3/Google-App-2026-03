@@ -2256,7 +2256,7 @@
 
             // 2. مزامنة حية مع الخادم السحابي وقاعدة البيانات
             try {
-                const endpoint = GATE_CONFIG.cloudEndpoint;
+                const endpoint = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 if (endpoint) {
                     const res = await fetch(endpoint, {
                         method: 'POST',
@@ -3114,6 +3114,16 @@ function resetCheckInForm() {
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
 
+                async function parseExecApiResponse(res) {
+                    const text = await res.text();
+                    if (!text) return null;
+                    let data = JSON.parse(text);
+                    if (typeof data === 'string') {
+                        try { data = JSON.parse(data); } catch (_e) {}
+                    }
+                    return data;
+                }
+
                 async function fetchActiveVisitorsFromCloud() {
             if (!navigator.onLine) return;
             try {
@@ -3122,16 +3132,20 @@ function resetCheckInForm() {
                 try {
                     const res = await fetch(targetUrl, {
                         method: 'POST',
+                        mode: 'cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({ action: 'getAllGateVisitors', data: {} })
                     });
-                    json = await res.json();
+                    if (res.ok) json = await parseExecApiResponse(res);
                 } catch(pErr) {
-                    const res = await fetch(targetUrl + '?action=getAllGateVisitors', { method: 'GET', mode: 'cors' });
-                    json = await res.json();
+                    /* fallback below */
+                }
+                if (!json || !json.success) {
+                    const res = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'action=getAllGateVisitors&_t=' + Date.now(), { method: 'GET', mode: 'cors' });
+                    if (res.ok) json = await parseExecApiResponse(res);
                 }
 
-                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || []) : null;
+                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || json.data || []) : null;
                 if (Array.isArray(cloudList)) {
                     const now = Date.now();
                     const listWithTs = cloudList.map(v => {
@@ -3525,26 +3539,41 @@ function resetCheckInForm() {
             win.document.close();
         }
 
-        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
-
-        function getEffectiveApiUrl() {
+                function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
+            }
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p) return p;
-                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                if (s1) {
-                    const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
                 }
-                const s2 = localStorage.getItem('hse_app_settings');
-                if (s2) {
-                    const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-            } catch(e) {}
-            return DEFAULT_API_URL;
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+            } catch (e) {}
+            return DEFAULT_GAS;
         }
 
         async function syncVisitorCheckInToCloud(visitorRecord) {
@@ -3841,7 +3870,7 @@ function resetCheckInForm() {
             renderEmergencyContacts();
             if (!navigator.onLine) return;
             try {
-                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -3969,7 +3998,7 @@ function resetCheckInForm() {
 
             try {
                 const startTime = performance.now();
-                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
                 const latency = Math.round(performance.now() - startTime);
 

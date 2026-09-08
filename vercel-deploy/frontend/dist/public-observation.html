@@ -416,7 +416,6 @@
             }
             .iso-meta-key { font-size: 0.54rem; }
             .iso-meta-val { font-size: 0.56rem; padding: 0 2px; }
-        }
 
             .iso-footer-meta-strip {
                 display: flex;
@@ -436,6 +435,220 @@
             .iso-footer-meta-val {
                 font-size: 0.58rem;
                 padding: 1px 5px;
+            }
+        }
+
+        /* 📱 تحسين وتنسيق أزرار وأدوات الهيدر على الموبايل والديسكتوب */
+        .top-tools-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 2px 0;
+            flex-wrap: wrap;
+        }
+
+        .top-tools-left, .top-tools-right {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .top-status-pill {
+            padding: 5px 11px;
+            border-radius: 20px;
+            font-size: 0.76rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #ecfdf5;
+            color: #047857;
+            border: 1.5px solid #a7f3d0;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            user-select: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .top-status-pill:active {
+            transform: scale(0.96);
+        }
+
+        .top-action-btn {
+            text-decoration: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            white-space: nowrap;
+            border: 1.5px solid transparent;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            user-select: none;
+        }
+        .top-action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .top-btn-sos {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            color: #b91c1c;
+            border-color: #fca5a5;
+        }
+        .top-btn-sos:hover {
+            background: #fca5a5;
+            color: #991b1b;
+        }
+
+        .top-btn-hub {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            color: #4338ca;
+            border-color: #c7d2fe;
+        }
+        .top-btn-hub:hover {
+            background: #c7d2fe;
+            color: #3730a3;
+        }
+
+        .top-btn-lang {
+            background: #ffffff;
+            color: #1e40af;
+            border-color: #cbd5e1;
+        }
+        .top-btn-lang:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        /* 🧰 رف أدوات ومساعد الملاحظات الميدانية المتقدم */
+        .obs-advanced-tools-shelf {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+            border: 1.5px solid #cbd5e1;
+            border-radius: 16px;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
+            transition: all 0.25s ease;
+        }
+
+        .obs-tools-shelf-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .obs-tools-shelf-title {
+            font-size: 0.84rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .obs-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .obs-tool-card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 9px 10px;
+            border-radius: 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1.5px solid;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            white-space: nowrap;
+            user-select: none;
+            width: 100%;
+        }
+        .obs-tool-card-btn:active {
+            transform: scale(0.96);
+        }
+
+        .obs-btn-voice {
+            background: #ecfdf5;
+            color: #047857;
+            border-color: #6ee7b7;
+        }
+        .obs-btn-voice:hover {
+            background: #d1fae5;
+            border-color: #34d399;
+        }
+
+        .obs-btn-heatmap {
+            background: #fff1f2;
+            color: #be123c;
+            border-color: #fca5a5;
+        }
+        .obs-btn-heatmap:hover {
+            background: #ffe4e6;
+            border-color: #f87171;
+        }
+
+        .obs-btn-digest {
+            background: #ffffff;
+            color: #334155;
+            border-color: #cbd5e1;
+        }
+        .obs-btn-digest:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+        }
+
+        .obs-btn-track {
+            background: #f0f9ff;
+            color: #0369a1;
+            border-color: #7dd3fc;
+        }
+        .obs-btn-track:hover {
+            background: #e0f2fe;
+            border-color: #38bdf8;
+        }
+
+        @media (max-width: 640px) {
+            .top-tools-bar {
+                gap: 6px;
+            }
+            .top-status-pill {
+                padding: 4px 8px;
+                font-size: 0.72rem;
+            }
+            .top-action-btn {
+                padding: 4px 9px;
+                font-size: 0.72rem;
+            }
+            .obs-advanced-tools-shelf {
+                padding: 10px 10px 12px;
+                border-radius: 14px;
+                margin-bottom: 16px;
+            }
+            .obs-tools-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+            .obs-tool-card-btn {
+                padding: 9px 6px;
+                font-size: 0.74rem;
+                border-radius: 9px;
+                gap: 4px;
             }
         }
 
@@ -2550,14 +2763,170 @@
         </div>
     </div>
 
+    <!-- 🔍 Digital Observation Tracking & Lookup Modal -->
+    <div id="trackObservationModal" class="emergency-modal-overlay" onclick="closeTrackObservationModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 580px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <span id="txtTrackModalTitle">تتبع واستعلام حالة الملاحظة (Observation Tracking)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeTrackObservationModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 6px; display: block;">أدخل كود الملاحظة أو الرقم المرجعي (Ref Code):</label>
+                    <div style="display: flex; gap: 8px;">
+                        <input type="text" id="trackSearchInput" class="form-control" placeholder="مثال: OBS-202609-0001" style="font-weight: 700; text-transform: uppercase;" onkeydown="if(event.key==='Enter') executeTrackSearch()">
+                        <button type="button" onclick="executeTrackSearch()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 0 16px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; box-shadow: 0 2px 4px rgba(2,132,199,0.3);">
+                            <i class="fas fa-search"></i>
+                            <span>بحث</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="trackSearchResultWrap" style="display: none;">
+                    <!-- Result Card Filled Dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔥 Visual Plant Risk Heatmap Modal -->
+    <div id="plantRiskHeatmapModal" class="emergency-modal-overlay" onclick="closePlantRiskHeatmapModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 680px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-fire-flame-curved"></i>
+                    <span id="txtHeatmapModalTitle">الخريطة الحرارية لمخاطر المصانع (Plant Risk Heatmap)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closePlantRiskHeatmapModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">مؤشرات كثافة المخاطر المفتوحة بالمواقع:</span>
+                    <div style="display: flex; gap: 8px; font-size: 0.72rem; font-weight: 800;">
+                        <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 12px; border: 1px solid #bbf7d0;">🟢 آمن (0-1)</span>
+                        <span style="background: #fef3c7; color: #b45309; padding: 2px 8px; border-radius: 12px; border: 1px solid #fde68a;">🟡 انتباه (2-4)</span>
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 2px 8px; border-radius: 12px; border: 1px solid #fecaca;">🔴 نقطة ساخنة (5+)</span>
+                    </div>
+                </div>
+
+                <div id="heatmapGridContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto; padding: 4px;">
+                    <!-- Filled dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📄 Shift Observation Digest Modal -->
+    <div id="shiftDigestModal" class="emergency-modal-overlay" onclick="closeShiftDigestModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 720px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-file-invoice"></i>
+                    <span id="txtShiftDigestModalTitle">تقرير الوردية الميداني المجمع (Shift HSE Digest)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeShiftDigestModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px;">
+                <!-- Filters -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الموقع / المصنع:</label>
+                        <select id="digestSiteSelect" class="form-control" style="font-size: 0.8rem; padding: 6px;" onchange="renderShiftDigestReport()">
+                            <option value="">— كافة المواقع —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">الوردية:</label>
+                        <select id="digestShiftSelect" class="form-control" style="font-size: 0.8rem; padding: 6px;" onchange="renderShiftDigestReport()">
+                            <option value="">جميع الورديات</option>
+                            <option value="الأولى (صباحية)">الوردية الأولى (صباحية)</option>
+                            <option value="الثانية (مسائية)">الوردية الثانية (مسائية)</option>
+                            <option value="الثالثة (ليلية)">الوردية الثالثة (ليلية)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.72rem; font-weight: 800; color: #475569; display: block; margin-bottom: 2px;">التاريخ:</label>
+                        <input type="date" id="digestDateInput" class="form-control" style="font-size: 0.8rem; padding: 6px;" onchange="renderShiftDigestReport()">
+                    </div>
+                </div>
+
+                <!-- Report Render Target -->
+                <div id="shiftDigestReportWrap" style="max-height: 400px; overflow-y: auto; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+                    <!-- Filled dynamically -->
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                    <button type="button" onclick="shareShiftDigestWhatsapp()" style="background: #25d366; color: #ffffff; border: none; border-radius: 8px; padding: 8px 14px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fab fa-whatsapp"></i> مشاركة ملخص واتساب
+                    </button>
+                    <button type="button" onclick="printShiftDigestReport()" style="background: #0284c7; color: #ffffff; border: none; border-radius: 8px; padding: 8px 16px; font-weight: 800; font-size: 0.82rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i> طباعة / PDF رسمي
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🎙️ Field HSE Voice Assistant Modal -->
+    <div id="hseVoiceAssistantModal" class="emergency-modal-overlay" onclick="closeHseVoiceAssistantModal(event)" style="display: none;">
+        <div class="emergency-modal-dialog" style="max-width: 540px; animation: fadeInModal 0.2s ease;" onclick="event.stopPropagation()">
+            <div style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-radius: 14px 14px 0 0;">
+                <div style="font-weight: 800; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fas fa-robot"></i>
+                    <span id="txtVoiceBotModalTitle">مساعد السلامة الصوتي الميداني (HSE AI Voice Assistant)</span>
+                </div>
+                <button type="button" style="width: 32px; height: 32px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center;" onclick="closeHseVoiceAssistantModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div style="padding: 16px; text-align: center;">
+                <p style="font-size: 0.82rem; color: #475569; margin-bottom: 12px; font-weight: 600;">تحدث واستفسر صوتياً عن مهمات الوقاية، تصاريح العمل، أو تعليمات السلامة الميدانية:</p>
+                
+                <div style="margin: 14px 0;">
+                    <button type="button" id="btnBotMicTrigger" onclick="toggleHseBotListening()" style="width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; border: none; font-size: 1.8rem; cursor: pointer; box-shadow: 0 4px 15px rgba(16,185,129,0.4); transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div id="botListeningStatus" style="font-size: 0.78rem; font-weight: 800; color: #047857; margin-top: 8px;">انقر على الميكروفون للبدء بالتحدث</div>
+                </div>
+
+                <!-- Quick Suggested Questions -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 12px;">
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('مهمات الوقاية في عنبر التجميد')">مهمات التجميد ❄️</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('شروط تصريح اللحام والأعمال الساخنة')">تصريح اللحام 🔥</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('إجراءات الأماكن المغلقة')">الأماكن المغلقة 🚪</button>
+                    <button type="button" class="suggestion-chip" onclick="processHseVoiceQuery('سرعة الرافعة الشوكية')">الرافعات الشوكية 🚜</button>
+                </div>
+
+                <!-- Voice Result Box -->
+                <div id="botResponseCard" style="display: none; text-align: right; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px; animation: fadeIn 0.3s ease;">
+                    <!-- Content dynamic -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <!-- 📌 رأس النموذج الثابت أثناء الانزلاق (Sticky Header: Tools + ISO Table) -->
         <header class="form-sticky-header">
             <!-- شريط أدوات الحالة والطقس والطوارئ والعودة للبوابة واللغة الموحد -->
-            <div class="top-tools-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            <div class="top-tools-bar">
+                <div class="top-tools-left">
                     <!-- مؤشر حالة الاتصال وسرعة استجابة السيرفر (Live Ping Meter) -->
-                    <div id="onlineStatus" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر" style="padding: 4px 10px; border-radius: 8px; font-size: 0.76rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; cursor: pointer; transition: all 0.2s;">
+                    <div id="onlineStatus" class="top-status-pill" onclick="measureCloudPing(true)" title="انقر لفحص سرعة الاستجابة اللحظية للسيرفر">
                         <span id="onlineStatusDot" style="width: 7px; height: 7px; border-radius: 50%; background: #10b981; display: inline-block; box-shadow: 0 0 6px #10b981;"></span>
                         <span id="onlineStatusText">متصل بالسحابة</span>
                         <span id="onlineStatusPing" style="background: rgba(4, 120, 87, 0.12); padding: 1px 5px; border-radius: 4px; font-size: 0.68rem; font-family: monospace; display: none;">--ms</span>
@@ -2572,21 +2941,21 @@
                 </div>
 
                 <!-- أزرار الأدوات والطوارئ واللغة والعودة للبوابة -->
-                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                <div class="top-tools-right">
                     <!-- زر الطوارئ الفوري SOS -->
-                    <button type="button" class="sos-btn" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
+                    <button type="button" class="top-action-btn top-btn-sos" id="btnEmergencySos" onclick="openEmergencySosModal(event)" title="أرقام وخطوط الطوارئ الميدانية / Emergency SOS">
                         <i class="fas fa-phone-volume"></i>
                         <span id="txtSosBtn">طوارئ SOS</span>
                     </button>
 
                     <!-- زر العودة لبوابة النماذج -->
-                    <a href="/forms-hub" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <a href="/forms-hub" class="top-action-btn top-btn-hub" title="العودة لبوابة النماذج الرئيسية">
                         <i class="fas fa-th-large"></i>
                         <span id="txtBackToHub">البوابة</span>
                     </a>
 
                     <!-- زر تبديل اللغة -->
-                    <button type="button" id="langToggleBtn" class="lang-btn" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()" style="padding: 4px 12px; font-size: 0.8rem; font-weight: 800; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e40af; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <button type="button" id="langToggleBtn" class="top-action-btn top-btn-lang" title="Switch Language / تبديل اللغة" onclick="toggleLanguage()">
                         <i class="fas fa-globe"></i>
                         <span id="langBtnText">EN</span>
                     </button>
@@ -2646,6 +3015,25 @@
             <h2 style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin-bottom: 6px;">تم تسجيل الملاحظة بنجاح!</h2>
             <p style="color: #64748b; font-size: 0.9rem; line-height: 1.5;">تم توثيق الملاحظة في سجل الملاحظات اليومية وإحالتها لفريق السلامة للمتابعة الفورية.</p>
             <div class="ref-badge" id="refBadge">OBS-202608-0000</div>
+
+            <!-- 🎫 تذكرة ورابط التتبع الرقمي المباشر -->
+            <div id="successTrackingTicketBox" style="background: #f0f9ff; border: 1.5px dashed #38bdf8; border-radius: 12px; padding: 12px; margin: 10px 0 14px; text-align: right;">
+                <div style="font-size: 0.82rem; font-weight: 800; color: #0369a1; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-ticket-simple text-sky-600"></i>
+                        <span>تذكرة التتبع الرقمية المباشرة (Direct Tracking Link)</span>
+                    </span>
+                    <span style="background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 800;">تتبع فوري</span>
+                </div>
+                <p style="font-size: 0.75rem; color: #0284c7; margin: 0 0 8px; line-height: 1.4;">يمكنك أنت وفريق العمل متابعة حالة ومعالجة هذه الملاحظة في أي وقت عبر هذا الرابط المباشر:</p>
+                <div style="display: flex; gap: 6px; align-items: center; background: #ffffff; border: 1px solid #bae6fd; border-radius: 8px; padding: 6px 8px;">
+                    <input type="text" id="directTrackUrlInput" readonly style="border: none; background: transparent; font-size: 0.76rem; color: #0369a1; font-weight: 700; width: 100%; outline: none; direction: ltr; text-align: left;" value="">
+                    <button type="button" onclick="copyDirectTrackUrl()" style="border: none; background: #0284c7; color: #ffffff; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-copy"></i>
+                        <span>نسخ الرابط</span>
+                    </button>
+                </div>
+            </div>
             
             <div id="receiptContainer" class="receipt-card">
                 <!-- سيتم ملؤه تلقائياً ببيانات الملاحظة المسجلة -->
@@ -2681,6 +3069,42 @@
 
             <!-- Honeypot ضد السبام -->
             <input type="text" name="_hp_field" id="hpField" style="display:none;" tabindex="-1" autocomplete="off">
+
+            <!-- 🛠️ رف أدوات ومساعدات الملاحظات الميدانية المتقدمة (داخل نموذج الملاحظات) -->
+            <div class="obs-advanced-tools-shelf">
+                <div class="obs-tools-shelf-header">
+                    <div class="obs-tools-shelf-title">
+                        <i class="fas fa-layer-group text-blue-600"></i>
+                        <span id="txtObsToolsTitle">أدوات ومساعدات الملاحظات:</span>
+                    </div>
+                    <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">خدمات ذكية مساندة</span>
+                </div>
+                <div class="obs-tools-grid">
+                    <!-- زر مساعد السلامة الصوتي -->
+                    <button type="button" class="obs-tool-card-btn obs-btn-voice" id="btnHseVoiceBot" onclick="openHseVoiceAssistantModal(event)" title="مساعد السلامة الصوتي الميداني / Voice Assistant">
+                        <i class="fas fa-microphone-lines"></i>
+                        <span id="txtVoiceBotBtn">مساعد السلامة</span>
+                    </button>
+
+                    <!-- زر خريطة المخاطر الحرارية -->
+                    <button type="button" class="obs-tool-card-btn obs-btn-heatmap" id="btnPlantRiskHeatmap" onclick="openPlantRiskHeatmapModal(event)" title="الخريطة الحرارية لمخاطر المصانع / Plant Risk Heatmap">
+                        <i class="fas fa-fire-flame-curved"></i>
+                        <span id="txtHeatmapBtn">خريطة المخاطر</span>
+                    </button>
+
+                    <!-- زر تقرير الوردية -->
+                    <button type="button" class="obs-tool-card-btn obs-btn-digest" id="btnShiftDigest" onclick="openShiftDigestModal(event)" title="تقرير الوردية الميداني المجمع / Shift Digest">
+                        <i class="fas fa-file-invoice"></i>
+                        <span id="txtShiftDigestBtn">تقرير الوردية</span>
+                    </button>
+
+                    <!-- زر تتبع الملاحظات -->
+                    <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
+                        <i class="fas fa-magnifying-glass"></i>
+                        <span id="txtTrackBtn">تتبع ملاحظة</span>
+                    </button>
+                </div>
+            </div>
 
             <!-- 1. الموقع والمكان وتوقيت الملاحظة -->
             <div class="form-section section-theme-1">
@@ -2747,11 +3171,8 @@
                         </div>
                     </div>
 
-                    <!-- إدخال يدوي للمكان -->
-                    <div id="customPlaceGroup" class="form-group" style="display: none; margin-top: 10px; margin-bottom: 0;">
-                        <label class="form-label" for="customPlaceInput" style="font-size: 0.8rem; font-weight: 700; color: #475569;">مكان فرعي آخر (إدخال يدوي):</label>
-                        <input type="text" id="customPlaceInput" class="form-control" style="background: #ffffff; border: 1.5px solid #bfdbfe;" placeholder="اكتب المكان أو القسم بدقة...">
-                    </div>
+                    <!-- بانر المخاطر النشطة في نفس المكان -->
+                    <div id="obs-active-hazards-banner" style="display: none;"></div>
                 </div>
 
                 <!-- كرت توقيت الملاحظة والوردية بطابع جمالي مهني منمق أسفل المصنع -->
@@ -2924,6 +3345,21 @@
                             <i class="fas fa-circle-info" id="descQualityIcon"></i> <span id="descQualityText">يرجى توضيح تفاصيل الملاحظة</span>
                         </div>
                         <div id="descCharCounter" style="color: #9a3412; font-weight: 800; background: #ffedd5; padding: 2px 8px; border-radius: 12px; border: 1px solid #fed7aa;">0 حرف</div>
+                    </div>
+
+                    <!-- اقتراح التصنيف الذكي التلقائي عبر الذكاء الاصطناعي -->
+                    <div id="aiClassificationSuggestionWrap" style="display: none; margin-top: 8px; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); border: 1.5px solid #7dd3fc; border-radius: 10px; padding: 10px 12px; animation: fadeIn 0.3s ease;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                            <span style="font-size: 0.8rem; font-weight: 800; color: #0369a1; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-brain" style="color: #0284c7;"></i>
+                                <span>اقتراح الذكاء الاصطناعي (AI Auto-Classify)</span>
+                            </span>
+                            <button type="button" onclick="applyAiSuggestionDirect()" style="background: #0284c7; color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 3px rgba(2,132,199,0.3);">
+                                <i class="fas fa-wand-magic-sparkles"></i>
+                                <span>تطبيق الاقتراح</span>
+                            </button>
+                        </div>
+                        <div id="aiSuggestionDetails" style="font-size: 0.75rem; color: #0c4a6e; display: flex; flex-wrap: wrap; gap: 6px; font-weight: 600;"></div>
                     </div>
                 </div>
 
@@ -3319,6 +3755,13 @@
                 backHubBtn: 'الرجوع إلى بوابة النماذج',
                 floatingHub: 'بوابة النماذج',
 
+                // Tools Shelf
+                obsToolsTitle: 'أدوات ومساعدات الملاحظات:',
+                voiceBotBtn: 'مساعد السلامة',
+                heatmapBtn: 'خريطة المخاطر',
+                shiftDigestBtn: 'تقرير الوردية',
+                trackBtn: 'تتبع ملاحظة',
+
                 // Modals
                 markupModalTitle: 'تحديد موضع الخطر على الصورة',
                 toolCircle: 'دائرة حمراء',
@@ -3350,6 +3793,13 @@
                 // Offline
                 offlineQueueText: 'offline observation(s) pending sync',
                 syncNowBtn: 'Sync Now',
+
+                // Tools Shelf
+                obsToolsTitle: 'Observation Tools & Utilities:',
+                voiceBotBtn: 'Voice Assistant',
+                heatmapBtn: 'Risk Heatmap',
+                shiftDigestBtn: 'Shift Digest',
+                trackBtn: 'Track Observation',
 
                 // Section 1
                 sec1Title: 'Observation Location & Timing',
@@ -3494,6 +3944,18 @@
             // Offline Queue
             const offlineBtn = document.querySelector('.btn-sync-offline');
             if (offlineBtn) offlineBtn.innerHTML = `<i class="fas fa-rotate"></i> ${t.syncNowBtn}`;
+
+            // Tools Shelf (داخل نموذج الملاحظات)
+            const obsToolsTitle = document.getElementById('txtObsToolsTitle');
+            if (obsToolsTitle) obsToolsTitle.textContent = t.obsToolsTitle;
+            const voiceBotBtn = document.getElementById('txtVoiceBotBtn');
+            if (voiceBotBtn) voiceBotBtn.textContent = t.voiceBotBtn;
+            const heatmapBtn = document.getElementById('txtHeatmapBtn');
+            if (heatmapBtn) heatmapBtn.textContent = t.heatmapBtn;
+            const shiftDigestBtn = document.getElementById('txtShiftDigestBtn');
+            if (shiftDigestBtn) shiftDigestBtn.textContent = t.shiftDigestBtn;
+            const trackBtn = document.getElementById('txtTrackBtn');
+            if (trackBtn) trackBtn.textContent = t.trackBtn;
 
             // Section Titles & Descriptions (All 4 Sections)
             const secThemes = [
@@ -3932,7 +4394,236 @@
         }
 
         // ==========================================
-        // 2. مقياس جودة الوصف ومساعد الصياغة المباشر
+        // 2. محرك الذكاء الاصطناعي للتصنيف التلقائي الفوري (AI NLP Auto-Classifier)
+        // ==========================================
+        const AI_HAZARD_CLASSIFIER_RULES = [
+            {
+                keywords: ['مهمات', 'خوذة', 'سيفتي', 'حذاء', 'كمامة', 'نظارة', 'واقي', 'جوانتي', 'قفاز', 'سماعات', 'افرول', 'أفرول', 'بدلة', 'ppe', 'صديري'],
+                type: 'سلوك غير آمن',
+                subCategory: '🦺 عدم ارتداء أو مخالفة مهمات الوقاية (PPE)',
+                riskLevel: 'متوسط',
+                targetDays: 3,
+                reason: 'تم رصد كلمات متعلقة بمهمات الوقاية الشخصية (PPE)'
+            },
+            {
+                keywords: ['كهرباء', 'كابل', 'سلك', 'اسلاك', 'أسلاك', 'لوحة', 'قاطع', 'شورت', 'فيش', 'بريزة', 'شرارة', 'عزل', 'لوتو', 'loto', 'جهد', 'طاقة'],
+                type: 'حالة غير آمنة',
+                subCategory: '⚡ تمديدات كهربائية عشوائية أو أسلاك مكشوفة',
+                riskLevel: 'عالي',
+                targetDays: 1,
+                reason: 'تم رصد مخاطر كهربائية أو عزل طاقة تستوجب تدخلاً عاجلاً'
+            },
+            {
+                keywords: ['حريق', 'دخان', 'طفاية', 'طفايات', 'لهب', 'خرطوم', 'جرس', 'انذار', 'إنذار', 'رشاش', 'لحام', 'قطع ساخن', 'شرز', 'اشتعال', 'سريع الاشتعال'],
+                type: 'خطر حريق',
+                subCategory: '🔥 طفايات حريق معطلة أو فاقدة للضغط أو منتهية الصلاحية',
+                riskLevel: 'عالي',
+                targetDays: 1,
+                reason: 'تم رصد كلمات متعلقة بمخاطر الحريق ومعدات الطوارئ'
+            },
+            {
+                keywords: ['زيت', 'تسريب', 'تسرب', 'بقعة', 'كيماويات', 'حمض', 'مذيب', 'كلور', 'سماد', 'تآكل', 'برميل', 'صودا', 'اسيد', 'هيدروليك'],
+                type: 'حالة غير آمنة',
+                subCategory: '🧪 تسريب سوائل كيميائية أو زيوت هيدروليك',
+                riskLevel: 'متوسط',
+                targetDays: 2,
+                reason: 'تم رصد تسريبات كيميائية أو زيوت هيدروليكية'
+            },
+            {
+                keywords: ['ارتفاع', 'سقالة', 'سقالات', 'سلم', 'سقف', 'حزام', 'منصة', 'حافة', 'سقوط', 'ونش', 'كرين', 'سلة', 'حزام امان'],
+                type: 'سلوك غير آمن',
+                subCategory: '🧗 العمل على ارتفاعات بدون ربط حزام الأمان',
+                riskLevel: 'عالي',
+                targetDays: 1,
+                reason: 'تم رصد مخاطر العمل على ارتفاعات وحزام الأمان'
+            },
+            {
+                keywords: ['فوركلفت', 'كلارك', 'رافعة شوكية', 'رافعه', 'بوق', 'سرعة', 'سائق', 'مشاة', 'رجوع', 'تحميل', 'شوكه'],
+                type: 'سلوك غير آمن',
+                subCategory: '🚜 سرعة زائدة وقيادة متهورة للرافعة الشوكية (Forklift)',
+                riskLevel: 'عالي',
+                targetDays: 2,
+                reason: 'تم رصد مخاطر حركة ومعدات الرافعة الشوكية'
+            },
+            {
+                keywords: ['ماكينة', 'ماكينه', 'سير', 'ترس', 'حزام', 'شفرة', 'غطاء', 'حاجز', 'حساس', 'طوارئ', 'امان', 'أمان', 'guard'],
+                type: 'حالة غير آمنة',
+                subCategory: '⚙️ تشغيل معدة مع إزالة غطاء الحماية (Guard)',
+                riskLevel: 'عالي',
+                targetDays: 1,
+                reason: 'تم رصد ماكينات أو حوافظ أمان بحاجة لتدخل'
+            },
+            {
+                keywords: ['انزلاق', 'تعثر', 'مبتل', 'مبتلة', 'مياه', 'ماء', 'بلل', 'حفرة', 'درج', 'عائق', 'مسدود', 'طريق'],
+                type: 'حالة غير آمنة',
+                subCategory: '🚶 وجود أرضيات مبتلة أو زيوت تسبب الانزلاق',
+                riskLevel: 'متوسط',
+                targetDays: 3,
+                reason: 'تم رصد مخاطر أسطح وانزلاق أو عوائق مسارات'
+            },
+            {
+                keywords: ['تخزين', 'كراتين', 'باليتة', 'باليتات', 'رص', 'تكديس', 'مخزن', 'ارفف', 'أرفف', 'ارتفاع مبالغ'],
+                type: 'حالة غير آمنة',
+                subCategory: '📦 رص وتكديس بارتفاعات خطرة مهددة بالسقوط',
+                riskLevel: 'متوسط',
+                targetDays: 4,
+                reason: 'تم رصد تكديس وتخزين غير مطابق'
+            },
+            {
+                keywords: ['قمامة', 'مخلفات', 'نفايات', 'هواء', 'تلوث', 'انبعاث', 'صرف', 'حاوية', 'روائح', 'بيئة', 'بيئي', 'هدر'],
+                type: 'ملاحظة بيئية',
+                subCategory: '🌿 هدر مياه وتسريب شبكات الغسيل والصرف الصناعي',
+                riskLevel: 'منخفض',
+                targetDays: 7,
+                reason: 'تم رصد ملاحظات متعلقة بالبيئة وإدارة المخلفات والهدر'
+            },
+            {
+                keywords: ['التزام', 'ممتاز', 'مبادرة', 'تصرف صحيح', 'ايجابي', 'إيجابي', 'قدوة', 'نظافة مثالية', 'مطابقة كاملة', 'شكر'],
+                type: 'سلوك إيجابي',
+                subCategory: '🌟 التزام مثالي بارتداء مهمات الوقاية كاملة',
+                riskLevel: 'منخفض',
+                targetDays: 14,
+                reason: 'تم رصد تصرف إيجابي أو التزام متميز'
+            },
+            {
+                keywords: ['مقترح', 'اقتراح', 'تحسين', 'تطوير', 'تسهيل', 'فكرة', 'تعديل هندسي', 'ترشيد'],
+                type: 'اقتراح تحسين',
+                subCategory: '💡 مقترح تحسين عام لمنظومة السلامة والتشغيل',
+                riskLevel: 'منخفض',
+                targetDays: 14,
+                reason: 'تم رصد مقترح تطويري لبيئة العمل'
+            }
+        ];
+
+        let currentAiClassification = null;
+        let aiDebounceTimer = null;
+
+        function classifyObservationText(text) {
+            if (!text || typeof text !== 'string') return null;
+            const cleanText = text.toLowerCase().trim();
+            if (cleanText.length < 5) return null;
+
+            let bestMatch = null;
+            let maxHits = 0;
+
+            for (const rule of AI_HAZARD_CLASSIFIER_RULES) {
+                let hits = 0;
+                for (const kw of rule.keywords) {
+                    if (cleanText.includes(kw)) {
+                        hits += (kw.length > 4 ? 2 : 1);
+                    }
+                }
+                if (hits > maxHits) {
+                    maxHits = hits;
+                    bestMatch = rule;
+                }
+            }
+
+            if (maxHits > 0 && bestMatch) {
+                return {
+                    type: bestMatch.type,
+                    subCategory: bestMatch.subCategory,
+                    riskLevel: bestMatch.riskLevel,
+                    targetDays: bestMatch.targetDays,
+                    reason: bestMatch.reason,
+                    confidence: Math.min(98, 60 + (maxHits * 12))
+                };
+            }
+            return null;
+        }
+
+        function runAiObservationClassification(text) {
+            clearTimeout(aiDebounceTimer);
+            aiDebounceTimer = setTimeout(() => {
+                const wrap = document.getElementById('aiClassificationSuggestionWrap');
+                const detailsBox = document.getElementById('aiSuggestionDetails');
+                if (!wrap || !detailsBox) return;
+
+                const result = classifyObservationText(text);
+                if (!result) {
+                    wrap.style.display = 'none';
+                    currentAiClassification = null;
+                    return;
+                }
+
+                currentAiClassification = result;
+                const riskColor = (result.riskLevel === 'عالي') ? '#ef4444' : ((result.riskLevel === 'متوسط') ? '#f59e0b' : '#10b981');
+
+                detailsBox.innerHTML = `
+                    <span style="background: #ffffff; padding: 2px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
+                        <strong>النوع:</strong> ${result.type}
+                    </span>
+                    <span style="background: #ffffff; padding: 2px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
+                        <strong>التصنيف:</strong> ${result.subCategory}
+                    </span>
+                    <span style="background: #ffffff; padding: 2px 8px; border-radius: 6px; border: 1px solid #bae6fd; color: ${riskColor};">
+                        <strong>الخطورة:</strong> ${result.riskLevel}
+                    </span>
+                    <span style="background: #ffffff; padding: 2px 8px; border-radius: 6px; border: 1px solid #bae6fd;">
+                        <strong>المهلة المقترحة:</strong> ${result.targetDays} أيام
+                    </span>
+                    <span style="color: #0369a1; width: 100%; display: block; font-size: 0.72rem; margin-top: 2px;">
+                        <i class="fas fa-lightbulb text-amber-500"></i> ${result.reason} (دقة الاقتراح: ${result.confidence}%)
+                    </span>
+                `;
+                wrap.style.display = 'block';
+            }, 250);
+        }
+
+        function applyAiSuggestionDirect() {
+            if (!currentAiClassification) return;
+            const { type, subCategory, riskLevel, targetDays } = currentAiClassification;
+
+            // 1. Select Type Card
+            const typeCards = document.querySelectorAll('.type-card');
+            typeCards.forEach(card => {
+                if (card.dataset.type === type || card.textContent.includes(type)) {
+                    selectType(card);
+                }
+            });
+
+            // 2. Select Subcategory
+            setTimeout(() => {
+                const subSelect = document.getElementById('subCategorySelect');
+                if (subSelect) {
+                    for (let i = 0; i < subSelect.options.length; i++) {
+                        if (subSelect.options[i].value === subCategory || subSelect.options[i].text.includes(subCategory.replace(/^[^\s]+\s/, ''))) {
+                            subSelect.selectedIndex = i;
+                            handleSubCategoryChange(subSelect.value);
+                            break;
+                        }
+                    }
+                }
+            }, 60);
+
+            // 3. Select Risk Level Chip
+            const riskChips = document.querySelectorAll('.risk-chip');
+            riskChips.forEach(chip => {
+                if (chip.dataset.risk === riskLevel) {
+                    selectRisk(chip);
+                }
+            });
+
+            // 4. Auto-calculate Target Completion Date
+            const expInput = document.getElementById('expectedDateInput');
+            if (expInput) {
+                const d = new Date();
+                d.setDate(d.getDate() + targetDays);
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                expInput.value = `${y}-${m}-${day}`;
+                expInput.dataset.autoCalculated = 'true';
+            }
+
+            const wrap = document.getElementById('aiClassificationSuggestionWrap');
+            if (wrap) wrap.style.display = 'none';
+
+            showToast('تم تطبيق تصنيف الذكاء الاصطناعي بنجاح! ⚡', 'success', 2500);
+        }
+
+        // ==========================================
+        // 3. مقياس جودة الوصف ومساعد الصياغة المباشر
         // ==========================================
         function handleDetailsInputQuality(val) {
             const text = String(val || '').trim();
@@ -3942,6 +4633,10 @@
             const iconEl = document.getElementById('descQualityIcon');
 
             if (countEl) countEl.textContent = `${text.length} حرف`;
+
+            // Trigger AI NLP Auto-Classifier
+            runAiObservationClassification(text);
+
             if (!badgeEl || !textEl || !iconEl) return;
 
             if (text.length === 0) {
@@ -4115,6 +4810,9 @@
                     const parsed = JSON.parse(cached);
                     if (parsed && Array.isArray(parsed.sites) && parsed.sites.length > 0) {
                         loadedConfig = parsed;
+                        if (Array.isArray(parsed.recentOpenHazards)) {
+                            window._recentOpenHazards = parsed.recentOpenHazards;
+                        }
                         if (parsed.companyLogo) updateCompanyLogo(parsed.companyLogo);
                         renderConfigData(parsed);
                     }
@@ -4234,6 +4932,10 @@
                 const data = await res.json();
                 if (data && data.success && Array.isArray(data.sites) && data.sites.length > 0) {
                     loadedConfig = data;
+                    if (Array.isArray(data.recentOpenHazards)) {
+                        window._recentOpenHazards = data.recentOpenHazards;
+                        try { refreshLocationHazardsBanner(); } catch (_) {}
+                    }
                     if (data.companyLogo) {
                         updateCompanyLogo(data.companyLogo);
                     }
@@ -4533,6 +5235,7 @@
             if (searchInput) searchInput.disabled = false;
             placeSelect.disabled = false;
             filterPlaces('');
+            try { refreshLocationHazardsBanner(); } catch (_) {}
         }
 
         function filterPlaces(query) {
@@ -4561,12 +5264,6 @@
                 placeSelect.appendChild(opt);
             });
 
-            // خيار إدخال يدوي
-            const otherOpt = document.createElement('option');
-            otherOpt.value = '__OTHER__';
-            otherOpt.textContent = '➕ مكان فرعي آخر (إدخال يدوي)...';
-            placeSelect.appendChild(otherOpt);
-
             if (countBadge) {
                 countBadge.textContent = q ? `(${filtered.length} مكان مطابق)` : '';
             }
@@ -4588,13 +5285,7 @@
         }
 
         function handlePlaceChange(val) {
-            const customGroup = document.getElementById('customPlaceGroup');
-            if (val === '__OTHER__') {
-                customGroup.style.display = 'block';
-                document.getElementById('customPlaceInput').focus();
-            } else {
-                customGroup.style.display = 'none';
-            }
+            try { refreshLocationHazardsBanner(); } catch (_) {}
         }
 
         function handleOwnerChange(val) {
@@ -4636,10 +5327,287 @@
         }
 
         // ==========================================
-        // 1. إدارة ومعالجة الصور المتعددة وضغطها عبر Canvas
+        // فحص التكرار وتنبيه المخاطر المفتوحة للورديات (36-48 ساعة)
+        // ==========================================
+        const _OBS_DUP_WINDOW_MS = 48 * 60 * 60 * 1000;
+        const _OBS_SUBMIT_DEDUP_MS = 8000;
+        let _lastObsSubmitFp = '';
+        let _lastObsSubmitAt = 0;
+        let _obsSubmitInFlight = false;
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function normalizeObsText(value) {
+            let s = String(value || '').trim().toLowerCase();
+            if (!s) return '';
+            s = s.replace(/[\u064B-\u065F\u0670]/g, '');
+            s = s.replace(/[أإآٱ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+            s = s.replace(/[^\u0600-\u06FFa-z0-9\s]/g, ' ');
+            return s.replace(/\s+/g, ' ').trim();
+        }
+
+        function cleanLocationName(place, site) {
+            let p = String(place || '').trim();
+            if (!p) return '';
+            if (site) {
+                const sEsc = String(site).trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+                p = p.replace(new RegExp('^' + sEsc + '[_\\-\\s:]+', 'i'), '');
+                p = p.replace(new RegExp('[(_\\-\\s:]+' + sEsc + '[)_\\-\\s]*$', 'i'), '');
+            }
+            p = p.replace(/^(ICAPP[-_\s]*\d+|مصنع[-_\s]*\d+)[_\\-\\s:]+/i, '');
+            return p.trim();
+        }
+
+        function obsLocationKey(site, place) {
+            const s = normalizeObsText(site);
+            const p = normalizeObsText(cleanLocationName(place, site));
+            if (!s && !p) return '';
+            return s + '|loc:' + p;
+        }
+
+        function parseObsDateMs(when) {
+            if (!when) return NaN;
+            if (typeof when === 'number') return when;
+            const s = String(when).trim();
+            if (!s) return NaN;
+            const isoLike = s.replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(:\d{2})?/, '$1T$2:00');
+            const d = new Date(isoLike);
+            if (!isNaN(d.getTime())) return d.getTime();
+            const d2 = new Date(s);
+            if (!isNaN(d2.getTime())) return d2.getTime();
+            return NaN;
+        }
+
+        function obsTextSimilarity(a, b) {
+            const na = normalizeObsText(a);
+            const nb = normalizeObsText(b);
+            if (!na || !nb) return 0;
+            if (na === nb) return 1;
+            if (na.includes(nb) || nb.includes(na)) return 0.92;
+            const cleanWord = w => w.replace(/^(و|ال|لل|بال|فال|كال)/, '');
+            const ta = new Set(na.split(' ').map(cleanWord).filter(t => t.length >= 2));
+            const tb = new Set(nb.split(' ').map(cleanWord).filter(t => t.length >= 2));
+            if (!ta.size || !tb.size) return 0;
+            let inter = 0;
+            ta.forEach(t => { if (tb.has(t)) inter += 1; });
+            return inter / (ta.size + tb.size - inter);
+        }
+
+        function getActiveHazardsForLocation(site, place) {
+            const key = obsLocationKey(site, place);
+            if (!key || key.endsWith('|loc:')) return [];
+            const list = window._recentOpenHazards || [];
+            const nowMs = Date.now();
+            const out = [];
+            for (let i = 0; i < list.length; i++) {
+                const obs = list[i];
+                if (!obs) continue;
+                const obsKey = obsLocationKey(obs.siteName, obs.locationName);
+                if (obsKey !== key) continue;
+                const when = obs.date || obs.createdAt || 0;
+                const tMs = parseObsDateMs(when);
+                if (!isNaN(tMs) && Math.abs(nowMs - tMs) > _OBS_DUP_WINDOW_MS) continue;
+                out.push(obs);
+            }
+            return out.slice(0, 8);
+        }
+
+        function refreshLocationHazardsBanner() {
+            const banner = document.getElementById('obs-active-hazards-banner');
+            if (!banner) return;
+            const site = (document.getElementById('siteSelect')?.value || '').trim();
+            const place = (document.getElementById('placeSelect')?.value || '').trim();
+            if (!site || !place) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+            const matches = getActiveHazardsForLocation(site, place);
+            if (!matches.length) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+            const isHotspot = matches.length >= 3;
+            const hotspotHtml = isHotspot ? `
+                <div style="background: linear-gradient(135deg, #fff1f2, #ffe4e6); border: 1.5px solid #f43f5e; border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 8px rgba(244,63,94,0.15);">
+                    <div style="width: 38px; height: 38px; border-radius: 50%; background: #ffe4e6; display: flex; align-items: center; justify-content: center; color: #e11d48; font-size: 1.2rem; flex-shrink: 0;">
+                        <i class="fas fa-fire-flame-curved"></i>
+                    </div>
+                    <div>
+                        <div style="font-weight: 900; color: #9f1239; font-size: 0.88rem;">🔥 تنبيه: بؤرة مخاطر متكررة (Hazard Hotspot Area)</div>
+                        <div style="font-size: 0.76rem; color: #be123c; font-weight: 600; margin-top: 2px;">تكرر تسجيل (${matches.length}) ملاحظات ومخاطر مفتوحة في هذا الموقع خلال الورديات الأخيرة. يُوصى بمراجعة تدابير السلامة الجذرية.</div>
+                    </div>
+                </div>` : '';
+
+            const rows = matches.map(obs => {
+                const code = escapeHtml(obs.isoCode || obs.id || '');
+                const shift = escapeHtml(obs.shift || '—');
+                const who = escapeHtml(obs.observerName || '—');
+                const type = escapeHtml(obs.observationType || '');
+                const snippet = escapeHtml(String(obs.details || '').slice(0, 100));
+                return `<li style="margin:0 0 6px; display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; font-size: 0.82rem; border-bottom:1px dashed #fed7aa; padding-bottom:4px;">
+                    <strong style="color:#9a3412;">${code}</strong>
+                    <span class="badge" style="background:#fed7aa; color:#9a3412; font-size:0.75rem; padding:1px 6px; border-radius:4px; font-weight:700;">${type}</span>
+                    <span style="opacity:0.85; font-size:0.78rem;">وردية ${shift} — ${who}</span>
+                    <span style="flex:1; min-width:140px; opacity:0.9; color:#431407;">${snippet}${String(obs.details || '').length > 100 ? '…' : ''}</span>
+                </li>`;
+            }).join('');
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div style="background:#fff7ed; border:1.5px solid #fdba74; border-radius:10px; padding:10px 14px; margin-top:12px; margin-bottom:12px;">
+                    ${hotspotHtml}
+                    <div style="font-weight:800; color:#9a3412; margin-bottom:6px; font-size:0.86rem; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                        <span>يوجد ${matches.length} ملاحظة مفتوحة في هذا المكان خلال الورديات السابقة.</span>
+                    </div>
+                    <p style="margin:0 0 8px; font-size:0.78rem; color:#7c2d12;">إذا كان الخطر قائماً، سجّل متابعة على الملاحظة القائمة بدل تكرار نفس السجل.</p>
+                    <ul style="margin:0; padding:0; list-style:none;">${rows}</ul>
+                </div>`;
+        }
+
+        function findDuplicateCandidates(payload) {
+            const key = obsLocationKey(payload.siteName, payload.locationName);
+            const details = payload.details || '';
+            const subCategory = payload.subCategory || '';
+            const list = window._recentOpenHazards || [];
+            const hits = [];
+            const nowMs = Date.now();
+            for (let i = 0; i < list.length; i++) {
+                const obs = list[i];
+                if (!obs) continue;
+                if (obsLocationKey(obs.siteName, obs.locationName) !== key) continue;
+                const when = obs.date || obs.createdAt || 0;
+                const tMs = parseObsDateMs(when);
+                if (!isNaN(tMs) && Math.abs(nowMs - tMs) > _OBS_DUP_WINDOW_MS) continue;
+                
+                const simDetails = obsTextSimilarity(details, obs.details);
+                const simSubCat = subCategory ? obsTextSimilarity(subCategory, obs.details) : 0;
+                const sim = Math.max(simDetails, simSubCat);
+                
+                if (sim < 0.35) continue;
+                hits.push({ obs, sim, exact: sim >= 0.85 });
+            }
+            hits.sort((a, b) => b.sim - a.sim);
+            return hits.slice(0, 5);
+        }
+
+        function askDuplicateDecision(hits) {
+            return new Promise(resolve => {
+                const top = hits[0];
+                const obs = top.obs;
+                const code = escapeHtml(obs.isoCode || obs.id || '');
+                const who = escapeHtml(obs.observerName || '—');
+                const shift = escapeHtml(obs.shift || '—');
+                const snippet = escapeHtml(String(obs.details || '').slice(0, 120));
+                const extra = hits.length > 1
+                    ? `<p style="margin:6px 0 0; font-size:12px; color:#64748b;">ويوجد ${hits.length - 1} ملاحظة مشابهة أخرى في نفس المكان.</p>`
+                    : '';
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-backdrop-custom';
+                overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.65);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);';
+                overlay.innerHTML = `
+                    <div style="background:#ffffff;border-radius:14px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.3);max-width:480px;width:100%;overflow:hidden;animation:fadeInModal 0.2s ease;">
+                        <div style="background:#fff7ed;border-bottom:1px solid #fed7aa;padding:14px 18px;display:flex;align-items:center;gap:10px;">
+                            <div style="width:36px;height:36px;border-radius:50%;background:#ffedd5;display:flex;align-items:center;justify-content:center;color:#ea580c;font-size:1.1rem;flex-shrink:0;">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin:0;font-size:1rem;font-weight:800;color:#9a3412;">ملاحظة مشابهة مسجلة مسبقاً</h3>
+                                <p style="margin:2px 0 0;font-size:0.75rem;color:#c2410c;">تم رصد نفس الحالة في نفس المكان مؤخراً</p>
+                            </div>
+                        </div>
+                        <div style="padding:16px 18px;line-height:1.6;font-size:0.88rem;color:#334155;">
+                            <p style="margin:0 0 8px;">هذه الحالة مسجّلة مسبقاً برقم <strong style="color:#0369a1;">${code}</strong> بواسطة <strong>${who}</strong> في وردية <strong>${shift}</strong>.</p>
+                            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:0.8rem;color:#475569;margin-bottom:10px;">
+                                <strong>نص الملاحظة المسجلة:</strong> ${snippet}…
+                            </div>
+                            <p style="margin:0;font-size:0.82rem;color:#64748b;">إن كان الخطر قائماً من وردية سابقة، اختر <strong>«إضافة متابعة»</strong> لربط تقريرك بالسجل المفتوح دون تكرار الصفوف.</p>
+                            ${extra}
+                        </div>
+                        <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:12px 18px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;">
+                            <button type="button" data-dup="cancel" style="padding:8px 14px;border:1px solid #cbd5e1;background:#ffffff;color:#475569;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">إلغاء</button>
+                            <button type="button" data-dup="force" style="padding:8px 14px;border:1px solid #fca5a5;background:#fef2f2;color:#dc2626;border-radius:8px;font-weight:700;font-size:0.82rem;cursor:pointer;">تسجيل منفصلة</button>
+                            <button type="button" data-dup="followup" style="padding:8px 16px;border:none;background:#0284c7;color:#ffffff;border-radius:8px;font-weight:800;font-size:0.84rem;cursor:pointer;box-shadow:0 2px 6px rgba(2,132,199,0.35);">إضافة متابعة</button>
+                        </div>
+                    </div>`;
+                const finish = (choice) => {
+                    overlay.remove();
+                    resolve(choice);
+                };
+                overlay.querySelectorAll('[data-dup]').forEach(b => {
+                    b.addEventListener('click', () => finish(b.getAttribute('data-dup')));
+                });
+                overlay.addEventListener('click', e => {
+                    if (e.target === overlay) finish('cancel');
+                });
+                document.body.appendChild(overlay);
+            });
+        }
+
+        // ==========================================
+        // 1. إدارة ومعالجة الصور وضغط WebP اللحظي (< 200 KB)
         // ==========================================
         let uploadedPhotos = []; // مصفوفة لتخزين الصور (حتى 3 صور)
         let currentMarkupIndex = 0;
+
+        function compressCanvasToWebP(canvas, maxBytes = 200 * 1024) {
+            if (!canvas) return '';
+            const canWebP = (function() {
+                try {
+                    const test = document.createElement('canvas');
+                    test.width = 1;
+                    test.height = 1;
+                    return test.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+                } catch(e) {
+                    return false;
+                }
+            })();
+
+            const mime = canWebP ? 'image/webp' : 'image/jpeg';
+            const qualitySteps = [0.80, 0.65, 0.50, 0.35];
+            let bestDataUrl = canvas.toDataURL(mime, qualitySteps[0]);
+
+            for (let i = 0; i < qualitySteps.length; i++) {
+                const q = qualitySteps[i];
+                const dataUrl = canvas.toDataURL(mime, q);
+                const headerLen = dataUrl.indexOf(',') + 1;
+                const b64Bytes = Math.round((dataUrl.length - headerLen) * 0.75);
+                bestDataUrl = dataUrl;
+                if (b64Bytes <= maxBytes) {
+                    return bestDataUrl;
+                }
+            }
+
+            // إذا كان الحجم لا زال كبيراً، يتم تقليص أبعاد الـ Canvas بنسبة 75%
+            try {
+                const scaleCanvas = document.createElement('canvas');
+                const sWidth = Math.round(canvas.width * 0.75);
+                const sHeight = Math.round(canvas.height * 0.75);
+                scaleCanvas.width = sWidth;
+                scaleCanvas.height = sHeight;
+                const sCtx = scaleCanvas.getContext('2d');
+                sCtx.drawImage(canvas, 0, 0, sWidth, sHeight);
+                
+                for (const q of [0.65, 0.45, 0.30]) {
+                    const dataUrl = scaleCanvas.toDataURL(mime, q);
+                    const headerLen = dataUrl.indexOf(',') + 1;
+                    const b64Bytes = Math.round((dataUrl.length - headerLen) * 0.75);
+                    bestDataUrl = dataUrl;
+                    if (b64Bytes <= maxBytes) return bestDataUrl;
+                }
+            } catch(scaleErr) {}
+
+            return bestDataUrl;
+        }
 
         function handlePhotoSelect(event) {
             const files = event.target.files;
@@ -4655,7 +5623,7 @@
             const filesToProcess = Array.from(files).slice(0, remainingSlots);
             let processed = 0;
 
-            showToast('جاري ضغط ومعالجة الصور...', 'loading');
+            showToast('جاري ضغط ومعالجة الصور بصيغة WebP السريعة...', 'loading');
 
             filesToProcess.forEach(file => {
                 const reader = new FileReader();
@@ -4705,7 +5673,8 @@
                         ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
                         ctx.fillText(`📅 ${dateStr} | 📍 ${loc}`, width - 12, height - (bannerHeight * 0.22));
 
-                        const compressed = canvas.toDataURL('image/jpeg', 0.72);
+                        // ضغط الصورة بتقنية WebP الفورية لأقل من 200 كيلوبايت
+                        const compressed = compressCanvasToWebP(canvas, 200 * 1024);
                         if (uploadedPhotos.length < 3) {
                             uploadedPhotos.push(compressed);
                         }
@@ -4714,7 +5683,7 @@
                         if (processed === filesToProcess.length) {
                             hideToast();
                             renderPhotosGallery();
-                            showToast(`تمت إضافة ${processed} صورة بنجاح ✅`, 'success', 2500);
+                            showToast(`تمت إضافة وضغط ${processed} صورة بنجاح WebP ✅`, 'success', 2500);
                         }
                     };
                     img.src = e.target.result;
@@ -6132,17 +7101,13 @@
                 }
 
                 // إزالة أي تمييز خطأ سابق
-                ['siteSelect', 'placeSelect', 'customPlaceInput', 'detailsInput', 'responsibleDeptSelect', 'ownerSelect', 'customOwnerInput'].forEach(id => {
+                ['siteSelect', 'placeSelect', 'detailsInput', 'responsibleDeptSelect', 'ownerSelect', 'customOwnerInput'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.borderColor = '';
                 });
 
                 let site = (document.getElementById('siteSelect')?.value || '').trim();
-
-                let place = document.getElementById('placeSelect')?.value || '';
-                if (place === '__OTHER__') {
-                    place = document.getElementById('customPlaceInput')?.value.trim() || '';
-                }
+                let place = (document.getElementById('placeSelect')?.value || '').trim();
 
                 let subCat = document.getElementById('subCategorySelect')?.value || '';
                 if (subCat === '__OTHER_SUB__') {
@@ -6199,6 +7164,50 @@
                     return;
                 }
 
+                // فحص القفل لمنع الإرسال المتعدد والتكرار السريع
+                if (_obsSubmitInFlight || (submitBtn && submitBtn.disabled)) {
+                    showToast('جاري حفظ الملاحظة... يرجى الانتظار', 'warning', 2500);
+                    return;
+                }
+
+                const submitFp = [
+                    obsLocationKey(site, place),
+                    String(selectedObservationType || '').trim(),
+                    normalizeObsText(details)
+                ].join('||');
+                const nowTs = Date.now();
+                if (_lastObsSubmitFp === submitFp && (nowTs - _lastObsSubmitAt) < _OBS_SUBMIT_DEDUP_MS) {
+                    showToast('تم تسجيل هذه الملاحظة للتو. لن يتم تكرار الإرسال.', 'warning', 3500);
+                    return;
+                }
+
+                // فحص الملاحظات المكررة في نفس المكان
+                const dupHits = findDuplicateCandidates({
+                    siteName: site,
+                    locationName: place,
+                    observationType: selectedObservationType,
+                    subCategory: subCat,
+                    details: details
+                });
+
+                let followUpToId = null;
+                let followUpIsoCode = null;
+
+                if (dupHits.length > 0) {
+                    const choice = await askDuplicateDecision(dupHits);
+                    if (choice === 'cancel') {
+                        return;
+                    }
+                    if (choice === 'followup') {
+                        followUpToId = dupHits[0].obs.id;
+                        followUpIsoCode = dupHits[0].obs.isoCode || dupHits[0].obs.id;
+                    }
+                }
+
+                _obsSubmitInFlight = true;
+                _lastObsSubmitFp = submitFp;
+                _lastObsSubmitAt = nowTs;
+
                 // تفعيل حالة التحميل على زر الإرسال فوراً
                 if (submitBtn) {
                     submitBtn.disabled = true;
@@ -6219,6 +7228,8 @@
                 const payload = {
                     action: 'submitPublicObservation',
                     instantRefCode: instantRefCode,
+                    followUpToId: followUpToId,
+                    followUpIsoCode: followUpIsoCode,
                     siteName: site,
                     locationName: place,
                     observationType: selectedObservationType || 'سلوك غير آمن',
@@ -6270,6 +7281,8 @@
                     riskLevel: selectedRiskLevel || 'متوسط',
                     observerName: document.getElementById('ownerSelect')?.value || 'ميداني'
                 });
+            } finally {
+                _obsSubmitInFlight = false;
             }
         });
 
@@ -6573,13 +7586,13 @@
         function saveMarkupAndApply() {
             if (!markupCanvas) return;
             try {
-                const dataUrl = markupCanvas.toDataURL('image/jpeg', 0.85);
+                const dataUrl = compressCanvasToWebP(markupCanvas, 200 * 1024);
                 if (uploadedPhotos[currentMarkupIndex] !== undefined) {
                     uploadedPhotos[currentMarkupIndex] = dataUrl;
                     renderPhotosGallery();
                 }
                 closeMarkupModal();
-                showToast('تم حفظ التأشير وتطبيقه على الصورة بنجاح! ✅', 'success', 2500);
+                showToast('تم حفظ التأشير وضغط الصورة بنجاح WebP! ✅', 'success', 2500);
             } catch(e) {
                 showToast('تعذر حفظ التعديل، يرجى المحاولة ثانية', 'error', 3000);
             }
@@ -6829,12 +7842,7 @@
                     const newPlaceOpt = document.createElement('option');
                     newPlaceOpt.value = cleanPlace;
                     newPlaceOpt.textContent = cleanPlace;
-                    const otherOpt = placeSelect.querySelector('option[value="__OTHER__"]');
-                    if (otherOpt) {
-                        placeSelect.insertBefore(newPlaceOpt, otherOpt);
-                    } else {
-                        placeSelect.appendChild(newPlaceOpt);
-                    }
+                    placeSelect.appendChild(newPlaceOpt);
                     placeSelect.value = cleanPlace;
                 } else {
                     placeSelect.value = matchedPlaceVal;
@@ -6951,9 +7959,21 @@
 
 
         function showSuccess(refId, p) {
-            showToast('تم تسجيل الملاحظة بنجاح وتوثيقها بالنظام!', 'success', 5000);
+            const isFollowUp = !!(p && p.followUpToId);
+            if (isFollowUp) {
+                showToast('تم تسجيل المتابعة بنجاح وربطها بالملاحظة المفتوحة!', 'success', 5000);
+                document.getElementById('refBadge').textContent = 'متابعة على الملاحظة: ' + (p.followUpIsoCode || p.followUpToId);
+            } else {
+                showToast('تم تسجيل الملاحظة بنجاح وتوثيقها بالنظام!', 'success', 5000);
+                document.getElementById('refBadge').textContent = 'رقم الملاحظة: ' + refId;
+            }
             document.getElementById('observationForm').style.display = 'none';
-            document.getElementById('refBadge').textContent = 'رقم الملاحظة: ' + refId;
+
+            // تجهيز رابط التتبع الرقمي المباشر
+            const trackingCode = isFollowUp ? (p.followUpIsoCode || refId) : refId;
+            const directUrl = window.location.origin + window.location.pathname + '?track=' + encodeURIComponent(trackingCode);
+            const trackInput = document.getElementById('directTrackUrlInput');
+            if (trackInput) trackInput.value = directUrl;
 
             // تجهيز رابط ورسالة واتساب المنسقة
             const waBtn = document.getElementById('shareWhatsappBtn');
@@ -6963,12 +7983,14 @@
                 const site = p.siteName || '';
                 const place = p.locationName || '';
                 const loc = (site && place) ? `${site} — ${place}` : (site || place || '-');
+                const headerTitle = isFollowUp ? '🛡️ *تقرير متابعة ملاحظة سلامة وصحة مهنية (HSE)*\n' : '🛡️ *تقرير ملاحظة سلامة وصحة مهنية (HSE)*\n';
+                const refLine = isFollowUp ? ('📌 *متابعة على الملاحظة:* `' + (p.followUpIsoCode || p.followUpToId) + '` (تتبع: `' + refId + '`)\n') : ('📌 *رقم الملاحظة:* `' + refId + '`\n');
 
                 const waMessage = 
-                    '🛡️ *تقرير ملاحظة سلامة وصحة مهنية (HSE)*\n' +
+                    headerTitle +
                     '*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n' +
                     '━━━━━━━━━━━━━━━━━━━━\n' +
-                    '📌 *رقم الملاحظة:* `' + refId + '`\n' +
+                    refLine +
                     '📅 *تاريخ التسجيل:* ' + (p.date || 'اليوم') + (p.shift ? (' (' + p.shift + ')') : '') + '\n' +
                     '🏭 *المصنع / الموقع:* ' + loc + '\n' +
                     '⚠️ *نوع الملاحظة:* ' + (p.observationType || '') + ' (' + riskEmoji + ' ' + (p.riskLevel || 'متوسط') + ')\n' +
@@ -6982,6 +8004,7 @@
                     '📊 *حالة الملاحظة:* ' + statusEmoji + ' ' + (p.status || 'مفتوح') + '\n' +
                     (p.expectedCompletionDate ? ('⏳ *تاريخ المعالجة المستهدف:* ' + p.expectedCompletionDate + '\n') : '') +
                     (p.mapsUrl ? ('📍 *الموقع على الخريطة:* ' + p.mapsUrl + '\n') : '') +
+                    '🔗 *رابط التتبع المباشر:* ' + directUrl + '\n' +
                     '━━━━━━━━━━━━━━━━━━━━\n' +
                     '🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_';
 
@@ -7066,6 +8089,753 @@
             } else {
                 fallbackCopyText(textToCopy);
             }
+        }
+
+        function copyDirectTrackUrl() {
+            const trackInput = document.getElementById('directTrackUrlInput');
+            if (!trackInput || !trackInput.value) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(trackInput.value).then(() => {
+                    showToast('تم نسخ رابط التتبع المباشر بنجاح! 📋', 'success', 2500);
+                }).catch(() => fallbackCopyText(trackInput.value));
+            } else {
+                fallbackCopyText(trackInput.value);
+            }
+        }
+
+        function openTrackObservationModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            const modal = document.getElementById('trackObservationModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const input = document.getElementById('trackSearchInput');
+                if (input) setTimeout(() => input.focus(), 100);
+            }
+        }
+
+        function closeTrackObservationModal(event) {
+            const modal = document.getElementById('trackObservationModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        async function executeTrackSearch(customCode) {
+            const searchInput = document.getElementById('trackSearchInput');
+            const resultWrap = document.getElementById('trackSearchResultWrap');
+            const code = (customCode || (searchInput ? searchInput.value : '')).trim();
+            if (!code) {
+                showToast('يرجى إدخال كود الملاحظة للبحث', 'warning', 2500);
+                return;
+            }
+
+            if (resultWrap) {
+                resultWrap.style.display = 'block';
+                resultWrap.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #0284c7;">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <div style="margin-top: 8px; font-weight: 700; font-size: 0.85rem;">جاري البحث عن الملاحظة في السجل...</div>
+                    </div>`;
+            }
+
+            const cleanCode = code.toUpperCase().trim();
+            let foundObs = null;
+
+            // 1. فحص الملاحظات المفتوحة المحملة محلياً
+            const localList = window._recentOpenHazards || [];
+            for (const obs of localList) {
+                const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+                if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                    foundObs = obs;
+                    break;
+                }
+            }
+
+            // 2. فحص طابور عدم الاتصال المحلي
+            if (!foundObs) {
+                const queue = getOfflineQueue();
+                for (const item of queue) {
+                    const qCode = String(item.refCode || '').toUpperCase();
+                    if (qCode === cleanCode || qCode.includes(cleanCode)) {
+                        foundObs = {
+                            ...item.payload,
+                            isoCode: item.refCode,
+                            status: 'قيد المزامنة (محفوظ محلياً)',
+                            isOfflineItem: true
+                        };
+                        break;
+                    }
+                }
+            }
+
+            // 3. الاستعلام من السيرفر السحابي عند وجود اتصال
+            if (navigator.onLine && (!foundObs || foundObs.isOfflineItem)) {
+                try {
+                    const targetUrl = getEffectiveApiUrl();
+                    const res = await fetch(targetUrl, {
+                        method: 'POST',
+                        mode: 'cors',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'trackObservation', refCode: cleanCode })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.success && data.observation) {
+                            foundObs = data.observation;
+                        }
+                    }
+                } catch(e) {}
+            }
+
+            renderTrackResult(foundObs, cleanCode);
+        }
+
+        function renderTrackResult(obs, queryCode) {
+            const resultWrap = document.getElementById('trackSearchResultWrap');
+            if (!resultWrap) return;
+
+            if (!obs) {
+                resultWrap.innerHTML = `
+                    <div style="background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 14px; text-align: center; color: #9f1239;">
+                        <i class="fas fa-circle-exclamation fa-2x" style="color: #e11d48; margin-bottom: 6px;"></i>
+                        <div style="font-weight: 800; font-size: 0.9rem;">لم يتم العثور على ملاحظة برقم (${escapeHtml(queryCode)})</div>
+                        <div style="font-size: 0.78rem; color: #be123c; margin-top: 4px;">تأكد من كتابة الكود بشكل صحيح (مثل OBS-202609-0001) أو قد تكون الملاحظة حديثة وقيد المراجعة.</div>
+                    </div>`;
+                return;
+            }
+
+            const code = escapeHtml(obs.isoCode || obs.id || obs.refCode || queryCode);
+            const status = obs.status || 'Open';
+            const isClosed = status === 'مغلق' || status === 'Closed' || String(status).includes('مغلق');
+            const isPendingSync = !!obs.isOfflineItem;
+            const statusBg = isClosed ? '#dcfce7' : (isPendingSync ? '#ffedd5' : '#e0f2fe');
+            const statusColor = isClosed ? '#15803d' : (isPendingSync ? '#c2410c' : '#0369a1');
+            const statusIcon = isClosed ? 'fa-check-circle' : (isPendingSync ? 'fa-clock' : 'fa-hourglass-half');
+
+            const step2Done = !isPendingSync;
+            const step3Done = isClosed;
+
+            resultWrap.innerHTML = `
+                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: right;">
+                    <!-- Status Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">كود الملاحظة:</div>
+                            <div style="font-size: 1.05rem; font-weight: 900; color: #0284c7;">${code}</div>
+                        </div>
+                        <div style="background: ${statusBg}; color: ${statusColor}; padding: 4px 12px; border-radius: 20px; font-weight: 800; font-size: 0.8rem; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas ${statusIcon}"></i>
+                            <span>${status}</span>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Progress Tracker -->
+                    <div style="margin-bottom: 14px; background: #f8fafc; border-radius: 8px; padding: 10px 8px; border: 1px solid #e2e8f0;">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; position: relative;">
+                            <div>
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background: #10b981; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">✓</div>
+                                <div style="font-size: 0.72rem; font-weight: 800; color: #1e293b;">1. تم الرصد</div>
+                            </div>
+                            <div>
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${step2Done ? '#0284c7' : '#cbd5e1'}; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">${step2Done ? '2' : '⏳'}</div>
+                                <div style="font-size: 0.72rem; font-weight: 800; color: ${step2Done ? '#0284c7' : '#64748b'};">2. قيد المتابعة</div>
+                            </div>
+                            <div>
+                                <div style="width: 24px; height: 24px; border-radius: 50%; background: ${step3Done ? '#10b981' : '#cbd5e1'}; color: #fff; margin: 0 auto 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800;">${step3Done ? '✓' : '3'}</div>
+                                <div style="font-size: 0.72rem; font-weight: 800; color: ${step3Done ? '#10b981' : '#64748b'};">3. تم الإغلاق</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Observation Details Grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; margin-bottom: 10px;">
+                        <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                            <span style="color: #64748b; display: block; font-size: 0.7rem;">الموقع:</span>
+                            <strong style="color: #1e293b;">${escapeHtml(obs.siteName || '—')} / ${escapeHtml(obs.locationName || '—')}</strong>
+                        </div>
+                        <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                            <span style="color: #64748b; display: block; font-size: 0.7rem;">النوع والخطورة:</span>
+                            <strong style="color: #1e293b;">${escapeHtml(obs.observationType || '—')} (${escapeHtml(obs.riskLevel || '—')})</strong>
+                        </div>
+                        <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                            <span style="color: #64748b; display: block; font-size: 0.7rem;">الإدارة المعنية:</span>
+                            <strong style="color: #1e293b;">${escapeHtml(obs.responsibleDepartment || '—')}</strong>
+                        </div>
+                        <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
+                            <span style="color: #64748b; display: block; font-size: 0.7rem;">التاريخ المتوقع:</span>
+                            <strong style="color: #1e293b;">${escapeHtml(obs.expectedCompletionDate || '—')}</strong>
+                        </div>
+                    </div>
+
+                    ${obs.details ? `
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #334155; margin-bottom: 8px;">
+                        <strong>تفاصيل الملاحظة:</strong> ${escapeHtml(obs.details)}
+                    </div>` : ''}
+
+                    ${obs.correctiveAction ? `
+                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
+                        <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
+                    </div>` : ''}
+                </div>
+            `;
+        }
+
+        // ==========================================
+        // 4. الخريطة الحرارية التفاعلية لمخاطر المصانع (Plant Risk Heatmap)
+        // ==========================================
+        function openPlantRiskHeatmapModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            const modal = document.getElementById('plantRiskHeatmapModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                renderPlantRiskHeatmap();
+            }
+        }
+
+        function closePlantRiskHeatmapModal(event) {
+            const modal = document.getElementById('plantRiskHeatmapModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function renderPlantRiskHeatmap() {
+            const container = document.getElementById('heatmapGridContainer');
+            if (!container) return;
+
+            const list = window._recentOpenHazards || [];
+            const locationStats = {};
+
+            if (loadedConfig && Array.isArray(loadedConfig.sites)) {
+                loadedConfig.sites.forEach(site => {
+                    const sName = site.name;
+                    const places = Array.isArray(site.places) ? site.places : [];
+                    places.forEach(pName => {
+                        const key = `${sName} — ${pName}`;
+                        locationStats[key] = { site: sName, place: pName, count: 0, high: 0, med: 0, low: 0, score: 0 };
+                    });
+                });
+            }
+
+            list.forEach(obs => {
+                const s = obs.siteName || '';
+                const p = obs.locationName || '';
+                if (!s || !p) return;
+                const key = `${s} — ${p}`;
+                if (!locationStats[key]) {
+                    locationStats[key] = { site: s, place: p, count: 0, high: 0, med: 0, low: 0, score: 0 };
+                }
+                locationStats[key].count++;
+                const risk = String(obs.riskLevel || '').toLowerCase();
+                if (risk.includes('عالي') || risk.includes('high')) {
+                    locationStats[key].high++;
+                    locationStats[key].score += 3;
+                } else if (risk.includes('متوسط') || risk.includes('med')) {
+                    locationStats[key].med++;
+                    locationStats[key].score += 2;
+                } else {
+                    locationStats[key].low++;
+                    locationStats[key].score += 1;
+                }
+            });
+
+            const entries = Object.values(locationStats);
+            if (entries.length === 0) {
+                container.innerHTML = `<div style="grid-column: 1/-1; text-align:center; color:#64748b; padding:20px; font-weight:700;">لا توجد بيانات مواقع متاحة حالياً.</div>`;
+                return;
+            }
+
+            entries.sort((a, b) => b.score - a.score);
+
+            container.innerHTML = entries.map(item => {
+                let bg = '#f0fdf4';
+                let border = '#86efac';
+                let textCol = '#166534';
+                let badgeBg = '#dcfce7';
+                let statusTitle = '🟢 آمن';
+
+                if (item.score >= 5 || item.count >= 3 || item.high >= 1) {
+                    bg = '#fff1f2';
+                    border = '#f43f5e';
+                    textCol = '#9f1239';
+                    badgeBg = '#ffe4e6';
+                    statusTitle = '🔴 بؤرة مخاطر حرجة';
+                } else if (item.score >= 2 || item.count >= 1) {
+                    bg = '#fffbeb';
+                    border = '#f59e0b';
+                    textCol = '#92400e';
+                    badgeBg = '#fef3c7';
+                    statusTitle = '🟡 انتباه ومتابعة';
+                }
+
+                return `
+                    <div onclick="filterByHeatmapLocation('${escapeHtml(item.site)}', '${escapeHtml(item.place)}')" style="background: ${bg}; border: 1.5px solid ${border}; border-radius: 10px; padding: 10px; cursor: pointer; transition: transform 0.15s; text-align: right; box-shadow: 0 1px 3px rgba(0,0,0,0.04);" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <span style="font-size: 0.7rem; font-weight: 800; background: ${badgeBg}; color: ${textCol}; padding: 1px 6px; border-radius: 4px;">${statusTitle}</span>
+                            <span style="font-size: 0.7rem; font-weight: 800; color: #64748b;">مجموع النقاط: ${item.score}</span>
+                        </div>
+                        <div style="font-weight: 800; font-size: 0.85rem; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(item.site)}">${escapeHtml(item.site)}</div>
+                        <div style="font-size: 0.78rem; font-weight: 700; color: #475569; margin-bottom: 6px;">📍 ${escapeHtml(item.place)}</div>
+                        <div style="font-size: 0.72rem; color: #334155; display: flex; gap: 6px; flex-wrap: wrap;">
+                            <span>المفتوحة: <strong>${item.count}</strong></span>
+                            ${item.high > 0 ? `<span style="color:#e11d48;">عالية: <strong>${item.high}</strong></span>` : ''}
+                            ${item.med > 0 ? `<span style="color:#d97706;">متوسطة: <strong>${item.med}</strong></span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterByHeatmapLocation(site, place) {
+            closePlantRiskHeatmapModal();
+            const siteSelect = document.getElementById('siteSelect');
+            if (siteSelect) {
+                siteSelect.value = site;
+                handleSiteChange(site);
+                setTimeout(() => {
+                    const placeSelect = document.getElementById('placeSelect');
+                    if (placeSelect) {
+                        placeSelect.value = place;
+                        handlePlaceChange(place);
+                    }
+                }, 100);
+            }
+            showToast(`تم تحديد موقع الخريطة: ${site} - ${place}`, 'info', 2500);
+        }
+
+        // ==========================================
+        // 5. تقرير الوردية الميداني المجمع (Shift HSE Digest)
+        // ==========================================
+        function openShiftDigestModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            const modal = document.getElementById('shiftDigestModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                const sel = document.getElementById('digestSiteSelect');
+                if (sel && loadedConfig && Array.isArray(loadedConfig.sites)) {
+                    sel.innerHTML = '<option value="">— كافة المواقع —</option>' + 
+                        loadedConfig.sites.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+                }
+                const dateInput = document.getElementById('digestDateInput');
+                if (dateInput && !dateInput.value) {
+                    dateInput.value = new Date().toISOString().split('T')[0];
+                }
+                renderShiftDigestReport();
+            }
+        }
+
+        function closeShiftDigestModal(event) {
+            const modal = document.getElementById('shiftDigestModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function getShiftDigestData() {
+            const site = document.getElementById('digestSiteSelect')?.value || '';
+            const shift = document.getElementById('digestShiftSelect')?.value || '';
+            const date = document.getElementById('digestDateInput')?.value || '';
+
+            const list = window._recentOpenHazards || [];
+            const filtered = list.filter(obs => {
+                if (site && obs.siteName !== site) return false;
+                if (shift && obs.shift && !obs.shift.includes(shift.replace(/\s*\(.*\)/, ''))) return false;
+                if (date && obs.date && !obs.date.startsWith(date)) return false;
+                return true;
+            });
+
+            const total = filtered.length;
+            const closed = filtered.filter(o => o.status === 'Closed' || o.status === 'مغلق').length;
+            const open = total - closed;
+            const high = filtered.filter(o => String(o.riskLevel).includes('عالي')).length;
+
+            return { filtered, total, closed, open, high, site: site || 'كافة المواقع', shift: shift || 'جميع الورديات', date: date || new Date().toLocaleDateString('ar-EG') };
+        }
+
+        function renderShiftDigestReport() {
+            const wrap = document.getElementById('shiftDigestReportWrap');
+            if (!wrap) return;
+
+            const data = getShiftDigestData();
+            const rows = data.filtered.map((obs, idx) => `
+                <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.78rem;">
+                    <td style="padding: 6px 8px; font-weight: 800; color: #0284c7;">${escapeHtml(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
+                    <td style="padding: 6px 8px;">${escapeHtml(obs.siteName || '')} - ${escapeHtml(obs.locationName || '')}</td>
+                    <td style="padding: 6px 8px;"><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${escapeHtml(obs.observationType || '')}</span></td>
+                    <td style="padding: 6px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#e11d48' : '#334155'}; font-weight: 700;">${escapeHtml(obs.riskLevel || 'متوسط')}</td>
+                    <td style="padding: 6px 8px;">${escapeHtml(String(obs.details || '').slice(0, 70))}...</td>
+                    <td style="padding: 6px 8px; font-weight: 700;">${escapeHtml(obs.status || 'مفتوح')}</td>
+                </tr>
+            `).join('');
+
+            wrap.innerHTML = `
+                <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <div style="font-weight: 900; font-size: 1.05rem; color: #0f172a;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                            <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                        </div>
+                        <div style="text-align: left; font-size: 0.72rem; color: #475569;">
+                            <div><strong>كود الوثيقة:</strong> DOC-HSE-OBS-SDR-01</div>
+                            <div><strong>التاريخ:</strong> ${data.date}</div>
+                            <div><strong>الوردية:</strong> ${data.shift}</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; text-align: center;">
+                        <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 700;">إجمالي المرصود</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: #0f172a;">${data.total}</div>
+                        </div>
+                        <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 0.7rem; color: #991b1b; font-weight: 700;">عالية الخطورة</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: #b91c1c;">${data.high}</div>
+                        </div>
+                        <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 0.7rem; color: #9a3412; font-weight: 700;">قيد المتابعة</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: #ea580c;">${data.open}</div>
+                        </div>
+                        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 8px;">
+                            <div style="font-size: 0.7rem; color: #166534; font-weight: 700;">تم الإغلاق</div>
+                            <div style="font-size: 1.2rem; font-weight: 900; color: #15803d;">${data.closed}</div>
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+                        <thead>
+                            <tr style="background: #0f172a; color: #ffffff; font-size: 0.75rem; text-align: right;">
+                                <th style="padding: 6px 8px;">الكود</th>
+                                <th style="padding: 6px 8px;">الموقع</th>
+                                <th style="padding: 6px 8px;">النوع</th>
+                                <th style="padding: 6px 8px;">الخطورة</th>
+                                <th style="padding: 6px 8px;">تفاصيل الملاحظة</th>
+                                <th style="padding: 6px 8px;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.length > 0 ? rows : `<tr><td colspan="6" style="text-align:center; padding:16px; color:#64748b; font-weight:700;">لا توجد ملاحظات مسجلة مطابقة لهذه الفلاتر.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function printShiftDigestReport() {
+            window.print();
+        }
+
+        function shareShiftDigestWhatsapp() {
+            const data = getShiftDigestData();
+            const msg = `📋 *تقرير الوردية الميداني المجمع للملاحظات (HSE Shift Digest)*\n*الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*\n━━━━━━━━━━━━━━━━━━━━\n📅 *التاريخ:* ${data.date} | ⏱️ *الوردية:* ${data.shift}\n🏭 *الموقع:* ${data.site}\n━━━━━━━━━━━━━━━━━━━━\n📊 *ملخص مؤشرات السلامة بالوردية:*\n• إجمالي الملاحظات المرصودة: *${data.total}*\n• المخاطر عالية الخطورة: *${data.high}* 🔴\n• قيد المعالجة والمتابعة: *${data.open}* ⏳\n• تم إغلاقها فوراً: *${data.closed}* ✅\n━━━━━━━━━━━━━━━━━━━━\n🌐 _منظومة إدارة السلامة والصحة المهنية (SafetyHub)_`;
+
+            window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+        }
+
+        // ==========================================
+        // 6. بوت ومساعد السلامة الصوتي الميداني (Field HSE Voice Assistant)
+        // ==========================================
+        const ICAPP_SAFETY_KNOWLEDGE_BASE = [
+            {
+                keywords: ['تجميد', 'ثلاجة', 'فريزر', 'سالب', 'تبريد', 'حرارة منخفضة'],
+                topic: 'عنابر التجميد والتبريد السريع (Cold Storage Safety)',
+                ppe: ['🦺 بدلة تجميد حرارية معتمدة', '🧤 جوانتي حراري عازل للبرودة', '🥾 حذاء سيفتي شتوي مانع للانزلاق', '🧢 غطاء رأس وأذن حراري'],
+                rules: [
+                    'الحد الأقصى للتواجد المستمر داخل عنبر التجميد (-18°C) هو 45 دقيقة يعقبها 15 دقيقة راحة.',
+                    'التأكد من عمل مقبض فتح باب الطوارئ الداخلي الفوسفوري وعمل جهاز الإنذار المانع للاحتجاز.',
+                    'حظر الدخول الفردي منعاً لحدوث إغماء دون علم الزملاء.'
+                ],
+                spokenSummary: 'في عنابر التجميد يلزم ارتداء بدلة التجميد الحرارية، الجوانتي العازل، وحذاء مانع للانزلاق. أقصى مدة عمل متواصلة 45 دقيقة مع فحص أزرار الطوارئ الداخلية.'
+            },
+            {
+                keywords: ['لحام', 'قطع', 'ساخن', 'شرز', 'صاروخ', 'اوكسجين', 'لهب', 'اسطوانة'],
+                topic: 'تصاريح وأعمال اللحام والأعمال الساخنة (Hot Work)',
+                ppe: ['🥽 نظارة أو قناع لحام معتم', '🧤 قفازات جلدية طويلة للحام', '🦺 مريلة وأفرول قطني مقاوم للحريق', '🥾 حذاء سيفتي بنعل واقي'],
+                rules: [
+                    'استخراج تصريح عمل ساخن (Hot Work Permit) ساري المفعول قبل بدء أي عمل بـ 30 دقيقة.',
+                    'إخلاء دائرة قطرها 11 متراً من أي مواد كرتونية أو مذيبات سريعة الاشتعال مع وضع ستائر عزل الحريق.',
+                    'تواجد مراقب حريق (Fire Watch) مزود بطفاية بودرة/رغوة صالحة أثناء العمل ولمدة 60 دقيقة بعد انتهاء اللحام.'
+                ],
+                spokenSummary: 'أعمال اللحام تتطلب تصريح عمل ساخن معتمد، قناع لحام وقفازات جلدية، إخلاء المواد القابلة للاشتعال لمسافة 11 متراً، وتواجد مراقب حريق مع طفاية صالحة.'
+            },
+            {
+                keywords: ['مغلق', 'تانك', 'خزان', 'بيارة', 'صومعة', 'محصورة', 'بيارات'],
+                topic: 'الأماكن المغلقة والمحصورة (Confined Space Entry)',
+                ppe: ['🦺 حزام أمان كامل مع حبل إنقاذ (Full Body Harness)', '😷 جهاز تنفس مزود بهواء نقي عند الحاجة', '🪖 خوذة مزودة بكشاف إنارة معتمد Ex', '🧤 قفازات واقية'],
+                rules: [
+                    'فحص نسبة الأكسجين والغازات السامة بجهاز Calibrated Gas Detector قبل الدخول (الأكسجين بين 19.5% و 23.5%).',
+                    'تطبيق إجراءات عزل الطاقة وتأمين المحابس LOTO وفصل الخطوط الميكانيكية.',
+                    'تواجد مراقب دخول (Attendant) خارج الفتحة طوال فترة العمل ومعه وسيلة اتصال ونظام ونش إنقاذ Tripod.'
+                ],
+                spokenSummary: 'دخول الأماكن المغلقة يتطلب قياس نسبة الغازات والأكسجين، تصريح دخول، حزام أمان كامل، ومراقب طوارئ خارجي مستمر مع معدات الإنقاذ.'
+            },
+            {
+                keywords: ['كلارك', 'رافعة', 'شوكية', 'فوركلفت', 'سائق', 'سرعة', 'بوق'],
+                topic: 'سلامة تشغيل الرافعات الشوكية (Forklift Safety)',
+                ppe: ['🦺 سترة فسفورية عالية الوضوح Hi-Vis', '🥾 حذاء سلامة بمقدمة صلبة', '🪖 خوذة رأس لسائقي الرافعات'],
+                rules: [
+                    'السرعة القصوى داخل صالات الإنتاج والممرات 8 كم/ساعة، وفي التقاطعات 5 كم/ساعة مع إطلاق البوق.',
+                    'حظر نقل أو رفع أي ركاب على شوك الرافعة نهائياً.',
+                    'خفض الشوكات إلى مستوى 15 سم فوق الأرض أثناء السير والتحرك في اتجاه الرؤية المفتوحة.'
+                ],
+                spokenSummary: 'السرعة القصوى للرافعة الشوكية داخل المصنع 8 كيلومتر في الساعة، مع ربط حزام الأمان وارتداء السترة الفسفورية، ويمنع تماماً ركوب أي شخص على الشوك.'
+            },
+            {
+                keywords: ['حرارة', 'اجهاد', 'شمس', 'عطش', 'صيف', 'ماء', 'دوار'],
+                topic: 'بروتوكول الوقاية من الإجهاد الحراري (Heat Stress Advisory)',
+                ppe: ['🧢 غطاء رأس واقي من الشمس', '👕 ملابس قطنية خفيفة فاتحة اللون', '🕶️ نظارة حماية شمسية معتمدة'],
+                rules: [
+                    'شرب كوب ماء بارد كل 15 إلى 20 دقيقة بانتظام حتى بدون الشعور بالعطش.',
+                    'أخذ فترات راحة مظللة وجيدة التهوية مع توفير محاليل الجفاف عند ارتفاع درجة الحرارة فوق 38 مئوية.',
+                    'مراقبة علامات الإجهاد الحراري: الدوار، الغثيان، والتعرق الشديد.'
+                ],
+                spokenSummary: 'للوقاية من الإجهاد الحراري اشرب كوب ماء كل 20 دقيقة، التزم بالراحة في الظل، وارتد ملابس قطنية فاتحة مع إبلاغ العيادة فوراً عند الشعور بالدوار.'
+            },
+            {
+                keywords: ['كيميائ', 'حمض', 'صودا', 'كلور', 'مطهرات', 'غسيل', 'مادة', 'sds', 'msds'],
+                topic: 'سلامة التعامل مع المواد الكيميائية والمطهرات (Chemical Safety)',
+                ppe: ['🥽 نظارة حماية كيميائية مغلقة Goggles', '🛡️ واقي وجه شفاف Face Shield', '🧤 قفازات مطاطية طويلة مقاومة للكيماويات', '🦺 مريلة واقية'],
+                rules: [
+                    'الاطلاع على صحيفة بيانات سلامة المادة (SDS) قبل فتح أو استخدام أي مادة كيميائية.',
+                    'حظر خلط الأحماض مع القلويات أو الكلور نهائياً منعاً لتصاعد غازات سامة مميتة.',
+                    'التأكد من توفر وجاهزية دش الطوارئ ومحطة غسيل العيون (Emergency Shower & Eyewash) في المنطقة.'
+                ],
+                spokenSummary: 'عند التعامل مع الكيماويات يجب ارتداء نظارة الحماية وواقي الوجه والقفازات المقاومة، ومراجعة صحيفة SDS والتأكد من جاهزية دش الطوارئ وغسول العيون.'
+            },
+            {
+                keywords: ['بيئة', 'بيئية', 'انسكاب', 'تسرب', 'نفايات', 'قمامة', 'تلوث', 'زيت', 'صرف', 'مخلفات', 'spill'],
+                topic: 'الحماية البيئية وإدارة الانسكابات والنفايات (Environmental Protection & Spill Control)',
+                ppe: ['🧤 قفازات نيتريل سميكة', '🥾 حذاء سلامة مطاطي عازل', '🥽 نظارة سلامة واقية'],
+                rules: [
+                    'فصل النفايات من المصدر: النفايات الخطرة (حاوية حمراء)، التدوير والصلبة (زرقاء)، والبيولوجية/الغذائية (خضراء).',
+                    'استخدام طقم احتواء الانسكابات (Spill Kit) فوراً لوقف تسرب الزيوت أو الكيماويات ومنع وصولها لمجاري الصرف الصراعي.',
+                    'إبلاغ مسئول البيئة والسلامة فور وقوع أي تسريب كيميائي أو زيوت يزيد عن 5 ليترات.'
+                ],
+                spokenSummary: 'للحفاظ على البيئة يلزم فصل النفايات حسب الحاويات المخصصة، واستخدام طقم الانسكابات فوراً لوقف أي تسرب زيوت أو كيماويات ومنع وصولها للصرف.'
+            },
+            {
+                keywords: ['ارتفاع', 'ارتفاعات', 'سلم', 'سقالة', 'حبل', 'سقوط', 'سطح', 'مرتفع'],
+                topic: 'العمل على ارتفاعات والسلامة على السقالات (Working at Heights)',
+                ppe: ['🦺 حزام أمان كامل بممتص صدمات Full Body Harness', '🪖 خوذة سلامة مزودة برباط ذقن', '🥾 حذاء سلامة مانع للانزلاق'],
+                rules: [
+                    'الالتزام بربط حزام الأمان في نقطة تثبيت معتمدة (Anchor Point) عند العمل على ارتفاع 1.8 متر أو أكثر.',
+                    'التأكد من وجود كارت التفتيش الأخضر (Scafftag) الصالح على السقالة قبل الصعود عليها.',
+                    'يحظر تماماً استخدام السلاليم المزدوجة أو المكسورة، وتثبيت السلم بزاوية ميل 4:1 مع ربطه من الأعلى.'
+                ],
+                spokenSummary: 'عند العمل على ارتفاع مترين أو أكثر يجب ارتداء حزام الأمان الكامل وربطه بنقطة تثبيت معتمدة والتأكد من وجود كارت السقالة الأخضر.'
+            },
+            {
+                keywords: ['كهرباء', 'كهربائي', 'لوحة', 'كابل', 'صدمة', 'ماس', 'صيانة', 'عزل', 'loto', 'تأمين'],
+                topic: 'السلامة الكهربائية وتطبيق نظام قفل مصادر الطاقة (Electrical Safety & LOTO)',
+                ppe: ['🧤 قفازات عازلة للكهرباء معتمدة', '🥾 حذاء سلامة بنعل عازل للكهرباء', '🥽 نظارة حماية ضد الوميض الكهربائي'],
+                rules: [
+                    'تطبيق نظام LOTO ووضع القفل الخاص وبطاقة التحذير الشخصية قبل بدء أي أعمال صيانة ميكانيكية أو كهربائية.',
+                    'حظر فتح اللوحات الكهربائية الرئيسية إلا بواسطة فني كهرباء مصرح له ومؤهل.',
+                    'فحص كابلات المعدات والآلات والتأكد من عدم وجود أسلاك عارية أو وصلات غير معزولة.'
+                ],
+                spokenSummary: 'قبل أي صيانة يجب فصل التيار وتطبيق نظام LOTO بوضع قفل وبطاقة السلامة، ويمنع فتح اللوحات الكهربائية إلا للفنيين المختصين.'
+            },
+            {
+                keywords: ['حريق', 'دخان', 'إخلاء', 'طوارئ', 'طفاية', 'إنذار', 'حريقة', 'جرس', 'نقطة تجمع'],
+                topic: 'السلامة من الحرائق وخطة الإخلاء عند الطوارئ (Fire Safety & Evacuation)',
+                ppe: ['🪖 خوذة سلامة ميدانية', '🦺 سترة فسفورية عالية الوضوح'],
+                rules: [
+                    'عند سماع صفارة الإنذار: أوقف العمل فوراً، اغلق المحابس والآلات، واتجه إلى أقرب مخرج طوارئ بهدوء.',
+                    'التجمع في نقطة التجمع المحددة (Assembly Point) والالتزام بتعليمات مرشدي الإخلاء وعدم العودة للمبنى.',
+                    'حافظ على ممرات ومخارج الطوارئ وطفيات الحريق خالية تماماً من أي عوائق أو مشاطيح كرتون.'
+                ],
+                spokenSummary: 'عند الإنذار يجب إيقاف العمل والتوجه فوراً عبر مخرج الطوارئ إلى نقطة التجمع، مع الالتزام بعدم سد الممرات وطفيات الحريق.'
+            },
+            {
+                keywords: ['ضوضاء', 'ضجيج', 'صوت', 'سدادة', 'أذن', 'سمع', 'ماكينات', 'مولد'],
+                topic: 'الوقاية من الضوضاء وحماية السمع (Hearing Conservation)',
+                ppe: ['🎧 واقي أذن خارجي Ear Muffs', '🔌 سدادات أذن سيليكونية Ear Plugs معتمدة'],
+                rules: [
+                    'ارتداء واقيات السمع إلزامياً في جميع المناطق التي تزيد فيها شدة الضوضاء عن 85 ديسيبل.',
+                    'التأكد من نظافة سدادات الأذن قبل تركيبها لمنع التهابات الأذن الداخلية.',
+                    'إبلاغ فريق الصيانة فوراً عند ملاحظة اهتزازات أو أصوات غير طبيعية مرتفعة في المعدات.'
+                ],
+                spokenSummary: 'في مناطق الضوضاء العالية فوق 85 ديسيبل يجب ارتداء سدادات أو واقيات الأذن لحماية السمع من التلف التدريجي.'
+            },
+            {
+                keywords: ['انزلاق', 'تعثر', 'سقوط', 'أرضية', 'ماء', 'زيت', 'درج', 'ممر', 'نظافة'],
+                topic: 'منع الانزلاق والتعثر في صالات الإنتاج (Slips, Trips & Falls Prevention)',
+                ppe: ['🥾 حذاء سلامة مطاطي بنعل مانع للانزلاق SRC rated', '🦺 سترة عاكسة'],
+                rules: [
+                    'تجفيف الأرضيات المبتلة فوراً ووضع لافتة تحذيرية أرضية مبتلة (Wet Floor) أثناء النظافة.',
+                    'إزالة الكابلات والمواسير والخراطيم من ممرات السير وتثبيتها في أعلى جدران الصالة.',
+                    'الحفاظ على نظافة وترتيب موقع العمل (5S Housekeeping) بصفة مستمرة طوال الوردية.'
+                ],
+                spokenSummary: 'لمنع الانزلاق والتعثر احرص على تجفيف المياه فوراً من الأرضيات، وضع لافتة أرضية مبتلة، وحافظ على الممرات خالية من الخراطيم والكابلات.'
+            },
+            {
+                keywords: ['غذاء', 'سلامة اغذية', 'نظافة شخصية', 'شعر', 'شبكة', 'زجاج', 'بلاستيك', 'تلوث', 'هاسب', 'haccp'],
+                topic: 'تكامل سلامة الأغذية مع السلامة والصحة المهنية (Food Safety & HSE Integration)',
+                ppe: ['🧢 شبكة شعر ودقن معتمدة Hairnet & Beard cover', '🥼 بالطو أبيض نظيف بدون جيوب خارجية', '🧤 قفازات طعام معتمدة'],
+                rules: [
+                    'حظر إدخال الساعات أو المجوهرات أو أدوات الكتابة أو الدبابيس داخل صالات تصنيع وتعبئة الأغذية.',
+                    'تطبيق سياسة الخالي من الزجاج والبلاستيك الهش لحماية المنتجات والأفراد من التلوث والإصابات.',
+                    'غسل وتطهير الأيدي جيداً لمدة 20 ثانية قبل الدخول لخطوط التعبئة وبعد استخدام الدورة المياه.'
+                ],
+                spokenSummary: 'في صالات الأغذية يجب الالتزام بشبكة الشعر والبالطو النظيف وغسل الأيدي، ويمنع تماماً ارتداء المجوهرات أو إدخال الزجاج لتجنب تلوث المنتج.'
+            }
+        ];
+
+        let hseSpeechRecognizer = null;
+        let isBotListening = false;
+
+        function openHseVoiceAssistantModal(event) {
+            if (event) { event.stopPropagation(); event.preventDefault(); }
+            const modal = document.getElementById('hseVoiceAssistantModal');
+            if (modal) modal.style.display = 'flex';
+        }
+
+        function closeHseVoiceAssistantModal(event) {
+            const modal = document.getElementById('hseVoiceAssistantModal');
+            if (modal) modal.style.display = 'none';
+            if (hseSpeechRecognizer) {
+                try { hseSpeechRecognizer.stop(); } catch(e) {}
+            }
+            isBotListening = false;
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+        }
+
+        function toggleHseBotListening() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                showToast('متصفحك لا يدعم الإدخال الصوتي. يرجى استخدام Chrome أو Safari الحديث.', 'error', 3500);
+                return;
+            }
+
+            const micBtn = document.getElementById('btnBotMicTrigger');
+            const statusText = document.getElementById('botListeningStatus');
+
+            if (isBotListening) {
+                if (hseSpeechRecognizer) try { hseSpeechRecognizer.stop(); } catch(e) {}
+                isBotListening = false;
+                if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                if (statusText) statusText.textContent = 'انقر على الميكروفون للبدء بالتحدث';
+                return;
+            }
+
+            try {
+                const recognizer = new SpeechRecognition();
+                recognizer.lang = 'ar-EG';
+                recognizer.continuous = false;
+                recognizer.interimResults = false;
+
+                recognizer.onstart = () => {
+                    isBotListening = true;
+                    if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+                    if (statusText) statusText.textContent = '🔴 جاري الاستماع إلى سؤالك الآن... تحدث بوضوح';
+                };
+
+                recognizer.onresult = (e) => {
+                    const transcript = e.results[0][0].transcript;
+                    if (statusText) statusText.textContent = `تم التقاط: "${transcript}"`;
+                    processHseVoiceQuery(transcript);
+                };
+
+                recognizer.onerror = () => {
+                    isBotListening = false;
+                    if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    if (statusText) statusText.textContent = 'تعذر سماع الصوت، يرجى المحاولة ثانية';
+                };
+
+                recognizer.onend = () => {
+                    isBotListening = false;
+                    if (micBtn) micBtn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                };
+
+                hseSpeechRecognizer = recognizer;
+                recognizer.start();
+            } catch(err) {
+                showToast('تعذر تشغيل الميكروفون', 'error', 2500);
+            }
+        }
+
+        function processHseVoiceQuery(query) {
+            if (!query) return;
+            const clean = query.toLowerCase().trim();
+            const resultBox = document.getElementById('botResponseCard');
+            if (!resultBox) return;
+
+            let matchedTopic = null;
+            let maxHits = 0;
+
+            for (const kb of ICAPP_SAFETY_KNOWLEDGE_BASE) {
+                let hits = 0;
+                for (const kw of kb.keywords) {
+                    if (clean.includes(kw)) hits++;
+                }
+                if (hits > maxHits) {
+                    maxHits = hits;
+                    matchedTopic = kb;
+                }
+            }
+
+            resultBox.style.display = 'block';
+
+            if (matchedTopic && maxHits > 0) {
+                resultBox.innerHTML = `
+                    <div style="font-weight: 800; font-size: 0.95rem; color: #047857; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                        <span>🛡️ ${matchedTopic.topic}</span>
+                        <button type="button" onclick="speakHseResponse('${escapeHtml(matchedTopic.spokenSummary)}')" style="background: #e0f2fe; color: #0369a1; border: none; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
+                            <i class="fas fa-volume-high"></i> إعادة النطق
+                        </button>
+                    </div>
+                    
+                    <div style="margin-bottom: 8px;">
+                        <strong style="font-size: 0.78rem; color: #1e293b;">مهمات الوقاية الإلزامية المطلوبة (PPE):</strong>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                            ${matchedTopic.ppe.map(p => `<span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.72rem; font-weight: 700; padding: 2px 6px; border-radius: 6px;">${p}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 0.78rem; color: #334155; line-height: 1.5; margin-bottom: 8px;">
+                        <ul style="margin: 0; padding-right: 16px;">
+                            ${matchedTopic.rules.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 6px;">
+                        <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', '${escapeHtml(matchedTopic.topic)}')" style="background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                            <i class="fas fa-pen-to-square"></i> تسجيل ملاحظة بهذا الشأن
+                        </button>
+                    </div>
+                `;
+
+                speakHseResponse(matchedTopic.spokenSummary);
+            } else {
+                resultBox.innerHTML = `
+                    <div style="color: #475569; font-size: 0.82rem; text-align: center; padding: 10px;">
+                        <i class="fas fa-circle-question fa-2x" style="color: #94a3b8; margin-bottom: 6px;"></i>
+                        <div style="font-weight: 700;">سؤالك: "${escapeHtml(query)}"</div>
+                        <div style="margin-top: 4px; font-size: 0.75rem; color: #64748b;">لم أجد بنداً مباشراً لهذا الاستفسار. يمكنك توجيه السؤال لمشرف السلامة أو تسجيل الملاحظة مباشرة.</div>
+                        <button type="button" onclick="fillObservationFromBot('${escapeHtml(query)}', 'ملاحظة عامة')" style="margin-top: 8px; background: #0284c7; color: #ffffff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">
+                            <i class="fas fa-pen-to-square"></i> نقل السؤال للنموذج كملاحظة
+                        </button>
+                    </div>
+                `;
+                speakHseResponse('لم أتمكن من إيجاد معيار مباشر لهذا السؤال، يمكنك تسجيله كملاحظة ميدانية لمتابعة فريق السلامة.');
+            }
+        }
+
+        function speakHseResponse(text) {
+            if (!window.speechSynthesis || !text) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'ar-EG';
+                utter.rate = 0.95;
+                window.speechSynthesis.speak(utter);
+            } catch(e) {}
+        }
+
+        function fillObservationFromBot(query, topic) {
+            closeHseVoiceAssistantModal();
+            const details = document.getElementById('detailsInput');
+            if (details) {
+                details.value = `استفسار وملاحظة ميدانية: ${query} (الموضوع: ${topic})`;
+                if (typeof handleDetailsInputQuality === 'function') handleDetailsInputQuality(details.value);
+                details.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                details.focus();
+            }
+            showToast('تم نقل نص الاستفسار إلى نموذج الملاحظات ✅', 'success', 2500);
         }
 
         function fallbackCopyText(text) {
@@ -7332,6 +9102,18 @@
             measureCloudPing();
             fetchPlantWeatherData();
             fetchEmergencyContactsCloud();
+
+            // فحص كود التتبع الممرر عبر الرابط ?track=OBS-...
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const trackCode = urlParams.get('track') || urlParams.get('ref') || urlParams.get('code');
+                if (trackCode) {
+                    openTrackObservationModal();
+                    const searchInput = document.getElementById('trackSearchInput');
+                    if (searchInput) searchInput.value = trackCode;
+                    setTimeout(() => executeTrackSearch(trackCode), 300);
+                }
+            } catch(e) {}
         });
     </script>
 </body>
