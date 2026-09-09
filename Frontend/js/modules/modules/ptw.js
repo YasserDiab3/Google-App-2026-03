@@ -1699,8 +1699,11 @@ const PTW = {
             return isNaN(numericDate.getTime()) ? null : numericDate;
         }
 
-        const stringValue = String(value).trim();
-        if (!stringValue) return null;
+        let stringValue = String(value).trim();
+        if ((stringValue.startsWith('"') && stringValue.endsWith('"')) || (stringValue.startsWith("'") && stringValue.endsWith("'"))) {
+            stringValue = stringValue.slice(1, -1).trim();
+        }
+        if (!stringValue || stringValue === '-' || stringValue === '—' || stringValue === 'null' || stringValue === 'undefined' || stringValue === 'غير محدد') return null;
 
         // Match DD/MM/YYYY or DD-MM-YYYY with optional time HH:mm:ss or HH:mm
         const dmyMatch = stringValue.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
@@ -2219,16 +2222,24 @@ const PTW = {
             statusIcon = 'fa-clock';
         }
 
-        const workStartSource = entry.timeFrom || entry.openDate;
+        const workStartSource = entry.timeFrom || entry.openDate || entry.startDate || entry.createdAt;
+        const workEndSource = entry.timeTo || entry.closureDate || entry.endDate;
         const registryDateStr = workStartSource && Utils.formatDate
             ? Utils.formatDate(workStartSource)
             : t('module.ptw.common.notSpecified', 'غير محدد');
         const registryDateDisplay = !workStartSource || registryDateStr === '-' ? t('module.ptw.common.notSpecified', 'غير محدد') : registryDateStr;
 
         const formatRegistryTime = (dateStr) => {
-            if (!dateStr || dateStr === t('module.ptw.common.notSpecified', 'غير محدد')) return t('module.ptw.common.notSpecified', 'غير محدد');
+            if (!dateStr || dateStr === t('module.ptw.common.notSpecified', 'غير محدد') || dateStr === '-') return t('module.ptw.common.notSpecified', 'غير محدد');
             try {
-                const date = this.parseDateTimeValue(dateStr);
+                let cleanStr = String(dateStr).trim();
+                if ((cleanStr.startsWith('"') && cleanStr.endsWith('"')) || (cleanStr.startsWith("'") && cleanStr.endsWith("'"))) {
+                    cleanStr = cleanStr.slice(1, -1).trim();
+                }
+                const timeMatch = cleanStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+                if (timeMatch) return `${timeMatch[1].padStart(2, '0')}:${timeMatch[2]}`;
+
+                const date = this.parseDateTimeValue(cleanStr);
                 if (!date || isNaN(date.getTime())) return t('module.ptw.common.notSpecified', 'غير محدد');
                 return date.toLocaleTimeString('en-GB-u-nu-latn', { hour: '2-digit', minute: '2-digit', hour12: false });
             } catch {
@@ -2237,12 +2248,17 @@ const PTW = {
         };
 
         const timeFromDisplay = formatRegistryTime(workStartSource);
-        const timeToDisplay = formatRegistryTime(entry.timeTo);
+        const timeToDisplay = formatRegistryTime(workEndSource);
         const permitTypeDisplay = this.getPermitTypeDisplay(entry);
         const permitTypeShort = permitTypeDisplay.length > 50 ? permitTypeDisplay.substring(0, 50) + '...' : permitTypeDisplay;
-        const totalDisp = (entry.timeFrom && entry.timeTo)
-            ? this.calculateTotalTime(entry.timeFrom, entry.timeTo)
-            : (this.isUsableDurationText(entry.totalTime) ? entry.totalTime : t('module.ptw.common.notSpecified', 'غير محدد'));
+        
+        let totalDisp = t('module.ptw.common.notSpecified', 'غير محدد');
+        if (this.isUsableDurationText(entry.totalTime)) {
+            totalDisp = entry.totalTime;
+        } else if (workStartSource && workEndSource) {
+            const calculated = this.calculateTotalTime(workStartSource, workEndSource);
+            if (this.isUsableDurationText(calculated)) totalDisp = calculated;
+        }
         const statusText = this.statusLabel(entry.status);
         const seqDisplay = this.getPermitDisplayNumber(entry);
         const workDesc = String(entry.workDescription || '');
@@ -19342,8 +19358,8 @@ const PTW = {
             siteName: registryEntry.location,
             sublocation: registryEntry.sublocation,
             sublocationName: registryEntry.sublocation,
-            startDate: registryEntry.timeFrom || registryEntry.openDate,
-            endDate: registryEntry.timeTo || registryEntry.closureDate,
+            startDate: registryEntry.timeFrom || registryEntry.openDate || registryEntry.startDate || registryEntry.createdAt,
+            endDate: registryEntry.timeTo || registryEntry.closureDate || registryEntry.endDate || registryEntry.timeFrom || registryEntry.openDate,
             status: registryEntry.status,
             workDescription: registryEntry.workDescription,
             requestingParty: registryEntry.requestingParty,
@@ -19481,13 +19497,18 @@ const PTW = {
                         }
                     }
 
+                    const startVal = item.startDate || item.openDate || item.timeFrom || item.createdAt;
+                    const endVal = item.endDate || item.closureDate || item.timeTo || startVal;
+                    const startDateDisplay = startVal ? Utils.formatDate(startVal) : '-';
+                    const endDateDisplay = endVal ? Utils.formatDate(endVal) : '-';
+
                     return `
                     <tr>
                         <td>${Utils.escapeHTML(item.workType || '')}</td>
                         <td title="${Utils.escapeHTML(item.siteName || item.location || '')}">${Utils.escapeHTML(item.siteName || item.location || '')}</td>
                         <td title="${Utils.escapeHTML(item.sublocationName || item.sublocation || '')}">${Utils.escapeHTML(item.sublocationName || item.sublocation || '-')}</td>
-                        <td>${item.startDate ? Utils.formatDate(item.startDate) : '-'}</td>
-                        <td>${item.endDate ? Utils.formatDate(item.endDate) : '-'}</td>
+                        <td>${startDateDisplay}</td>
+                        <td>${endDateDisplay}</td>
                         <td>
                             <span class="badge badge-${approvedCount === totalCount && totalCount > 0 ? 'success' : 'warning'}">
                                 ${totalCount > 0 ? `${approvedCount}/${totalCount}` : '—'}

@@ -4356,7 +4356,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1729',
+    appVersion: '1.0.1730',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6031,6 +6031,11 @@ const Utils = {
                 d = date;
             } else {
                 let dateStr = String(date).trim();
+                if ((dateStr.startsWith('"') && dateStr.endsWith('"')) || (dateStr.startsWith("'") && dateStr.endsWith("'"))) {
+                    dateStr = dateStr.slice(1, -1).trim();
+                }
+                if (!dateStr || dateStr === '-' || dateStr === '—' || dateStr === 'null' || dateStr === 'undefined' || dateStr === 'غير محدد') return '-';
+
                 const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
                 if (dmyMatch) {
                     const [, day, month, year, hours, minutes, seconds] = dmyMatch;
