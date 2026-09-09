@@ -1118,6 +1118,34 @@ const DataManager = {
                 }
             }
             
+            // إذا كانت البيانات محملة، نضمن طلب جلب مجمع غير حاشر فوراً من خادم SQL
+            setTimeout(() => {
+                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.batchReadFromSheets === 'function') {
+                    const sheetsToEnsure = ['PTW', 'PTWRegistry', 'ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ApprovedContractors', 'Violations', 'DailyObservations'];
+                    GoogleIntegration.batchReadFromSheets(sheetsToEnsure, { timeout: 25000 })
+                        .then(res => {
+                            if (res && res.data) {
+                                Object.keys(res.data).forEach(s => {
+                                    const rows = res.data[s];
+                                    if (Array.isArray(rows) && rows.length > 0) {
+                                        AppState.appData[s] = rows;
+                                        const lowerMap = {
+                                            'PTW': 'ptw', 'PTWRegistry': 'ptwRegistry', 'ClinicVisits': 'clinicVisits',
+                                            'ClinicContractorVisits': 'clinicContractorVisits', 'Training': 'training',
+                                            'Employees': 'employees', 'ApprovedContractors': 'approvedContractors',
+                                            'Violations': 'violations', 'DailyObservations': 'dailyObservations'
+                                        };
+                                        if (lowerMap[s]) AppState.appData[lowerMap[s]] = rows;
+                                    }
+                                });
+                                try {
+                                    window.dispatchEvent(new CustomEvent('syncDataCompleted', { detail: { syncedCount: Object.keys(res.data).length } }));
+                                } catch (e) {}
+                            }
+                        }).catch(() => {});
+                }
+            }, 100);
+
             try { window.dispatchEvent(new CustomEvent('dataManagerLoaded')); } catch (e) {}
             return true;
         } catch (error) {
