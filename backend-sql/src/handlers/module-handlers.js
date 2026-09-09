@@ -2180,6 +2180,24 @@ const moduleHandlers = {
             total: allInjuries.length,
             timestamp: new Date().toISOString()
         };
+    },
+
+    'deleteInjury': function(payload, postData, action, actorUserData) {
+        const injuryId = payload?.injuryId || postData?.injuryId || payload?.id || postData?.id || payload?.data?.injuryId || payload?.data?.id;
+        if (!injuryId) {
+            return { success: false, message: 'معرف الإصابة مطلوب', errorCode: 'INJURY_ID_REQUIRED' };
+        }
+        const db = getDatabase();
+        let deletedCount = 0;
+        deletedCount += db.deleteRow('Injuries', 'id', injuryId);
+        deletedCount += db.deleteRow('ClinicContractorInjuries', 'id', injuryId);
+        return {
+            success: true,
+            message: deletedCount > 0 ? 'تم حذف سجل الإصابة بنجاح' : 'السجل غير موجود أو تم حذفه سابقاً',
+            deleted: deletedCount > 0,
+            deletedCount: deletedCount,
+            timestamp: new Date().toISOString()
+        };
     }
 };
 

@@ -5921,11 +5921,14 @@ const Clinic = {
                     <td class="text-center">${attachmentsCount}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-injury" data-id="${Utils.escapeHTML(item.id || '')}">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض تفاصيل الإصابة">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-injury" data-id="${Utils.escapeHTML(item.id || '')}">
+                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل الإصابة">
                                 <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="btn-icon btn-icon-danger" data-action="delete-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف الإصابة">
+                                <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </td>
@@ -6181,6 +6184,41 @@ const Clinic = {
         panel.querySelectorAll('[data-action="edit-injury"]').forEach((btn) => {
             btn.addEventListener('click', () => this.editInjury(btn.getAttribute('data-id')));
         });
+        panel.querySelectorAll('[data-action="delete-injury"]').forEach((btn) => {
+            btn.addEventListener('click', () => this.deleteInjury(btn.getAttribute('data-id')));
+        });
+    },
+
+    async deleteInjury(id) {
+        if (!id) return;
+        const record = (AppState.appData.injuries || []).find((item) => String(item.id) === String(id));
+        const name = record ? (record.employeeName || record.personName || record.contractorName || '') : '';
+        const displayName = name ? `المصاب (${name})` : 'هذا السجل';
+        const ok = confirm(`هل أنت متأكد من حذف سجل الإصابة لـ ${displayName}؟\n\nتنبيه: هذا الإجراء لا يمكن التراجع عنه.`);
+        if (!ok) return;
+
+        try {
+            Notification?.info?.('جاري حذف سجل الإصابة...');
+            const targetSheet = (record && record.personType === 'contractor') ? 'ClinicContractorInjuries' : 'Injuries';
+            const res = await GoogleIntegration.sendRequest({
+                action: 'deleteInjury',
+                data: { injuryId: id, id: id, sheetName: targetSheet }
+            });
+
+            if (res && (res.success || res.ok || res.deleted)) {
+                AppState.appData.injuries = (AppState.appData.injuries || []).filter((item) => String(item.id) !== String(id));
+                if (AppState.appData.clinicContractorInjuries) {
+                    AppState.appData.clinicContractorInjuries = AppState.appData.clinicContractorInjuries.filter((item) => String(item.id) !== String(id));
+                }
+                Notification?.success?.('تم حذف سجل الإصابة بنجاح');
+                this.renderInjuriesTab();
+            } else {
+                Notification?.error?.('تعذر حذف سجل الإصابة: ' + (res?.message || 'خطأ غير معروف'));
+            }
+        } catch (error) {
+            Utils.safeError('❌ خطأ في حذف سجل الإصابة:', error);
+            Notification?.error?.('حدث خطأ أثناء حذف سجل الإصابة: ' + error.message);
+        }
     },
 
     // ===== قسم تحليل بيانات المترددين على العيادة =====

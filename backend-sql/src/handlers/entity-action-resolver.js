@@ -34,6 +34,7 @@ const ACTION_MAP = {
     deleteMedication: { sheet: 'Medications', op: 'delete', idFields: ['medicationId', 'id'] },
     addInjury: { sheet: 'Injuries', op: 'upsert', idFields: ['id'] },
     updateInjury: { sheet: 'Injuries', op: 'upsert', idFields: ['injuryId', 'id'], dataField: 'updateData' },
+    deleteInjury: { sheet: 'Injuries', op: 'delete', idFields: ['injuryId', 'id'] },
     addClinicVisitDeletionRequest: { sheet: 'ClinicVisitDeletionRequests', op: 'upsert', idFields: ['id'] },
     addMedicationDeletionRequest: { sheet: 'MedicationDeletionRequests', op: 'upsert', idFields: ['id'] },
     addSupplyRequest: { sheet: 'SupplyRequests', op: 'upsert', idFields: ['id'] },
