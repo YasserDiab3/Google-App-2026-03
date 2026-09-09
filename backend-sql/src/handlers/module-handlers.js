@@ -1216,7 +1216,13 @@ const moduleHandlers = {
     'getFormsHubConfig': function(payload, postData, action) {
         const db = getDatabase();
         const sites = db.readSheet('Form_Sites') || [];
-        const activeVisitors = (db.readSheet('GateVisitors') || []).filter(v => !v.exitTime);
+        const activeVisitors = (db.readSheet('GateVisitors') || []).filter(v => {
+            const status = String(v.status || v['Status'] || '').trim().toLowerCase();
+            const exitTime = String(v.exitTime || v['Exit Time'] || '').trim();
+            const isDeparted = status.includes('خروج') || status.includes('departed') || status.includes('exited');
+            const hasExitTime = exitTime !== '' && exitTime !== '0' && exitTime !== '-';
+            return !isDeparted && !hasExitTime;
+        });
 
         return {
             success: true,

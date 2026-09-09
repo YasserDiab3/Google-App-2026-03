@@ -12,6 +12,9 @@
     <link rel="manifest" href="manifest-visitor.json">
     <link rel="icon" type="image/png" href="icons/icapp-logo.png">
     
+    <!-- Unified API Engine Resolver -->
+    <script src="js/hse-api-url.js"></script>
+    
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2263,15 +2266,19 @@
                         mode: 'cors',
                         redirect: 'follow',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'getPublicObservationConfig' })
+                        body: JSON.stringify({ action: 'getPublicVisitorConfig' })
                     });
                     const serverData = await res.json();
-                    if (serverData && serverData.success && Array.isArray(serverData.sites) && serverData.sites.length > 0) {
-                        currentSystemConfig.sites = serverData.sites;
+                    if (serverData && serverData.success) {
+                        if (Array.isArray(serverData.sites) && serverData.sites.length > 0) {
+                            currentSystemConfig.sites = serverData.sites;
+                        }
                         if (Array.isArray(serverData.departments) && serverData.departments.length > 0) {
                             currentSystemConfig.departments = serverData.departments;
                         }
-                        if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
+                        if (Array.isArray(serverData.hosts) && serverData.hosts.length > 0) {
+                            currentSystemConfig.safetyMembers = serverData.hosts.map(h => typeof h === 'string' ? h : (h.name || ''));
+                        } else if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
                             currentSystemConfig.safetyMembers = serverData.safetyMembers;
                         }
                         try {
@@ -3540,40 +3547,14 @@ function resetCheckInForm() {
         }
 
                 function getEffectiveApiUrl() {
-            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
-                ? String(window.HSE_DEFAULT_GAS_URL)
-                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
-            function isForeignBackend(u) {
-                var s = String(u || '').toLowerCase();
-                if (!s) return true;
-                if (s.indexOf('trycloudflare.com') !== -1) return true;
-                if (s.indexOf('safety-icapp.com') !== -1) return true;
-                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
-                if (s.indexOf('/api/exec') !== -1) return true;
-                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
-                return s.indexOf('script.google.com/macros/s/') === -1;
+            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
+                return window.getEffectiveApiUrl();
             }
             try {
                 var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved && isForeignBackend(saved)) {
-                    localStorage.removeItem('hse_public_api_url');
-                    localStorage.removeItem('HSE_API_URL');
-                    saved = '';
-                }
-                if (saved && !isForeignBackend(saved)) {
-                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
-                }
-                var raw = localStorage.getItem('hse_google_config');
-                if (raw) {
-                    var parsed = JSON.parse(raw);
-                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
-                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
-                }
-                var urlParams = new URLSearchParams(window.location.search);
-                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
-                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+                if (saved) return saved;
             } catch (e) {}
-            return DEFAULT_GAS;
+            return '/api/exec';
         }
 
         async function syncVisitorCheckInToCloud(visitorRecord) {

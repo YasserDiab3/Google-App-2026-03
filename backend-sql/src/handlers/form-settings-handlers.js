@@ -309,9 +309,37 @@ function buildPublicFormSafetyMembers(db) {
 }
 
 function buildPublicFormDepartments(db) {
-    return (db.readSheet('Form_Departments') || [])
+    const list = (db.readSheet('Form_Departments') || [])
         .map((d) => String(d.name || d || '').trim())
         .filter(Boolean);
+    if (list.length > 0) return list;
+
+    const deptRows = (db.readSheet('Departments') || [])
+        .map((d) => String(d.name || d.department || d['Department Name'] || d || '').trim())
+        .filter(Boolean);
+    if (deptRows.length > 0) return Array.from(new Set(deptRows));
+
+    const empDepts = (db.readSheet('Employees') || [])
+        .map(e => String(e.department || e['Department'] || '').trim())
+        .filter(Boolean);
+    if (empDepts.length > 0) return Array.from(new Set(empDepts));
+
+    return [
+        'إدارة السلامة والصحة المهنية',
+        'إدارة الصيانة',
+        'إدارة الإنتاج',
+        'إدارة الجودة',
+        'إدارة المخازن',
+        'إدارة الموارد البشرية',
+        'إدارة الأمن والحراسة',
+        'إدارة المشروعات',
+        'إدارة المشتريات',
+        'إدارة الخدمات اللوجستية',
+        'إدارة الزراعة',
+        'الإدارة المالية',
+        'إدارة تكنولوجيا المعلومات',
+        'الإدارة العامة'
+    ];
 }
 
 module.exports = {

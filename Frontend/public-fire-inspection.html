@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+    <script src="js/hse-api-url.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
@@ -2014,40 +2015,14 @@
         let currentPhotoBase64 = '';
 
                 function getEffectiveApiUrl() {
-            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
-                ? String(window.HSE_DEFAULT_GAS_URL)
-                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
-            function isForeignBackend(u) {
-                var s = String(u || '').toLowerCase();
-                if (!s) return true;
-                if (s.indexOf('trycloudflare.com') !== -1) return true;
-                if (s.indexOf('safety-icapp.com') !== -1) return true;
-                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
-                if (s.indexOf('/api/exec') !== -1) return true;
-                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
-                return s.indexOf('script.google.com/macros/s/') === -1;
+            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
+                return window.getEffectiveApiUrl();
             }
             try {
                 var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved && isForeignBackend(saved)) {
-                    localStorage.removeItem('hse_public_api_url');
-                    localStorage.removeItem('HSE_API_URL');
-                    saved = '';
-                }
-                if (saved && !isForeignBackend(saved)) {
-                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
-                }
-                var raw = localStorage.getItem('hse_google_config');
-                if (raw) {
-                    var parsed = JSON.parse(raw);
-                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
-                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
-                }
-                var urlParams = new URLSearchParams(window.location.search);
-                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
-                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+                if (saved) return saved;
             } catch (e) {}
-            return DEFAULT_GAS;
+            return '/api/exec';
         }
 
         
