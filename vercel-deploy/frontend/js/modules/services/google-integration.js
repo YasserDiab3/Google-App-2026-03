@@ -67,12 +67,7 @@ const GoogleIntegration = {
      * هل خلفية خادم SQL جاهزة (رابط Web App + تفعيل الاتصال)
      */
     _isBackendRpcConfigured() {
-        try {
-            const url = String(this._resolveScriptUrl() || '').trim();
-            return !!(url && url.indexOf('script.google.com') !== -1);
-        } catch (e) {
-            return false;
-        }
+        return true;
     },
 
     /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
@@ -361,47 +356,27 @@ const GoogleIntegration = {
      * تطبيع رابط Web App (/dev → /exec) قبل الطلب
      */
     _resolveScriptUrl() {
+        if (typeof getEffectiveApiUrl === 'function') {
+            const live = String(getEffectiveApiUrl() || '').trim();
+            if (live) return live;
+        }
         const fromGasConfig = (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function')
             ? String(Utils.getAppsScriptScriptUrl() || '').trim()
             : String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
-        if (fromGasConfig && fromGasConfig.indexOf('script.google.com') !== -1) {
-            return fromGasConfig.replace(/\/dev(\?|#|$)/, '/exec$1');
+        if (fromGasConfig && !fromGasConfig.includes('trycloudflare.com')) {
+            return fromGasConfig;
         }
-        if (typeof getEffectiveApiUrl === 'function') {
-            const live = String(getEffectiveApiUrl() || '').trim();
-            if (live && live.indexOf('script.google.com') !== -1) return live;
-        }
-        if (fromGasConfig) return fromGasConfig;
-        if (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL) {
-            return String(window.HSE_DEFAULT_GAS_URL);
-        }
-        return '';
+        return '/api/exec';
     },
 
     /**
      * التحقق من صحة رابط الباك إند (خادم SQL أو SQL Serverless / Tunnel)
      */
     isValidGoogleAppsScriptUrl(url) {
-        try {
-            if (!url || typeof url !== 'string') return false;
-            const trimmed = url.trim();
-            if (trimmed.startsWith('/') || trimmed.startsWith('./')) return true;
-            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
-            const urlObj = new URL(trimmed, base);
-            const host = urlObj.hostname.toLowerCase();
-            const path = urlObj.pathname || '';
-            if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
-                return path.endsWith('/exec');
-            }
-            if (host.includes('safety-icapp.com') || host.includes('safetyicapp-ecru')) return false;
-            if (host.includes('vercel.app') && (path === '/api/exec' || path.endsWith('/api/exec'))) return false;
-            if (host === 'localhost' || host === '127.0.0.1' || host === '') {
-                return true;
-            }
-            return false;
-        } catch (error) {
-            return false;
-        }
+        if (!url || typeof url !== 'string') return false;
+        const trimmed = url.trim();
+        if (trimmed.includes('trycloudflare.com')) return false;
+        return true;
     },
 
     /**

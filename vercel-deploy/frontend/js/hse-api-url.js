@@ -5,23 +5,19 @@
 (function (root) {
     'use strict';
 
-    var DEFAULT_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+    var DEFAULT_GAS_EXEC_URL = '/api/exec';
     var DEFAULT_SPREADSHEET_ID = '1EanavJ2OodOmq8b1GagSj8baa-KF-o4mVme_Jlwmgxc';
 
     function isForeignBackend(u) {
         const s = String(u || '').toLowerCase();
         if (!s) return false;
         if (s.indexOf('trycloudflare.com') !== -1) return true;
-        if (s.indexOf('safety-icapp.com') !== -1) return true;
-        if (s.indexOf('safetyicapp-ecru') !== -1) return true;
-        if (s.indexOf('script.google.com') === -1 && s.indexOf('/api/exec') !== -1) return true;
-        if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
         return false;
     }
 
     function normalizeGasUrl(u) {
         let url = String(u || '').trim();
-        if (!url || isForeignBackend(url)) return '';
+        if (!url || isForeignBackend(url)) return '/api/exec';
         if (url.indexOf('script.google.com/macros/s/') !== -1) {
             url = url.replace(/\/dev(\?|#|$)/, '/exec$1');
         }
@@ -49,11 +45,6 @@
             if (typeof localStorage === 'undefined') return parsed;
             const repaired = ensureGasConfig(parsed);
             localStorage.setItem('hse_google_config', JSON.stringify(repaired));
-            const custom = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-            if (custom && isForeignBackend(custom)) {
-                localStorage.removeItem('hse_public_api_url');
-                localStorage.removeItem('HSE_API_URL');
-            }
             return repaired;
         } catch (_e) {
             return parsed;
@@ -62,18 +53,18 @@
 
     function readStoredGasUrl() {
         try {
-            if (typeof localStorage === 'undefined') return '';
+            if (typeof localStorage === 'undefined') return '/api/exec';
             const custom = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
             const n1 = normalizeGasUrl(custom);
-            if (n1) return n1;
+            if (n1 && !isForeignBackend(n1)) return n1;
             const raw = localStorage.getItem('hse_google_config');
             if (raw) {
                 const parsed = JSON.parse(raw);
                 const n2 = normalizeGasUrl(parsed && parsed.appsScript && parsed.appsScript.scriptUrl);
-                if (n2) return n2;
+                if (n2 && !isForeignBackend(n2)) return n2;
             }
         } catch (_e) {}
-        return '';
+        return '/api/exec';
     }
 
     function scrubForeignStoredUrls() {
@@ -84,13 +75,6 @@
                 localStorage.removeItem('hse_public_api_url');
                 localStorage.removeItem('HSE_API_URL');
             }
-            const raw = localStorage.getItem('hse_google_config');
-            const parsed = raw ? JSON.parse(raw) : {};
-            const url = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
-            const sid = parsed && parsed.sheets && parsed.sheets.spreadsheetId;
-            if (!url || isForeignBackend(url) || !String(sid || '').trim()) {
-                persistRepairedConfig(parsed || {});
-            }
         } catch (_e) {}
     }
 
@@ -98,19 +82,6 @@
         scrubForeignStoredUrls();
         const stored = readStoredGasUrl();
         if (stored) return stored;
-        try {
-            if (root.AppState && AppState.googleConfig && AppState.googleConfig.appsScript) {
-                const n = normalizeGasUrl(AppState.googleConfig.appsScript.scriptUrl);
-                if (n) return n;
-            }
-        } catch (_e) {}
-        const q = (typeof URLSearchParams !== 'undefined' && root.location)
-            ? new URLSearchParams(root.location.search || '')
-            : null;
-        if (q) {
-            const p = normalizeGasUrl(q.get('apiUrl') || q.get('api') || '');
-            if (p) return p;
-        }
         return DEFAULT_GAS_EXEC_URL;
     }
 

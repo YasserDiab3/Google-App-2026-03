@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1705",
+  "version": "1.0.1710",
   "highlights": {
     "ar": [
-      "تحويل النظام بالكامل إلى بنية قواعد بيانات SQLite نقية 100%.",
-      "فحص واجتياز جميع عمليات الإضافة والتعديل والقراءة والحذف لـ 17 مديول بنسبة نجاح 100%.",
-      "إصلاح زر وحالة حذف الإصابات في العيادة الطبية وحل معالجات RPC الديناميكية."
+      "إصلاح شامل للتوجيه الخاطئ لقواعد بيانات Google Apps Script وحظر مسح /api/exec.",
+      "توجيه جميع طلبات RPC مباشرة وبشكل دائم إلى محرك خادم SQL المباشر.",
+      "تأكيد عمل حذف الإصابات في العيادة الطبيبة بدون أي رسائل أخطاء من Google."
     ],
     "en": [
-      "Full system conversion to 100% pure SQLite database architecture.",
-      "100% pass rate on full CRUD operations across all 17 modules.",
-      "Fixed injury deletion in medical clinic and dynamic RPC router resolution."
+      "Full fix for legacy Google Apps Script routing and removal of /api/exec scrubbing.",
+      "Permanent routing of all RPC requests directly to pure SQL backend engine.",
+      "Confirmed working injury deletion in medical clinic without legacy Google error messages."
     ]
   }
 }

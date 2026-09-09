@@ -1743,9 +1743,9 @@ const DataManager = {
             try {
                 const sc = AppState.googleConfig && AppState.googleConfig.appsScript;
                 const u = sc && String(sc.scriptUrl || '').trim();
-                if (u && (u.includes('trycloudflare.com') || u.includes('safety-icapp.com') || (u.includes('/api/exec') && u.indexOf('script.google.com') === -1))) {
+                if (u && u.includes('trycloudflare.com')) {
                     const repaired = (typeof window !== 'undefined' && typeof window.__hseEnsureGasConfig === 'function')
-                        ? window.__hseEnsureGasConfig({ ...AppState.googleConfig, appsScript: { ...(sc || {}), scriptUrl: '', enabled: true } })
+                        ? window.__hseEnsureGasConfig({ ...AppState.googleConfig, appsScript: { ...(sc || {}), scriptUrl: '/api/exec', enabled: true } })
                         : AppState.googleConfig;
                     AppState.googleConfig = repaired;
                     localStorage.removeItem('hse_public_api_url');
