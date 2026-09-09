@@ -16,7 +16,6 @@ const GAS_PUBLIC_ACTIONS = new Set([
     'getPublicDailySafetyConfig',
     'submitPublicObservation',
     'getPublicObservationConfig',
-    'getPublicObservationsAnalytics',
     'submitPublicNearMiss',
     'getPublicNearMissConfig',
     'submitPublicFireInspection',

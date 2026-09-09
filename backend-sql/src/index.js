@@ -96,6 +96,15 @@ const rpcHandler = async (req, res) => {
 app.post('/', rpcHandler);
 app.post('/exec', rpcHandler);
 app.post('/api/rpc', rpcHandler);
+app.post('/api/exec', rpcHandler);
+app.get('/api/exec', (req, res) => {
+    const action = req.query?.action;
+    if (action) {
+        handleRpcRequest({ action, data: req.query || {} }).then(r => res.json(r)).catch(e => res.status(500).json({ success: false, message: e.message }));
+    } else {
+        res.json({ status: 'ok', server: 'HSE SQL Backend', endpoint: '/api/exec' });
+    }
+});
 
 // Start server if executed directly
 if (require.main === module) {

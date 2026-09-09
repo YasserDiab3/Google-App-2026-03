@@ -1323,14 +1323,45 @@ const moduleHandlers = {
             annual: {}
         };
 
+        function normalizeObsDate(raw) {
+            if (!raw) return null;
+            const s = String(raw).trim();
+            const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = String(isoMatch[2]).padStart(2, '0');
+                const d = String(isoMatch[3]).padStart(2, '0');
+                return { iso: `${y}-${m}-${d}`, time: new Date(`${y}-${m}-${d}T12:00:00Z`).getTime() };
+            }
+            const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+            if (slashMatch) {
+                let m = parseInt(slashMatch[1], 10);
+                let d = parseInt(slashMatch[2], 10);
+                let y = parseInt(slashMatch[3], 10);
+                if (y < 100) y = 2000 + y;
+                if (m > 12 && d <= 12) { const tmp = m; m = d; d = tmp; }
+                const mStr = String(m).padStart(2, '0');
+                const dStr = String(d).padStart(2, '0');
+                return { iso: `${y}-${mStr}-${dStr}`, time: new Date(`${y}-${mStr}-${dStr}T12:00:00Z`).getTime() };
+            }
+            const dt = new Date(s);
+            if (!isNaN(dt.getTime())) {
+                const y = dt.getFullYear();
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                const d = String(dt.getDate()).padStart(2, '0');
+                return { iso: `${y}-${m}-${d}`, time: dt.getTime() };
+            }
+            return null;
+        }
+
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
             if (!r) continue;
 
-            const dateStr = String(r.date || r.createdAt || '').trim();
-            const dtClean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
-            const dObj = dtClean ? new Date(dtClean) : null;
-            const rowTime = dObj && !isNaN(dObj.getTime()) ? dObj.getTime() : 0;
+            const normDate = normalizeObsDate(r.createdAt) || normalizeObsDate(r.date);
+            const dtClean = normDate ? normDate.iso : todayStr;
+            const rowTime = normDate ? normDate.time : now.getTime();
+            const dObj = normDate ? new Date(normDate.time) : now;
 
             const st = String(r.status || 'مفتوح').trim();
             const rk = String(r.riskLevel || r.risk || 'متوسط').trim();
@@ -1361,8 +1392,8 @@ const moduleHandlers = {
             const isLow = !isHigh && !isMedium;
             const rkKey = isHigh ? 'high' : (isMedium ? 'medium' : 'low');
 
-            const isThisWeek = dtClean >= sevenDaysStr;
-            const isThisMonth = dtClean.indexOf(thisMonthStr) === 0;
+            const isThisWeek = rowTime >= w1Start && rowTime <= (now.getTime() + (24 * 3600 * 1000));
+            const isThisMonth = dtClean.startsWith(thisMonthStr);
 
             // Trend
             if (rowTime >= w1Start) {

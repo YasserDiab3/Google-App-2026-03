@@ -8265,20 +8265,55 @@
 
     async function fetchObservationsAnalyticsFromCloud(force = false) {
         try {
-            const url = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
+            const primaryUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+            const gasFallbackUrl = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
 
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } })
-            });
+            let data = null;
+            let success = false;
 
-            if (!res.ok) {
-                throw new Error('HTTP ' + res.status);
+            // 1. محاولة الرابط الأساسي
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+                const res = await fetch(primaryUrl || '/api/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (res.ok) {
+                    const json = await res.json();
+                    if (json && json.success) {
+                        data = json;
+                        success = true;
+                    }
+                }
+            } catch(pErr) {
+                console.warn('Primary analytics endpoint error:', pErr);
             }
 
-            const data = await res.json();
-            if (data && data.success) {
+            // 2. إذا فشل الرابط الأساسي، المحاولة مع الرابط الاحتياطي السحابي GAS
+            if (!success && primaryUrl !== gasFallbackUrl) {
+                try {
+                    const resFb = await fetch(gasFallbackUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'getPublicObservationsAnalytics', data: { force: force } })
+                    });
+                    if (resFb.ok) {
+                        const jsonFb = await resFb.json();
+                        if (jsonFb && jsonFb.success) {
+                            data = jsonFb;
+                            success = true;
+                        }
+                    }
+                } catch(fErr) {
+                    console.warn('Fallback analytics endpoint error:', fErr);
+                }
+            }
+
+            if (success && data) {
                 rawObservationsAnalyticsData = data;
                 try {
                     localStorage.setItem('HSE_PUBLIC_OBS_ANALYTICS_CACHE', JSON.stringify(data));
@@ -8289,7 +8324,7 @@
                 return true;
             }
 
-            console.warn('Observations analytics API:', data?.message || data);
+            console.warn('Observations analytics API returned no data');
             if (!rawObservationsAnalyticsData) {
                 showAnalyticsEmptyState(data?.message || 'تعذر تحميل بيانات التحليل من الخادم');
             }
