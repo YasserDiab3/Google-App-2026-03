@@ -1006,10 +1006,11 @@ const GoogleIntegration = {
                 if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;
             }
 
-            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
+            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
             // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
-            if (typeof AppState !== 'undefined' && AppState.currentUser) {
-                const cu = AppState.currentUser;
+            const _resolvedUser = this.resolveCurrentUser();
+            if (_resolvedUser) {
+                const cu = _resolvedUser;
                 const envelope = {
                     email: String(cu.email || '').trim(),
                     id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',

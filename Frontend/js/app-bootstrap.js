@@ -1155,21 +1155,13 @@
                 return requiredData;
             }
 
-            // ✅ عقد StableLoader: الأوراق المملوكة الثقيلة تُجلب من موديولها عند فتح تبويبه — لا من Bootstrap.
-            //   منعها هنا يوقف عاصفة الجلب عند إعادة التحميل (F5) التي تزاحم طابور 3 عمّال.
-            const OWNED_HEAVY_KEYS = new Set([
-                'clinicVisits', 'clinicContractorVisits', 'training',
-                'employees', 'ptw', 'ptwRegistry', 'dailyObservations'
-            ]);
-            const stripOwnedHeavy = (list) => [...new Set(list)].filter((k) => !OWNED_HEAVY_KEYS.has(k));
-
             if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
                 requiredData.push(
                     'users', 'employees', 'approvedContractors', 'contractors',
                     'incidents', 'nearmiss', 'ptw', 'ptwRegistry', 'training',
                     'clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries', 'dailyObservations'
                 );
-                return stripOwnedHeavy(requiredData);
+                return [...new Set(requiredData)];
             }
 
             if (typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
@@ -1192,7 +1184,7 @@
                 requiredData.push('clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries');
             }
 
-            return stripOwnedHeavy(requiredData);
+            return [...new Set(requiredData)];
         },
 
         /**
