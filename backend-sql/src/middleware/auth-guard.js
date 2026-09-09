@@ -37,7 +37,8 @@ const PUBLIC_EXEMPT_ACTIONS = new Set([
     'getSecurityOfficersList',
     'getHseBroadcastMessages', 'getHseEmergencyContacts',
     'saveHseBroadcastMessages', 'saveHseEmergencyContacts',
-    'setOfficialChampionsApproval'
+    'setOfficialChampionsApproval',
+    'getFormSettings', 'getCompanySettings', 'getPPEItemsList', 'getAllPPE'
 ]);
 
 /** @deprecated — القراءات التشخيصية فقط (باقي القراءات تتطلب جلسة) */

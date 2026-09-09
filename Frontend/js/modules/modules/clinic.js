@@ -2649,7 +2649,7 @@ const Clinic = {
             const sites = this.getSiteOptions();
             const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
             const opts = (empty) => '<option value="">' + (empty || 'اختر المصنع') + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
-            ['visits-filter-factory', 'visit-factory', 'visit-contractor-factory', 'enhanced-visit-factory'].forEach(id => {
+            ['visits-filter-factory', 'visit-factory', 'visit-contractor-factory', 'enhanced-visit-factory', 'injury-factory'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر المصنع'); if (v) el.value = v; }
             });
@@ -2657,6 +2657,7 @@ const Clinic = {
                 this.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
                 this.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
                 this.setupClinicWorkplaceDatalist('enhanced-visit-factory', 'enhanced-visit-employee-location', 'enhanced-visit-employee-location-datalist');
+                this.setupClinicWorkplaceDatalist('injury-factory', 'injury-sub-location', 'injury-sub-location-datalist');
             }
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Clinic.refreshSiteDropdowns:', e); }
     },
