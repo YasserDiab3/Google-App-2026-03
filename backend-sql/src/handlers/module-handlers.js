@@ -2198,6 +2198,19 @@ const moduleHandlers = {
             deletedCount: deletedCount,
             timestamp: new Date().toISOString()
         };
+    },
+
+    'getAllTrainings': function(payload, postData, action) {
+        const db = getDatabase();
+        const records = db.readSheet('Training');
+        return {
+            success: true,
+            data: records,
+            trainings: records,
+            count: records.length,
+            total: records.length,
+            timestamp: new Date().toISOString()
+        };
     }
 };
 

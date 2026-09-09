@@ -122,21 +122,21 @@ async function handleRpcRequest(reqBody) {
                     const writeGate = checkSheetDirectWriteAccess(sheetName, actorUserData, act);
                     if (!writeGate.ok) return writeGate;
                     const db = getDatabase();
-                    const id = p?.id || p?.recordId;
+                    const id = p?.id || p?.recordId || p?.data?.id || p?.updateData?.id || p?.[`${sheetName.toLowerCase()}Id`] || p?.[`${sheetName}Id`] || postData?.id || postData?.data?.id;
                     const updateData = p?.updateData || p?.data || p || {};
                     updateData.updatedAt = new Date().toISOString();
-                    db.updateRow(sheetName, 'id', id, updateData);
-                    return { success: true, message: `تم تحديث البيانات في ${sheetName} بنجاح`, id: id };
+                    const changes = db.updateRow(sheetName, 'id', id, updateData);
+                    return { success: true, message: `تم تحديث البيانات في ${sheetName} بنجاح`, id: id, changes: changes };
                 };
                 break;
-            } else if (lowerAction === `delete${lowerSheet}`) {
+            } else if (lowerAction === `delete${lowerSheet}` || lowerAction === `remove${lowerSheet}`) {
                 handler = function(p, postData, act, actorUserData) {
                     const writeGate = checkSheetDirectWriteAccess(sheetName, actorUserData, act);
                     if (!writeGate.ok) return writeGate;
                     const db = getDatabase();
-                    const id = p?.id || p?.recordId;
-                    db.deleteRows(sheetName, 'id', id);
-                    return { success: true, message: `تم حذف السجل من ${sheetName} بنجاح`, id: id };
+                    const id = p?.id || p?.recordId || p?.data?.id || p?.[`${sheetName.toLowerCase()}Id`] || p?.[`${sheetName}Id`] || postData?.id || postData?.data?.id;
+                    const changes = db.deleteRows(sheetName, 'id', id);
+                    return { success: true, message: `تم حذف السجل من ${sheetName} بنجاح`, id: id, deleted: changes > 0, deletedCount: changes };
                 };
                 break;
             }
