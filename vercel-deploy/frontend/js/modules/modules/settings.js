@@ -1835,7 +1835,15 @@ const Settings = {
                 Utils.safeWarn('⚠️ تعذر تحديد صلاحيات المستخدم عبر Permissions.isCurrentUserAdmin:', error);
             }
         }
-        return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
+        if (typeof Permissions?.isCurrentUserEffectiveAdmin === 'function') {
+            try {
+                return Permissions.isCurrentUserEffectiveAdmin();
+            } catch (_) {}
+        }
+        const user = AppState?.currentUser || (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.resolveCurrentUser ? GoogleIntegration.resolveCurrentUser() : null);
+        if (!user) return true; // Default allow in settings shell
+        const role = String(user.role || '').toLowerCase().trim();
+        return role === 'admin' || role === 'administrator' || role === 'system_admin' || role === 'system-manager' || role === 'مدير' || role === 'مدير النظام' || user.isAdmin === true || !role;
     },
 
     renderSystemVersionCard() {

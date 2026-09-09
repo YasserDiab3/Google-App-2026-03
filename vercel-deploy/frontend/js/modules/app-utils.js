@@ -414,6 +414,10 @@ const Permissions = {
         return false;
     },
 
+    isCurrentUserAdmin(user = AppState.currentUser) {
+        return this.isCurrentUserEffectiveAdmin(user);
+    },
+
     /**
      * تطبيع كائن الصلاحيات (يُحوّل JSON string إلى كائن)
      */
@@ -498,13 +502,18 @@ const Permissions = {
 
     getFormSettingsState() {
         // دالة متزامنة للحصول على الحالة (تُستخدم في دوال العرض)
-        if (!this.formSettingsState) {
-            // إذا لم تكن الحالة مهيأة، إرجاع حالة افتراضية
-            return {
-                sites: [],
-                selectedSiteId: '',
-                departments: [],
-                safetyTeam: []
+        if (!this.formSettingsState || !Array.isArray(this.formSettingsState.sites) || this.formSettingsState.sites.length === 0) {
+            const sitesSource = (Array.isArray(AppState?.appData?.observationSites) && AppState.appData.observationSites.length > 0)
+                ? AppState.appData.observationSites
+                : (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES) ? DailyObservations.DEFAULT_SITES : []);
+            
+            const selectedSiteId = this.formSettingsState?.selectedSiteId || sitesSource[0]?.id || '';
+            this.formSettingsState = {
+                sites: sitesSource,
+                selectedSiteId,
+                departments: (this.formSettingsState?.departments && this.formSettingsState.departments.length > 0) ? this.formSettingsState.departments : this.getInitialFormDepartments(),
+                safetyTeam: (this.formSettingsState?.safetyTeam && this.formSettingsState.safetyTeam.length > 0) ? this.formSettingsState.safetyTeam : this.getInitialSafetyTeam(),
+                placesSearchQuery: this.formSettingsState?.placesSearchQuery || ''
             };
         }
         if (!this.formSettingsState._persistedSiteIds) {
@@ -528,18 +537,16 @@ const Permissions = {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
-        // لا نحاول جلب الشيت إلا عند تفعيل رابط Web App — وإلا نعتمد فوراً على المحلي/DEFAULT_SITES (أسرع وأقل أخطاء)
-        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        const hasRemoteSettingsApi = !!(
-            cloudReady &&
-            typeof GoogleIntegration !== 'undefined' &&
-            typeof GoogleIntegration.sendToAppsScript === 'function'
-        );
+        
+        const hasRemoteSettingsApi = typeof GoogleIntegration !== 'undefined' &&
+            (typeof GoogleIntegration.sendRequest === 'function' || typeof GoogleIntegration.sendToAppsScript === 'function');
 
         // محاولة تحميل إعدادات الشركة من قاعدة SQL أولاً
         if (hasRemoteSettingsApi) {
             try {
-                const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
+                const companyResult = typeof GoogleIntegration.sendRequest === 'function'
+                    ? await GoogleIntegration.sendRequest({ action: 'getCompanySettings' })
+                    : await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
                     let companyRow = companyResult.data;
                     if (Array.isArray(companyRow)) {
@@ -643,7 +650,9 @@ const Permissions = {
         if (hasRemoteSettingsApi) {
             try {
                 // ✅ إصلاح: تحميل مباشر من قاعدة البيانات بدون تأخير
-                const result = await GoogleIntegration.sendToAppsScript('getFormSettings', {});
+                const result = typeof GoogleIntegration.sendRequest === 'function'
+                    ? await GoogleIntegration.sendRequest({ action: 'getFormSettings' })
+                    : await GoogleIntegration.sendToAppsScript('getFormSettings', {});
                 if (result && result.success && result.data) {
                     // ✅ إصلاح: تحديث AppState بالبيانات من قاعدة SQL مع التأكد من وجود الأماكن الفرعية
                     if (Array.isArray(result.data.sites) && result.data.sites.length > 0) {
@@ -856,40 +865,52 @@ const Permissions = {
 
     getInitialFormDepartments() {
         const settings = AppState.companySettings || {};
-        const stored = settings.formDepartments;
-        if (Array.isArray(stored)) {
+        const stored = settings.formDepartments || settings.departments;
+        if (Array.isArray(stored) && stored.length > 0) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string') {
+        if (typeof stored === 'string' && stored.trim()) {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
-        }
-        if (Array.isArray(settings.departments)) {
-            return settings.departments.map((item) => String(item || '').trim()).filter(Boolean);
-        }
-        if (typeof settings.departments === 'string') {
-            return settings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
         }
         if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getDepartmentOptions === 'function') {
             try {
                 const options = DailyObservations.getDepartmentOptions();
-                if (Array.isArray(options)) {
+                if (Array.isArray(options) && options.length > 0) {
                     return options.map((item) => String(item || '').trim()).filter(Boolean);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل الإدارات من DailyObservations:', error);
             }
         }
-        return [];
+        return [
+            'إدارة السلامة والصحة المهنية',
+            'إدارة الصيانة',
+            'إدارة الإنتاج',
+            'إدارة الجودة',
+            'إدارة المخازن',
+            'إدارة الموارد البشرية',
+            'إدارة الأمن والحراسة',
+            'إدارة المشروعات',
+            'إدارة المشتريات',
+            'إدارة الخدمات اللوجستية',
+            'إدارة الزراعة',
+            'الإدارة المالية',
+            'إدارة تكنولوجيا المعلومات',
+            'الإدارة العامة'
+        ];
     },
 
     getInitialSafetyTeam() {
         const settings = AppState.companySettings || {};
         const stored = settings.safetyTeam || settings.safetyTeamMembers;
-        if (Array.isArray(stored)) {
+        if (Array.isArray(stored) && stored.length > 0) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string') {
+        if (typeof stored === 'string' && stored.trim()) {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+        }
+        if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SAFETY_MEMBERS) && DailyObservations.DEFAULT_SAFETY_MEMBERS.length > 0) {
+            return DailyObservations.DEFAULT_SAFETY_MEMBERS.slice();
         }
         return [];
     },
@@ -946,7 +967,7 @@ const Permissions = {
                                     <p class="form-settings-panel__desc">قائمة المصانع أو المواقع؛ انقر على الصف أو زر «اختيار» لتحديد الموقع النشط.</p>
                                 </div>
                                 <div class="form-settings-panel__body">
-                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list"></div>
+                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list">${this.renderFormSitesList()}</div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-site">
@@ -979,7 +1000,7 @@ const Permissions = {
                                             </button>
                                         </div>
                                     </div>
-                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list"></div>
+                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list">${this.renderFormPlacesList()}</div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-place" id="form-settings-add-place-btn">
@@ -993,7 +1014,7 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-briefcase"></i>المسؤولون عن التنفيذ
                         </h3>
-                        <div id="form-settings-departments-list" class="form-settings-subsection__list"></div>
+                        <div id="form-settings-departments-list" class="form-settings-subsection__list">${this.renderDepartmentsList()}</div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-department">
                             <i class="fas fa-plus ml-2"></i>إضافة إدارة
                         </button>
@@ -1002,7 +1023,7 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-user-shield"></i>فريق السلامة
                         </h3>
-                        <div id="form-settings-safety-list" class="form-settings-subsection__list"></div>
+                        <div id="form-settings-safety-list" class="form-settings-subsection__list">${this.renderSafetyTeamList()}</div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-safety-member">
                             <i class="fas fa-plus ml-2"></i>إضافة عضو
                         </button>
@@ -4629,16 +4650,24 @@ const Utils = {
      * هل يوجد مسار مزامنة عبر خادم SQL (تفعيل + رابط Web App /exec)
      */
     hasCloudBackendSync() {
+        if (typeof GoogleIntegration !== 'undefined') {
+            if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && GoogleIntegration._isBackendRpcConfigured()) {
+                return true;
+            }
+            if (typeof GoogleIntegration.isConfigured === 'function' && GoogleIntegration.isConfigured()) {
+                return true;
+            }
+        }
         try {
             if (typeof this.getAppsScriptScriptUrl === 'function') {
                 const gas = String(this.getAppsScriptScriptUrl() || '').trim();
-                if (gas.indexOf('script.google.com') !== -1) return true;
+                if (gas.length > 0) return true;
             }
         } catch (_e) { /* ignore */ }
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
-        if (!gc || !gc.appsScript) return false;
+        if (!gc || !gc.appsScript) return true; // Default true for SQL backend
         const url = String(gc.appsScript.scriptUrl || '').trim();
-        return !!(url && url.indexOf('script.google.com') !== -1);
+        return !!url;
     },
 
     /**
