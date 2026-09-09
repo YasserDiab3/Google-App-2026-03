@@ -2,9 +2,9 @@
 <html lang="ar" dir="rtl">
     <head>
         <meta charset="UTF-8" />
-        <meta name="app-version" content="1.0.1712" />
+        <meta name="app-version" content="1.0.1720" />
         <!-- إعدادات اتصال الخلفية: محرك وقاعدة بيانات SQL -->
-        <script src="js/hse-api-url.js?v=hse-app-v1.0.1712-20260909"></script>
+        <script src="js/hse-api-url.js?v=hse-app-v1.0.1720-20260909"></script>
         <script>
             window.__hseHardReloadForUpdate = function (ver, opts) {
                 return (async function () {
@@ -4816,7 +4816,7 @@
 
         <!-- Main App - Refactored Modules -->
         <!-- 1. Utils and Constants (must be loaded first) -->
-        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/app-utils.js?v=hse-app-v1.0.1720-20260909" defer></script>
 
         <!-- 1.1 DOM Safety Utilities (safe DOM access functions) -->
         <script src="js/modules/dom-safety-utils.js" defer></script>
@@ -4831,7 +4831,7 @@
         <!-- CRITICAL: DataManager is defined here and must be loaded before login-init-fixed.js -->
         <!-- Load individual service modules first (they expose themselves to window) -->
         <script src="js/modules/services/local-db-cache.js" defer></script>
-        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/services/data-manager.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script
             src="js/modules/services/periodic-inspection-store.js"
             defer
@@ -4849,12 +4849,12 @@
             defer
         ></script>
         <script src="js/modules/services/workflow.js" defer></script>
-        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/services/google-integration.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/services/stable-loader.js" defer></script>
-        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/services/hse-metrics.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/services/email-dispatch.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/services/email-templates.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/services/data-integrity.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/services/data-repository.js" defer></script>
         <script src="js/modules/services/smart-cache.js" defer></script>
         <script src="js/modules/services/offline-banner.js" defer></script>
@@ -4867,23 +4867,23 @@
             defer
         ></script>
         <script src="js/modules/services/issue-tracking.js" defer></script>
-        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/services/safety-calendar-reference-events.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/services/safety-calendar-events.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <!-- Main services loader (ensures all services are available and adds helper functions) -->
         <script src="js/modules/app-services.js" defer></script>
 
         <!-- 3. UI (UI rendering and DOM manipulation) -->
-        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/i18n-core.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <!-- Training قبل app-ui: loadSectionData/refreshCurrentSection قد تُستدعى قبل نهاية سلسلة الموديولات -->
-        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/training.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/app-ui.js?v=hse-app-v1.0.1720-20260909" defer></script>
 
         <!-- 4. Modules (Auth, Dashboard, Users, etc.) -->
         <!-- CRITICAL: Auth is defined here and must be loaded before login-init-fixed.js -->
         <!-- تم تقسيم الملف لتحسين الأداء -->
         <!-- تحميل Auth و Dashboard من ملفات منفصلة أولاً -->
-        <script src="js/modules/auth.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/auth.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/dashboard.js?v=hse-app-v1.0.1720-20260909" defer></script>
         
         <!-- تحميل جميع الموديولات مباشرة (بدلاً من modules-loader.js) -->
         <script src="js/modules/modules/users.js" defer></script>
@@ -4891,34 +4891,34 @@
         <script src="js/modules/modules/user-versions-admin.js" defer></script>
         <script src="js/modules/modules/client-errors-admin.js" defer></script>
         <script src="js/modules/modules/investigation-rca.js" defer></script>
-        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/incidents.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/nearmiss.js" defer></script>
-        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/ptw.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/reports.js" defer></script>
         <script src="js/modules/modules/help-content-en.js" defer></script>
         <script src="js/modules/modules/help.js" defer></script>
-        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/settings.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/clinic.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/clinic-attendance.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/fireequipment.js" defer></script>
-        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/ppe.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/periodic-equipment.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/periodicinspections.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/contractors.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/gatesecurity.js" defer></script>
-        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/violations.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/employees.js" defer></script>
         <script src="js/modules/modules/behaviormonitoring.js" defer></script>
         <script src="js/modules/modules/chemicalsafety.js" defer></script>
-        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1712-20260909" defer></script>
-        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/dailyobservations.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/safetycalendar.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/iso.js?v=hse-app-v1.0.1720-20260909" defer></script>
+        <script src="js/modules/modules/emergency.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/safetybudget.js" defer></script>
         <script src="js/modules/modules/actiontrackingregister.js" defer></script>
         <script src="js/modules/modules/hse.js" defer></script>
         <script src="js/modules/modules/safetyperformancekpis.js" defer></script>
-        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1712-20260909" defer></script>
+        <script src="js/modules/modules/sustainability.js?v=hse-app-v1.0.1720-20260909" defer></script>
         <script src="js/modules/modules/riskassessment.js" defer></script>
         <script src="js/modules/modules/riskmatrix.js" defer></script>
         <script src="js/modules/modules/legaldocuments.js" defer></script>

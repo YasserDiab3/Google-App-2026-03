@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1712",
+  "version": "1.0.1720",
   "highlights": {
     "ar": [
-      "إصلاح إرسال بيانات المستخدم الحالي تلقائياً مع جميع طلبات RPC للحذف والتعديل.",
-      "توسيع مطابقة بيانات المستخدم المعرف في الحماية بالسيرفر ليشمل الجلسات الفعالة والأكواد.",
-      "تأكيد تنفيذ حذف الإصابات وجميع عمليات الحذف دون رسالة البريد غير مسجل."
+      "استيراد ومزامنة كامل البيانات التاريخية الحديثة من V.3-HSE Database (5).xlsx.",
+      "تأكيد استعادة 1,693 تصريح عمل، 1,537 زيارة عيادة، و 43,735 سجل تدقيق.",
+      "تحديث محرك التوجيه وقاعدة بيانات SQL برقم الإصدار الرسمي V.1.0.1720."
     ],
     "en": [
-      "Automatic injection of active user session into all RPC requests.",
-      "Enhanced user identity resolution with active session and code fallbacks.",
-      "Confirmed working injury deletion without unregistered user error."
+      "Imported and synced latest complete historical dataset from V.3-HSE Database (5).xlsx.",
+      "Restored 1,693 PTWs, 1,537 clinic visits, and 43,735 security audit logs.",
+      "Updated SQL engine and app version to V.1.0.1720."
     ]
   }
 }
