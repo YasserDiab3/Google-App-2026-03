@@ -1,5 +1,5 @@
 /**
- * رابط الخلفية لهذا المشروع: Google Apps Script + Sheets فقط.
+ * رابط الخلفية لهذا المشروع: محرك وقاعدة بيانات SQL المباشر.
  * ممنوع: safety-icapp.com و /api/exec (SQL على Vercel) — مشروع آخر.
  */
 (function (root) {

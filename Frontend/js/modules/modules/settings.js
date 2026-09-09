@@ -816,7 +816,7 @@ const Settings = {
                             <i class="fas fa-cloud text-green-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات الاتصال بـ Google Apps Script ومزامنة جداول Google Sheets</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بمحرك الباك إند وقاعدة البيانات SQL</p>
                     </div>
                     <div class="settings-group-content">
                         <div class="content-card">

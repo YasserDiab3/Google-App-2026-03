@@ -197,11 +197,10 @@ var log = function() {
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    رابط نشر Google Apps Script (Web App)
+                                    رابط محرك الباك إند SQL
                                 </label>
-                                <input id="login-sync-script-url" type="url" class="form-input" dir="ltr"
-                                    placeholder="https://script.google.com/macros/s/XXXX/exec" autocomplete="off">
-                                <p class="text-xs text-gray-500 mt-2">الصق رابط النشر من محرر Apps Script (نشر → تطبيق ويب) ويجب أن ينتهي بـ <b>/exec</b>.</p>
+                                <input type="url" id="login-sync-script-url" class="form-input w-full ltr-input text-xs" placeholder="https://www.safety-icapp.com/api/exec">
+                                <p class="text-xs text-gray-500 mt-2">رابط الباك إند الخاص بمحرك SQL وينتهي بـ <b>/exec</b>.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
