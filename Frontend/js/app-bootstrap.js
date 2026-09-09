@@ -998,20 +998,9 @@
                     return this.loadSharedDataFallback();
                 }
 
-                // ✅ تصفية: فصل البيانات الحديثة (لا تحتاج جلب) عن البيانات القديمة (تحتاج جلب)
-                const staleTypes = requiredDataTypes.filter(dt => !this._isBootstrapDataFresh(dt));
-                const freshTypes = requiredDataTypes.filter(dt =>  this._isBootstrapDataFresh(dt));
-
-                if (freshTypes.length > 0) {
-                    log(`⚡ ${freshTypes.length} نوع بيانات حديثة (من cache) — تخطي الخادم: [${freshTypes.join(', ')}]`);
-                }
-
-                if (staleTypes.length === 0) {
-                    log('✅ جميع البيانات المحلية حديثة — لا حاجة لأي طلب من الخادم');
-                    return;
-                }
-
-                log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
+                // مع خادم SQL السريع، نجلب دائماً البيانات الحديثة من الخادم لضمان مطابقة قاعدة البيانات
+                const staleTypes = requiredDataTypes;
+                log(`🎯 جلب ${staleTypes.length} نوع بيانات من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
 
                 let fetchedCount = 0;
                 const fetchedKeys = [];

@@ -544,9 +544,14 @@ const Dashboard = {
             if (this.dashboardCan('ppe')) tuples.push(['PPE', 'ppe']);
             if (this.dashboardCan('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
             if (this.dashboardCan('clinic')) {
+                tuples.push(['ClinicVisits', 'clinicVisits']);
+                tuples.push(['ClinicContractorVisits', 'clinicContractorVisits']);
                 tuples.push(['SickLeave', 'sickLeave']);
                 tuples.push(['Medications', 'medications']);
                 tuples.push(['ClinicInventory', 'clinicInventory']);
+            }
+            if (this.dashboardCan('daily-observations') || this.dashboardCan('observations')) {
+                tuples.push(['DailyObservations', 'dailyObservations']);
             }
             if (this.dashboardCan('incidents')) {
                 tuples.push(['Incidents', 'incidents']);
