@@ -1118,6 +1118,7 @@ const DataManager = {
                 }
             }
             
+            try { window.dispatchEvent(new CustomEvent('dataManagerLoaded')); } catch (e) {}
             return true;
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل البيانات المحلية:', error);

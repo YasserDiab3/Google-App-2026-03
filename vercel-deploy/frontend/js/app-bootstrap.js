@@ -1117,6 +1117,12 @@
                     if (fetchedKeys.length > 0 && window.DataManager && window.DataManager.recordServerFetch) {
                         try { window.DataManager.recordServerFetch(fetchedKeys); } catch (e) {}
                     }
+                    // إطلاق حدث اكتمال المزامنة لتحديث الواجهة فوراً بالبيانات الجديدة
+                    try {
+                        window.dispatchEvent(new CustomEvent('syncDataCompleted', {
+                            detail: { syncedCount: fetchedCount, sheets: fetchedKeys }
+                        }));
+                    } catch (e) {}
                     // حفظ البيانات محلياً بعد تأخير بسيط
                     if (window.DataManager && window.DataManager.save) {
                         setTimeout(() => {
