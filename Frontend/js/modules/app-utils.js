@@ -7297,6 +7297,29 @@ const ViolationTypesManager = {
         }
     },
 
+    async ensureRemoteLoaded(force = false) {
+        if (!force && AppState?.appData?.violationTypes && AppState.appData.violationTypes.length > 0) {
+            return this.ensureInitialized();
+        }
+        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+            try {
+                const res = await GoogleIntegration.sendRequest({ action: 'getAllViolationTypes' });
+                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    AppState.appData.violationTypes = res.data;
+                    if (AppState.syncMeta && AppState.syncMeta.sheets) {
+                        AppState.syncMeta.sheets.ViolationTypes = true;
+                    }
+                    return this.ensureInitialized();
+                }
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('Could not load remote violation types:', e);
+                }
+            }
+        }
+        return this.ensureInitialized();
+    },
+
     getAll() {
         return this.ensureInitialized().slice();
     },

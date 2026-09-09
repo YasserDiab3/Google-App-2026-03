@@ -2217,10 +2217,34 @@ const Settings = {
                 
                 // ✅ إصلاح: تحميل بيانات إعدادات النماذج فوراً عند فتح التبويب
                 if (targetTab === 'form-settings' && this.isCurrentUserAdmin()) {
-                    if (typeof Permissions !== 'undefined' && typeof Permissions.bindFormSettingsEvents === 'function') {
-                        Permissions.bindFormSettingsEvents().catch(error => {
-                            Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
-                        });
+                    if (typeof Permissions !== 'undefined') {
+                        if (typeof Permissions.ensureFormSettingsState === 'function') {
+                            Permissions.ensureFormSettingsState(true).then(() => {
+                                if (typeof Permissions.refreshFormSettingsUI === 'function') {
+                                    Permissions.refreshFormSettingsUI();
+                                }
+                                if (typeof Permissions.bindFormSettingsEvents === 'function') {
+                                    Permissions.bindFormSettingsEvents();
+                                }
+                            }).catch(error => {
+                                Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
+                            });
+                        } else if (typeof Permissions.bindFormSettingsEvents === 'function') {
+                            Permissions.bindFormSettingsEvents().catch(error => {
+                                Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
+                            });
+                        }
+                    }
+                }
+                if (targetTab === 'violation-types') {
+                    if (typeof ViolationTypesManager !== 'undefined') {
+                        if (typeof ViolationTypesManager.ensureRemoteLoaded === 'function') {
+                            ViolationTypesManager.ensureRemoteLoaded().then(() => {
+                                this.refreshViolationTypesList();
+                            });
+                        } else {
+                            this.refreshViolationTypesList();
+                        }
                     }
                 }
                 if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {

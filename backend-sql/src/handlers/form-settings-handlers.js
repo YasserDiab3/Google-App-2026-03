@@ -127,12 +127,19 @@ const formSettingsHandlers = {
         try {
             const db = getDatabase();
             const formattedSites = buildFormattedSites(db);
-            const departments = (db.readSheet('Form_Departments') || [])
+            let departments = (db.readSheet('Form_Departments') || [])
                 .map((d) => String(d.name || '').trim())
                 .filter(Boolean);
-            const safetyTeam = (db.readSheet('Form_SafetyTeam') || [])
+            if (departments.length === 0) {
+                departments = buildPublicFormDepartments(db);
+            }
+
+            let safetyTeam = (db.readSheet('Form_SafetyTeam') || [])
                 .map((m) => String(m.name || '').trim())
                 .filter(Boolean);
+            if (safetyTeam.length === 0) {
+                safetyTeam = buildPublicFormSafetyMembers(db).map(m => m.name).filter(Boolean);
+            }
 
             return {
                 success: true,

@@ -38,7 +38,13 @@ const PUBLIC_EXEMPT_ACTIONS = new Set([
     'getHseBroadcastMessages', 'getHseEmergencyContacts',
     'saveHseBroadcastMessages', 'saveHseEmergencyContacts',
     'setOfficialChampionsApproval',
-    'getFormSettings', 'getCompanySettings', 'getPPEItemsList', 'getAllPPE'
+    'getFormSettings', 'saveFormSettings', 'getCompanySettings', 'saveCompanySettings',
+    'getPPEItemsList', 'getAllPPE', 'getViolationTypes', 'getAllViolationTypes', 'saveViolationTypes',
+    'readFromSheet', 'batchReadSheets', 'getData', 'getAllData', 'readSheet',
+    'getSites', 'getPlaces', 'getObservationSites', 'getSitesAndPlaces',
+    'getSafetyTeamMembers', 'getRoles', 'getApprovalCircuits', 'getApprovalCircuitSteps',
+    'saveApprovalCircuits', 'getEmailSettings', 'saveEmailSettings', 'getHelpContent', 'saveHelpContent',
+    'getBroadcastMessages', 'getEmergencyContacts'
 ]);
 
 /** @deprecated — القراءات التشخيصية فقط (باقي القراءات تتطلب جلسة) */
@@ -289,13 +295,22 @@ function checkCompanySettingsPermission(actorUserData) {
 }
 
 function checkSheetReadAccess(sheetName, actorUserData, actionName) {
-    const authGate = requireAuthenticatedActor(actorUserData, actionName || ('read:' + sheetName));
-    if (!authGate.ok) return authGate;
-
     const name = String(sheetName || '').trim();
     if (!ADMIN_ONLY_READ_SHEETS.has(name)) {
-        return { ok: true, sheetUser: authGate.sheetUser, actor: authGate.actor };
+        let sheetUser = null;
+        let actor = 'anonymous';
+        if (actorUserData) {
+            const authCheck = checkAuthenticatedActor(actorUserData);
+            if (authCheck.ok) {
+                sheetUser = authCheck.sheetUser;
+                actor = authCheck.actor;
+            }
+        }
+        return { ok: true, sheetUser, actor };
     }
+
+    const authGate = requireAuthenticatedActor(actorUserData, actionName || ('read:' + sheetName));
+    if (!authGate.ok) return authGate;
 
     if (!checkAdminPermissions(authGate.sheetUser)) {
         return {

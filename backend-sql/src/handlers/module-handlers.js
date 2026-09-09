@@ -872,6 +872,76 @@ const moduleHandlers = {
         return { success: true, message: 'تم تسجيل المخالفة', data };
     },
 
+    'getViolationTypes': function(payload, postData, action) {
+        const db = getDatabase();
+        const types = db.readSheet('ViolationTypes') || [];
+        return { success: true, data: types, count: types.length };
+    },
+
+    'getAllViolationTypes': function(payload, postData, action) {
+        const db = getDatabase();
+        const types = db.readSheet('ViolationTypes') || [];
+        return { success: true, data: types, count: types.length };
+    },
+
+    'saveViolationTypes': function(payload, postData, action, actorUserData) {
+        const data = payload?.data || payload || postData?.data || postData || {};
+        const rawTypes = data.violationTypes || data.types || data.data || payload?.violationTypes || [];
+        const violationTypes = Array.isArray(rawTypes) ? rawTypes : (typeof rawTypes === 'string' ? JSON.parse(rawTypes || '[]') : []);
+
+        if (!Array.isArray(violationTypes)) {
+            return { success: false, message: 'بيانات أنواع المخالفات غير صحيحة' };
+        }
+
+        const db = getDatabase();
+        const existingRows = db.readSheet('ViolationTypes') || [];
+
+        // Protection: Don't wipe everything if sending empty list while records exist
+        if (violationTypes.length === 0 && existingRows.length > 0) {
+            return {
+                success: false,
+                message: 'تم رفض الحفظ: قائمة الأنواع فارغة بينما توجد أنواع مسجلة.'
+            };
+        }
+
+        const snapshotIds = new Set();
+        violationTypes.forEach(t => {
+            if (t && t.id) snapshotIds.add(String(t.id).trim());
+        });
+
+        // Delete removed rows
+        existingRows.forEach(row => {
+            const rid = row && row.id ? String(row.id).trim() : '';
+            if (rid && !snapshotIds.has(rid)) {
+                db.deleteRows('ViolationTypes', 'id', rid);
+            }
+        });
+
+        const nowIso = new Date().toISOString();
+        violationTypes.forEach((type, idx) => {
+            if (!type) return;
+            const id = String(type.id || '').trim() || `VTYPE_${Date.now()}_${idx}`;
+            const row = {
+                id,
+                name: String(type.name || type.label || '').trim(),
+                description: String(type.description || '').trim(),
+                fineAmount: Number(type.fineAmount ?? type.defaultFineAmount ?? 0) || 0,
+                isDefault: type.isDefault === true || type.isDefault === 'true' || type.isDefault === '1' ? '1' : '0',
+                order: typeof type.order === 'number' ? type.order : (idx + 1),
+                updatedAt: type.updatedAt || nowIso,
+                createdAt: type.createdAt || nowIso
+            };
+            const found = db.findRow('ViolationTypes', { id });
+            if (found) {
+                db.updateRow('ViolationTypes', 'id', id, row);
+            } else {
+                db.insertRow('ViolationTypes', row);
+            }
+        });
+
+        return { success: true, message: 'تم حفظ أنواع المخالفات بنجاح', count: violationTypes.length };
+    },
+
     'getViolationApprovalSettings': function(payload, postData, action) {
         const db = getDatabase();
         const records = db.readSheet('ViolationApprovalSettings');
