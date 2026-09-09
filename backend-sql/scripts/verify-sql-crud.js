@@ -11,7 +11,7 @@ const { handleRpcRequest } = require('../src/rpc-router');
 const { getDatabase } = require('../src/db/database');
 const config = require('../src/config/config');
 
-const adminUser = { id: 'USR_VERIFY', name: 'فحص SQL', role: 'admin', isAdmin: true, email: 'admin@system.local' };
+const adminUser = { id: 'USR_VERIFY', name: 'فحص SQL', role: 'admin', isAdmin: true, email: 'admin@icapp.com' };
 
 const LOAD_SHEETS = [
     'ClinicVisits', 'ClinicContractorVisits', 'Employees', 'Medications',
@@ -21,9 +21,9 @@ const LOAD_SHEETS = [
 let passed = 0;
 let failed = 0;
 
-function check(name, fn) {
+async function check(name, fn) {
     try {
-        fn();
+        await fn();
         passed++;
         console.log(`  PASS  ${name}`);
     } catch (e) {
@@ -32,8 +32,8 @@ function check(name, fn) {
     }
 }
 
-function rpc(action, data = {}) {
-    return handleRpcRequest({ action, data, actorUserData: adminUser });
+async function rpc(action, data = {}) {
+    return await handleRpcRequest({ action, data, actorUserData: adminUser });
 }
 
 async function tryLiveUrl() {
@@ -62,15 +62,15 @@ async function main() {
     console.log('DB:', config.sqlitePath);
 
     const db = getDatabase();
-    check('database file accessible', () => {
+    await check('database file accessible', () => {
         assert.ok(db);
     });
 
     console.log('\n--- قراءة / تحميل (عرض) ---');
     const counts = {};
     for (const sheet of LOAD_SHEETS) {
-        const res = rpc('readFromSheet', { sheetName: sheet });
-        check(`readFromSheet:${sheet}`, () => {
+        const res = await rpc('readFromSheet', { sheetName: sheet });
+        await check(`readFromSheet:${sheet}`, () => {
             assert.strictEqual(res.success, true, res.message || res.errorCode);
             assert.ok(Array.isArray(res.data));
             counts[sheet] = res.data.length;
@@ -78,10 +78,10 @@ async function main() {
     }
     console.log('         counts:', JSON.stringify(counts));
 
-    const batch = rpc('batchReadSheets', {
+    const batch = await rpc('batchReadSheets', {
         sheetNames: ['ClinicVisits', 'Employees', 'PTW', 'PTWRegistry', 'DailyObservations']
     });
-    check('batchReadSheets (frontend load pattern)', () => {
+    await check('batchReadSheets (frontend load pattern)', () => {
         assert.strictEqual(batch.success, true);
         assert.ok(batch.data.ClinicVisits);
         assert.ok(batch.data.Employees);
@@ -91,7 +91,7 @@ async function main() {
 
     console.log('\n--- CRUD دورة كاملة (ClientErrorLog) ---');
     const testId = `SQL_CRUD_${Date.now()}`;
-    const create = rpc('appendToSheet', {
+    const create = await rpc('appendToSheet', {
         sheetName: 'ClientErrorLog',
         data: {
             id: testId,
@@ -101,67 +101,68 @@ async function main() {
             createdAt: new Date().toISOString()
         }
     });
-    check('CREATE appendToSheet', () => {
+    await check('CREATE appendToSheet', () => {
         assert.strictEqual(create.success, true, create.message);
     });
 
-    const readOne = rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
-    check('READ after create', () => {
+    const readOne = await rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
+    await check('READ after create', () => {
         const row = readOne.data.find(r => String(r.id) === testId);
         assert.ok(row, 'row not found');
         assert.strictEqual(row.message, 'smoke crud verify');
     });
 
-    const update = rpc('updateRow', {
+    const update = await rpc('updateRow', {
         sheetName: 'ClientErrorLog',
         id: testId,
         data: { message: 'smoke crud updated' }
     });
-    check('UPDATE updateRow', () => {
+    await check('UPDATE updateRow', () => {
         assert.strictEqual(update.success, true);
         assert.ok(update.changes > 0);
     });
 
-    const readUpdated = rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
-    check('READ after update', () => {
+    const readUpdated = await rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
+    await check('READ after update', () => {
         const row = readUpdated.data.find(r => String(r.id) === testId);
         assert.strictEqual(row.message, 'smoke crud updated');
     });
 
-    const del = rpc('deleteRow', {
+    const del = await rpc('deleteRow', {
         sheetName: 'ClientErrorLog',
         id: testId
     });
-    check('DELETE deleteRow', () => {
+    await check('DELETE deleteRow', () => {
         assert.strictEqual(del.success, true);
         assert.ok(del.changes > 0);
     });
 
-    const readAfterDelete = rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
-    check('READ after delete', () => {
+    const readAfterDelete = await rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
+    await check('READ after delete', () => {
         const row = readAfterDelete.data.find(r => String(r.id) === testId);
         assert.strictEqual(row, undefined);
     });
 
     console.log('\n--- saveToSheet upsert ---');
     const upsertId = `SQL_UPSERT_${Date.now()}`;
-    check('saveToSheet insert', () => {
-        const r = rpc('saveToSheet', {
+    await check('saveToSheet insert', async () => {
+        const r = await rpc('saveToSheet', {
             sheetName: 'ClientErrorLog',
             data: { id: upsertId, message: 'upsert new', module: 'verify' }
         });
         assert.strictEqual(r.success, true);
     });
-    check('saveToSheet update', () => {
-        const r = rpc('saveToSheet', {
+    await check('saveToSheet update', async () => {
+        const r = await rpc('saveToSheet', {
             sheetName: 'ClientErrorLog',
             data: { id: upsertId, message: 'upsert updated', module: 'verify' }
         });
         assert.strictEqual(r.success, true);
-        const row = rpc('readFromSheet', { sheetName: 'ClientErrorLog' }).data.find(x => x.id === upsertId);
-        assert.strictEqual(row.message, 'upsert updated');
+        const res = await rpc('readFromSheet', { sheetName: 'ClientErrorLog' });
+        const row = res.data.find(x => x.id === upsertId);
+        assert.ok(row && row.message === 'upsert updated');
     });
-    rpc('deleteRow', { sheetName: 'ClientErrorLog', id: upsertId });
+    await rpc('deleteRow', { sheetName: 'ClientErrorLog', id: upsertId });
 
     await tryLiveUrl();
 
