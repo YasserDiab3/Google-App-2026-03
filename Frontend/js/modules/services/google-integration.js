@@ -73,11 +73,38 @@ const GoogleIntegration = {
     /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
     ADMIN_ONLY_READ_SHEETS: ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
 
+    resolveCurrentUser() {
+        if (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.email) {
+            return AppState.currentUser;
+        }
+        try {
+            let sessionUser = null;
+            const sess = sessionStorage.getItem('hse_current_session');
+            if (sess) {
+                sessionUser = JSON.parse(sess);
+            }
+            if (!sessionUser || !sessionUser.email) {
+                const rem = localStorage.getItem('hse_remember_user');
+                if (rem) {
+                    sessionUser = JSON.parse(rem);
+                }
+            }
+            if (sessionUser && sessionUser.email) {
+                if (typeof AppState !== 'undefined' && (!AppState.currentUser || !AppState.currentUser.email)) {
+                    AppState.currentUser = sessionUser;
+                }
+                return sessionUser;
+            }
+        } catch (_) {}
+        return (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : null;
+    },
+
     _isCurrentUserEffectiveAdmin_() {
         try {
-            return !!(AppState.currentUser && typeof Permissions !== 'undefined'
+            const user = this.resolveCurrentUser();
+            return !!(user && typeof Permissions !== 'undefined'
                 && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
-                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
+                && Permissions.isCurrentUserEffectiveAdmin(user));
         } catch (e) {
             return false;
         }
@@ -1754,15 +1781,16 @@ const GoogleIntegration = {
             throw new Error('يجب إدخال action في الطلب');
         }
 
-        if (typeof AppState !== 'undefined' && AppState.currentUser) {
+        const currentUser = this.resolveCurrentUser();
+        if (currentUser) {
             if (!requestData.userData && !requestData.actorUserData) {
-                requestData.actorUserData = AppState.currentUser;
-                requestData.userData = AppState.currentUser;
+                requestData.actorUserData = currentUser;
+                requestData.userData = currentUser;
             }
             if (requestData.data && typeof requestData.data === 'object') {
                 if (!requestData.data.userData && !requestData.data.actorUserData) {
-                    requestData.data.actorUserData = AppState.currentUser;
-                    requestData.data.userData = AppState.currentUser;
+                    requestData.data.actorUserData = currentUser;
+                    requestData.data.userData = currentUser;
                 }
             }
         }

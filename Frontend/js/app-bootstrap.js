@@ -340,6 +340,10 @@
 
                     const hasSession = !!sessionEmail;
                     if (hasSession) {
+                        // 🔒 استعادة جلسة المستخدم في AppState قبل بدء جلب البيانات المحلية والشبكية
+                        if (typeof window.Auth !== 'undefined' && typeof window.Auth.checkRememberedUser === 'function') {
+                            try { window.Auth.checkRememberedUser(); } catch (_) {}
+                        }
                         // 🔒 قبل التحميل: امسح كاش مستخدم آخر وانتظر IDB
                         if (typeof window.DataManager.purgeIfUserChanged === 'function') {
                             window.DataManager.purgeIfUserChanged(sessionEmail);
@@ -403,9 +407,7 @@
                     // ✅ PERF: لا await جلب الشبكة هنا — كان يحجب استعادة الجلسة وعرض الواجهة (تهنيج boot).
                     // البيانات المحلية جاهزة من DataManager.load؛ الجلب من الخادم بالخلفية بعد _tryFastSessionRestore.
                     // إعادة التحميل: لا تجلب الشبكة هنا — المحلي ظاهر والموديول الظاهر يحدّث تبويبه فقط
-                    if (AppState.isPageRefresh) {
-                        log('⚡ إعادة تحميل — تخطي جلب الشبكة الأولي (بيانات محلية جاهزة)');
-                    } else if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
+                    if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
                         try {
                             const userPermissions = Permissions.getCurrentUserPermissions();
                             void this.loadDataBasedOnPermissions(userPermissions).catch((error) => {

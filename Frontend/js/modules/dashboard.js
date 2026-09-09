@@ -579,6 +579,7 @@ const Dashboard = {
                 const rows = map[sheet];
                 if (Array.isArray(rows)) {
                     AppState.appData[appKey] = rows;
+                    AppState.appData[sheet] = rows;
                 }
             });
 
@@ -587,6 +588,7 @@ const Dashboard = {
 
             // ✅ تحديث الكروت فوراً بعد وصول البيانات من الخادم
             try {
+                this.updateKPIs();
                 this.updateStats();
                 this.updateReportsStatistics();
             } catch (_) { /* تجاهل */ }

@@ -378,6 +378,16 @@ const Permissions = {
      * يُستخدم لـ Users وإعدادات adminOnly وتبويبات التفصيل ومعدات الحريق.
      */
     isCurrentUserEffectiveAdmin(user = AppState.currentUser) {
+        if (!user) {
+            try {
+                const sess = sessionStorage.getItem('hse_current_session');
+                if (sess) user = JSON.parse(sess);
+                if (!user || !user.email) {
+                    const rem = localStorage.getItem('hse_remember_user');
+                    if (rem) user = JSON.parse(rem);
+                }
+            } catch (_) {}
+        }
         if (!user) return false;
         if (this.isAdminRole(user.role)) return true;
         const spRaw = user.permissions;
@@ -4346,7 +4356,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1721',
+    appVersion: '1.0.1722',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
