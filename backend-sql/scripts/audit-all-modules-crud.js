@@ -31,7 +31,22 @@ const MODULES_TO_TEST = [
     { sheet: 'FireEquipmentAssets', add: 'addFireEquipmentAssets', get: 'getAllFireEquipmentAssets', update: 'updateFireEquipmentAssets', delete: 'deleteFireEquipmentAssets' },
     { sheet: 'PeriodicEquipmentAssets', add: 'addPeriodicEquipmentAssets', get: 'getAllPeriodicEquipmentAssets', update: 'updatePeriodicEquipmentAssets', delete: 'deletePeriodicEquipmentAssets' },
     { sheet: 'PPE', add: 'addPPE', get: 'getAllPPE', update: 'updatePPE', delete: 'deletePPE' },
-    { sheet: 'BehaviorMonitoring', add: 'addBehaviorMonitoring', get: 'getAllBehaviorMonitoring', update: 'updateBehaviorMonitoring', delete: 'deleteBehaviorMonitoring' }
+    { sheet: 'BehaviorMonitoring', add: 'addBehaviorMonitoring', get: 'getAllBehaviorMonitoring', update: 'updateBehaviorMonitoring', delete: 'deleteBehaviorMonitoring' },
+    
+    // Additional System Modules
+    { sheet: 'Incidents', add: 'addIncident', get: 'getAllIncidents', update: 'updateIncident', delete: 'deleteIncident' },
+    { sheet: 'EmergencyMapItems', add: 'addEmergencyMapItem', get: 'getAllEmergencyMapItems', update: 'updateEmergencyMapItem', delete: 'deleteEmergencyMapItem' },
+    { sheet: 'EmergencyFloorPlans', add: 'addEmergencyFloorPlan', get: 'getAllEmergencyFloorPlans', update: 'updateEmergencyFloorPlan', delete: 'deleteEmergencyFloorPlan' },
+    { sheet: 'ChemicalSafety', add: 'addChemicalSafety', get: 'getAllChemicalSafety', update: 'updateChemicalSafety', delete: 'deleteChemicalSafety' },
+    { sheet: 'ActionTrackingRegister', add: 'addActionTracking', get: 'getAllActionTracking', update: 'updateActionTracking', delete: 'deleteActionTracking' },
+    { sheet: 'Sustainability', add: 'addSustainability', get: 'getAllSustainability', update: 'updateSustainability', delete: 'deleteSustainability' },
+    { sheet: 'SafetyBudget', add: 'addSafetyBudget', get: 'getAllSafetyBudget', update: 'updateSafetyBudget', delete: 'deleteSafetyBudget' },
+    { sheet: 'RiskAssessment', add: 'addRiskAssessment', get: 'getAllRiskAssessment', update: 'updateRiskAssessment', delete: 'deleteRiskAssessment' },
+    { sheet: 'LegalDocuments', add: 'addLegalDocuments', get: 'getAllLegalDocuments', update: 'updateLegalDocuments', delete: 'deleteLegalDocuments' },
+    { sheet: 'SafetyTeamMembers', add: 'addSafetyTeamMember', get: 'getAllSafetyTeamMembers', update: 'updateSafetyTeamMember', delete: 'deleteSafetyTeamMember' },
+    { sheet: 'SafetyTeamTasks', add: 'addSafetyTeamTask', get: 'getAllSafetyTeamTasks', update: 'updateSafetyTeamTask', delete: 'deleteSafetyTeamTask' },
+    { sheet: 'SafetyTeamLeave', add: 'addSafetyTeamLeave', get: 'getAllSafetyTeamLeave', update: 'updateSafetyTeamLeave', delete: 'deleteSafetyTeamLeave' },
+    { sheet: 'SafetyTeamKPIs', add: 'addSafetyTeamKPI', get: 'getAllSafetyTeamKPIs', update: 'updateSafetyTeamKPI', delete: 'deleteCustomKPI' }
 ];
 
 async function runAudit() {

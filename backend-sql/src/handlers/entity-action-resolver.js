@@ -87,17 +87,39 @@ const ACTION_MAP = {
     deleteEmergencyFloorPlan: { sheet: 'EmergencyFloorPlans', op: 'delete', idFields: ['planId', 'id'] },
 
     // Safety Health Management
-    deleteSafetyTeamMember: { sheet: 'SafetyTeamMembers', op: 'delete', idFields: ['memberId', 'id'] },
+    deleteSafetyTeamMember: { sheet: 'Form_SafetyTeam', op: 'delete', idFields: ['memberId', 'id'] },
+    addSafetyTeamMember: { sheet: 'Form_SafetyTeam', op: 'upsert', idFields: ['id'] },
+    updateSafetyTeamMember: { sheet: 'Form_SafetyTeam', op: 'upsert', idFields: ['id'], dataField: 'updateData' },
     deleteSafetyTeamTask: { sheet: 'SafetyTeamTasks', op: 'delete', idFields: ['taskId', 'id'] },
-    deleteSafetyTeamLeave: { sheet: 'SafetyTeamLeave', op: 'delete', idFields: ['leaveId', 'id'] },
+    deleteSafetyTeamLeave: { sheet: 'ClinicStaffTimeOffRequests', op: 'delete', idFields: ['leaveId', 'id'] },
     deleteSafetyTeamAttendance: { sheet: 'SafetyTeamAttendance', op: 'delete', idFields: ['id'] },
     deleteCustomKPI: { sheet: 'SafetyTeamKPIs', op: 'delete', idFields: ['kpiId', 'id'] },
     addSafetyTeamTask: { sheet: 'SafetyTeamTasks', op: 'upsert', idFields: ['id'] },
     updateSafetyTeamTask: { sheet: 'SafetyTeamTasks', op: 'upsert', idFields: ['taskId', 'id'], dataField: 'updateData' },
-    addSafetyTeamLeave: { sheet: 'SafetyTeamLeave', op: 'upsert', idFields: ['id'] },
-    updateSafetyTeamLeave: { sheet: 'SafetyTeamLeave', op: 'upsert', idFields: ['leaveId', 'id'], dataField: 'updateData' },
+    addSafetyTeamLeave: { sheet: 'ClinicStaffTimeOffRequests', op: 'upsert', idFields: ['id'] },
+    updateSafetyTeamLeave: { sheet: 'ClinicStaffTimeOffRequests', op: 'upsert', idFields: ['leaveId', 'id'], dataField: 'updateData' },
     addSafetyTeamKPI: { sheet: 'SafetyTeamKPIs', op: 'upsert', idFields: ['id'] },
     updateSafetyTeamKPI: { sheet: 'SafetyTeamKPIs', op: 'upsert', idFields: ['kpiId', 'id'], dataField: 'updateData' },
+
+    // Chemical Safety
+    addChemicalSafety: { sheet: 'Chemical_Register', op: 'upsert', idFields: ['id'] },
+    getAllChemicalSafety: { sheet: 'Chemical_Register', op: 'read' },
+    updateChemicalSafety: { sheet: 'Chemical_Register', op: 'upsert', idFields: ['id'], dataField: 'updateData' },
+    deleteChemicalSafety: { sheet: 'Chemical_Register', op: 'delete', idFields: ['id'] },
+
+    // Action Tracking
+    addActionTracking: { sheet: 'IssueTracking', op: 'upsert', idFields: ['id'] },
+    updateActionTracking: { sheet: 'IssueTracking', op: 'upsert', idFields: ['id'], dataField: 'updateData' },
+    deleteActionTracking: { sheet: 'IssueTracking', op: 'delete', idFields: ['id'] },
+
+    // Risk Assessment
+    addRiskAssessment: { sheet: 'RiskAssessments', op: 'upsert', idFields: ['id'] },
+    getAllRiskAssessment: { sheet: 'RiskAssessments', op: 'read' },
+    updateRiskAssessment: { sheet: 'RiskAssessments', op: 'upsert', idFields: ['id'], dataField: 'updateData' },
+    deleteRiskAssessment: { sheet: 'RiskAssessments', op: 'delete', idFields: ['id'] },
+
+    // Safety Team Leave
+    getAllSafetyTeamLeave: { sheet: 'ClinicStaffTimeOffRequests', op: 'read' },
 
     // Periodic equipment / inspections
     deletePeriodicEquipmentAsset: { sheet: 'PeriodicEquipmentAssets', op: 'delete', idFields: ['assetId', 'id'] },
@@ -235,6 +257,11 @@ function buildEntityHandler(actionName, spec) {
                 const id = pickId(payload, postData, spec.idFields || ['id']);
                 if (id && !row.id) row.id = id;
                 return upsertRow(db, sheetName, row);
+            }
+
+            if (spec.op === 'read') {
+                const records = db.readSheet(sheetName);
+                return { success: true, data: records, count: records.length, sheetName: sheetName };
             }
 
             return { success: false, message: `عملية غير مدعومة: ${spec.op}` };
