@@ -1754,6 +1754,19 @@ const GoogleIntegration = {
             throw new Error('يجب إدخال action في الطلب');
         }
 
+        if (typeof AppState !== 'undefined' && AppState.currentUser) {
+            if (!requestData.userData && !requestData.actorUserData) {
+                requestData.actorUserData = AppState.currentUser;
+                requestData.userData = AppState.currentUser;
+            }
+            if (requestData.data && typeof requestData.data === 'object') {
+                if (!requestData.data.userData && !requestData.data.actorUserData) {
+                    requestData.data.actorUserData = AppState.currentUser;
+                    requestData.data.userData = AppState.currentUser;
+                }
+            }
+        }
+
         // فشل مُهيكل: المستدعي يريد { success:false, message } بدل استثناء.
         // بدون هذا كان رفض الخادم (كلمة مرور خاطئة، رمز MFA غير صحيح…) يُرمى كخطأ اتصال
         // فيسقط الدخول إلى التحقق المحلي، والحساب المُفعّل عليه MFA يُرفض محلياً.

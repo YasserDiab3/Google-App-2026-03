@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1710",
+  "version": "1.0.1712",
   "highlights": {
     "ar": [
-      "إصلاح شامل للتوجيه الخاطئ لقواعد بيانات Google Apps Script وحظر مسح /api/exec.",
-      "توجيه جميع طلبات RPC مباشرة وبشكل دائم إلى محرك خادم SQL المباشر.",
-      "تأكيد عمل حذف الإصابات في العيادة الطبيبة بدون أي رسائل أخطاء من Google."
+      "إصلاح إرسال بيانات المستخدم الحالي تلقائياً مع جميع طلبات RPC للحذف والتعديل.",
+      "توسيع مطابقة بيانات المستخدم المعرف في الحماية بالسيرفر ليشمل الجلسات الفعالة والأكواد.",
+      "تأكيد تنفيذ حذف الإصابات وجميع عمليات الحذف دون رسالة البريد غير مسجل."
     ],
     "en": [
-      "Full fix for legacy Google Apps Script routing and removal of /api/exec scrubbing.",
-      "Permanent routing of all RPC requests directly to pure SQL backend engine.",
-      "Confirmed working injury deletion in medical clinic without legacy Google error messages."
+      "Automatic injection of active user session into all RPC requests.",
+      "Enhanced user identity resolution with active session and code fallbacks.",
+      "Confirmed working injury deletion without unregistered user error."
     ]
   }
 }

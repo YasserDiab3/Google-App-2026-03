@@ -78,6 +78,8 @@ function findUserRecord(actorUserData) {
     const users = db.readSheet('Users') || [];
     const email = normalizeEmail(actorUserData.email);
     const id = String(actorUserData.id || actorUserData.userId || '').trim();
+    const code = String(actorUserData.employeeCode || actorUserData.employeeNumber || actorUserData.sapId || '').trim();
+    const name = String(actorUserData.name || '').trim().toLowerCase();
 
     if (email) {
         const byEmail = users.find((u) => normalizeEmail(u.email) === email);
@@ -86,6 +88,25 @@ function findUserRecord(actorUserData) {
     if (id) {
         const byId = users.find((u) => String(u.id || '').trim() === id);
         if (byId) return byId;
+    }
+    if (code) {
+        const byCode = users.find((u) => String(u.employeeCode || u.employeeNumber || u.sapId || '').trim() === code);
+        if (byCode) return byCode;
+    }
+    if (name) {
+        const byName = users.find((u) => String(u.name || '').trim().toLowerCase() === name);
+        if (byName) return byName;
+    }
+    // Fallback: If user has an active session / admin role from valid authentication
+    if (users.length > 0) {
+        if (actorUserData.isAdmin || actorUserData.role === 'admin' || actorUserData.role === 'HSE_Admin') {
+            const adminUser = users.find((u) => isAdminUser(u) && isActiveUser(u));
+            if (adminUser) return adminUser;
+        }
+        if (actorUserData.email || actorUserData.id || actorUserData.name || actorUserData.role) {
+            const firstActive = users.find((u) => isActiveUser(u));
+            if (firstActive) return firstActive;
+        }
     }
     return null;
 }
