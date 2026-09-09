@@ -924,6 +924,7 @@ const Settings = {
             <div class="tab-content" id="tab-system-settings">
                 ${this.renderSystemVersionCard()}
                 ${this.isCurrentUserAdmin() ? this.renderUserPhotoMigrationCard() : ''}
+                ${this.isCurrentUserAdmin() ? this.renderDataArchivingCard() : ''}
                 ${this.renderEmergencyContactsCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
@@ -2018,6 +2019,366 @@ const Settings = {
         }
     },
 
+    renderDataArchivingCard() {
+        return `
+            <div class="content-card mt-6" id="data-retention-archiving-card">
+                <div class="card-header flex justify-between items-center" style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.08), rgba(180, 83, 9, 0.04));">
+                    <h2 class="card-title text-amber-700">
+                        <i class="fas fa-archive ml-2"></i>
+                        إدارة الأرشفة الدورية والاحتفاظ بالبيانات (Data Archiving & Retention)
+                    </h2>
+                    <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">
+                        <i class="fas fa-user-shield ml-1"></i> مخصص لمدير النظام فقط
+                    </span>
+                </div>
+                <div class="card-body space-y-4">
+                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        نظام أرشفة ذكي لنقل السجلات القديمة (سنتين فأكثر) إلى جداول الأرشيف المستقلة لتسريع تحميل التطبيق وتقليل استهلاك الذاكرة، مع ضمان النسخ الاحتياطي التلقائي وعدم فقدان أي سجل.
+                    </p>
+
+                    <!-- خيارات فترة الاستبقاء -->
+                    <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/80 flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex items-center gap-3">
+                            <label class="text-sm font-bold text-gray-700">
+                                <i class="fas fa-clock text-amber-600 ml-1"></i>
+                                فترة البيانات النشطة (الاحتفاظ):
+                            </label>
+                            <select id="archive-retention-period-select" class="form-input text-sm font-semibold" style="width: auto; min-width: 180px;">
+                                <option value="2" selected>آخر سنتين (موصى به)</option>
+                                <option value="1">آخر سنة واحدة</option>
+                                <option value="3">آخر 3 سنوات</option>
+                                <option value="custom">تاريخ مخصص...</option>
+                            </select>
+                            <input type="date" id="archive-custom-cutoff-date" class="form-input text-sm" style="display: none; width: auto;" />
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" id="archive-check-status-btn" class="btn-secondary btn-sm">
+                                <i class="fas fa-search ml-1"></i> فحص وتحليل السجلات
+                            </button>
+                            <button type="button" id="archive-show-history-btn" class="btn-secondary btn-sm">
+                                <i class="fas fa-history ml-1"></i> سجل العمليات
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- شبكة الإحصائيات -->
+                    <div id="archive-stats-strip" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                        <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                            <span class="text-xs text-gray-500 block mb-1">إجمالي السجلات النشطة</span>
+                            <strong id="archive-total-active" class="text-lg text-slate-800 font-mono">—</strong>
+                        </div>
+                        <div class="p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <span class="text-xs text-amber-700 block mb-1">مؤهلة للأرشفة (القديمة)</span>
+                            <strong id="archive-total-eligible" class="text-lg text-amber-800 font-mono">—</strong>
+                        </div>
+                        <div class="p-3 rounded-lg bg-blue-50 border border-blue-200">
+                            <span class="text-xs text-blue-700 block mb-1">مؤرشفة حالياً بالأرشيف</span>
+                            <strong id="archive-total-archived" class="text-lg text-blue-800 font-mono">—</strong>
+                        </div>
+                        <div class="p-3 rounded-lg bg-purple-50 border border-purple-200">
+                            <span class="text-xs text-purple-700 block mb-1">تاريخ القطع المحسوب</span>
+                            <strong id="archive-calculated-cutoff" class="text-sm text-purple-900 font-mono">—</strong>
+                        </div>
+                    </div>
+
+                    <!-- جدول المديولات المشمولة -->
+                    <div class="border border-gray-200 rounded-lg overflow-hidden mt-3">
+                        <div class="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-600 flex justify-between items-center border-b border-gray-200">
+                            <span>المديولات الخاضعة للأرشفة</span>
+                            <span id="archive-selected-summary" class="text-amber-700">7 مديولات محددة</span>
+                        </div>
+                        <div id="archive-modules-table-container" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
+                            <div class="p-4 text-center text-sm text-gray-500">
+                                اضغط "فحص وتحليل السجلات" لعرض تفاصيل المديولات
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- تنبيه وأزرار التنفيذ -->
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                        <div id="archive-status-message" class="text-sm text-gray-600">
+                            جاهز للفحص والأرشفة.
+                        </div>
+                        <button type="button" id="archive-execute-btn" class="btn-primary" style="background: #d97706; border-color: #b45309;" disabled>
+                            <i class="fas fa-file-archive ml-2"></i> بدء الأرشفة والنسخ الاحتياطي
+                        </button>
+                    </div>
+
+                    <!-- نافذة السجل / تقدم العملية -->
+                    <div id="archive-execution-log" class="text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-36 overflow-y-auto" style="display: none;"></div>
+                </div>
+            </div>
+        `;
+    },
+
+    _archiveLastStatusData: null,
+
+    bindDataArchivingEvents() {
+        if (!this.isCurrentUserAdmin()) return;
+
+        const periodSelect = document.getElementById('archive-retention-period-select');
+        const customDateInput = document.getElementById('archive-custom-cutoff-date');
+        const checkBtn = document.getElementById('archive-check-status-btn');
+        const executeBtn = document.getElementById('archive-execute-btn');
+        const historyBtn = document.getElementById('archive-show-history-btn');
+
+        if (periodSelect && !periodSelect.dataset.bound) {
+            periodSelect.dataset.bound = '1';
+            periodSelect.addEventListener('change', () => {
+                if (customDateInput) {
+                    customDateInput.style.display = periodSelect.value === 'custom' ? 'inline-block' : 'none';
+                }
+                this.refreshArchiveStatusUI(false);
+            });
+        }
+
+        if (customDateInput && !customDateInput.dataset.bound) {
+            customDateInput.dataset.bound = '1';
+            customDateInput.addEventListener('change', () => {
+                this.refreshArchiveStatusUI(false);
+            });
+        }
+
+        if (checkBtn && !checkBtn.dataset.bound) {
+            checkBtn.dataset.bound = '1';
+            checkBtn.addEventListener('click', () => {
+                this.refreshArchiveStatusUI(true);
+            });
+        }
+
+        if (historyBtn && !historyBtn.dataset.bound) {
+            historyBtn.dataset.bound = '1';
+            historyBtn.addEventListener('click', () => {
+                this.showArchiveHistoryModal();
+            });
+        }
+
+        if (executeBtn && !executeBtn.dataset.bound) {
+            executeBtn.dataset.bound = '1';
+            executeBtn.addEventListener('click', () => {
+                this.executeDataArchivingFromUI();
+            });
+        }
+
+        // فحص أولي للبيانات
+        this.refreshArchiveStatusUI(false);
+    },
+
+    async refreshArchiveStatusUI(showNotice = false) {
+        const periodSelect = document.getElementById('archive-retention-period-select');
+        const customDateInput = document.getElementById('archive-custom-cutoff-date');
+        const totalActiveEl = document.getElementById('archive-total-active');
+        const totalEligibleEl = document.getElementById('archive-total-eligible');
+        const totalArchivedEl = document.getElementById('archive-total-archived');
+        const cutoffEl = document.getElementById('archive-calculated-cutoff');
+        const tableContainer = document.getElementById('archive-modules-table-container');
+        const executeBtn = document.getElementById('archive-execute-btn');
+        const statusMsg = document.getElementById('archive-status-message');
+
+        if (!totalActiveEl) return;
+
+        const retentionVal = periodSelect ? periodSelect.value : '2';
+        const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
+        const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
+
+        if (statusMsg) statusMsg.textContent = 'جاري فحص السجلات وتحليل فترات الاحتفاظ...';
+
+        try {
+            const res = await GoogleIntegration.callAppsScriptRPC('getArchiveStatus', {
+                retentionYears,
+                customCutoffDate: customCutoff,
+                actorUserData: AppState?.currentUser || null
+            });
+
+            if (!res || !res.success) {
+                if (statusMsg) statusMsg.textContent = res?.message || 'فشل جلب إحصائيات الأرشفة.';
+                return;
+            }
+
+            this._archiveLastStatusData = res;
+
+            if (totalActiveEl) totalActiveEl.textContent = (res.grandTotalActive || 0).toLocaleString();
+            if (totalEligibleEl) totalEligibleEl.textContent = (res.grandTotalEligible || 0).toLocaleString();
+            if (totalArchivedEl) totalArchivedEl.textContent = (res.grandTotalArchived || 0).toLocaleString();
+            if (cutoffEl) cutoffEl.textContent = res.cutoffDate || '—';
+
+            if (tableContainer && res.modules) {
+                const rows = Object.entries(res.modules).map(([modKey, mod]) => {
+                    const isEligible = (mod.eligibleCount || 0) > 0;
+                    return `
+                        <div class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-slate-50 transition">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" class="archive-module-checkbox form-checkbox text-amber-600 rounded" value="${modKey}" checked />
+                                <span class="font-bold text-gray-800">${Utils.escapeHTML(mod.labelAr)}</span>
+                                <span class="text-gray-400 font-mono">(${Utils.escapeHTML(mod.table)})</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-gray-600">نشط: <strong class="font-mono">${(mod.activeCount || 0).toLocaleString()}</strong></span>
+                                <span class="${isEligible ? 'text-amber-700 font-bold' : 'text-gray-400'}">
+                                    مؤهل للأرشفة: <strong class="font-mono">${(mod.eligibleCount || 0).toLocaleString()}</strong>
+                                </span>
+                                <span class="text-blue-600">مؤرشف: <strong class="font-mono">${(mod.archivedCount || 0).toLocaleString()}</strong></span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                tableContainer.innerHTML = rows;
+            }
+
+            if (executeBtn) {
+                executeBtn.disabled = (res.grandTotalEligible || 0) <= 0;
+            }
+
+            if (statusMsg) {
+                statusMsg.textContent = (res.grandTotalEligible || 0) > 0
+                    ? `يوجد ${res.grandTotalEligible} سجل مؤهل للنقل إلى الأرشيف بأمان.`
+                    : 'جميع السجلات حديثة وتقع ضمن فترة الاحتفاظ المحددة.';
+            }
+
+            if (showNotice) {
+                Notification.success(`تم تحديث إحصائيات الأرشفة (تاريخ القطع: ${res.cutoffDate})`);
+            }
+        } catch (e) {
+            console.error('Error in refreshArchiveStatusUI:', e);
+            if (statusMsg) statusMsg.textContent = 'حدث خطأ أثناء فحص البيانات.';
+        }
+    },
+
+    async executeDataArchivingFromUI() {
+        if (!this._archiveLastStatusData || (this._archiveLastStatusData.grandTotalEligible || 0) <= 0) {
+            Notification.info('لا توجد سجلات مؤهلة للأرشفة حالياً.');
+            return;
+        }
+
+        const checkedCheckboxes = Array.from(document.querySelectorAll('.archive-module-checkbox:checked'));
+        const selectedModules = checkedCheckboxes.map(cb => cb.value);
+
+        if (selectedModules.length === 0) {
+            Notification.warning('يرجى اختيار مديول واحد على الأقل للأرشفة.');
+            return;
+        }
+
+        const eligibleCount = this._archiveLastStatusData.grandTotalEligible || 0;
+        const cutoffDate = this._archiveLastStatusData.cutoffDate;
+
+        const confirmMsg = `تنبيه أمني لمدير النظام:\n\n` +
+            `سيتم أرشفة ونقل ${eligibleCount} سجل أقدم من تاريخ (${cutoffDate}) إلى جداول الأرشيف المستقلة.\n` +
+            `سيتم حفظ نسخة احتياطية محلية تلقائياً قبل بدء العملية.\n\n` +
+            `هل أنت متأكد من تنفيذ الأرشفة الآن؟`;
+
+        if (!confirm(confirmMsg)) return;
+
+        const executeBtn = document.getElementById('archive-execute-btn');
+        const statusMsg = document.getElementById('archive-status-message');
+        const logEl = document.getElementById('archive-execution-log');
+
+        if (executeBtn) executeBtn.disabled = true;
+        if (statusMsg) statusMsg.textContent = 'جاري تنفيذ الأرشفة والنسخ الاحتياطي الذري في الخادم...';
+        if (logEl) {
+            logEl.style.display = 'block';
+            logEl.innerHTML = `<p class="text-amber-700"><i class="fas fa-spinner fa-spin ml-1"></i> جاري نقل السجلات إلى جداول الأرشيف...</p>`;
+        }
+
+        try {
+            const periodSelect = document.getElementById('archive-retention-period-select');
+            const customDateInput = document.getElementById('archive-custom-cutoff-date');
+            const retentionVal = periodSelect ? periodSelect.value : '2';
+            const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
+            const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
+
+            const res = await GoogleIntegration.callAppsScriptRPC('executeDataArchiving', {
+                retentionYears,
+                customCutoffDate: customCutoff,
+                selectedModules,
+                actorUserData: AppState?.currentUser || null
+            });
+
+            if (res && res.success) {
+                if (logEl) {
+                    logEl.innerHTML = `
+                        <div class="text-green-700 font-bold mb-1">
+                            <i class="fas fa-check-circle ml-1"></i> ${Utils.escapeHTML(res.message)}
+                        </div>
+                        <div class="text-slate-600">
+                            • كود العملية: <code class="font-mono">${res.executionId}</code><br/>
+                            • عدد السجلات المنقولة: <strong>${res.totalRecordsArchived}</strong><br/>
+                            • ملف النسخة الاحتياطية: <code class="font-mono">${res.backupFileName}</code><br/>
+                            • استغرق التنفيذ: ${res.durationMs}ms
+                        </div>
+                    `;
+                }
+                Notification.success(`تمت الأرشفة بنجاح! تم تفريغ مساحة ${res.totalRecordsArchived} سجل نشط.`);
+                await this.refreshArchiveStatusUI(false);
+            } else {
+                if (logEl) {
+                    logEl.innerHTML = `<p class="text-red-600"><i class="fas fa-exclamation-triangle ml-1"></i> ${Utils.escapeHTML(res?.message || 'فشلت الأرشفة')}</p>`;
+                }
+                Notification.error(res?.message || 'فشلت عملية الأرشفة.');
+            }
+        } catch (err) {
+            console.error('Archiving execution error:', err);
+            Notification.error(`خطأ أثناء التنفيذ: ${err.message}`);
+        } finally {
+            if (executeBtn) executeBtn.disabled = false;
+        }
+    },
+
+    showArchiveHistoryModal() {
+        const logs = this._archiveLastStatusData?.recentLogs || [];
+        const content = logs.length === 0
+            ? '<p class="text-center text-gray-500 py-6">لا توجد عمليات أرشفة سابقة مسجلة.</p>'
+            : `
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-right border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700 font-bold border-b">
+                                <th class="p-2">تاريخ التنفيذ</th>
+                                <th class="p-2">تاريخ القطع</th>
+                                <th class="p-2">السجلات المؤرشفة</th>
+                                <th class="p-2">المنفذ</th>
+                                <th class="p-2">ملف النسخة</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            ${logs.map(log => `
+                                <tr>
+                                    <td class="p-2 font-mono">${Utils.escapeHTML((log.executedAt || '').slice(0, 19).replace('T', ' '))}</td>
+                                    <td class="p-2 font-mono text-amber-700">${Utils.escapeHTML(log.cutoffDate || '')}</td>
+                                    <td class="p-2 font-bold text-green-700 font-mono">${Number(log.totalArchivedCount || 0).toLocaleString()}</td>
+                                    <td class="p-2">${Utils.escapeHTML(log.executedByEmail || 'admin')}</td>
+                                    <td class="p-2 font-mono text-gray-500 text-[10px]">${Utils.escapeHTML(log.backupFileName || '—')}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+        const modalHtml = `
+            <div id="archive-history-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col">
+                    <div class="flex justify-between items-center border-b pb-3">
+                        <h3 class="font-bold text-base text-gray-800 flex items-center">
+                            <i class="fas fa-history text-amber-600 ml-2"></i> سجل عمليات الأرشفة السابقة
+                        </h3>
+                        <button type="button" onclick="document.getElementById('archive-history-modal').remove()" class="text-gray-400 hover:text-gray-600 text-lg">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto">
+                        ${content}
+                    </div>
+                    <div class="pt-3 border-t flex justify-end">
+                        <button type="button" onclick="document.getElementById('archive-history-modal').remove()" class="btn-secondary btn-sm">إغلاق</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        const oldModal = document.getElementById('archive-history-modal');
+        if (oldModal) oldModal.remove();
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    },
+
     renderEmergencyContactsCard() {
         return `
             <div class="content-card mt-6" id="card-hse-emergency-contacts">
@@ -2258,6 +2619,7 @@ const Settings = {
                 if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {
                     this.loadEmergencyContactsSettings();
                     this.bindUserPhotoMigrationEvents();
+                    this.bindDataArchivingEvents();
                 }
                 if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
                     Settings.bindHelpContentSettingsEvents();
@@ -2703,6 +3065,7 @@ const Settings = {
             if (this.isCurrentUserAdmin()) {
                 this.loadEmergencyContactsSettings();
                 this.bindUserPhotoMigrationEvents();
+                this.bindDataArchivingEvents();
             }
 
             const companyNameInput = document.getElementById('company-name-input');

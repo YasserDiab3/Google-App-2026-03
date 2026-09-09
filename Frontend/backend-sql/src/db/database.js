@@ -31,7 +31,7 @@ function isSafeIdentifier(name) {
 }
 
 /** حد استجابة Vercel ~4.5MB — نُبقي هامش JSON/التغليف */
-const MAX_RPC_LIST_BYTES = 3 * 1024 * 1024;
+const MAX_RPC_LIST_BYTES = 4.2 * 1024 * 1024;
 
 function capRowsForRpc(rows) {
     if (!Array.isArray(rows) || rows.length === 0) return rows;
@@ -107,7 +107,8 @@ const HEAVY_LIST_FIELDS = {
     PTWRegistry: [
         'equipment', 'tools', 'toolsList', 'hotWorkDetails', 'confinedSpaceDetails',
         'heightWorkDetails', 'preStartChecklist', 'governmentPermits', 'gasTesting',
-        'mocRequest', 'requiredPPE'
+        'mocRequest', 'requiredPPE', 'manualApprovalsText', 'manualClosureApprovalsText',
+        'teamMembersText', 'riskNotes', 'ppeNotes'
     ],
     NearMiss: ['attachments']
 };

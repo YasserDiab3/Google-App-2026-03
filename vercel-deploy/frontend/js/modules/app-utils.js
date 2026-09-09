@@ -1596,6 +1596,25 @@ const Permissions = {
         const removedSite = state.sites[index];
         const removedHadName = String(removedSite?.name || '').trim().length > 0;
         const siteName = removedSite?.name || 'موقع بدون اسم';
+
+        if (removedHadName) {
+            // فحص السجلات المرتبطة محلياً قبل الحذف
+            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.siteId === siteId || o.siteName === siteName).length;
+            const localPtwCount = (AppState?.ptw || []).filter(p => p.siteId === siteId || p.siteName === siteName).length;
+            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationLocationId === siteId || v.violationLocation === siteName).length;
+            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
+
+            if (totalLocalUsed > 0) {
+                const modulesList = [];
+                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
+                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
+                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
+                
+                Notification.error(`قفل الحذف: لا يمكن حذف الموقع «${siteName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
+                return;
+            }
+        }
+
         if (!confirm(`سيتم حذف الموقع "${siteName}" وجميع الأماكن المرتبطة به. هل ترغب بالمتابعة؟`)) {
             return;
         }
@@ -1730,11 +1749,30 @@ const Permissions = {
         const index = site.places.findIndex((item) => item.id === placeId);
         if (index === -1) return;
         const removedPlace = site.places[index];
+        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         const placeName = removedPlace?.name || 'مكان بدون اسم';
+
+        if (removedHadName) {
+            // فحص السجلات المرتبطة محلياً قبل الحذف
+            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.placeId === placeId || o.locationName === placeName).length;
+            const localPtwCount = (AppState?.ptw || []).filter(p => p.sublocationId === placeId || p.sublocationName === placeName).length;
+            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationPlaceId === placeId || v.violationPlace === placeName).length;
+            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
+
+            if (totalLocalUsed > 0) {
+                const modulesList = [];
+                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
+                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
+                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
+
+                Notification.error(`قفل الحذف: لا يمكن حذف المكان الفرعي «${placeName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
+                return;
+            }
+        }
+
         if (!confirm(`هل ترغب في حذف المكان "${placeName}"؟`)) {
             return;
         }
-        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         site.places.splice(index, 1);
         if (state._persistedPlaceIds) {
             state._persistedPlaceIds.delete(String(placeId));

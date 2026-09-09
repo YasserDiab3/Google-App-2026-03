@@ -13,6 +13,7 @@ const companySettingsHandlers = require('./handlers/company-settings-handlers');
 const ppeHandlers = require('./handlers/ppe-handlers');
 const formSettingsHandlers = require('./handlers/form-settings-handlers');
 const publicFormsHandlers = require('./handlers/public-forms-handlers');
+const archiveHandlers = require('./handlers/archive-handlers');
 const {
     enforceRpcSecurity,
     checkSheetReadAccess,
@@ -39,6 +40,10 @@ const ActionRegistry = {
     updatePPE: ppeHandlers.updatePPE,
     getFormSettings: formSettingsHandlers.getFormSettings,
     saveFormSettings: formSettingsHandlers.saveFormSettings,
+    checkLocationUsage: formSettingsHandlers.checkLocationUsage,
+    getArchiveStatus: (p, postData, act, actorUserData) => archiveHandlers.getArchiveStatus(p, postData, act, actorUserData),
+    executeDataArchiving: (p, postData, act, actorUserData) => archiveHandlers.executeDataArchiving(p, postData, act, actorUserData),
+    queryArchivedRecords: (p, postData, act, actorUserData) => archiveHandlers.queryArchivedRecords(p, postData, act, actorUserData),
     initializeSheets: () => ({
         success: true,
         message: 'قاعدة SQL جاهزة — لا حاجة لتهيئة Google Sheets'

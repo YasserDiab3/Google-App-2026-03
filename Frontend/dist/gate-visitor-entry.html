@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <script src="../js/hse-api-url.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SafetyHub | نظام تسجيل وتتبع الزوار والمقاولين</title>
@@ -12,6 +11,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest-visitor.json">
     <link rel="icon" type="image/png" href="icons/icapp-logo.png">
+    
+    <!-- Unified API Engine Resolver -->
+    <script src="js/hse-api-url.js"></script>
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2264,15 +2266,19 @@
                         mode: 'cors',
                         redirect: 'follow',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'getPublicObservationConfig' })
+                        body: JSON.stringify({ action: 'getPublicVisitorConfig' })
                     });
                     const serverData = await res.json();
-                    if (serverData && serverData.success && Array.isArray(serverData.sites) && serverData.sites.length > 0) {
-                        currentSystemConfig.sites = serverData.sites;
+                    if (serverData && serverData.success) {
+                        if (Array.isArray(serverData.sites) && serverData.sites.length > 0) {
+                            currentSystemConfig.sites = serverData.sites;
+                        }
                         if (Array.isArray(serverData.departments) && serverData.departments.length > 0) {
                             currentSystemConfig.departments = serverData.departments;
                         }
-                        if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
+                        if (Array.isArray(serverData.hosts) && serverData.hosts.length > 0) {
+                            currentSystemConfig.safetyMembers = serverData.hosts.map(h => typeof h === 'string' ? h : (h.name || ''));
+                        } else if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
                             currentSystemConfig.safetyMembers = serverData.safetyMembers;
                         }
                         try {

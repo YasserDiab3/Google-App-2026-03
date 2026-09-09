@@ -378,6 +378,16 @@ const Permissions = {
      * يُستخدم لـ Users وإعدادات adminOnly وتبويبات التفصيل ومعدات الحريق.
      */
     isCurrentUserEffectiveAdmin(user = AppState.currentUser) {
+        if (!user) {
+            try {
+                const sess = sessionStorage.getItem('hse_current_session');
+                if (sess) user = JSON.parse(sess);
+                if (!user || !user.email) {
+                    const rem = localStorage.getItem('hse_remember_user');
+                    if (rem) user = JSON.parse(rem);
+                }
+            } catch (_) {}
+        }
         if (!user) return false;
         if (this.isAdminRole(user.role)) return true;
         const spRaw = user.permissions;
@@ -402,6 +412,10 @@ const Permissions = {
             }
         }
         return false;
+    },
+
+    isCurrentUserAdmin(user = AppState.currentUser) {
+        return this.isCurrentUserEffectiveAdmin(user);
     },
 
     /**
@@ -488,13 +502,18 @@ const Permissions = {
 
     getFormSettingsState() {
         // دالة متزامنة للحصول على الحالة (تُستخدم في دوال العرض)
-        if (!this.formSettingsState) {
-            // إذا لم تكن الحالة مهيأة، إرجاع حالة افتراضية
-            return {
-                sites: [],
-                selectedSiteId: '',
-                departments: [],
-                safetyTeam: []
+        if (!this.formSettingsState || !Array.isArray(this.formSettingsState.sites) || this.formSettingsState.sites.length === 0) {
+            const sitesSource = (Array.isArray(AppState?.appData?.observationSites) && AppState.appData.observationSites.length > 0)
+                ? AppState.appData.observationSites
+                : (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES) ? DailyObservations.DEFAULT_SITES : []);
+            
+            const selectedSiteId = this.formSettingsState?.selectedSiteId || sitesSource[0]?.id || '';
+            this.formSettingsState = {
+                sites: sitesSource,
+                selectedSiteId,
+                departments: (this.formSettingsState?.departments && this.formSettingsState.departments.length > 0) ? this.formSettingsState.departments : this.getInitialFormDepartments(),
+                safetyTeam: (this.formSettingsState?.safetyTeam && this.formSettingsState.safetyTeam.length > 0) ? this.formSettingsState.safetyTeam : this.getInitialSafetyTeam(),
+                placesSearchQuery: this.formSettingsState?.placesSearchQuery || ''
             };
         }
         if (!this.formSettingsState._persistedSiteIds) {
@@ -518,18 +537,16 @@ const Permissions = {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
-        // لا نحاول جلب الشيت إلا عند تفعيل رابط Web App — وإلا نعتمد فوراً على المحلي/DEFAULT_SITES (أسرع وأقل أخطاء)
-        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
-        const hasRemoteSettingsApi = !!(
-            cloudReady &&
-            typeof GoogleIntegration !== 'undefined' &&
-            typeof GoogleIntegration.sendToAppsScript === 'function'
-        );
+        
+        const hasRemoteSettingsApi = typeof GoogleIntegration !== 'undefined' &&
+            (typeof GoogleIntegration.sendRequest === 'function' || typeof GoogleIntegration.sendToAppsScript === 'function');
 
         // محاولة تحميل إعدادات الشركة من قاعدة SQL أولاً
         if (hasRemoteSettingsApi) {
             try {
-                const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
+                const companyResult = typeof GoogleIntegration.sendRequest === 'function'
+                    ? await GoogleIntegration.sendRequest({ action: 'getCompanySettings' })
+                    : await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
                     let companyRow = companyResult.data;
                     if (Array.isArray(companyRow)) {
@@ -633,7 +650,9 @@ const Permissions = {
         if (hasRemoteSettingsApi) {
             try {
                 // ✅ إصلاح: تحميل مباشر من قاعدة البيانات بدون تأخير
-                const result = await GoogleIntegration.sendToAppsScript('getFormSettings', {});
+                const result = typeof GoogleIntegration.sendRequest === 'function'
+                    ? await GoogleIntegration.sendRequest({ action: 'getFormSettings' })
+                    : await GoogleIntegration.sendToAppsScript('getFormSettings', {});
                 if (result && result.success && result.data) {
                     // ✅ إصلاح: تحديث AppState بالبيانات من قاعدة SQL مع التأكد من وجود الأماكن الفرعية
                     if (Array.isArray(result.data.sites) && result.data.sites.length > 0) {
@@ -846,40 +865,52 @@ const Permissions = {
 
     getInitialFormDepartments() {
         const settings = AppState.companySettings || {};
-        const stored = settings.formDepartments;
-        if (Array.isArray(stored)) {
+        const stored = settings.formDepartments || settings.departments;
+        if (Array.isArray(stored) && stored.length > 0) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string') {
+        if (typeof stored === 'string' && stored.trim()) {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
-        }
-        if (Array.isArray(settings.departments)) {
-            return settings.departments.map((item) => String(item || '').trim()).filter(Boolean);
-        }
-        if (typeof settings.departments === 'string') {
-            return settings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
         }
         if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getDepartmentOptions === 'function') {
             try {
                 const options = DailyObservations.getDepartmentOptions();
-                if (Array.isArray(options)) {
+                if (Array.isArray(options) && options.length > 0) {
                     return options.map((item) => String(item || '').trim()).filter(Boolean);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل الإدارات من DailyObservations:', error);
             }
         }
-        return [];
+        return [
+            'إدارة السلامة والصحة المهنية',
+            'إدارة الصيانة',
+            'إدارة الإنتاج',
+            'إدارة الجودة',
+            'إدارة المخازن',
+            'إدارة الموارد البشرية',
+            'إدارة الأمن والحراسة',
+            'إدارة المشروعات',
+            'إدارة المشتريات',
+            'إدارة الخدمات اللوجستية',
+            'إدارة الزراعة',
+            'الإدارة المالية',
+            'إدارة تكنولوجيا المعلومات',
+            'الإدارة العامة'
+        ];
     },
 
     getInitialSafetyTeam() {
         const settings = AppState.companySettings || {};
         const stored = settings.safetyTeam || settings.safetyTeamMembers;
-        if (Array.isArray(stored)) {
+        if (Array.isArray(stored) && stored.length > 0) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string') {
+        if (typeof stored === 'string' && stored.trim()) {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+        }
+        if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SAFETY_MEMBERS) && DailyObservations.DEFAULT_SAFETY_MEMBERS.length > 0) {
+            return DailyObservations.DEFAULT_SAFETY_MEMBERS.slice();
         }
         return [];
     },
@@ -936,7 +967,7 @@ const Permissions = {
                                     <p class="form-settings-panel__desc">قائمة المصانع أو المواقع؛ انقر على الصف أو زر «اختيار» لتحديد الموقع النشط.</p>
                                 </div>
                                 <div class="form-settings-panel__body">
-                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list"></div>
+                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list">${this.renderFormSitesList()}</div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-site">
@@ -969,7 +1000,7 @@ const Permissions = {
                                             </button>
                                         </div>
                                     </div>
-                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list"></div>
+                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list">${this.renderFormPlacesList()}</div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-place" id="form-settings-add-place-btn">
@@ -983,7 +1014,7 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-briefcase"></i>المسؤولون عن التنفيذ
                         </h3>
-                        <div id="form-settings-departments-list" class="form-settings-subsection__list"></div>
+                        <div id="form-settings-departments-list" class="form-settings-subsection__list">${this.renderDepartmentsList()}</div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-department">
                             <i class="fas fa-plus ml-2"></i>إضافة إدارة
                         </button>
@@ -992,7 +1023,7 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-user-shield"></i>فريق السلامة
                         </h3>
-                        <div id="form-settings-safety-list" class="form-settings-subsection__list"></div>
+                        <div id="form-settings-safety-list" class="form-settings-subsection__list">${this.renderSafetyTeamList()}</div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-safety-member">
                             <i class="fas fa-plus ml-2"></i>إضافة عضو
                         </button>
@@ -1565,6 +1596,25 @@ const Permissions = {
         const removedSite = state.sites[index];
         const removedHadName = String(removedSite?.name || '').trim().length > 0;
         const siteName = removedSite?.name || 'موقع بدون اسم';
+
+        if (removedHadName) {
+            // فحص السجلات المرتبطة محلياً قبل الحذف
+            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.siteId === siteId || o.siteName === siteName).length;
+            const localPtwCount = (AppState?.ptw || []).filter(p => p.siteId === siteId || p.siteName === siteName).length;
+            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationLocationId === siteId || v.violationLocation === siteName).length;
+            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
+
+            if (totalLocalUsed > 0) {
+                const modulesList = [];
+                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
+                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
+                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
+                
+                Notification.error(`قفل الحذف: لا يمكن حذف الموقع «${siteName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
+                return;
+            }
+        }
+
         if (!confirm(`سيتم حذف الموقع "${siteName}" وجميع الأماكن المرتبطة به. هل ترغب بالمتابعة؟`)) {
             return;
         }
@@ -1699,11 +1749,30 @@ const Permissions = {
         const index = site.places.findIndex((item) => item.id === placeId);
         if (index === -1) return;
         const removedPlace = site.places[index];
+        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         const placeName = removedPlace?.name || 'مكان بدون اسم';
+
+        if (removedHadName) {
+            // فحص السجلات المرتبطة محلياً قبل الحذف
+            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.placeId === placeId || o.locationName === placeName).length;
+            const localPtwCount = (AppState?.ptw || []).filter(p => p.sublocationId === placeId || p.sublocationName === placeName).length;
+            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationPlaceId === placeId || v.violationPlace === placeName).length;
+            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
+
+            if (totalLocalUsed > 0) {
+                const modulesList = [];
+                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
+                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
+                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
+
+                Notification.error(`قفل الحذف: لا يمكن حذف المكان الفرعي «${placeName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
+                return;
+            }
+        }
+
         if (!confirm(`هل ترغب في حذف المكان "${placeName}"؟`)) {
             return;
         }
-        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         site.places.splice(index, 1);
         if (state._persistedPlaceIds) {
             state._persistedPlaceIds.delete(String(placeId));
@@ -4346,7 +4415,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1700',
+    appVersion: '1.0.1730',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4619,16 +4688,24 @@ const Utils = {
      * هل يوجد مسار مزامنة عبر خادم SQL (تفعيل + رابط Web App /exec)
      */
     hasCloudBackendSync() {
+        if (typeof GoogleIntegration !== 'undefined') {
+            if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && GoogleIntegration._isBackendRpcConfigured()) {
+                return true;
+            }
+            if (typeof GoogleIntegration.isConfigured === 'function' && GoogleIntegration.isConfigured()) {
+                return true;
+            }
+        }
         try {
             if (typeof this.getAppsScriptScriptUrl === 'function') {
                 const gas = String(this.getAppsScriptScriptUrl() || '').trim();
-                if (gas.indexOf('script.google.com') !== -1) return true;
+                if (gas.length > 0) return true;
             }
         } catch (_e) { /* ignore */ }
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
-        if (!gc || !gc.appsScript) return false;
+        if (!gc || !gc.appsScript) return true; // Default true for SQL backend
         const url = String(gc.appsScript.scriptUrl || '').trim();
-        return !!(url && url.indexOf('script.google.com') !== -1);
+        return !!url;
     },
 
     /**
@@ -6021,6 +6098,11 @@ const Utils = {
                 d = date;
             } else {
                 let dateStr = String(date).trim();
+                if ((dateStr.startsWith('"') && dateStr.endsWith('"')) || (dateStr.startsWith("'") && dateStr.endsWith("'"))) {
+                    dateStr = dateStr.slice(1, -1).trim();
+                }
+                if (!dateStr || dateStr === '-' || dateStr === '—' || dateStr === 'null' || dateStr === 'undefined' || dateStr === 'غير محدد') return '-';
+
                 const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
                 if (dmyMatch) {
                     const [, day, month, year, hours, minutes, seconds] = dmyMatch;
@@ -7280,6 +7362,29 @@ const ViolationTypesManager = {
                 dm.save();
             }
         }
+    },
+
+    async ensureRemoteLoaded(force = false) {
+        if (!force && AppState?.appData?.violationTypes && AppState.appData.violationTypes.length > 0) {
+            return this.ensureInitialized();
+        }
+        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+            try {
+                const res = await GoogleIntegration.sendRequest({ action: 'getAllViolationTypes' });
+                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+                    AppState.appData.violationTypes = res.data;
+                    if (AppState.syncMeta && AppState.syncMeta.sheets) {
+                        AppState.syncMeta.sheets.ViolationTypes = true;
+                    }
+                    return this.ensureInitialized();
+                }
+            } catch (e) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('Could not load remote violation types:', e);
+                }
+            }
+        }
+        return this.ensureInitialized();
     },
 
     getAll() {

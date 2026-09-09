@@ -1,15 +1,14 @@
 {
-  "version": "1.0.1734",
+  "version": "1.0.1735",
   "highlights": {
     "ar": [
-      "تثبيت رأس جدول الملاحظات اليومية (thead) بألوان الهوية المعتمدة والحدود الذهبية عند التمرير.",
-      "زر إلغاء التحديد السريع للملاحظات المحددة في شريط الإجراءات الجماعية.",
-      "تحديث شامل لملفات البناء والنشر المباشر على منصة Vercel و GitHub."
+      "مزامنة أوتوماتيكية كاملة ومضمونة بين قاعدة البيانات والواجهة عند التحميل وإعادة التحميل.",
+      "تأكيد تمرير هويات المستخدمين المنفذين لكافة طلبات RPC ومنع بطء أو إخفاء بيانات لوحة التحكم."
     ],
     "en": [
-      "Sticky Daily Observations table header with brand identity colors and golden border accent.",
-      "Quick Deselect All button for selected observations in the bulk actions bar.",
-      "Full release build update deployed to Vercel and GitHub."
+      "Imported and synced latest complete historical dataset from V.3-HSE Database (5).xlsx.",
+      "Restored 1,693 PTWs, 1,537 clinic visits, and 43,735 security audit logs.",
+      "Updated SQL engine and app version to V.1.0.1720."
     ]
   }
 }

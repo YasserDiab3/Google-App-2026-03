@@ -1,6 +1,6 @@
 /**
  * Automated Database Backup Service
- * يدير النسخ الاحتياطي التلقائي لقاعدة بيانات SQL مع الضغط وتدوير النسخ
+ * يدير النسخ الاحتياطي التلقائي لقاعدة بيانات SQL مع الضغط وتدوير النسخ وحماية الاستقرار
  */
 'use strict';
 
@@ -11,6 +11,7 @@ const config = require('../config/config');
 
 const BACKUP_DIR = path.resolve(__dirname, '..', '..', 'backups');
 const MAX_BACKUP_AGE_DAYS = 30;
+const MAX_BACKUP_COUNT = 30;
 
 function ensureBackupDir() {
     if (!fs.existsSync(BACKUP_DIR)) {
@@ -21,7 +22,7 @@ function ensureBackupDir() {
 /**
  * إنشاء نسخة احتياطية فورية ومضغوطة من قاعدة البيانات
  */
-function createBackup(dbInstance = null) {
+function createBackup(dbInstance = null, label = null) {
     try {
         ensureBackupDir();
         const srcDb = config.sqlitePath;
@@ -39,12 +40,13 @@ function createBackup(dbInstance = null) {
         const now = new Date();
         const pad = (n) => String(n).padStart(2, '0');
         const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-        const backupFileName = `clinic_hse_backup_${timestamp}.db.gz`;
+        const prefix = label ? `clinic_hse_backup_${label}_` : 'clinic_hse_backup_';
+        const backupFileName = `${prefix}${timestamp}.db.gz`;
         const destPath = path.join(BACKUP_DIR, backupFileName);
 
         // 2. Read and Gzip
         const dbBuffer = fs.readFileSync(srcDb);
-        const gzipped = zlib.gzipSync(dbBuffer);
+        const gzipped = zlib.gzipSync(dbBuffer, { level: 6 });
         fs.writeFileSync(destPath, gzipped);
 
         const originalSizeMB = (dbBuffer.length / (1024 * 1024)).toFixed(2);
@@ -70,7 +72,7 @@ function createBackup(dbInstance = null) {
 }
 
 /**
- * حذف النسخ الاحتياطية الأقدم من 30 يوماً
+ * حذف النسخ الاحتياطية الأقدم من 30 يوماً أو الاحتفاظ بأحدث 30 نسخة كحد أقصى
  */
 function rotateBackups() {
     try {
@@ -79,18 +81,29 @@ function rotateBackups() {
         const now = Date.now();
         const maxAgeMs = MAX_BACKUP_AGE_DAYS * 24 * 60 * 60 * 1000;
 
-        files.forEach(f => {
-            if (f.startsWith('clinic_hse_backup_') && f.endsWith('.db.gz')) {
+        const backupFiles = files
+            .filter(f => f.startsWith('clinic_hse_backup_') && f.endsWith('.db.gz'))
+            .map(f => {
                 const filePath = path.join(BACKUP_DIR, f);
                 const stats = fs.statSync(filePath);
-                if (now - stats.mtimeMs > maxAgeMs) {
-                    fs.unlinkSync(filePath);
-                    console.log(`[Backup Service] 🗑️ Removed expired backup: ${f}`);
-                }
+                return { name: f, path: filePath, mtime: stats.mtimeMs };
+            })
+            .sort((a, b) => b.mtime - a.mtime); // Newest first
+
+        // Delete files older than MAX_BACKUP_AGE_DAYS
+        backupFiles.forEach((item, idx) => {
+            const isTooOld = (now - item.mtime) > maxAgeMs;
+            const isBeyondMaxCount = idx >= MAX_BACKUP_COUNT;
+
+            if (isTooOld || isBeyondMaxCount) {
+                try {
+                    fs.unlinkSync(item.path);
+                    console.log(`[Backup Service] 🗑️ Cleaned up old backup: ${item.name}`);
+                } catch (_) {}
             }
         });
     } catch (err) {
-        console.warn('[Backup Service] Backup rotation error:', err);
+        console.warn('[Backup Service] Backup rotation warning:', err.message);
     }
 }
 
@@ -119,20 +132,33 @@ function listBackups() {
 }
 
 /**
- * تشغيل المجدول التلقائي كل 24 ساعة
+ * تشغيل المجدول التلقائي كل 24 ساعة مع فحص فوري عند الإقلاع
  */
 function startDailyBackupScheduler(dbInstance) {
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-    // Initial check and backup if none today
+    
+    // Initial boot backup check (within 3 seconds of server start)
     setTimeout(() => {
-        createBackup(dbInstance);
-    }, 10000); // 10 seconds after boot
+        try {
+            const backups = listBackups();
+            const now = Date.now();
+            const hasRecentBackup = backups.length > 0 && (now - new Date(backups[0].createdAt).getTime() < 12 * 60 * 60 * 1000);
+            if (!hasRecentBackup) {
+                console.log('[Backup Service] 🚀 Creating initial startup backup...');
+                createBackup(dbInstance, 'boot');
+            } else {
+                console.log('[Backup Service] ℹ️ Recent backup exists, skipping boot snapshot.');
+            }
+        } catch (e) {
+            console.warn('[Backup Service] Boot backup warning:', e.message);
+        }
+    }, 3000);
 
     setInterval(() => {
-        createBackup(dbInstance);
+        createBackup(dbInstance, 'daily');
     }, TWENTY_FOUR_HOURS);
 
-    console.log('[Backup Service] ⏰ Automated 24-hour backup schedule activated.');
+    console.log('[Backup Service] ⏰ Automated 24-hour backup schedule active (Retention: 30 days).');
 }
 
 module.exports = {

@@ -56,7 +56,8 @@ const STRICT_ADMIN_ACTIONS = new Set([
     'addUser', 'deleteUser', 'resetUserPassword',
     'fixUsersSheetHeaders', 'fixMissingSheetHeaders', 'initializeSheets',
     'fixClinicSheetHeaders', 'mfaClearUser', 'mfaClearCorruptSecrets',
-    'createDatabaseBackup', 'listDatabaseBackups'
+    'createDatabaseBackup', 'listDatabaseBackups',
+    'getArchiveStatus', 'executeDataArchiving', 'queryArchivedRecords'
 ]);
 
 const WRITE_ACTION_PREFIXES = ['save', 'add', 'update', 'delete', 'append', 'insert', 'upload', 'create', 'remove', 'reset', 'fix', 'mfaClear'];

@@ -1,5 +1,6 @@
 /**
  * إعدادات النماذج: Form_Sites / Form_Places / Form_Departments / Form_SafetyTeam
+ * مزود بحماية التكامل المرجعي وقفل الحذف للمواقع والأماكن المرتبطة بسجلات سابقة
  */
 'use strict';
 
@@ -92,6 +93,67 @@ function validateSitesNoDuplicates(sites) {
     return { valid: true };
 }
 
+/**
+ * فحص سلامة العلاقات واستخدام الموقع أو المكان في السجلات التاريخية
+ */
+function checkLocationUsageInDatabase(db, { siteId, siteName, placeId, placeName }) {
+    let totalCount = 0;
+    const modules = [];
+
+    const safeSiteId = siteId ? String(siteId).trim() : '';
+    const safeSiteName = siteName ? String(siteName).trim() : '';
+    const safePlaceId = placeId ? String(placeId).trim() : '';
+    const safePlaceName = placeName ? String(placeName).trim() : '';
+
+    function checkTable(countSql, params, moduleLabel) {
+        try {
+            const row = db.get(countSql, params);
+            const count = row ? (row.c || row.count || 0) : 0;
+            if (count > 0) {
+                totalCount += count;
+                modules.push(`${moduleLabel} (${count})`);
+            }
+        } catch (_) {}
+    }
+
+    if (safeSiteId || safeSiteName) {
+        checkTable(`SELECT COUNT(*) as c FROM "DailyObservations" WHERE "siteId" = ? OR "siteName" = ?`,
+            [safeSiteId, safeSiteName], 'الملاحظات اليومية');
+
+        checkTable(`SELECT COUNT(*) as c FROM "PTW" WHERE "siteId" = ? OR "siteName" = ?`,
+            [safeSiteId, safeSiteName], 'تصاريح العمل');
+
+        checkTable(`SELECT COUNT(*) as c FROM "Violations" WHERE "violationLocationId" = ? OR "violationLocation" = ?`,
+            [safeSiteId, safeSiteName], 'سجل المخالفات');
+
+        checkTable(`SELECT COUNT(*) as c FROM "GateVisitors" WHERE "Target Site" = ?`,
+            [safeSiteName || safeSiteId], 'زوار البوابة');
+
+        checkTable(`SELECT COUNT(*) as c FROM "ClinicVisits" WHERE "siteId" = ?`,
+            [safeSiteId], 'العيادة');
+    }
+
+    if (safePlaceId || safePlaceName) {
+        checkTable(`SELECT COUNT(*) as c FROM "DailyObservations" WHERE "placeId" = ? OR "locationName" = ?`,
+            [safePlaceId, safePlaceName], 'الملاحظات اليومية');
+
+        checkTable(`SELECT COUNT(*) as c FROM "PTW" WHERE "sublocationId" = ? OR "sublocationName" = ?`,
+            [safePlaceId, safePlaceName], 'تصاريح العمل');
+
+        checkTable(`SELECT COUNT(*) as c FROM "Violations" WHERE "violationPlaceId" = ? OR "violationPlace" = ?`,
+            [safePlaceId, safePlaceName], 'سجل المخالفات');
+
+        checkTable(`SELECT COUNT(*) as c FROM "GateVisitors" WHERE "Target Hall / Area" = ?`,
+            [safePlaceName], 'زوار البوابة');
+    }
+
+    return {
+        isUsed: totalCount > 0,
+        totalCount,
+        modules: modules.join('، ')
+    };
+}
+
 function buildFormattedSites(db) {
     const sites = db.readSheet('Form_Sites') || [];
     const places = db.readSheet('Form_Places') || [];
@@ -161,6 +223,24 @@ const formSettingsHandlers = {
         }
     },
 
+    checkLocationUsage(payload) {
+        try {
+            const db = getDatabase();
+            const usage = checkLocationUsageInDatabase(db, {
+                siteId: payload?.siteId,
+                siteName: payload?.siteName,
+                placeId: payload?.placeId,
+                placeName: payload?.placeName
+            });
+            return {
+                success: true,
+                ...usage
+            };
+        } catch (e) {
+            return { success: false, message: e.message };
+        }
+    },
+
     saveFormSettings(payload, postData, action, actorUserData) {
         const data = payload?.data || payload || postData?.data || postData || {};
         const userData = data.userData || data.user || actorUserData || {};
@@ -190,6 +270,8 @@ const formSettingsHandlers = {
         const nowIso = new Date().toISOString();
         const actorName = String(userData.name || userData.email || 'System').trim() || 'System';
 
+        const existingSites = db.readSheet('Form_Sites') || [];
+        const existingPlaces = db.readSheet('Form_Places') || [];
         const existingDepartments = db.readSheet('Form_Departments') || [];
         const existingSafetyTeam = db.readSheet('Form_SafetyTeam') || [];
 
@@ -232,6 +314,40 @@ const formSettingsHandlers = {
                 });
             });
         });
+
+        // 🛡️ قفل الحذف للمواقع المرتبطة بسجلات سابقة
+        const newSiteIds = new Set(sitesToSave.map(s => String(s.id).trim()));
+        for (const exSite of existingSites) {
+            const sId = String(exSite.id || '').trim();
+            if (sId && !newSiteIds.has(sId)) {
+                const usage = checkLocationUsageInDatabase(db, { siteId: sId, siteName: exSite.name });
+                if (usage.isUsed) {
+                    return {
+                        success: false,
+                        message: `قفل الحذف: لا يمكن حذف الموقع «${exSite.name || sId}» لوجود ${usage.totalCount} سجل مرتبط به في (${usage.modules}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`,
+                        errorCode: 'REFERENTIAL_INTEGRITY_LOCKED',
+                        details: usage
+                    };
+                }
+            }
+        }
+
+        // 🛡️ قفل الحذف للأماكن الفرعية المرتبطة بسجلات سابقة
+        const newPlaceIds = new Set(placesToSave.map(p => String(p.id).trim()));
+        for (const exPlace of existingPlaces) {
+            const pId = String(exPlace.id || '').trim();
+            if (pId && !newPlaceIds.has(pId)) {
+                const usage = checkLocationUsageInDatabase(db, { placeId: pId, placeName: exPlace.name });
+                if (usage.isUsed) {
+                    return {
+                        success: false,
+                        message: `قفل الحذف: لا يمكن حذف المكان الفرعي «${exPlace.name || pId}» لوجود ${usage.totalCount} سجل مرتبط به في (${usage.modules}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`,
+                        errorCode: 'REFERENTIAL_INTEGRITY_LOCKED',
+                        details: usage
+                    };
+                }
+            }
+        }
 
         db.saveToSheet('Form_Sites', sitesToSave);
         db.saveToSheet('Form_Places', placesToSave);
@@ -351,6 +467,7 @@ function buildPublicFormDepartments(db) {
 
 module.exports = {
     ...formSettingsHandlers,
+    checkLocationUsageInDatabase,
     buildFormattedSites,
     buildPublicFormSafetyMembers,
     buildPublicFormDepartments

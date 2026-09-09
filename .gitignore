@@ -46,6 +46,10 @@ yarn-error.log*
 *.db
 !*.db.gz
 backend-sql/backups/
+**/data/backups/
+scratch/
+Frontend/dist/backend-sql/
+Frontend/dist/api/
 **/clinic_hse.rebuilt.db
 **/dist/data/sql/*.db
 **/dist/data/sql/*.db.gz

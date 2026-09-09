@@ -8,11 +8,10 @@ var log=function(){try{window.Utils&&typeof window.Utils.safeLog=="function"&&wi
                         <div class="space-y-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    \u0631\u0627\u0628\u0637 \u0646\u0634\u0631 Google Apps Script (Web App)
+                                    \u0631\u0627\u0628\u0637 \u0645\u062D\u0631\u0643 \u0627\u0644\u0628\u0627\u0643 \u0625\u0646\u062F SQL
                                 </label>
-                                <input id="login-sync-script-url" type="url" class="form-input" dir="ltr"
-                                    placeholder="https://script.google.com/macros/s/XXXX/exec" autocomplete="off">
-                                <p class="text-xs text-gray-500 mt-2">\u0627\u0644\u0635\u0642 \u0631\u0627\u0628\u0637 \u0627\u0644\u0646\u0634\u0631 \u0645\u0646 \u0645\u062D\u0631\u0631 Apps Script (\u0646\u0634\u0631 \u2192 \u062A\u0637\u0628\u064A\u0642 \u0648\u064A\u0628) \u0648\u064A\u062C\u0628 \u0623\u0646 \u064A\u0646\u062A\u0647\u064A \u0628\u0640 <b>/exec</b>.</p>
+                                <input type="url" id="login-sync-script-url" class="form-input w-full ltr-input text-xs" placeholder="https://www.safety-icapp.com/api/exec">
+                                <p class="text-xs text-gray-500 mt-2">\u0631\u0627\u0628\u0637 \u0627\u0644\u0628\u0627\u0643 \u0625\u0646\u062F \u0627\u0644\u062E\u0627\u0635 \u0628\u0645\u062D\u0631\u0643 SQL \u0648\u064A\u0646\u062A\u0647\u064A \u0628\u0640 <b>/exec</b>.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">

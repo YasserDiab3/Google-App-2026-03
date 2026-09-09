@@ -872,6 +872,76 @@ const moduleHandlers = {
         return { success: true, message: 'تم تسجيل المخالفة', data };
     },
 
+    'getViolationTypes': function(payload, postData, action) {
+        const db = getDatabase();
+        const types = db.readSheet('ViolationTypes') || [];
+        return { success: true, data: types, count: types.length };
+    },
+
+    'getAllViolationTypes': function(payload, postData, action) {
+        const db = getDatabase();
+        const types = db.readSheet('ViolationTypes') || [];
+        return { success: true, data: types, count: types.length };
+    },
+
+    'saveViolationTypes': function(payload, postData, action, actorUserData) {
+        const data = payload?.data || payload || postData?.data || postData || {};
+        const rawTypes = data.violationTypes || data.types || data.data || payload?.violationTypes || [];
+        const violationTypes = Array.isArray(rawTypes) ? rawTypes : (typeof rawTypes === 'string' ? JSON.parse(rawTypes || '[]') : []);
+
+        if (!Array.isArray(violationTypes)) {
+            return { success: false, message: 'بيانات أنواع المخالفات غير صحيحة' };
+        }
+
+        const db = getDatabase();
+        const existingRows = db.readSheet('ViolationTypes') || [];
+
+        // Protection: Don't wipe everything if sending empty list while records exist
+        if (violationTypes.length === 0 && existingRows.length > 0) {
+            return {
+                success: false,
+                message: 'تم رفض الحفظ: قائمة الأنواع فارغة بينما توجد أنواع مسجلة.'
+            };
+        }
+
+        const snapshotIds = new Set();
+        violationTypes.forEach(t => {
+            if (t && t.id) snapshotIds.add(String(t.id).trim());
+        });
+
+        // Delete removed rows
+        existingRows.forEach(row => {
+            const rid = row && row.id ? String(row.id).trim() : '';
+            if (rid && !snapshotIds.has(rid)) {
+                db.deleteRows('ViolationTypes', 'id', rid);
+            }
+        });
+
+        const nowIso = new Date().toISOString();
+        violationTypes.forEach((type, idx) => {
+            if (!type) return;
+            const id = String(type.id || '').trim() || `VTYPE_${Date.now()}_${idx}`;
+            const row = {
+                id,
+                name: String(type.name || type.label || '').trim(),
+                description: String(type.description || '').trim(),
+                fineAmount: Number(type.fineAmount ?? type.defaultFineAmount ?? 0) || 0,
+                isDefault: type.isDefault === true || type.isDefault === 'true' || type.isDefault === '1' ? '1' : '0',
+                order: typeof type.order === 'number' ? type.order : (idx + 1),
+                updatedAt: type.updatedAt || nowIso,
+                createdAt: type.createdAt || nowIso
+            };
+            const found = db.findRow('ViolationTypes', { id });
+            if (found) {
+                db.updateRow('ViolationTypes', 'id', id, row);
+            } else {
+                db.insertRow('ViolationTypes', row);
+            }
+        });
+
+        return { success: true, message: 'تم حفظ أنواع المخالفات بنجاح', count: violationTypes.length };
+    },
+
     'getViolationApprovalSettings': function(payload, postData, action) {
         const db = getDatabase();
         const records = db.readSheet('ViolationApprovalSettings');
@@ -1216,7 +1286,13 @@ const moduleHandlers = {
     'getFormsHubConfig': function(payload, postData, action) {
         const db = getDatabase();
         const sites = db.readSheet('Form_Sites') || [];
-        const activeVisitors = (db.readSheet('GateVisitors') || []).filter(v => !v.exitTime);
+        const activeVisitors = (db.readSheet('GateVisitors') || []).filter(v => {
+            const status = String(v.status || v['Status'] || '').trim().toLowerCase();
+            const exitTime = String(v.exitTime || v['Exit Time'] || '').trim();
+            const isDeparted = status.includes('خروج') || status.includes('departed') || status.includes('exited');
+            const hasExitTime = exitTime !== '' && exitTime !== '0' && exitTime !== '-';
+            return !isDeparted && !hasExitTime;
+        });
 
         return {
             success: true,
@@ -1317,14 +1393,45 @@ const moduleHandlers = {
             annual: {}
         };
 
+        function normalizeObsDate(raw) {
+            if (!raw) return null;
+            const s = String(raw).trim();
+            const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                const y = isoMatch[1];
+                const m = String(isoMatch[2]).padStart(2, '0');
+                const d = String(isoMatch[3]).padStart(2, '0');
+                return { iso: `${y}-${m}-${d}`, time: new Date(`${y}-${m}-${d}T12:00:00Z`).getTime() };
+            }
+            const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+            if (slashMatch) {
+                let m = parseInt(slashMatch[1], 10);
+                let d = parseInt(slashMatch[2], 10);
+                let y = parseInt(slashMatch[3], 10);
+                if (y < 100) y = 2000 + y;
+                if (m > 12 && d <= 12) { const tmp = m; m = d; d = tmp; }
+                const mStr = String(m).padStart(2, '0');
+                const dStr = String(d).padStart(2, '0');
+                return { iso: `${y}-${mStr}-${dStr}`, time: new Date(`${y}-${mStr}-${dStr}T12:00:00Z`).getTime() };
+            }
+            const dt = new Date(s);
+            if (!isNaN(dt.getTime())) {
+                const y = dt.getFullYear();
+                const m = String(dt.getMonth() + 1).padStart(2, '0');
+                const d = String(dt.getDate()).padStart(2, '0');
+                return { iso: `${y}-${m}-${d}`, time: dt.getTime() };
+            }
+            return null;
+        }
+
         for (let i = 0; i < rows.length; i++) {
             const r = rows[i];
             if (!r) continue;
 
-            const dateStr = String(r.date || r.createdAt || '').trim();
-            const dtClean = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr.split(' ')[0];
-            const dObj = dtClean ? new Date(dtClean) : null;
-            const rowTime = dObj && !isNaN(dObj.getTime()) ? dObj.getTime() : 0;
+            const normDate = normalizeObsDate(r.createdAt) || normalizeObsDate(r.date);
+            const dtClean = normDate ? normDate.iso : todayStr;
+            const rowTime = normDate ? normDate.time : now.getTime();
+            const dObj = normDate ? new Date(normDate.time) : now;
 
             const st = String(r.status || 'مفتوح').trim();
             const rk = String(r.riskLevel || r.risk || 'متوسط').trim();
@@ -1355,8 +1462,8 @@ const moduleHandlers = {
             const isLow = !isHigh && !isMedium;
             const rkKey = isHigh ? 'high' : (isMedium ? 'medium' : 'low');
 
-            const isThisWeek = dtClean >= sevenDaysStr;
-            const isThisMonth = dtClean.indexOf(thisMonthStr) === 0;
+            const isThisWeek = rowTime >= w1Start && rowTime <= (now.getTime() + (24 * 3600 * 1000));
+            const isThisMonth = dtClean.startsWith(thisMonthStr);
 
             // Trend
             if (rowTime >= w1Start) {
@@ -2178,6 +2285,37 @@ const moduleHandlers = {
             injuries: allInjuries,
             count: allInjuries.length,
             total: allInjuries.length,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'deleteInjury': function(payload, postData, action, actorUserData) {
+        const injuryId = payload?.injuryId || postData?.injuryId || payload?.id || postData?.id || payload?.data?.injuryId || payload?.data?.id;
+        if (!injuryId) {
+            return { success: false, message: 'معرف الإصابة مطلوب', errorCode: 'INJURY_ID_REQUIRED' };
+        }
+        const db = getDatabase();
+        let deletedCount = 0;
+        deletedCount += db.deleteRow('Injuries', 'id', injuryId);
+        deletedCount += db.deleteRow('ClinicContractorInjuries', 'id', injuryId);
+        return {
+            success: true,
+            message: deletedCount > 0 ? 'تم حذف سجل الإصابة بنجاح' : 'السجل غير موجود أو تم حذفه سابقاً',
+            deleted: deletedCount > 0,
+            deletedCount: deletedCount,
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'getAllTrainings': function(payload, postData, action) {
+        const db = getDatabase();
+        const records = db.readSheet('Training');
+        return {
+            success: true,
+            data: records,
+            trainings: records,
+            count: records.length,
+            total: records.length,
             timestamp: new Date().toISOString()
         };
     }

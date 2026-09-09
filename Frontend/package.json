@@ -1,5 +1,6 @@
 {
-  "name": "hse-frontend",
+  "name": "hse-frontend-v1.0.1735",
+  "version": "1.0.1735",
   "private": true,
   "description": "بناء إنتاجي: تصغير JS وإزالة console/debugger بدون source maps",
   "scripts": {
