@@ -60,6 +60,18 @@
         <script>
             (function () {
                 try {
+                    if (window.history && window.history.replaceState) {
+                        var u = new URL(window.location.href);
+                        if (u.searchParams.has("_v") || u.searchParams.has("_bust") || u.searchParams.has("_force")) {
+                            u.searchParams.delete("_v");
+                            u.searchParams.delete("_bust");
+                            u.searchParams.delete("_force");
+                            var cleanUrl = u.pathname + (u.search && u.search !== "?" ? u.search : "") + u.hash;
+                            window.history.replaceState(null, "", cleanUrl);
+                        }
+                    }
+                } catch (e) {}
+                try {
                     var q = new URLSearchParams(window.location.search || "");
                     if (q.get("debug") === "1" || (typeof localStorage !== "undefined" && localStorage.getItem("HSE_DEBUG_CONSOLE") === "1")) {
                         window.__HSE_DEBUG_CONSOLE = true;
