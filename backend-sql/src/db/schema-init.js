@@ -44,7 +44,7 @@ function initSchema(db = getDatabase()) {
     // إضافة فهارس فريدة تمنع تكرار المعرفات في جدول DailyObservations
     try {
         db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "idx_DailyObservations_id_unique" ON "DailyObservations" ("id") WHERE "id" IS NOT NULL AND "id" != '';`);
-        db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "idx_DailyObservations_iso_unique" ON "DailyObservations" ("isoCode") WHERE "isoCode" IS NOT NULL AND "isoCode" != '';`);
+        db.exec(`CREATE INDEX IF NOT EXISTS "idx_DailyObservations_iso" ON "DailyObservations" ("isoCode");`);
     } catch (_) {}
 
     // دفع DDL (CREATE TABLE/INDEX) إلى Turso إن كان المحرك embedded replica

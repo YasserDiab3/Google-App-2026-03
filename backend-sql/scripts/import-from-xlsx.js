@@ -110,7 +110,7 @@ function replaceSheetExact(db, sheetName, rows) {
 
     const colNames = cols.map((c) => `"${c}"`).join(', ');
     const placeholders = cols.map(() => '?').join(', ');
-    const insertSql = `INSERT INTO ${table} (${colNames}) VALUES (${placeholders})`;
+    const insertSql = `INSERT OR REPLACE INTO ${table} (${colNames}) VALUES (${placeholders})`;
     const raw = db.raw;
     const stmt = raw && typeof raw.prepare === 'function'
         ? raw.prepare(insertSql)
