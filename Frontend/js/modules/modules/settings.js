@@ -817,75 +817,167 @@ const Settings = {
 
             <!-- Tab Content: التكامل والمزامنة -->
             <div class="tab-content" id="tab-integration">
+                <style>
+                    .integration-card {
+                        background: #ffffff;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
+                        overflow: hidden;
+                        margin-bottom: 24px;
+                    }
+                    .integration-card-header {
+                        padding: 18px 24px;
+                        background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
+                        border-bottom: 1px solid #e2e8f0;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                    }
+                    .integration-card-body {
+                        padding: 24px;
+                    }
+                    .integration-action-card {
+                        background: #ffffff;
+                        border-radius: 14px;
+                        padding: 22px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                        transition: all 0.25s ease;
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    .integration-action-card:hover {
+                        transform: translateY(-3px);
+                        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+                    }
+                    .custom-switch-label {
+                        position: relative;
+                        display: inline-block;
+                        width: 52px;
+                        height: 28px;
+                        margin: 0;
+                        cursor: pointer;
+                    }
+                    .custom-switch-label input {
+                        opacity: 0;
+                        width: 0;
+                        height: 0;
+                        position: absolute;
+                    }
+                    .custom-switch-slider {
+                        position: absolute;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background-color: #cbd5e1;
+                        border-radius: 34px;
+                        transition: 0.3s;
+                    }
+                    .custom-switch-slider:before {
+                        position: absolute;
+                        content: "";
+                        height: 22px;
+                        width: 22px;
+                        left: 3px;
+                        bottom: 3px;
+                        background-color: white;
+                        border-radius: 50%;
+                        transition: 0.3s;
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    }
+                    .custom-switch-label input:checked + .custom-switch-slider {
+                        background-color: #2563eb;
+                    }
+                    .custom-switch-label input:checked + .custom-switch-slider:before {
+                        transform: translateX(24px);
+                    }
+                    [data-theme="dark"] .integration-card {
+                        background: #1e293b;
+                        border-color: #334155;
+                    }
+                    [data-theme="dark"] .integration-card-header {
+                        background: #0f172a;
+                        border-color: #334155;
+                    }
+                </style>
+
                 <div class="settings-group mt-6">
-                    <div class="settings-group-header">
-                        <h2 class="settings-group-title">
-                            <i class="fas fa-cloud text-emerald-600 ml-2"></i>
+                    <div class="settings-group-header mb-6">
+                        <h2 class="settings-group-title text-xl font-black text-slate-800 flex items-center gap-2">
+                            <i class="fas fa-cloud text-emerald-600"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات الاتصال بمحرك الباك إند المباشر وقاعدة بيانات SQL فائقة السرعة</p>
+                        <p class="settings-group-subtitle text-sm text-slate-500 mt-1">إعدادات الاتصال بمحرك الباك إند المباشر وإدارة قاعدة بيانات SQL المدمجة</p>
                     </div>
+
                     <div class="settings-group-content space-y-6">
                         <!-- بطاقة 1: الخادم والمزامنة المباشرة -->
-                        <div class="content-card rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
-                            <div class="card-header bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-blue-100/80 text-blue-700 flex items-center justify-center shadow-xs">
-                                        <i class="fas fa-server text-base"></i>
+                        <div class="integration-card">
+                            <div class="integration-card-header">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                        <i class="fas fa-server"></i>
                                     </div>
                                     <div>
-                                        <h2 class="text-sm font-bold text-slate-800 m-0">الخادم والمزامنة المباشرة</h2>
-                                        <p class="text-xs text-slate-500 m-0">إعدادات الاتصال بمحرك وخادم SQL المدمج</p>
+                                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">الخادم والمزامنة المباشرة</h2>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0;">إعدادات الاتصال بمحرك وخادم SQL المدمج</p>
                                     </div>
                                 </div>
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">
+                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
                                     محرك SQL نشط 100%
                                 </span>
                             </div>
-                            <div class="card-body p-6">
-                                <form id="google-settings-form" class="space-y-5">
-                                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-2xs">
-                                                <i class="fas fa-bolt text-sm"></i>
+
+                            <div class="integration-card-body">
+                                <form id="google-settings-form" style="display: flex; flex-direction: column; gap: 20px;">
+                                    <!-- خيار التفعيل -->
+                                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
+                                        <div style="display: flex; align-items: center; gap: 14px;">
+                                            <div style="width: 36px; height: 36px; border-radius: 10px; background: #ffffff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #2563eb;">
+                                                <i class="fas fa-bolt"></i>
                                             </div>
                                             <div>
-                                                <label for="google-apps-script-enabled" class="text-sm font-bold text-slate-800 cursor-pointer block">تفعيل الاتصال بمحرك وخادم SQL المباشر</label>
-                                                <p class="text-xs text-slate-500 m-0">تمكين المعالجة الفورية لكافة الطلبات والنماذج عبر مسار الخادم</p>
+                                                <label for="google-apps-script-enabled" style="font-size: 0.95rem; font-weight: 700; color: #1e293b; cursor: pointer; display: block; margin-bottom: 2px;">تفعيل الاتصال بمحرك وخادم SQL المباشر</label>
+                                                <span style="font-size: 0.8rem; color: #64748b;">تمكين المعالجة الفورية لكافة الطلبات والنماذج عبر مسار الخادم الداخلي</span>
                                             </div>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                                            <input type="checkbox" id="google-apps-script-enabled" class="sr-only peer" ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        <label class="custom-switch-label">
+                                            <input type="checkbox" id="google-apps-script-enabled" ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
+                                            <span class="custom-switch-slider"></span>
                                         </label>
                                     </div>
 
+                                    <!-- حقل الـ API -->
                                     <div>
-                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                                            <i class="fas fa-link text-blue-600 ml-1.5"></i>
+                                        <label style="display: block; font-size: 0.85rem; font-weight: 800; color: #334155; margin-bottom: 8px;">
+                                            <i class="fas fa-link" style="color: #2563eb; margin-left: 6px;"></i>
                                             رابط API للخادم (SQL Backend Endpoint)
                                         </label>
-                                        <div class="relative rounded-xl shadow-2xs">
-                                            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
-                                                <i class="fas fa-terminal text-sm"></i>
-                                            </div>
-                                            <input type="text" id="google-apps-script-url" class="form-input pr-10 font-mono text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+                                        <div style="position: relative; display: flex; align-items: center;">
+                                            <input type="text" id="google-apps-script-url" class="form-input"
                                                 value="${AppState.googleConfig.appsScript.scriptUrl || '/api/exec'}"
-                                                placeholder="/api/exec">
+                                                placeholder="/api/exec"
+                                                style="width: 100%; padding: 12px 16px 12px 42px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.95rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; direction: ltr; text-align: left;">
+                                            <span style="position: absolute; left: 14px; color: #94a3b8; font-size: 1rem; pointer-events: none;">
+                                                <i class="fas fa-terminal"></i>
+                                            </span>
                                         </div>
-                                        <p class="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
-                                            <i class="fas fa-shield-halved text-emerald-600"></i>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 6px;">
+                                            <i class="fas fa-shield-halved" style="color: #059669;"></i>
                                             يتم حفظ ومعالجة جميع السجلات (144 جدولاً) داخلياً عبر محرك قاعدة بيانات SQL فائق السرعة والاستقرار.
                                         </p>
                                     </div>
 
-                                    <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                                        <button type="button" id="test-connection-btn" class="btn-secondary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition shadow-2xs">
-                                            <i class="fas fa-plug text-slate-600"></i>
+                                    <!-- أزرار الإجراءات المتجاورة -->
+                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
+                                        <button type="button" id="test-connection-btn" class="btn-secondary" style="padding: 10px 22px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                                            <i class="fas fa-plug" style="color: #64748b;"></i>
                                             <span>اختبار الاتصال</span>
                                         </button>
-                                        <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:shadow transition">
+                                        <button type="submit" class="btn-primary" style="padding: 10px 26px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);">
                                             <i class="fas fa-save"></i>
                                             <span>حفظ الإعدادات</span>
                                         </button>
@@ -893,69 +985,72 @@ const Settings = {
                                 </form>
                             </div>
                         </div>
-                        
+
                         <!-- بطاقة 2: أدوات المزامنة والإعداد الميداني -->
-                        <div class="content-card rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
-                            <div class="card-header bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-9 h-9 rounded-xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center shadow-xs">
-                                        <i class="fas fa-arrows-rotate text-base"></i>
+                        <div class="integration-card">
+                            <div class="integration-card-header">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                        <i class="fas fa-arrows-rotate"></i>
                                     </div>
                                     <div>
-                                        <h2 class="text-sm font-bold text-slate-800 m-0">المزامنة والإعداد الميداني</h2>
-                                        <p class="text-xs text-slate-500 m-0">أدوات إدارة الجداول وتحديث السجلات والبيانات</p>
+                                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">المزامنة والإعداد الميداني</h2>
+                                        <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0;">أدوات إدارة الجداول وتحديث السجلات والبيانات</p>
                                     </div>
                                 </div>
-                                <span class="text-xs font-medium text-slate-500">144 جدولاً مسجلاً</span>
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 4px 12px; border-radius: 8px;">
+                                    144 جدولاً مسجلاً
+                                </span>
                             </div>
-                            <div class="card-body p-6 space-y-6">
-                                <div class="p-3.5 rounded-xl bg-blue-50/80 border border-blue-100 text-xs text-blue-900 flex items-start gap-2.5">
-                                    <i class="fas fa-circle-info text-blue-600 text-sm mt-0.5 shrink-0"></i>
+
+                            <div class="integration-card-body" style="display: flex; flex-direction: column; gap: 20px;">
+                                <div style="padding: 14px 18px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; color: #1e40af; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 12px; line-height: 1.6;">
+                                    <i class="fas fa-circle-info" style="color: #2563eb; font-size: 1.15rem; margin-top: 2px; flex-shrink: 0;"></i>
                                     <span>تتيح لك هذه الأدوات تهيئة هيكل الجداول في قاعدة بيانات SQL، وتحديث الذاكرة المؤقتة (Cache)، وتثبيت السجلات بين الواجهة والخادم عند الحاجة.</span>
                                 </div>
 
-                                <!-- أزرار متجاورة أنيقة Side-by-Side Grid -->
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <!-- أزرار متجاورة أنيقة Side-by-Side 3 Columns -->
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
                                     <!-- أداة 1: تهيئة الجداول -->
-                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
-                                        <div class="space-y-1.5">
-                                            <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
-                                                <i class="fas fa-magic text-sm"></i>
+                                    <div class="integration-action-card" style="border: 1.5px solid #e9d5ff; background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%);">
+                                        <div style="margin-bottom: 20px;">
+                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #9333ea; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);">
+                                                <i class="fas fa-magic"></i>
                                             </div>
-                                            <h3 class="text-sm font-bold text-slate-800">تهيئة الجداول</h3>
-                                            <p class="text-xs text-slate-500 leading-relaxed">التحقق من إنشاء كافة الجداول والرؤوس الافتراضية تلقائياً.</p>
+                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #581c87; margin-bottom: 6px;">تهيئة الجداول</h3>
+                                            <p style="font-size: 0.825rem; color: #7e22ce; line-height: 1.5; margin: 0;">التحقق من إنشاء كافة الجداول الـ 144 والرؤوس الافتراضية تلقائياً.</p>
                                         </div>
-                                        <button type="button" id="initialize-sheets-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                        <button type="button" id="initialize-sheets-btn" style="width: 100%; padding: 12px 18px; background: #9333ea; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);">
                                             <i class="fas fa-database"></i>
                                             <span>تهيئة الجداول تلقائياً</span>
                                         </button>
                                     </div>
 
                                     <!-- أداة 2: مزامنة وقراءة البيانات -->
-                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
-                                        <div class="space-y-1.5">
-                                            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                                                <i class="fas fa-rotate text-sm"></i>
+                                    <div class="integration-action-card" style="border: 1.5px solid #bfdbfe; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);">
+                                        <div style="margin-bottom: 20px;">
+                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
+                                                <i class="fas fa-rotate"></i>
                                             </div>
-                                            <h3 class="text-sm font-bold text-slate-800">مزامنة البيانات (قراءة)</h3>
-                                            <p class="text-xs text-slate-500 leading-relaxed">تحديث البيانات والكاش وسحب أحدث السجلات من الخادم.</p>
+                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">مزامنة البيانات (قراءة)</h3>
+                                            <p style="font-size: 0.825rem; color: #1d4ed8; line-height: 1.5; margin: 0;">تحديث البيانات والكاش وسحب أحدث السجلات من الخادم فوراً.</p>
                                         </div>
-                                        <button type="button" id="sync-data-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                        <button type="button" id="sync-data-btn" style="width: 100%; padding: 12px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
                                             <i class="fas fa-cloud-arrow-down"></i>
                                             <span>مزامنة البيانات من الخادم</span>
                                         </button>
                                     </div>
 
                                     <!-- أداة 3: حفظ وتثبيت السجلات -->
-                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
-                                        <div class="space-y-1.5">
-                                            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                                                <i class="fas fa-cloud-arrow-up text-sm"></i>
+                                    <div class="integration-action-card" style="border: 1.5px solid #bbf7d0; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);">
+                                        <div style="margin-bottom: 20px;">
+                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);">
+                                                <i class="fas fa-cloud-arrow-up"></i>
                                             </div>
-                                            <h3 class="text-sm font-bold text-slate-800">حفظ البيانات (كتابة)</h3>
-                                            <p class="text-xs text-slate-500 leading-relaxed">تثبيت وتحديث جميع السجلات والتعديلات في قاعدة البيانات.</p>
+                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #14532d; margin-bottom: 6px;">حفظ البيانات (كتابة)</h3>
+                                            <p style="font-size: 0.825rem; color: #15803d; line-height: 1.5; margin: 0;">تثبيت وتحديث جميع السجلات والتعديلات في قاعدة بيانات SQL.</p>
                                         </div>
-                                        <button type="button" id="save-all-data-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                        <button type="button" id="save-all-data-btn" style="width: 100%; padding: 12px 18px; background: #16a34a; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);">
                                             <i class="fas fa-cloud-arrow-up"></i>
                                             <span>حفظ البيانات في الخادم</span>
                                         </button>
