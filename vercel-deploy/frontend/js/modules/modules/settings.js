@@ -89,6 +89,13 @@ const Settings = {
     formSettingsState: null,
     formSettingsEventsBound: false,
 
+    isCurrentUserAdmin() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
+            return Permissions.isCurrentUserAdmin();
+        }
+        return false;
+    },
+
     /** ترجيع مصفوفة تعليمات ما بعد الدخول من إعدادات الشركة (مع تطبيع) */
     getPostLoginItems() {
         const raw = AppState?.companySettings?.postLoginItems;
@@ -829,33 +836,18 @@ const Settings = {
                                         <label class="flex items-center mb-4">
                                             <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
                                                 ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بالخادم الخلفي</span>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بمحرك وخادم SQL المباشر</span>
                                         </label>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-link ml-2"></i>
-                                            رابط API للخادم (مطلوب للمزامنة)
+                                            <i class="fas fa-server ml-2"></i>
+                                            رابط API للخادم (SQL Backend Endpoint)
                                         </label>
-                                        <input type="url" id="google-apps-script-url" class="form-input"
-                                            value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
-                                            placeholder="https://script.google.com/macros/s/XXXX/exec">
-                                    </div>
-                                    <div>
-                                        <label class="flex items-center mb-4">
-                                            <input type="checkbox" id="google-sheets-enabled" class="rounded border-gray-300 text-blue-600"
-                                                ${AppState.googleConfig.sheets.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل مزامنة الجداول (إن يطلبها الخادم)</span>
-                                        </label>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-table ml-2"></i>
-                                            معرف الجدول / المشروع (اختياري)
-                                        </label>
-                                        <input type="text" id="google-sheets-id" class="form-input"
-                                            value="${AppState.googleConfig.sheets.spreadsheetId || ''}"
-                                            placeholder="إن وُجد في إعدادات الخادم">
+                                        <input type="text" id="google-apps-script-url" class="form-input"
+                                            value="${AppState.googleConfig.appsScript.scriptUrl || '/api/exec'}"
+                                            placeholder="/api/exec">
+                                        <p class="text-xs text-gray-500 mt-1">يتم تخزين ومعالجة جميع السجلات والبيانات داخلياً عبر محرك قاعدة بيانات SQL فائق السرعة.</p>
                                     </div>
                                     <div class="flex items-center justify-end gap-4 pt-4 border-t">
                                         <button type="button" id="test-connection-btn" class="btn-secondary">
@@ -2184,7 +2176,7 @@ const Settings = {
         if (statusMsg) statusMsg.textContent = 'جاري فحص السجلات وتحليل فترات الاحتفاظ...';
 
         try {
-            const res = await GoogleIntegration.callAppsScriptRPC('getArchiveStatus', {
+            const res = await GoogleIntegration.sendToAppsScript('getArchiveStatus', {
                 retentionYears,
                 customCutoffDate: customCutoff,
                 actorUserData: AppState?.currentUser || null
@@ -2286,7 +2278,7 @@ const Settings = {
             const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
             const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
 
-            const res = await GoogleIntegration.callAppsScriptRPC('executeDataArchiving', {
+            const res = await GoogleIntegration.sendToAppsScript('executeDataArchiving', {
                 retentionYears,
                 customCutoffDate: customCutoff,
                 selectedModules,
@@ -5804,15 +5796,15 @@ const Settings = {
             const sheetsEnabled = document.getElementById('google-sheets-enabled');
             const sheetsId = document.getElementById('google-sheets-id');
 
-            if (!appsScriptEnabled || !appsScriptUrl || !sheetsEnabled || !sheetsId) {
+            if (!appsScriptEnabled || !appsScriptUrl) {
                 Notification.error('خطأ: لم يتم العثور على حقول النموذج');
                 return;
             }
 
             AppState.googleConfig.appsScript.enabled = appsScriptEnabled.checked;
-            AppState.googleConfig.appsScript.scriptUrl = appsScriptUrl.value.trim();
-            AppState.googleConfig.sheets.enabled = sheetsEnabled.checked;
-            AppState.googleConfig.sheets.spreadsheetId = sheetsId.value.trim();
+            AppState.googleConfig.appsScript.scriptUrl = appsScriptUrl.value.trim() || '/api/exec';
+            AppState.googleConfig.sheets.enabled = sheetsEnabled ? sheetsEnabled.checked : true;
+            AppState.googleConfig.sheets.spreadsheetId = sheetsId ? sheetsId.value.trim() : (AppState.googleConfig.sheets?.spreadsheetId || '');
 
             // حفظ الإعدادات باستخدام window.DataManager
             let saveSuccess = false;

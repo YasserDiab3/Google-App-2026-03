@@ -10,7 +10,7 @@ const { getDatabase } = require('../db/database');
 const { headersMap } = require('../db/headers-schema');
 
 const ADMIN_ROLES = new Set([
-    'admin', 'administrator', 'system_admin', 'system-manager', 'مدير', 'مدير النظام'
+    'admin', 'administrator', 'system_admin', 'system-manager', 'مدير', 'مدير النظام', 'hse_admin', 'hse-admin'
 ]);
 
 /**
@@ -20,8 +20,17 @@ function isUserAdmin(userData) {
     if (!userData) return false;
     const role = String(userData.role || '').trim().toLowerCase();
     const email = String(userData.email || '').trim().toLowerCase();
-    if (ADMIN_ROLES.has(role)) return true;
-    if (email === 'admin' || email.includes('admin@')) return true;
+    if (ADMIN_ROLES.has(role) || ADMIN_ROLES.has(userData.role)) return true;
+    if (userData.isAdmin === true || userData.isAdmin === 'true' || userData.role === 'HSE_Admin' || userData.role === 'admin') return true;
+    if (userData.permissions) {
+        try {
+            const p = typeof userData.permissions === 'string' ? JSON.parse(userData.permissions) : userData.permissions;
+            if (p && (p.admin === true || p.isAdmin === true || p['manage-modules'] === true || p.manage_company_settings === true)) {
+                return true;
+            }
+        } catch (_) {}
+    }
+    if (email === 'admin' || email.includes('admin@') || email.startsWith('admin')) return true;
     return false;
 }
 

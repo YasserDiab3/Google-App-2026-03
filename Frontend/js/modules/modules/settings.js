@@ -89,6 +89,13 @@ const Settings = {
     formSettingsState: null,
     formSettingsEventsBound: false,
 
+    isCurrentUserAdmin() {
+        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
+            return Permissions.isCurrentUserAdmin();
+        }
+        return false;
+    },
+
     /** ترجيع مصفوفة تعليمات ما بعد الدخول من إعدادات الشركة (مع تطبيع) */
     getPostLoginItems() {
         const raw = AppState?.companySettings?.postLoginItems;
@@ -813,76 +820,146 @@ const Settings = {
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
                         <h2 class="settings-group-title">
-                            <i class="fas fa-cloud text-green-600 ml-2"></i>
+                            <i class="fas fa-cloud text-emerald-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle">إعدادات الاتصال بمحرك الباك إند وقاعدة البيانات SQL</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بمحرك الباك إند المباشر وقاعدة بيانات SQL فائقة السرعة</p>
                     </div>
-                    <div class="settings-group-content">
-                        <div class="content-card">
-                            <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>الخادم والمزامنة</h2>
-                            </div>
-                            <div class="card-body">
-                                <form id="google-settings-form" class="space-y-6">
-                                    <div>
-                                        <label class="flex items-center mb-4">
-                                            <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
-                                                ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بمحرك وخادم SQL المباشر</span>
-                                        </label>
+                    <div class="settings-group-content space-y-6">
+                        <!-- بطاقة 1: الخادم والمزامنة المباشرة -->
+                        <div class="content-card rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+                            <div class="card-header bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-blue-100/80 text-blue-700 flex items-center justify-center shadow-xs">
+                                        <i class="fas fa-server text-base"></i>
                                     </div>
                                     <div>
-                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                            <i class="fas fa-server ml-2"></i>
+                                        <h2 class="text-sm font-bold text-slate-800 m-0">الخادم والمزامنة المباشرة</h2>
+                                        <p class="text-xs text-slate-500 m-0">إعدادات الاتصال بمحرك وخادم SQL المدمج</p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    محرك SQL نشط 100%
+                                </span>
+                            </div>
+                            <div class="card-body p-6">
+                                <form id="google-settings-form" class="space-y-5">
+                                    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-blue-600 shadow-2xs">
+                                                <i class="fas fa-bolt text-sm"></i>
+                                            </div>
+                                            <div>
+                                                <label for="google-apps-script-enabled" class="text-sm font-bold text-slate-800 cursor-pointer block">تفعيل الاتصال بمحرك وخادم SQL المباشر</label>
+                                                <p class="text-xs text-slate-500 m-0">تمكين المعالجة الفورية لكافة الطلبات والنماذج عبر مسار الخادم</p>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="checkbox" id="google-apps-script-enabled" class="sr-only peer" ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
+                                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                                            <i class="fas fa-link text-blue-600 ml-1.5"></i>
                                             رابط API للخادم (SQL Backend Endpoint)
                                         </label>
-                                        <input type="text" id="google-apps-script-url" class="form-input"
-                                            value="${AppState.googleConfig.appsScript.scriptUrl || '/api/exec'}"
-                                            placeholder="/api/exec">
-                                        <p class="text-xs text-gray-500 mt-1">يتم تخزين ومعالجة جميع السجلات والبيانات داخلياً عبر محرك قاعدة بيانات SQL فائق السرعة.</p>
+                                        <div class="relative rounded-xl shadow-2xs">
+                                            <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-slate-400">
+                                                <i class="fas fa-terminal text-sm"></i>
+                                            </div>
+                                            <input type="text" id="google-apps-script-url" class="form-input pr-10 font-mono text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+                                                value="${AppState.googleConfig.appsScript.scriptUrl || '/api/exec'}"
+                                                placeholder="/api/exec">
+                                        </div>
+                                        <p class="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+                                            <i class="fas fa-shield-halved text-emerald-600"></i>
+                                            يتم حفظ ومعالجة جميع السجلات (144 جدولاً) داخلياً عبر محرك قاعدة بيانات SQL فائق السرعة والاستقرار.
+                                        </p>
                                     </div>
-                                    <div class="flex items-center justify-end gap-4 pt-4 border-t">
-                                        <button type="button" id="test-connection-btn" class="btn-secondary">
-                                            <i class="fas fa-plug ml-2"></i>
-                                            اختبار الاتصال
+
+                                    <div class="flex flex-wrap items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                                        <button type="button" id="test-connection-btn" class="btn-secondary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-100 transition shadow-2xs">
+                                            <i class="fas fa-plug text-slate-600"></i>
+                                            <span>اختبار الاتصال</span>
                                         </button>
-                                        <button type="submit" class="btn-primary">
-                                            <i class="fas fa-save ml-2"></i>
-                                            حفظ الإعدادات
+                                        <button type="submit" class="btn-primary px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:shadow transition">
+                                            <i class="fas fa-save"></i>
+                                            <span>حفظ الإعدادات</span>
                                         </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
                         
-                        <!-- المزامنة والإعداد -->
-                        <div class="content-card mt-6">
-                            <div class="card-header">
-                                <h2 class="card-title"><i class="fas fa-sync ml-2"></i>المزامنة والإعداد</h2>
+                        <!-- بطاقة 2: أدوات المزامنة والإعداد الميداني -->
+                        <div class="content-card rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+                            <div class="card-header bg-slate-50/70 border-b border-slate-100 px-6 py-4 flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-9 h-9 rounded-xl bg-emerald-100/80 text-emerald-700 flex items-center justify-center shadow-xs">
+                                        <i class="fas fa-arrows-rotate text-base"></i>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-sm font-bold text-slate-800 m-0">المزامنة والإعداد الميداني</h2>
+                                        <p class="text-xs text-slate-500 m-0">أدوات إدارة الجداول وتحديث السجلات والبيانات</p>
+                                    </div>
+                                </div>
+                                <span class="text-xs font-medium text-slate-500">144 جدولاً مسجلاً</span>
                             </div>
-                            <div class="card-body space-y-4">
-                                <div>
-                                    <p class="text-sm text-gray-600 mb-4">
-                                        <i class="fas fa-info-circle ml-2"></i>
-                                        سيتم إنشاء جميع الأوراق المطلوبة (Users, Incidents, NearMiss, PTW, Training, Clinic, Fire Equipment, PPE, ViolationTypes, Violations, Contractors) تلقائياً مع الرؤوس الافتراضية
-                                    </p>
-                                    <button id="initialize-sheets-btn" class="btn-primary w-full">
-                                        <i class="fas fa-magic ml-2"></i>
-                                        إنشاء جميع الأوراق تلقائياً
-                                    </button>
+                            <div class="card-body p-6 space-y-6">
+                                <div class="p-3.5 rounded-xl bg-blue-50/80 border border-blue-100 text-xs text-blue-900 flex items-start gap-2.5">
+                                    <i class="fas fa-circle-info text-blue-600 text-sm mt-0.5 shrink-0"></i>
+                                    <span>تتيح لك هذه الأدوات تهيئة هيكل الجداول في قاعدة بيانات SQL، وتحديث الذاكرة المؤقتة (Cache)، وتثبيت السجلات بين الواجهة والخادم عند الحاجة.</span>
                                 </div>
-                                <div class="border-t pt-4">
-                                    <button id="sync-data-btn" class="btn-primary w-full">
-                                        <i class="fas fa-sync ml-2"></i>
-                                        مزامنة البيانات من الخادم (قراءة)
-                                    </button>
-                                </div>
-                                <div class="border-t pt-4">
-                                    <button id="save-all-data-btn" class="btn-success w-full">
-                                        <i class="fas fa-cloud-upload-alt ml-2"></i>
-                                        حفظ جميع البيانات في الخادم (كتابة)
-                                    </button>
+
+                                <!-- أزرار متجاورة أنيقة Side-by-Side Grid -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <!-- أداة 1: تهيئة الجداول -->
+                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-indigo-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                                        <div class="space-y-1.5">
+                                            <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                                                <i class="fas fa-magic text-sm"></i>
+                                            </div>
+                                            <h3 class="text-sm font-bold text-slate-800">تهيئة الجداول</h3>
+                                            <p class="text-xs text-slate-500 leading-relaxed">التحقق من إنشاء كافة الجداول والرؤوس الافتراضية تلقائياً.</p>
+                                        </div>
+                                        <button type="button" id="initialize-sheets-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                            <i class="fas fa-database"></i>
+                                            <span>تهيئة الجداول تلقائياً</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- أداة 2: مزامنة وقراءة البيانات -->
+                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-blue-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                                        <div class="space-y-1.5">
+                                            <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                                                <i class="fas fa-rotate text-sm"></i>
+                                            </div>
+                                            <h3 class="text-sm font-bold text-slate-800">مزامنة البيانات (قراءة)</h3>
+                                            <p class="text-xs text-slate-500 leading-relaxed">تحديث البيانات والكاش وسحب أحدث السجلات من الخادم.</p>
+                                        </div>
+                                        <button type="button" id="sync-data-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                            <i class="fas fa-cloud-arrow-down"></i>
+                                            <span>مزامنة البيانات من الخادم</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- أداة 3: حفظ وتثبيت السجلات -->
+                                    <div class="p-4 rounded-xl border border-slate-200/80 bg-slate-50/50 hover:bg-white hover:border-emerald-200 hover:shadow-xs transition flex flex-col justify-between space-y-4">
+                                        <div class="space-y-1.5">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                                                <i class="fas fa-cloud-arrow-up text-sm"></i>
+                                            </div>
+                                            <h3 class="text-sm font-bold text-slate-800">حفظ البيانات (كتابة)</h3>
+                                            <p class="text-xs text-slate-500 leading-relaxed">تثبيت وتحديث جميع السجلات والتعديلات في قاعدة البيانات.</p>
+                                        </div>
+                                        <button type="button" id="save-all-data-btn" class="w-full px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-2xs hover:shadow-sm">
+                                            <i class="fas fa-cloud-arrow-up"></i>
+                                            <span>حفظ البيانات في الخادم</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2169,7 +2246,7 @@ const Settings = {
         if (statusMsg) statusMsg.textContent = 'جاري فحص السجلات وتحليل فترات الاحتفاظ...';
 
         try {
-            const res = await GoogleIntegration.callAppsScriptRPC('getArchiveStatus', {
+            const res = await GoogleIntegration.sendToAppsScript('getArchiveStatus', {
                 retentionYears,
                 customCutoffDate: customCutoff,
                 actorUserData: AppState?.currentUser || null
@@ -2271,7 +2348,7 @@ const Settings = {
             const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
             const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
 
-            const res = await GoogleIntegration.callAppsScriptRPC('executeDataArchiving', {
+            const res = await GoogleIntegration.sendToAppsScript('executeDataArchiving', {
                 retentionYears,
                 customCutoffDate: customCutoff,
                 selectedModules,

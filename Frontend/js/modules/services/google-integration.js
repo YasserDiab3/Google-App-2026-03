@@ -1720,6 +1720,10 @@ const GoogleIntegration = {
         return this._addToQueue(action, data, retryCount);
     },
 
+    async callAppsScriptRPC(action, data) {
+        return this.sendToAppsScript(action, data);
+    },
+
     _isTransientRpcError(errorMessage = '') {
         const msg = String(errorMessage || '').toLowerCase();
         return msg.includes('timeout') ||
