@@ -16,7 +16,9 @@ def sync_directories():
     # Define mapping: source relative path -> destination full path
     mapping = {
         'Backend': os.path.join(deploy_dir, 'backend'),
-        'Frontend': os.path.join(deploy_dir, 'frontend')
+        'Frontend': os.path.join(deploy_dir, 'frontend'),
+        'api': os.path.join(deploy_dir, 'api'),
+        'backend-sql/src': os.path.join(deploy_dir, 'backend-sql', 'src')
     }
 
     # Ensure vercel-deploy directory exists
@@ -57,13 +59,16 @@ def sync_directories():
         'public-near-miss.html',
         'public-fire-inspection.html',
         'public-daily-safety.html',
+        'public-tbt-record.html',
         'gate-visitor-entry.html',
         'manifest-hub.json',
         'manifest-observation.json',
         'manifest-near-miss.json',
         'manifest-fire-inspection.json',
         'manifest-daily-safety.json',
-        'manifest-visitor.json'
+        'manifest-tbt.json',
+        'manifest-visitor.json',
+        'version.json'
     ]
     for pfile in public_files:
         pub_src = os.path.join(base_dir, 'Frontend', pfile)
@@ -77,6 +82,27 @@ def sync_directories():
             ]:
                 safe_copy(pub_src, target)
             print(f"Successfully synced {pfile} across all deploy targets.")
+
+    # مزامنة مجلدات النماذج مع index.html الداخلي ونسخة version.json
+    alias_folders = {
+        'public-daily-safety.html': ['daily-safety', 'public-daily-safety'],
+        'public-tbt-record.html': ['tbt', 'public-tbt-record'],
+        'public-observation.html': ['observation', 'public-observation'],
+        'public-near-miss.html': ['near-miss', 'public-near-miss'],
+        'gate-visitor-entry.html': ['gate', 'visitors', 'gate-visitor-entry'],
+        'forms-hub.html': ['forms', 'forms-hub']
+    }
+    ver_src = os.path.join(base_dir, 'Frontend', 'version.json')
+    for src_html, folders in alias_folders.items():
+        src_path = os.path.join(base_dir, 'Frontend', src_html)
+        if os.path.exists(src_path):
+            for fld in folders:
+                for root in [os.path.join(base_dir, 'Frontend'), os.path.join(base_dir, 'Frontend', 'dist'), os.path.join(base_dir, 'dist'), deploy_dir, os.path.join(deploy_dir, 'dist'), os.path.join(deploy_dir, 'frontend'), os.path.join(deploy_dir, 'frontend', 'dist')]:
+                    target_file = os.path.join(root, fld, 'index.html')
+                    safe_copy(src_path, target_file)
+                    if os.path.exists(ver_src):
+                        target_ver = os.path.join(root, fld, 'version.json')
+                        safe_copy(ver_src, target_ver)
 
 if __name__ == "__main__":
     sync_directories()

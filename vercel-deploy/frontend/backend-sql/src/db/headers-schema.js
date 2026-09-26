@@ -4443,6 +4443,18 @@ const headersMap = {
         "updatedAt",
         "contractorName",
         "employeeCode"
+    ],
+    "FieldPortalAuth": [
+        "id",
+        "employeeCode",
+        "pinHash",
+        "salt",
+        "failedAttempts",
+        "lockedUntil",
+        "lastLoginAt",
+        "createdAt",
+        "updatedAt",
+        "status"
     ]
 };
 

@@ -186,20 +186,9 @@ function getFactoriesForFormRow(rowData, headers) {
  * يُعالج كل الصفوف الجديدة من lastProcessedRow+1 حتى آخر صف (وليس آخر صف فقط).
  */
 function processFormDataFromSheet() {
-  var lock = null;
+  var cache = null;
+  var lockAcquired = false;
   try {
-    try {
-      lock = LockService.getScriptLock();
-      if (!lock.waitLock(15000)) {
-        return { success: true, skipped: true, message: 'عملية مزامنة أخرى قيد التشغيل' };
-      }
-    } catch (lockEx) {
-      Logger.log('processFormDataFromSheet lock timeout: ' + lockEx.toString());
-    }
-
-    // إصلاح ذاتي: لو المشغّل الزمني ضاع (redeploy جديد) نعيد تثبيته قبل المعالجة
-    try { ensureDailySafetySyncTrigger_(); } catch (e) {}
-
     var sheet = getDailySafetyFormResponsesSheet();
     if (!sheet) {
       return { success: false, message: 'ورقة إجابات الفورم غير موجودة' };
@@ -207,7 +196,7 @@ function processFormDataFromSheet() {
 
     var lastRow = sheet.getLastRow();
     if (lastRow < 2) {
-      return { success: false, message: 'لا توجد إرسالات جديدة' };
+      return { success: true, skipped: true, message: 'لا توجد إرسالات جديدة' };
     }
 
     var properties = PropertiesService.getScriptProperties();
@@ -219,8 +208,18 @@ function processFormDataFromSheet() {
     }
 
     if (lastRow <= lastProcessedRow) {
-      return { success: false, message: 'لا توجد إرسالات جديدة' };
+      return { success: true, skipped: true, message: 'لا توجد إرسالات جديدة' };
     }
+
+    // قفل خفيف خاص بمزامنة الفورم فقط عبر CacheService حتى لا يحجز LockService.getScriptLock() العام ويعطّل نماذج البوابة
+    try {
+      cache = CacheService.getScriptCache();
+      if (cache.get('DSC_FORM_SYNC_RUNNING')) {
+        return { success: true, skipped: true, message: 'عملية مزامنة أخرى قيد التشغيل' };
+      }
+      cache.put('DSC_FORM_SYNC_RUNNING', '1', 90);
+      lockAcquired = true;
+    } catch (cacheEx) {}
 
     var startRow = lastProcessedRow > 0 ? lastProcessedRow + 1 : 2;
     return processFormRowsRange(sheet, startRow, lastRow, true);
@@ -228,8 +227,8 @@ function processFormDataFromSheet() {
     Logger.log('processFormDataFromSheet (DSC): ' + error.toString());
     return { success: false, message: 'حدث خطأ: ' + error.toString() };
   } finally {
-    if (lock) {
-      try { lock.releaseLock(); } catch (e) {}
+    if (lockAcquired && cache) {
+      try { cache.remove('DSC_FORM_SYNC_RUNNING'); } catch (e) {}
     }
   }
 }
@@ -272,6 +271,11 @@ function reprocessDailySafetyFormRows(fromRow, toRow) {
  * @param {boolean} updateLastProcessed - إذا true يُحدَّث LAST_PROCESSED_ROW بعد آخر صف ناجح
  */
 function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
+  // تحديد أقصى دفعة للمشغّل التلقائي بـ 8 صفوف في الدورة الواحدة لمنع تجاوز الوقت (Timed Out)
+  if (updateLastProcessed && (endRow - startRow + 1) > 8) {
+    endRow = startRow + 7;
+  }
+
   var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   var properties = PropertiesService.getScriptProperties();
   var processedCount = 0;
@@ -280,6 +284,16 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
   var savedRecords = [];
   var lastSuccessRow = startRow - 1;
   var numCols = sheet.getLastColumn();
+
+  // قراءة السجلات الحالية مرة واحدة فقط خارج الحلقة لتجنب قراءة الورقة كاملة مع كل صف
+  var existingList = [];
+  try {
+    existingList = typeof readFromSheet === 'function'
+      ? (readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID) || [])
+      : [];
+  } catch (eRead) {
+    existingList = [];
+  }
 
   // قراءة النطاق دفعة واحدة — أسرع + يقلل استهلاك quota (بدل getRange داخل الحلقة)
   var block = sheet.getRange(startRow, 1, endRow - startRow + 1, numCols).getValues();
@@ -303,7 +317,7 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
 
     var rowOk = true;
     for (var r = 0; r < records.length; r++) {
-      var result = saveDailySafetyCheckListFromForm(records[r], { skipDuplicates: true });
+      var result = saveDailySafetyCheckListFromForm(records[r], { skipDuplicates: true, existingRecords: existingList });
       if (!result || !result.success) {
         rowOk = false;
         failedRows.push({
@@ -316,15 +330,12 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
         skippedDuplicateCount++;
       } else {
         savedRecords.push(records[r]);
+        existingList.push(records[r]);
         processedCount++;
       }
     }
 
-    if (!rowOk) {
-      // فشل حفظ (قد يكون مؤقتاً): لا نقدم المؤشر — تُعاد محاولة الصف في الدورة التالية
-      // مع الاستمرار في معالجة بقية الصفوف (لا break كُلية تعطل النقل).
-      continue;
-    }
+    // حتى لو تعذر حفظ صف معين، نقدم المؤشر في المزامنة التلقائية لمنع الدخول في حلقة فشل لا نهائية كل دقيقة
     lastSuccessRow = row;
   }
 
@@ -333,7 +344,7 @@ function processFormRowsRange(sheet, startRow, endRow, updateLastProcessed) {
   }
 
   if (processedCount === 0 && skippedDuplicateCount === 0 && failedRows.length === 0) {
-    return { success: false, message: 'لا توجد بيانات كافية في النطاق المحدد' };
+    return { success: true, skipped: true, message: 'لا توجد بيانات كافية في النطاق المحدد' };
   }
 
   var ok = failedRows.length === 0;
@@ -478,16 +489,18 @@ function mapFormRowToDailySafetyCheckList(rowData, headers, forceFactory2) {
 /**
  * هل يوجد سجل مطابق مسبقاً في DailySafetyCheckList (لتجنب التكرار عند إعادة المعالجة)؟
  */
-function dailySafetyFormRecordExists(recordData) {
+function dailySafetyFormRecordExists(recordData, preloadedExisting) {
   if (!recordData) return false;
-  var existing = [];
-  try {
-    existing = typeof readFromSheet === 'function'
-      ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
-      : [];
-  } catch (e) {
-    Logger.log('dailySafetyFormRecordExists read error: ' + e.toString());
-    return false;
+  var existing = Array.isArray(preloadedExisting) ? preloadedExisting : null;
+  if (!existing) {
+    try {
+      existing = typeof readFromSheet === 'function'
+        ? readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID)
+        : [];
+    } catch (e) {
+      Logger.log('dailySafetyFormRecordExists read error: ' + e.toString());
+      return false;
+    }
   }
   if (!Array.isArray(existing) || existing.length === 0) return false;
 
@@ -533,7 +546,7 @@ function dailySafetyFormRecordExists(recordData) {
  */
 function saveDailySafetyCheckListFromForm(recordData, options) {
   options = options || {};
-  if (options.skipDuplicates && dailySafetyFormRecordExists(recordData)) {
+  if (options.skipDuplicates && dailySafetyFormRecordExists(recordData, options.existingRecords)) {
     return { success: true, skipped: true, message: 'السجل موجود مسبقاً في DailySafetyCheckList' };
   }
   return saveDailySafetyCheckListToAppSheet(recordData);
@@ -602,11 +615,6 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
     }
 
     var sheetName = 'DailySafetyCheckList';
-    if (!recordData.id) {
-      recordData.id = typeof generateSequentialId === 'function'
-        ? generateSequentialId('DSC', sheetName, APP_SPREADSHEET_ID)
-        : 'DSC-' + Date.now();
-    }
     if (!recordData.siteId && recordData.siteName) {
       recordData.siteId = recordData.siteName;
     }
@@ -617,18 +625,56 @@ function saveDailySafetyCheckListToAppSheet(recordData) {
       recordData.updatedAt = new Date();
     }
 
-    // رقم تقرير تلقائي DSC-YYYY-MM-DD-SH-NN إن لم يُحدّد (منتظر للفورم/الإدخال اليدوي)
-    if (!recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
+    // قراءة سريعة وخفيفة لآخر الصفوف فقط لحساب id و reportNumber في أقل من 150ms دون قراءة الورقة بالكامل مرتين
+    if (!recordData.id || !recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
       try {
-        var existingList = (typeof readFromSheet === 'function')
-          ? readFromSheet(sheetName, APP_SPREADSHEET_ID)
-          : [];
-        recordData.reportNumber = generateDailySafetyCheckListReportNumber(
-          recordData.date, recordData.shift, existingList);
-      } catch (e) {
-        Logger.log('generate reportNumber fallback: ' + e.toString());
-        recordData.reportNumber = '';
+        var ssFast = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+        var shFast = ssFast.getSheetByName(sheetName);
+        if (shFast && shFast.getLastRow() > 1) {
+          var lastR = shFast.getLastRow();
+          var lastC = shFast.getLastColumn();
+          var hdrs = shFast.getRange(1, 1, 1, lastC).getValues()[0].map(function(h) { return String(h || '').trim(); });
+          var idIdx = hdrs.indexOf('id');
+          var rnIdx = hdrs.indexOf('reportNumber');
+          var dtIdx = hdrs.indexOf('date');
+          var shIdx = hdrs.indexOf('shift');
+          var tailCount = Math.min(250, lastR - 1);
+          var tailStart = Math.max(2, lastR - tailCount + 1);
+          var tailRows = shFast.getRange(tailStart, 1, tailCount, lastC).getValues();
+          var maxIdSeq = lastR - 1;
+          var existingTail = [];
+          for (var ti = 0; ti < tailRows.length; ti++) {
+            var rRow = tailRows[ti];
+            var cid = idIdx >= 0 ? String(rRow[idIdx] || '').trim() : '';
+            var mId = cid.match(/^DSC[_-](\d+)$/i);
+            if (mId) {
+              var nId = parseInt(mId[1], 10);
+              if (!isNaN(nId) && nId > maxIdSeq) maxIdSeq = nId;
+            }
+            existingTail.push({
+              date: dtIdx >= 0 ? rRow[dtIdx] : '',
+              shift: shIdx >= 0 ? rRow[shIdx] : '',
+              reportNumber: rnIdx >= 0 ? rRow[rnIdx] : ''
+            });
+          }
+          if (!recordData.id) {
+            recordData.id = 'DSC_' + String(maxIdSeq + 1).padStart(4, '0');
+          }
+          if (!recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
+            recordData.reportNumber = generateDailySafetyCheckListReportNumber(
+              recordData.date, recordData.shift, existingTail);
+          }
+        }
+      } catch (eFast) {
+        Logger.log('Fast DSC id/reportNumber fallback: ' + eFast.toString());
       }
+    }
+
+    if (!recordData.id) {
+      recordData.id = 'DSC_' + Date.now();
+    }
+    if (!recordData.reportNumber || String(recordData.reportNumber).trim() === '') {
+      recordData.reportNumber = generateDailySafetyCheckListReportNumber(recordData.date, recordData.shift, []);
     }
 
     var res = typeof appendToSheet === 'function'
@@ -785,15 +831,22 @@ function repairDailySafetyCheckListSequence() {
 }
 
 /**
- * تُستدعى من المشغّل الزمني (كل دقيقة)
+ * تُستدعى من المشغّل الزمني (كل 10 دقائق)
  */
 function checkForNewDailySafetyFormSubmissions() {
   try {
+    // ترقية المشغّل الزمني لمرة واحدة من كل دقيقة إلى كل 10 دقائق لمنع استهلاك الحصة وتعليق القفل العام
+    try {
+      var props = PropertiesService.getScriptProperties();
+      if (props.getProperty('DSC_TRIGGER_INTERVAL_V2') !== '10') {
+        setupDailySafetyFormTrigger();
+        props.setProperty('DSC_TRIGGER_INTERVAL_V2', '10');
+      }
+    } catch (eTrig) {}
+
     var result = processFormDataFromSheet();
-    if (result && result.success) {
+    if (result && result.success && !result.skipped) {
       Logger.log('DSC Form: تمت معالجة ' + (result.processedCount || 0) + ' سجل/سجلات');
-    } else if (result && result.message) {
-      Logger.log('DSC Form: ' + result.message);
     }
   } catch (error) {
     Logger.log('checkForNewDailySafetyFormSubmissions: ' + error.toString());
@@ -813,9 +866,9 @@ function setupDailySafetyFormTrigger() {
     }
     ScriptApp.newTrigger('checkForNewDailySafetyFormSubmissions')
       .timeBased()
-      .everyMinutes(1)
+      .everyMinutes(10)
       .create();
-    Logger.log('تم إعداد مشغّل الفحص اليومي (كل دقيقة)');
+    Logger.log('تم إعداد مشغّل الفحص اليومي (كل 10 دقائق)');
     return { success: true, message: 'تم إعداد المشغّل بنجاح' };
   } catch (error) {
     Logger.log('setupDailySafetyFormTrigger: ' + error.toString());
@@ -825,7 +878,7 @@ function setupDailySafetyFormTrigger() {
 
 /**
  * إصلاح ذاتي: يتأكد من وجود مشغّل المزامنة الزمني، ويُثبّته لو ضاع
- * (بعد redeploy/nشر جديد قد تُفقد المشغّلات). يُستدعى من sync والـ trigger نفسه.
+ * (بعد redeploy/nشر جديد قد تُفقد المشغّلات).
  * @returns {boolean}
  */
 function ensureDailySafetySyncTrigger_() {
@@ -838,9 +891,9 @@ function ensureDailySafetySyncTrigger_() {
     }
     ScriptApp.newTrigger('checkForNewDailySafetyFormSubmissions')
       .timeBased()
-      .everyMinutes(1)
+      .everyMinutes(10)
       .create();
-    Logger.log('DSC Form: أعيد تثبيت المشغّل الزمني (كان مفقوداً)');
+    Logger.log('DSC Form: أعيد تثبيت المشغّل الزمني (كل 10 دقائق)');
     return true;
   } catch (error) {
     Logger.log('ensureDailySafetySyncTrigger_: ' + error.toString());
@@ -1140,6 +1193,31 @@ function rebuildDailySafetyCheckListFromForm() {
 
     var headersList = getDefaultHeaders(sheetName);
 
+    // الحفاظ على السجلات المُرسلة من تطبيق الويب (Public Web / App) التي لا توجد في ملف الفورم القديم
+    try {
+      var existingAppRecords = readFromSheet(sheetName, APP_SPREADSHEET_ID);
+      if (Array.isArray(existingAppRecords)) {
+        for (var ex = 0; ex < existingAppRecords.length; ex++) {
+          var exRec = existingAppRecords[ex];
+          if (!exRec || typeof exRec !== 'object') continue;
+          var exDate = exRec.date ? formatDateOnly(exRec.date) : '';
+          var exSite = String(exRec.siteName || exRec.siteId || '').trim();
+          var exShift = String(exRec.shift || '').trim();
+          var exInsp = String(exRec.inspectorName || '').trim();
+          if (!exDate && !exSite && !exInsp) continue;
+          var exKey = [exDate, exSite, exShift, exInsp].join('|');
+          if (!seenKeys[exKey]) {
+            seenKeys[exKey] = true;
+            seq++;
+            exRec.id = 'DSC_' + String(seq).padStart(4, '0');
+            allRecords.push(exRec);
+          }
+        }
+      }
+    } catch (keepErr) {
+      Logger.log('rebuildDailySafetyCheckListFromForm preserve web records warn: ' + keepErr.toString());
+    }
+
     var rows = [headersList.slice()];
     for (var m = 0; m < allRecords.length; m++) {
       var recRow = [];
@@ -1166,7 +1244,7 @@ function rebuildDailySafetyCheckListFromForm() {
       sheet.getRange(startRow + 1, 1, chunk.length, headersList.length).setValues(chunk);
     }
 
-    // حذف الصفوف الزائدة فقط من الأسفل (إن وُجدت) — لا يُحذف كل الصفوف أبدًا
+    // حذف الصفوف الزائدة فقط من الأسفل (إن وُجدت) بعد دمج سجلات الويب
     if (totalExisting > rows.length) {
       var frozenRows = sheet.getFrozenRows();
       var canDelete = totalExisting - rows.length;
@@ -1490,7 +1568,81 @@ function submitPublicDailySafetyChecklist(payload) {
       formSubmittedAt: new Date().toISOString()
     };
 
+    // فحص منع التكرار: إذا تم تقديم تقرير لنفس المسؤول والمصنع والوردية والتاريخ وضغط الطلمبات خلال آخر 15 دقيقة
+    try {
+      if (typeof readFromSheet === 'function') {
+        var existingRecords = readFromSheet('DailySafetyCheckList', APP_SPREADSHEET_ID);
+        var nowTs = new Date().getTime();
+        for (var rIdx = existingRecords.length - 1; rIdx >= 0 && rIdx >= existingRecords.length - 40; rIdx--) {
+          var rec = existingRecords[rIdx];
+          if (rec && String(rec.inspectorName || '').trim() === inspectorName &&
+              String(rec.siteName || rec.siteId || '').trim() === siteName &&
+              formatDateOnly(rec.date) === date &&
+              String(rec.shift || '').trim() === shift) {
+            var recPressure = String(rec.q15Reading || rec.q16 || '').trim();
+            var newPressure = String(recordData.q15Reading || '').trim();
+            if (!recPressure || !newPressure || recPressure === newPressure) {
+              var recCreated = rec.formSubmittedAt ? new Date(rec.formSubmittedAt).getTime() : 0;
+              if (recCreated > 0 && (nowTs - recCreated) < 15 * 60 * 1000) {
+                Logger.log('Prevented duplicate Daily Safety Checklist submit: ' + (rec.reportNumber || rec.id));
+                return {
+                  success: true,
+                  isDuplicatePrevented: true,
+                  reportNumber: rec.reportNumber || rec.id,
+                  id: rec.id,
+                  rowNumber: rec.rowNumber || null,
+                  message: 'تم إرجاع التقرير المسجل مسبقاً لمنع التكرار'
+                };
+              }
+            }
+          }
+        }
+      }
+    } catch (dupCheckErr) {
+      Logger.log('submitPublicDailySafetyChecklist dup check note: ' + dupCheckErr.toString());
+    }
+
     var res = saveDailySafetyCheckListToAppSheet(recordData);
+
+    // تسجيل ملاحظات المرور اليومي أو البنود غير المطابقة تلقائياً في سجل الملاحظات اليومية (DailyObservations)
+    try {
+      if (res && res.success !== false && typeof submitPublicObservation === 'function') {
+        var nonCompliantItems = [];
+        for (var qi = 1; qi <= 17; qi++) {
+          var qKey = 'q' + qi;
+          var qVal = String(recordData[qKey] || '').trim();
+          if (qVal === 'غير مطابق') {
+            var qLabel = (typeof DAILY_SAFETY_QUESTION_LABELS !== 'undefined' && DAILY_SAFETY_QUESTION_LABELS[qKey])
+              ? DAILY_SAFETY_QUESTION_LABELS[qKey]
+              : qKey;
+            nonCompliantItems.push(qLabel);
+          }
+        }
+        var notesClean = String(recordData.notes || '').trim();
+        if (notesClean || nonCompliantItems.length > 0) {
+          var obsParts = [];
+          if (notesClean) obsParts.push('ملاحظات المرور اليومي: ' + notesClean);
+          if (nonCompliantItems.length > 0) obsParts.push('بنود غير مطابقة في المرور اليومي: ' + nonCompliantItems.join(' ، '));
+          var linkedRes = submitPublicObservation({
+            observerName: inspectorName,
+            siteName: siteName,
+            shift: shift,
+            date: date,
+            observationType: nonCompliantItems.length > 0 ? 'مخالفة' : 'ملاحظة عامة',
+            category: 'المرور اليومي للسلامة',
+            severity: nonCompliantItems.length > 0 ? 'متوسط' : 'منخفض',
+            details: obsParts.join(' | ') + (res.reportNumber ? ' [تقرير مرور: ' + res.reportNumber + ']' : '')
+          });
+          if (linkedRes && linkedRes.id) {
+            res.linkedObservationId = linkedRes.id;
+            res.linkedObservationReportNumber = linkedRes.reportNumber || '';
+          }
+        }
+      }
+    } catch (obsMirrorErr) {
+      Logger.log('submitPublicDailySafetyChecklist mirror to DailyObservations warn: ' + obsMirrorErr.toString());
+    }
+
     return res;
   } catch (e) {
     Logger.log('Error in submitPublicDailySafetyChecklist: ' + e.toString());
@@ -1528,5 +1680,125 @@ function getPublicDailySafetyConfig() {
     };
   } catch (e) {
     return { success: false, message: e.message };
+  }
+}
+
+/**
+ * أداة تنظيف وحذف كافة التقريرات المكررة في جدول المرور اليومي للسلامة (DailySafetyCheckList)
+ * وكذلك الملاحظات المكررة المحولة تلقائياً إلى (DailyObservations).
+ */
+function removeDailySafetyDuplicates() {
+  try {
+    var appSpreadsheet = SpreadsheetApp.openById(APP_SPREADSHEET_ID);
+    var dscSheet = appSpreadsheet.getSheetByName('DailySafetyCheckList');
+    if (!dscSheet) {
+      return { success: false, message: 'ورقة DailySafetyCheckList غير موجودة' };
+    }
+
+    var lastRow = dscSheet.getLastRow();
+    var lastCol = dscSheet.getLastColumn();
+    if (lastRow <= 2) {
+      return { success: true, removedChecklistCount: 0, removedObservationCount: 0, message: 'لا توجد سجلات كافية للفحص' };
+    }
+
+    var headers = dscSheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h || '').trim(); });
+    var rnCol = headers.indexOf('reportNumber');
+    var dateCol = headers.indexOf('date');
+    var siteCol = headers.indexOf('siteName') >= 0 ? headers.indexOf('siteName') : headers.indexOf('siteId');
+    var inspCol = headers.indexOf('inspectorName');
+    var shiftCol = headers.indexOf('shift');
+    var tsCol = headers.indexOf('formSubmittedAt');
+
+    var rows = dscSheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    var seenGroups = {};
+    var rowsToDeleteDsc = [];
+    var deletedReportNumbers = [];
+
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var rowNum = i + 2;
+      var dateVal = formatDateOnly(r[dateCol]);
+      var siteVal = String(r[siteCol] || '').trim();
+      var inspVal = String(r[inspCol] || '').trim();
+      var shiftVal = String(r[shiftCol] || '').trim();
+      var rnVal = String(r[rnCol] || '').trim();
+      var tsVal = r[tsCol] ? new Date(r[tsCol]).getTime() : 0;
+
+      if (!dateVal && !inspVal && !siteVal) continue;
+
+      var groupKey = dateVal + '|' + siteVal + '|' + inspVal + '|' + shiftVal;
+
+      if (!seenGroups[groupKey]) {
+        seenGroups[groupKey] = [{ rowNum: rowNum, rn: rnVal, ts: tsVal }];
+      } else {
+        var group = seenGroups[groupKey];
+        var isDup = false;
+        for (var g = 0; g < group.length; g++) {
+          var firstTs = group[g].ts;
+          if (!tsVal || !firstTs || Math.abs(tsVal - firstTs) < 45 * 60 * 1000) {
+            isDup = true;
+            break;
+          }
+        }
+        if (isDup) {
+          rowsToDeleteDsc.push(rowNum);
+          if (rnVal) deletedReportNumbers.push(rnVal);
+        } else {
+          group.push({ rowNum: rowNum, rn: rnVal, ts: tsVal });
+        }
+      }
+    }
+
+    // 2) حذف الملاحظات المكررة الموازية في DailyObservations
+    var removedObsCount = 0;
+    var obsSheet = appSpreadsheet.getSheetByName('DailyObservations');
+    if (obsSheet && obsSheet.getLastRow() > 1) {
+      var obsLastRow = obsSheet.getLastRow();
+      var obsLastCol = obsSheet.getLastColumn();
+      var obsHeaders = obsSheet.getRange(1, 1, 1, obsLastCol).getValues()[0].map(function(h) { return String(h || '').trim(); });
+      var obsDetailsCol = obsHeaders.indexOf('details');
+      var obsRows = obsSheet.getRange(2, 1, obsLastRow - 1, obsLastCol).getValues();
+      var rowsToDeleteObs = [];
+
+      for (var oi = 0; oi < obsRows.length; oi++) {
+        var obsR = obsRows[oi];
+        var obsRowNum = oi + 2;
+        var detailsText = String(obsR[obsDetailsCol] || '');
+        if (deletedReportNumbers.some(function(rn) { return rn && detailsText.indexOf(rn) !== -1; })) {
+          rowsToDeleteObs.push(obsRowNum);
+        }
+      }
+
+      for (var dObs = rowsToDeleteObs.length - 1; dObs >= 0; dObs--) {
+        try {
+          obsSheet.deleteRow(rowsToDeleteObs[dObs]);
+          removedObsCount++;
+        } catch (eObs) {
+          Logger.log('Error deleting obs row ' + rowsToDeleteObs[dObs] + ': ' + eObs.toString());
+        }
+      }
+    }
+
+    // 3) حذف الصفوف المكررة من أسفل لأعلى في DailySafetyCheckList
+    var removedDscCount = 0;
+    for (var dDsc = rowsToDeleteDsc.length - 1; dDsc >= 0; dDsc--) {
+      try {
+        dscSheet.deleteRow(rowsToDeleteDsc[dDsc]);
+        removedDscCount++;
+      } catch (eDsc) {
+        Logger.log('Error deleting dsc row ' + rowsToDeleteDsc[dDsc] + ': ' + eDsc.toString());
+      }
+    }
+
+    return {
+      success: true,
+      removedChecklistCount: removedDscCount,
+      removedObservationCount: removedObsCount,
+      remainingRecords: (rows.length - removedDscCount),
+      message: 'تم حذف ' + removedDscCount + ' تقرير مرور يومي مكرر و ' + removedObsCount + ' ملاحظة مكررة بنجاح.'
+    };
+  } catch (err) {
+    Logger.log('Error in removeDailySafetyDuplicates: ' + err.toString());
+    return { success: false, message: 'حدث خطأ أثناء تنظيف التكرارات: ' + err.message };
   }
 }

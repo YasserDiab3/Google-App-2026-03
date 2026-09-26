@@ -1,6 +1,5 @@
 /**
  * إعدادات النماذج: Form_Sites / Form_Places / Form_Departments / Form_SafetyTeam
- * مزود بحماية التكامل المرجعي وقفل الحذف للمواقع والأماكن المرتبطة بسجلات سابقة
  */
 'use strict';
 
@@ -93,67 +92,6 @@ function validateSitesNoDuplicates(sites) {
     return { valid: true };
 }
 
-/**
- * فحص سلامة العلاقات واستخدام الموقع أو المكان في السجلات التاريخية
- */
-function checkLocationUsageInDatabase(db, { siteId, siteName, placeId, placeName }) {
-    let totalCount = 0;
-    const modules = [];
-
-    const safeSiteId = siteId ? String(siteId).trim() : '';
-    const safeSiteName = siteName ? String(siteName).trim() : '';
-    const safePlaceId = placeId ? String(placeId).trim() : '';
-    const safePlaceName = placeName ? String(placeName).trim() : '';
-
-    function checkTable(countSql, params, moduleLabel) {
-        try {
-            const row = db.get(countSql, params);
-            const count = row ? (row.c || row.count || 0) : 0;
-            if (count > 0) {
-                totalCount += count;
-                modules.push(`${moduleLabel} (${count})`);
-            }
-        } catch (_) {}
-    }
-
-    if (safeSiteId || safeSiteName) {
-        checkTable(`SELECT COUNT(*) as c FROM "DailyObservations" WHERE "siteId" = ? OR "siteName" = ?`,
-            [safeSiteId, safeSiteName], 'الملاحظات اليومية');
-
-        checkTable(`SELECT COUNT(*) as c FROM "PTW" WHERE "siteId" = ? OR "siteName" = ?`,
-            [safeSiteId, safeSiteName], 'تصاريح العمل');
-
-        checkTable(`SELECT COUNT(*) as c FROM "Violations" WHERE "violationLocationId" = ? OR "violationLocation" = ?`,
-            [safeSiteId, safeSiteName], 'سجل المخالفات');
-
-        checkTable(`SELECT COUNT(*) as c FROM "GateVisitors" WHERE "Target Site" = ?`,
-            [safeSiteName || safeSiteId], 'زوار البوابة');
-
-        checkTable(`SELECT COUNT(*) as c FROM "ClinicVisits" WHERE "siteId" = ?`,
-            [safeSiteId], 'العيادة');
-    }
-
-    if (safePlaceId || safePlaceName) {
-        checkTable(`SELECT COUNT(*) as c FROM "DailyObservations" WHERE "placeId" = ? OR "locationName" = ?`,
-            [safePlaceId, safePlaceName], 'الملاحظات اليومية');
-
-        checkTable(`SELECT COUNT(*) as c FROM "PTW" WHERE "sublocationId" = ? OR "sublocationName" = ?`,
-            [safePlaceId, safePlaceName], 'تصاريح العمل');
-
-        checkTable(`SELECT COUNT(*) as c FROM "Violations" WHERE "violationPlaceId" = ? OR "violationPlace" = ?`,
-            [safePlaceId, safePlaceName], 'سجل المخالفات');
-
-        checkTable(`SELECT COUNT(*) as c FROM "GateVisitors" WHERE "Target Hall / Area" = ?`,
-            [safePlaceName], 'زوار البوابة');
-    }
-
-    return {
-        isUsed: totalCount > 0,
-        totalCount,
-        modules: modules.join('، ')
-    };
-}
-
 function buildFormattedSites(db) {
     const sites = db.readSheet('Form_Sites') || [];
     const places = db.readSheet('Form_Places') || [];
@@ -189,19 +127,12 @@ const formSettingsHandlers = {
         try {
             const db = getDatabase();
             const formattedSites = buildFormattedSites(db);
-            let departments = (db.readSheet('Form_Departments') || [])
+            const departments = (db.readSheet('Form_Departments') || [])
                 .map((d) => String(d.name || '').trim())
                 .filter(Boolean);
-            if (departments.length === 0) {
-                departments = buildPublicFormDepartments(db);
-            }
-
-            let safetyTeam = (db.readSheet('Form_SafetyTeam') || [])
+            const safetyTeam = (db.readSheet('Form_SafetyTeam') || [])
                 .map((m) => String(m.name || '').trim())
                 .filter(Boolean);
-            if (safetyTeam.length === 0) {
-                safetyTeam = buildPublicFormSafetyMembers(db).map(m => m.name).filter(Boolean);
-            }
 
             return {
                 success: true,
@@ -220,24 +151,6 @@ const formSettingsHandlers = {
                 message: 'حدث خطأ أثناء قراءة إعدادات النماذج: ' + (err.message || err),
                 data: getDefaultFormSettings()
             };
-        }
-    },
-
-    checkLocationUsage(payload) {
-        try {
-            const db = getDatabase();
-            const usage = checkLocationUsageInDatabase(db, {
-                siteId: payload?.siteId,
-                siteName: payload?.siteName,
-                placeId: payload?.placeId,
-                placeName: payload?.placeName
-            });
-            return {
-                success: true,
-                ...usage
-            };
-        } catch (e) {
-            return { success: false, message: e.message };
         }
     },
 
@@ -270,8 +183,6 @@ const formSettingsHandlers = {
         const nowIso = new Date().toISOString();
         const actorName = String(userData.name || userData.email || 'System').trim() || 'System';
 
-        const existingSites = db.readSheet('Form_Sites') || [];
-        const existingPlaces = db.readSheet('Form_Places') || [];
         const existingDepartments = db.readSheet('Form_Departments') || [];
         const existingSafetyTeam = db.readSheet('Form_SafetyTeam') || [];
 
@@ -314,40 +225,6 @@ const formSettingsHandlers = {
                 });
             });
         });
-
-        // 🛡️ قفل الحذف للمواقع المرتبطة بسجلات سابقة
-        const newSiteIds = new Set(sitesToSave.map(s => String(s.id).trim()));
-        for (const exSite of existingSites) {
-            const sId = String(exSite.id || '').trim();
-            if (sId && !newSiteIds.has(sId)) {
-                const usage = checkLocationUsageInDatabase(db, { siteId: sId, siteName: exSite.name });
-                if (usage.isUsed) {
-                    return {
-                        success: false,
-                        message: `قفل الحذف: لا يمكن حذف الموقع «${exSite.name || sId}» لوجود ${usage.totalCount} سجل مرتبط به في (${usage.modules}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`,
-                        errorCode: 'REFERENTIAL_INTEGRITY_LOCKED',
-                        details: usage
-                    };
-                }
-            }
-        }
-
-        // 🛡️ قفل الحذف للأماكن الفرعية المرتبطة بسجلات سابقة
-        const newPlaceIds = new Set(placesToSave.map(p => String(p.id).trim()));
-        for (const exPlace of existingPlaces) {
-            const pId = String(exPlace.id || '').trim();
-            if (pId && !newPlaceIds.has(pId)) {
-                const usage = checkLocationUsageInDatabase(db, { placeId: pId, placeName: exPlace.name });
-                if (usage.isUsed) {
-                    return {
-                        success: false,
-                        message: `قفل الحذف: لا يمكن حذف المكان الفرعي «${exPlace.name || pId}» لوجود ${usage.totalCount} سجل مرتبط به في (${usage.modules}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`,
-                        errorCode: 'REFERENTIAL_INTEGRITY_LOCKED',
-                        details: usage
-                    };
-                }
-            }
-        }
 
         db.saveToSheet('Form_Sites', sitesToSave);
         db.saveToSheet('Form_Places', placesToSave);
@@ -405,6 +282,62 @@ const formSettingsHandlers = {
             sitesCount: sitesToSave.length,
             placesCount: placesToSave.length
         };
+    },
+
+    async getPublicFormsStatus() {
+        const db = getDatabase();
+        const defaultStatus = {
+            observation: { isOpen: true, message: 'نموذج تسجيل الملاحظات اليومية لا يقبل ردوداً حالياً بقرار من إدارة السلامة والصحة المهنية.' },
+            nearmiss: { isOpen: true, message: 'نموذج الإبلاغ عن الحوادث الوشيكة مغلق حالياً.' },
+            fire: { isOpen: true, message: 'نموذج فحص مهمات الإطفاء مغلق حالياً.' },
+            gate: { isOpen: true, message: 'نموذج تصاريح بوابات الزوار مغلق حالياً.' },
+            patrol: { isOpen: true, message: 'نموذج تفتيش السلامة اليومي مغلق حالياً.' }
+        };
+
+        try {
+            const rows = db.readSheet('CompanySettings') || [];
+            const row = rows.find(r => r.setting_key === 'HSE_PUBLIC_FORMS_STATUS' || r.key === 'HSE_PUBLIC_FORMS_STATUS');
+            if (row && (row.setting_value || row.value)) {
+                const parsed = JSON.parse(row.setting_value || row.value);
+                return { success: true, status: { ...defaultStatus, ...parsed } };
+            }
+        } catch (_) {}
+
+        return { success: true, status: defaultStatus };
+    },
+
+    async savePublicFormsStatus(payload, ctx) {
+        const perm = checkFormSettingsPermission(payload?.userData, ctx?.actorUser);
+        if (!perm.hasPermission) {
+            return { success: false, message: perm.message || 'غير مصرح' };
+        }
+
+        const db = getDatabase();
+        const statusObj = payload.status || payload;
+        if (!statusObj || typeof statusObj !== 'object') {
+            return { success: false, message: 'بيانات الحالة غير صالحة' };
+        }
+
+        const jsonStr = JSON.stringify(statusObj);
+        const rows = db.readSheet('CompanySettings') || [];
+        const existingIdx = rows.findIndex(r => r.setting_key === 'HSE_PUBLIC_FORMS_STATUS' || r.key === 'HSE_PUBLIC_FORMS_STATUS');
+        
+        if (existingIdx !== -1) {
+            db.updateRow('CompanySettings', rows[existingIdx].id, {
+                setting_value: jsonStr,
+                updatedAt: new Date().toISOString()
+            });
+        } else {
+            db.insertRow('CompanySettings', {
+                id: `SETTING_${Date.now()}`,
+                setting_key: 'HSE_PUBLIC_FORMS_STATUS',
+                setting_value: jsonStr,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+        }
+
+        return { success: true, message: 'تم حفظ وتحديث حالة استقبال النماذج بنجاح', status: statusObj };
     }
 };
 
@@ -412,8 +345,38 @@ function buildPublicFormSafetyMembers(db) {
     const seen = new Set();
     const members = [];
 
+    const BLOCKED_SAFETY_STAFF = new Set([
+        'اسلام السيد علي الزغبي',
+        'حسانين حسن محمد حسانين على',
+        'طارق مصطفى السيد مدين الجوهرى',
+        '112425',
+        '112411',
+        '100780'
+    ]);
+
+    function isStaffResigned(e) {
+        if (!e || typeof e !== 'object') return true;
+        const code = String(e.id || e.employeeCode || e.employeeNumber || e.code || e.sapId || '').trim();
+        if (code && BLOCKED_SAFETY_STAFF.has(code)) return true;
+        const name = String(e.name || e.fullName || '').trim();
+        for (const b of BLOCKED_SAFETY_STAFF) {
+            if (b.length > 3 && name.includes(b)) return true;
+        }
+        if (e.active === false || e.active === 'false' || e.isActive === false || e.isActive === 'false') return true;
+        if (e.resignationDate || e.terminationDate || e.endDate) return true;
+        const s = [
+            e.status, e.employeeStatus, e.workStatus, e.employmentStatus, e.state, e.activeStatus, e.jobStatus
+        ].map(v => String(v || '').toLowerCase().trim()).filter(Boolean).join(' | ');
+        if (!s) return false;
+        return s.includes('مستقيل') || s.includes('استقال') || s.includes('إنهاء') || s.includes('انهاء') ||
+               s.includes('مفصول') || s.includes('ترك') || s.includes('غير نشط') || s.includes('معاش') ||
+               s.includes('وفاة') || s.includes('resign') || s.includes('terminated') || s.includes('inactive') ||
+               s.includes('left');
+    }
+
     function addMember(raw) {
         if (!raw || typeof raw !== 'object') return;
+        if (isStaffResigned(raw)) return;
         const name = String(raw.name || raw.fullName || '').trim();
         if (!name) return;
         const key = name.toLowerCase();
@@ -421,53 +384,42 @@ function buildPublicFormSafetyMembers(db) {
         seen.add(key);
         members.push({
             name,
-            id: String(raw.id || '').trim(),
-            role: String(raw.role || raw.jobTitle || raw.position || '').trim()
+            id: String(raw.id || raw.employeeCode || raw.code || '').trim(),
+            role: String(raw.role || raw.jobTitle || raw.position || raw.job || '').trim()
         });
     }
 
     (db.readSheet('Form_SafetyTeam') || []).forEach(addMember);
     (db.readSheet('SafetyTeamMembers') || []).forEach(addMember);
+
+    // Also include active HSE staff from Employees table if not already added
+    (db.readSheet('Employees') || []).forEach(emp => {
+        if (!emp || typeof emp !== 'object') return;
+        if (isStaffResigned(emp)) return;
+        const dept = String(emp.department || '');
+        const job = String(emp.job || emp.position || emp.role || '');
+        const isHse = dept.includes('سلامة') || job.includes('سلامة');
+        const isFood = dept.includes('غذاء') || job.includes('غذاء');
+        if (isHse && !isFood) {
+            addMember({
+                name: emp.name || emp.fullName,
+                id: emp.id || emp.employeeNumber || emp.sapId || emp.code,
+                role: emp.job || emp.position || emp.role || 'فني سلامة وصحة مهنية'
+            });
+        }
+    });
+
     return members;
 }
 
 function buildPublicFormDepartments(db) {
-    const list = (db.readSheet('Form_Departments') || [])
+    return (db.readSheet('Form_Departments') || [])
         .map((d) => String(d.name || d || '').trim())
         .filter(Boolean);
-    if (list.length > 0) return list;
-
-    const deptRows = (db.readSheet('Departments') || [])
-        .map((d) => String(d.name || d.department || d['Department Name'] || d || '').trim())
-        .filter(Boolean);
-    if (deptRows.length > 0) return Array.from(new Set(deptRows));
-
-    const empDepts = (db.readSheet('Employees') || [])
-        .map(e => String(e.department || e['Department'] || '').trim())
-        .filter(Boolean);
-    if (empDepts.length > 0) return Array.from(new Set(empDepts));
-
-    return [
-        'إدارة السلامة والصحة المهنية',
-        'إدارة الصيانة',
-        'إدارة الإنتاج',
-        'إدارة الجودة',
-        'إدارة المخازن',
-        'إدارة الموارد البشرية',
-        'إدارة الأمن والحراسة',
-        'إدارة المشروعات',
-        'إدارة المشتريات',
-        'إدارة الخدمات اللوجستية',
-        'إدارة الزراعة',
-        'الإدارة المالية',
-        'إدارة تكنولوجيا المعلومات',
-        'الإدارة العامة'
-    ];
 }
 
 module.exports = {
     ...formSettingsHandlers,
-    checkLocationUsageInDatabase,
     buildFormattedSites,
     buildPublicFormSafetyMembers,
     buildPublicFormDepartments

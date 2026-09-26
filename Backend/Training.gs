@@ -1405,3 +1405,211 @@ function getLegalRegisterStatistics(filters) {
     }
 }
 
+/**
+ * ============================================
+ * 🛡️ تكوين نموذج محضر جلسة وتوعية بداية الوردية (TBT) العام
+ * ============================================
+ */
+function getPublicTbtConfig() {
+    try {
+        var spreadsheetId = getSpreadsheetId();
+        
+        // 1. Sites
+        var sites = [];
+        if (typeof getPublicObservationConfig === 'function') {
+            var obsCfg = getPublicObservationConfig();
+            if (obsCfg && Array.isArray(obsCfg.sites) && obsCfg.sites.length > 0) {
+                sites = obsCfg.sites;
+            }
+        }
+        if (sites.length === 0) {
+            sites = [
+                { name: 'ICAPP-1', id: 'ICAPP-1', places: ['عنبر الفراولة خط 1', 'عنبر الخضار خط 2', 'ثلاجة التجميد الكبرى', 'غرفة المحولات واللوحات', 'محطة معالجة المياه والصرف'] },
+                { name: 'ICAPP-2', id: 'ICAPP-2', places: ['خط تجفيف الخضار', 'مخزن البضاعة التامة', 'منطقة التحميل والشحن', 'الورشة الميكانيكية المركزية'] },
+                { name: 'الموقع العام والخدمات', id: 'الموقع العام والخدمات', places: ['ممرات المشاة الرئيسية', 'بوابة الدخول الرئيسية', 'منطقة تجميع المخلفات'] }
+            ];
+        }
+
+        // 2. Safety Team Members
+        var safetyMembers = [];
+        if (typeof getPublicObservationConfig === 'function') {
+            var obsCfg = getPublicObservationConfig();
+            if (obsCfg && Array.isArray(obsCfg.safetyMembers) && obsCfg.safetyMembers.length > 0) {
+                safetyMembers = obsCfg.safetyMembers;
+            }
+        }
+        if (safetyMembers.length === 0) {
+            safetyMembers = [
+                { name: 'ياسر محمد محمد دياب', role: 'مدير السلامة والصحة المهنية' },
+                { name: 'احمد محمود عبد العظيم محمود بدوي', role: 'فني سلامة وصحة مهنية' },
+                { name: 'فيصل ابراهيم ابراهيم زايد', role: 'فني سلامة وصحة مهنية' },
+                { name: 'محمد السيد عبدالله السعدني', role: 'أخصائي سلامة وصحة مهنية' },
+                { name: 'محمد سعيد حسن محمد شرف', role: 'فني سلامة وصحة مهنية' },
+                { name: 'محمود خالد قدرى حافظ', role: 'فني السلامة والصحة المهنية' },
+                { name: 'نادر محمد عبد المنعم ابو مسلم علي', role: 'فني سلامة وصحة مهنية' },
+                { name: 'نبيل عبد الفتاح عبد الصادق عزب', role: 'فني سلامة وصحة مهنية' },
+                { name: 'إبراهيم مصطفى إبراهيم إبراهيم سالم', role: 'فني سلامة وصحة مهنية' },
+                { name: 'مصطفى السيد عبداللطيف محمد', role: 'فني سلامة وصحة مهنية' }
+            ];
+        }
+
+        // 3. Departments
+        var departments = [
+            'الإنتاج',
+            'الصيانة الميكانيكية',
+            'الصيانة الكهربائية والتحكم',
+            'الجودة والمعامل وسلامة الغذاء',
+            'المخازن واللوجستيات',
+            'الحركة والنقل والشحن',
+            'الخدمات والمرافق والغلايات',
+            'السلامة والصحة المهنية والبيئة',
+            'الشؤون الإدارية والموارد البشرية'
+        ];
+
+        // 4. Approved Contractors & Contractors
+        var contractorsMap = {};
+        try {
+            var approvedList = readFromSheet('ApprovedContractors', spreadsheetId) || [];
+            approvedList.forEach(function(c) {
+                if (!c) return;
+                if (c.isActive === false || c.isActive === 'false' || c.isActive === 'FALSE') return;
+                var name = String(c.companyName || c.name || '').trim();
+                if (name && !contractorsMap[name]) {
+                    contractorsMap[name] = {
+                        id: String(c.id || c.code || name).trim(),
+                        name: name,
+                        companyName: name,
+                        code: String(c.code || c.isoCode || '').trim(),
+                        serviceType: String(c.serviceType || '').trim(),
+                        licenseNumber: String(c.licenseNumber || '').trim(),
+                        isApproved: true
+                    };
+                }
+            });
+        } catch (acErr) {}
+
+        try {
+            var rawContractors = readFromSheet('Contractors', spreadsheetId) || [];
+            rawContractors.forEach(function(c) {
+                if (!c) return;
+                if (c.isActive === false || c.isActive === 'false' || c.isActive === 'FALSE') return;
+                var name = String(c.name || c.companyName || '').trim();
+                if (name && !contractorsMap[name]) {
+                    contractorsMap[name] = {
+                        id: String(c.id || c.code || name).trim(),
+                        name: name,
+                        companyName: name,
+                        code: String(c.code || '').trim(),
+                        serviceType: String(c.serviceType || '').trim(),
+                        licenseNumber: String(c.contractNumber || c.licenseNumber || '').trim(),
+                        isApproved: true
+                    };
+                }
+            });
+        } catch (cErr) {}
+
+        var contractors = [];
+        for (var cKey in contractorsMap) {
+            if (contractorsMap.hasOwnProperty(cKey)) {
+                contractors.push(contractorsMap[cKey]);
+            }
+        }
+        contractors.sort(function(a, b) { return a.name.localeCompare(b.name, 'ar'); });
+
+        // 5. Employees (Active only - strictly excluding all resigned/inactive staff)
+        var employees = [];
+        var BLOCKED_TBT_STAFF = {
+            'اسلام السيد علي الزغبي': true,
+            'حسانين حسن محمد حسانين على': true,
+            'طارق مصطفى السيد مدين الجوهرى': true,
+            '112425': true,
+            '112411': true,
+            '100780': true
+        };
+        try {
+            var rawEmps = readFromSheet('Employees', spreadsheetId) || [];
+            rawEmps.forEach(function(e) {
+                if (!e) return;
+                var code = String(e.id || e.employeeNumber || e.sapId || '').trim();
+                var name = String(e.name || e.employeeName || e.fullName || '').trim();
+                if (!name) return;
+                if (BLOCKED_TBT_STAFF[code] || BLOCKED_TBT_STAFF[name]) return;
+                for (var bKey in BLOCKED_TBT_STAFF) {
+                    if (bKey.length > 3 && name.indexOf(bKey) !== -1) return;
+                }
+                if (e.active === false || e.active === 'false' || e.isActive === false || e.isActive === 'false') return;
+                if (e.resignationDate || e.terminationDate || e.endDate) return;
+                var status = String(e.status || e.employeeStatus || e.workStatus || '').toLowerCase();
+                if (status.indexOf('مستقيل') !== -1 || status.indexOf('استقال') !== -1 || status.indexOf('إنهاء') !== -1 || status.indexOf('انهاء') !== -1 || status.indexOf('مفصول') !== -1 || status.indexOf('ترك') !== -1 || status.indexOf('غير نشط') !== -1 || status.indexOf('معاش') !== -1 || status.indexOf('وفاة') !== -1 || status.indexOf('resign') !== -1 || status.indexOf('terminated') !== -1 || status.indexOf('inactive') !== -1) {
+                    return;
+                }
+                employees.push({
+                    id: String(e.id || e.employeeNumber || '').trim(),
+                    employeeNumber: String(e.employeeNumber || e.id || '').trim(),
+                    sapId: String(e.sapId || '').trim(),
+                    nationalId: String(e.nationalId || '').trim(),
+                    name: name,
+                    department: String(e.department || 'الإنتاج').trim(),
+                    position: String(e.position || e.job || e.jobTitle || 'فني').trim()
+                });
+            });
+        } catch (eErr) {}
+
+        return {
+            success: true,
+            sites: sites,
+            safetyMembers: safetyMembers,
+            departments: departments,
+            contractors: contractors,
+            employees: employees,
+            timestamp: new Date().toISOString()
+        };
+    } catch (err) {
+        Logger.log('Error in getPublicTbtConfig: ' + err.toString());
+        return { success: false, message: 'حدث خطأ أثناء تحميل بيانات TBT: ' + err.toString() };
+    }
+}
+
+/**
+ * تسجيل وتوثيق محضر جلسة وتوعية بداية الوردية (TBT) سحابياً
+ */
+function submitPublicTbtRecord(postData) {
+    try {
+        var data = postData && postData.data ? postData.data : (postData || {});
+        var contractorPayload = data.contractorPayload;
+        var employeePayload = data.employeePayload;
+        var recordRef = data.recordRef || ('TBT-' + Date.now());
+        var spreadsheetId = getSpreadsheetId();
+
+        var contractorSaved = false;
+        var employeeSaved = false;
+
+        if (contractorPayload) {
+            if (!contractorPayload.id) contractorPayload.id = 'CTR-' + Date.now();
+            contractorPayload.createdAt = contractorPayload.createdAt || new Date().toISOString();
+            contractorPayload.updatedAt = new Date().toISOString();
+            var resCtr = appendToSheet('ContractorTrainings', contractorPayload, spreadsheetId);
+            if (resCtr && resCtr.success) contractorSaved = true;
+        }
+
+        if (employeePayload) {
+            if (!employeePayload.id) employeePayload.id = 'TRN-' + Date.now();
+            employeePayload.createdAt = employeePayload.createdAt || new Date().toISOString();
+            employeePayload.updatedAt = new Date().toISOString();
+            var resEmp = appendToSheet('Training', employeePayload, spreadsheetId);
+            if (resEmp && resEmp.success) employeeSaved = true;
+        }
+
+        return {
+            success: true,
+            message: 'تم تسجيل محضر الـ TBT بنجاح بالمديول',
+            recordRef: recordRef,
+            contractorSaved: contractorSaved,
+            employeeSaved: employeeSaved
+        };
+    } catch (err) {
+        Logger.log('Error in submitPublicTbtRecord: ' + err.toString());
+        return { success: false, message: 'حدث خطأ أثناء حفظ محضر الـ TBT: ' + err.toString() };
+    }
+}
+

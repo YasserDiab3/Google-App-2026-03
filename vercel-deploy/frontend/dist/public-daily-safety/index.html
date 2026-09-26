@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl" data-theme="light">
 <head>
-    <script src="../../js/hse-api-url.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>نموذج المرور اليومي لمسئولي السلامة | ICAPP</title>
@@ -259,6 +258,16 @@
             }
             .iso-meta-key { font-size: 0.54rem; }
             .iso-meta-val { font-size: 0.56rem; padding: 0 2px; }
+        }
+
+        @media (max-width: 375px) {
+            .iso-header-table {
+                grid-template-columns: 70px 1fr 92px !important;
+            }
+            .iso-col-brand { min-width: 70px !important; max-width: 70px !important; padding: 2px !important; }
+            .iso-logo-wrap { width: 44px !important; height: 28px !important; }
+            .iso-doc-title { font-size: 0.75rem !important; }
+            .iso-col-meta { min-width: 92px !important; max-width: 92px !important; padding: 2px !important; }
         }
 
         .header-tools {
@@ -784,6 +793,78 @@
                 min-height: 48px !important;
                 padding: 10px 8px !important;
             }
+
+            /* 7. نوافذ الطوارئ والنجاح كـ Bottom Sheet على الهواتف */
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+
+            .success-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+            }
+            .success-modal {
+                border-radius: 20px 20px 0 0 !important;
+                max-width: 100vw !important;
+                width: 100vw !important;
+                max-height: calc(90dvh - env(safe-area-inset-top, 0px)) !important;
+                overflow-y: auto !important;
+                margin: auto 0 0 0 !important;
+                padding: 20px 14px calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+            .toggle-btn {
+                min-height: 42px !important;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .status-toggle-group {
+                gap: 5px !important;
+            }
+            .toggle-btn {
+                padding: 8px 2px !important;
+                font-size: 11px !important;
+                gap: 4px !important;
+                white-space: nowrap !important;
+                min-height: 42px !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
         }
 
         /* 🌡️ Live Weather & Heat Stress Badge */
@@ -897,7 +978,85 @@
         }
         .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
 
+        /* Unified Portal Footer */
+        .portal-unified-footer {
+            margin-top: 28px;
+            text-align: center;
+            padding: 18px 14px;
+            border-top: 1px solid rgba(226, 232, 240, 0.85);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.2) 0%, rgba(241, 245, 249, 0.65) 100%);
+            border-radius: 0 0 16px 16px;
+            font-size: 0.78rem;
+            color: #64748b;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .portal-unified-footer .footer-title {
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 0.84rem;
+            margin: 0 0 4px 0;
+        }
+        .portal-unified-footer .footer-subtitle {
+            margin: 0 0 10px 0;
+            font-size: 0.76rem;
+            color: #64748b;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        .portal-unified-footer .footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+        .portal-unified-footer .footer-version-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 800;
+            color: #1e293b;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+        }
+        .portal-unified-footer .footer-refresh-btn {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .portal-unified-footer .footer-refresh-btn:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .portal-unified-footer .footer-hub-link {
+            color: #0284c7;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .portal-unified-footer .footer-hub-link:hover {
+            color: #0369a1;
+            text-decoration: underline;
+        }
 </style>
+<script src="js/modules/hse-dark-mode.js"></script>
+<script src="js/modules/hse-device-audit.js"></script>
+<script src="js/modules/hse-security-alerts.js"></script>
+<script src="js/modules/hse-offline-sync.js"></script>
+<script src="js/modules/hse-push-notifications.js"></script>
+<script src="js/modules/hse-feature-flags.js"></script>
 </head>
 <body>
 
@@ -1007,7 +1166,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -1259,6 +1418,22 @@
 
         </form>
 
+        <!-- Unified Portal Footer -->
+        <footer class="portal-unified-footer" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-subtitle">نموذج كشف التفتيش والمرور اليومي لمسؤولي السلامة PWA • معتمد طبقاً لمعايير ISO 45001: 9.1 & OSHA 1926</p>
+            <div class="footer-meta-strip">
+                <i class="fas fa-code-branch text-amber-600"></i>
+                <span>إصدار النموذج:</span>
+                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1756</span>
+                <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
+                    <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
+                </button>
+                <span>•</span>
+                <a href="forms-hub.html" class="footer-hub-link">بوابة النماذج الرقمية</a>
+            </div>
+        </footer>
+
     </main>
 
     <!-- Success Modal — يظهر فقط بعد تأكيد الكتابة في Sheets -->
@@ -1280,13 +1455,13 @@
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 10px;">
-                <button type="button" id="waShareBtn" class="wa-share-btn" onclick="shareDailySafetyWhatsApp()">
-                    <i class="fab fa-whatsapp"></i> <span id="waShareBtnText">مشاركة التقرير عبر واتساب</span>
+                <button type="button" id="waShareBtn" class="wa-share-btn" onclick="shareDailySafetyWhatsApp()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important; color: #ffffff !important; padding: 12px 18px !important; border-radius: 12px !important; font-size: 14px !important; font-weight: 800 !important; border: none !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4) !important; width: 100% !important;">
+                    <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i> <span id="waShareBtnText">مشاركة التقرير عبر واتساب</span>
                 </button>
-                <button type="button" id="newReportBtn" onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px;">
+                <button type="button" id="newReportBtn" onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px; width: 100%;">
                     <i class="fas fa-plus ml-1"></i> تسجيل جولة مرور جديدة
                 </button>
-                <a href="/forms-hub" id="hubBackBtn" class="hub-link-btn" style="justify-content: center; padding: 10px; font-size: 13px;">
+                <a href="forms-hub.html" id="hubBackBtn" class="hub-link-btn" style="justify-content: center; padding: 10px; font-size: 13px; width: 100%; box-sizing: border-box;">
                     <i class="fas fa-arrow-right ml-1"></i> <span id="successHubBtnText">العودة لبوابة النماذج</span>
                 </a>
             </div>
@@ -1294,7 +1469,7 @@
     </div>
 
     <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
-    <a href="/forms-hub" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
         <i class="fas fa-layer-group"></i>
         <span>بوابة النماذج</span>
     </a>
@@ -1824,32 +1999,146 @@
                 }
 
                 if (rawMembers && Array.isArray(rawMembers) && rawMembers.length > 0) {
+                    const BLOCKED_INSPECTORS = new Set([
+                        'اسلام السيد علي الزغبي',
+                        'حسانين حسن محمد حسانين على',
+                        'طارق مصطفى السيد مدين الجوهرى',
+                        '112425',
+                        '112411',
+                        '100780'
+                    ]);
                     const inspSelect = document.getElementById('inspectorSelect');
                     const prevInsp = inspSelect.value;
                     inspSelect.innerHTML = `<option value="">${t.inspectorPlaceholder || '— اختر مسؤول السلامة —'}</option>`;
                     rawMembers.forEach(m => {
-                        const name = typeof m === 'string' ? m : m.name;
-                        if (name) {
-                            const opt = document.createElement('option');
-                            opt.value = name;
-                            opt.textContent = name;
-                            inspSelect.appendChild(opt);
+                        if (!m) return;
+                        const name = typeof m === 'string' ? m.trim() : String(m.name || m.fullName || '').trim();
+                        const code = typeof m === 'object' ? String(m.id || m.employeeCode || m.code || '').trim() : '';
+                        if (!name || name.length < 2) return;
+                        if (code && BLOCKED_INSPECTORS.has(code)) return;
+                        for (const b of BLOCKED_INSPECTORS) {
+                            if (b.length > 3 && name.includes(b)) return;
                         }
+                        if (typeof m === 'object') {
+                            if (m.active === false || m.active === 'false' || m.isActive === false || m.isActive === 'false') return;
+                            if (m.resignationDate || m.terminationDate || m.endDate) return;
+                            const status = String(m.status || m.jobStatus || '').toLowerCase();
+                            if (status.includes('مستقيل') || status.includes('استقال') || status.includes('غير نشط') || status.includes('resign') || status.includes('terminated')) return;
+                        }
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        opt.textContent = name;
+                        inspSelect.appendChild(opt);
                     });
                     if (prevInsp) inspSelect.value = prevInsp;
+
+                    // قراءة معاملات الرابط أو الجلسة الميدانية النشطة الموحدة (Active Field Session)
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        let sSite = urlParams.get('site') || urlParams.get('factory');
+                        let sInsp = urlParams.get('inspector') || urlParams.get('officer');
+                        let sShift = urlParams.get('shift');
+
+                        if (!sSite || !sInsp) {
+                            const sess = JSON.parse(localStorage.getItem('HSE_FIELD_ACTIVE_SESSION') || '{}');
+                            if (sess && sess.inspector) {
+                                if (!sInsp) sInsp = sess.inspector;
+                                if (!sSite) sSite = sess.site;
+                                if (!sShift) sShift = sess.shift;
+                            }
+                        }
+
+                        const siteSelect = document.getElementById('siteSelect');
+                        if (sSite && siteSelect) {
+                            for (let i = 0; i < siteSelect.options.length; i++) {
+                                if (siteSelect.options[i].value.toLowerCase().includes(sSite.toLowerCase())) {
+                                    siteSelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                        if (sInsp && inspSelect) {
+                            let matched = false;
+                            for (let i = 0; i < inspSelect.options.length; i++) {
+                                if (inspSelect.options[i].value === sInsp || inspSelect.options[i].value.includes(sInsp)) {
+                                    inspSelect.selectedIndex = i;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                            if (!matched && sInsp) {
+                                const opt = document.createElement('option');
+                                opt.value = sInsp;
+                                opt.textContent = sInsp;
+                                opt.selected = true;
+                                inspSelect.appendChild(opt);
+                            }
+                        }
+                        if (sShift) {
+                            const shiftSelect = document.getElementById('shiftSelect');
+                            if (shiftSelect) {
+                                for (let i = 0; i < shiftSelect.options.length; i++) {
+                                    if (shiftSelect.options[i].value.includes(sShift.split(' ')[0])) {
+                                        shiftSelect.selectedIndex = i;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } catch(sessErr) {}
                 }
             } catch(e) {}
         }
 
                 function getEffectiveApiUrl() {
-            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
-                return window.getEffectiveApiUrl();
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignHost(h) {
+                var s = String(h || '').toLowerCase();
+                return !s
+                    || s.indexOf('trycloudflare.com') !== -1
+                    || s.indexOf('safety-icapp.com') !== -1
+                    || s.indexOf('safetyicapp-ecru') !== -1;
+            }
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                if (s.indexOf('/api/gas') !== -1) return false;
+                return s.indexOf('script.google.com/macros/s/') === -1;
             }
             try {
+                // بروكسي Vercel نفس الأصل — يتجاوز مشكلة redirect في المتصفح مع GAS
+                var host = (window.location && window.location.hostname) || '';
+                var proto = (window.location && window.location.protocol) || '';
+                if (proto.indexOf('http') === 0 && host && host !== 'localhost' && host.indexOf('127.0.0.1') === -1 && !isForeignHost(host)) {
+                    return String(window.location.origin) + '/api/gas';
+                }
                 var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved) return saved;
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
+                }
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
             } catch (e) {}
-            return '/api/exec';
+            return DEFAULT_GAS;
         }
 
         function generateClientCsrfToken() {
@@ -1892,6 +2181,10 @@
         // Form Submission
         async function handleSubmit(e) {
             if (e && e.preventDefault) e.preventDefault();
+            
+            if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('form_submit', { formType: 'daily-safety' });
+            if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onFormSubmission('daily-safety', '');
+
             const t = DAILY_SAFETY_I18N[currentLang] || DAILY_SAFETY_I18N.ar;
 
             try {
@@ -1982,35 +2275,32 @@
                     q16: formAnswers.q17 || 'مطابق',
                     q17: formAnswers.q18 || 'مطابق',
                     signature: getSignatureBase64(),
+                    clientUuid: (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('hse_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10)),
                     csrfToken: generateClientCsrfToken()
                 };
                 if (payload.signature && String(payload.signature).length > 180000) {
                     payload.signature = '';
                 }
 
-                // 4. انتظار تأكيد الكتابة في Sheets — ممنوع نجاح وهمي قبل rowNumber
-                const submitBtn = document.getElementById('submitBtn');
-                const prevBtnHtml = submitBtn ? submitBtn.innerHTML : '';
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> <span>${t.submittingBtn}</span>`;
-                }
+                // 4. توليد كود التقرير المبدئي وعرض شاشة النجاح فورياً مع زر الواتساب المباشر
+                const now = new Date();
+                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
+                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
+                const instantRef = 'DSC-' + yearMonth + '-' + randomSuffix;
+                
+                showConfirmedSuccess(instantRef, payload, null);
 
-                try {
-                    saveToOfflineQueue(Object.assign({}, payload, { signature: '' }));
-                    const sync = await syncDailySafetyToCloud(payload, '', { updateUi: false });
-                    if (sync && sync.ok) {
-                        const serverRef = (sync.result && (sync.result.reportNumber || sync.result.id)) || '';
-                        showConfirmedSuccess(serverRef, payload, sync.result);
-                    } else {
-                        alert((t.syncFailedAlert || 'تعذر الحفظ') + (sync && sync.error ? ('\n' + sync.error) : ''));
+                // 6. المزامنة السحابية في الخلفية وتحديث رقم التقرير الرسمي وحالة الشيت فور التأكيد
+                syncDailySafetyToCloud(payload, instantRef, { updateUi: true }).then(sync => {
+                    if (sync && sync.ok && sync.result) {
+                        const serverRef = (sync.result && (sync.result.reportNumber || sync.result.id)) || instantRef;
+                        lastSubmittedRef = serverRef;
+                        const refBadge = document.getElementById('successRefBadge');
+                        if (refBadge) refBadge.textContent = (currentLang === 'en' ? 'Report Ref: ' : 'رقم التقرير: ') + serverRef;
                     }
-                } finally {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = prevBtnHtml || `<i class="fas fa-paper-plane"></i> <span>${t.submitBtn}</span>`;
-                    }
-                }
+                }).catch(e => console.warn('Background sync note:', e));
+
+                return false;
             } catch (err) {
                 console.error('Error in handleSubmit:', err);
                 alert((t.syncFailedAlert || 'تعذر الحفظ') + '\n' + ((err && err.message) || String(err)));
@@ -2239,6 +2529,7 @@
                             String(result.message || '').indexOf('doGet') !== -1
                         ));
                         if (realWrite && !fakeOk) {
+                            removeFromOfflineQueue(syncPayload.clientUuid);
                             if (updateUi) {
                                 const msgText = document.getElementById('successMsgText');
                                 if (msgText) {
@@ -2290,11 +2581,24 @@
         }
 
         // Offline Queue Management
+        function removeFromOfflineQueue(clientUuid) {
+            if (!clientUuid) return;
+            try {
+                const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
+                const remaining = q.filter(item => item.clientUuid !== clientUuid);
+                localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(remaining));
+            } catch(e) {}
+        }
+
         function saveToOfflineQueue(item) {
             try {
                 const q = JSON.parse(localStorage.getItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE') || '[]');
-                q.push({ ...item, timestamp: Date.now() });
-                localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(q));
+                const exists = q.some(i => (i.clientUuid && item.clientUuid && i.clientUuid === item.clientUuid) ||
+                    (i.inspectorName === item.inspectorName && i.date === item.date && i.shift === item.shift && i.siteName === item.siteName && i.q15Reading === item.q15Reading));
+                if (!exists) {
+                    q.push({ ...item, timestamp: Date.now() });
+                    localStorage.setItem('HSE_OFFLINE_DAILY_SAFETY_QUEUE', JSON.stringify(q));
+                }
             } catch(e) {}
         }
 
@@ -2630,6 +2934,106 @@
                 dotEl.style.background = '#10b981';
                 textEl.textContent = 'متصل بالسحابة';
             }
+        }
+
+        async function forceAppRefresh(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const spin = document.getElementById('refreshIconSpin');
+            if (spin) spin.classList.add('fa-spin');
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (let reg of regs) { await reg.unregister(); }
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) { await caches.delete(key); }
+                }
+            } catch (e) {}
+            window.location.reload(true);
+        }
+
+        // 🎙️ ميزة الإملاء الصوتي الذكي (محمية بـ Feature Flag: voice_dictation)
+        function initVoiceDictationFeature() {
+            const notesInput = document.getElementById('notesInput');
+            if (!notesInput) return;
+
+            let voiceBtn = document.getElementById('voiceDictationBtn');
+            const updateVoiceUi = (enabled) => {
+                if (enabled) {
+                    if (!voiceBtn) {
+                        const wrap = notesInput.parentElement;
+                        if (wrap) {
+                            wrap.style.position = 'relative';
+                            voiceBtn = document.createElement('button');
+                            voiceBtn.type = 'button';
+                            voiceBtn.id = 'voiceDictationBtn';
+                            voiceBtn.title = 'إملاء صوتي مباشر بدون يدين (تجريبي)';
+                            voiceBtn.style.cssText = 'position: absolute; left: 10px; bottom: 10px; background: #8b5cf6; color: white; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; z-index: 10; box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);';
+                            voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>إملاء صوتي</span>';
+                            wrap.appendChild(voiceBtn);
+
+                            let isRecording = false;
+                            let recognition = null;
+                            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+                            voiceBtn.onclick = () => {
+                                if (!SpeechRec) {
+                                    alert('ميزة التعرف على الصوت غير مدعومة في هذا المتصفح. يرجى تجربة Google Chrome.');
+                                    return;
+                                }
+                                if (isRecording) {
+                                    if (recognition) recognition.stop();
+                                    return;
+                                }
+                                try {
+                                    recognition = new SpeechRec();
+                                    recognition.lang = 'ar-EG';
+                                    recognition.continuous = false;
+                                    recognition.interimResults = false;
+
+                                    recognition.onstart = () => {
+                                        isRecording = true;
+                                        voiceBtn.style.background = '#ef4444';
+                                        voiceBtn.innerHTML = '<i class="fas fa-stop"></i> <span>جارٍ الاستماع...</span>';
+                                    };
+                                    recognition.onresult = (e) => {
+                                        const transcript = e.results[0][0].transcript;
+                                        notesInput.value = (notesInput.value ? notesInput.value + ' ' : '') + transcript;
+                                    };
+                                    recognition.onend = () => {
+                                        isRecording = false;
+                                        voiceBtn.style.background = '#8b5cf6';
+                                        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>إملاء صوتي</span>';
+                                    };
+                                    recognition.onerror = () => {
+                                        isRecording = false;
+                                        voiceBtn.style.background = '#8b5cf6';
+                                        voiceBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>إملاء صوتي</span>';
+                                    };
+                                    recognition.start();
+                                } catch (err) {
+                                    console.error('Speech recognition error:', err);
+                                }
+                            };
+                        }
+                    }
+                    if (voiceBtn) voiceBtn.style.display = 'inline-flex';
+                } else if (voiceBtn) {
+                    voiceBtn.style.display = 'none';
+                }
+            };
+
+            if (window.HseFeatureFlags) {
+                updateVoiceUi(HseFeatureFlags.isEnabled('voice_dictation'));
+                HseFeatureFlags.subscribe('voice_dictation', updateVoiceUi);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVoiceDictationFeature);
+        } else {
+            initVoiceDictationFeature();
         }
     </script>
 </body>

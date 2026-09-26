@@ -67,44 +67,22 @@ const GoogleIntegration = {
      * هل خلفية خادم SQL جاهزة (رابط Web App + تفعيل الاتصال)
      */
     _isBackendRpcConfigured() {
-        return true;
+        try {
+            const url = String(this._resolveScriptUrl() || '').trim();
+            return !!(url && url.indexOf('script.google.com') !== -1);
+        } catch (e) {
+            return false;
+        }
     },
 
     /** أوراق قراءتها للمدير فقط (تطابق Backend/Utils.gs) */
     ADMIN_ONLY_READ_SHEETS: ['Users', 'UserVersions', 'AuditLog', 'SecurityAuditLog', 'UserActivityLog'],
 
-    resolveCurrentUser() {
-        if (typeof AppState !== 'undefined' && AppState.currentUser && AppState.currentUser.email) {
-            return AppState.currentUser;
-        }
-        try {
-            let sessionUser = null;
-            const sess = sessionStorage.getItem('hse_current_session');
-            if (sess) {
-                sessionUser = JSON.parse(sess);
-            }
-            if (!sessionUser || !sessionUser.email) {
-                const rem = localStorage.getItem('hse_remember_user');
-                if (rem) {
-                    sessionUser = JSON.parse(rem);
-                }
-            }
-            if (sessionUser && sessionUser.email) {
-                if (typeof AppState !== 'undefined' && (!AppState.currentUser || !AppState.currentUser.email)) {
-                    AppState.currentUser = sessionUser;
-                }
-                return sessionUser;
-            }
-        } catch (_) {}
-        return (typeof AppState !== 'undefined' && AppState.currentUser) ? AppState.currentUser : null;
-    },
-
     _isCurrentUserEffectiveAdmin_() {
         try {
-            const user = this.resolveCurrentUser();
-            return !!(user && typeof Permissions !== 'undefined'
+            return !!(AppState.currentUser && typeof Permissions !== 'undefined'
                 && typeof Permissions.isCurrentUserEffectiveAdmin === 'function'
-                && Permissions.isCurrentUserEffectiveAdmin(user));
+                && Permissions.isCurrentUserEffectiveAdmin(AppState.currentUser));
         } catch (e) {
             return false;
         }
@@ -383,27 +361,47 @@ const GoogleIntegration = {
      * تطبيع رابط Web App (/dev → /exec) قبل الطلب
      */
     _resolveScriptUrl() {
-        if (typeof getEffectiveApiUrl === 'function') {
-            const live = String(getEffectiveApiUrl() || '').trim();
-            if (live) return live;
-        }
         const fromGasConfig = (typeof Utils !== 'undefined' && typeof Utils.getAppsScriptScriptUrl === 'function')
             ? String(Utils.getAppsScriptScriptUrl() || '').trim()
             : String(AppState?.googleConfig?.appsScript?.scriptUrl || '').trim();
-        if (fromGasConfig && !fromGasConfig.includes('trycloudflare.com')) {
-            return fromGasConfig;
+        if (fromGasConfig && fromGasConfig.indexOf('script.google.com') !== -1) {
+            return fromGasConfig.replace(/\/dev(\?|#|$)/, '/exec$1');
         }
-        return '/api/exec';
+        if (typeof getEffectiveApiUrl === 'function') {
+            const live = String(getEffectiveApiUrl() || '').trim();
+            if (live && live.indexOf('script.google.com') !== -1) return live;
+        }
+        if (fromGasConfig) return fromGasConfig;
+        if (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL) {
+            return String(window.HSE_DEFAULT_GAS_URL);
+        }
+        return '';
     },
 
     /**
      * التحقق من صحة رابط الباك إند (خادم SQL أو SQL Serverless / Tunnel)
      */
     isValidGoogleAppsScriptUrl(url) {
-        if (!url || typeof url !== 'string') return false;
-        const trimmed = url.trim();
-        if (trimmed.includes('trycloudflare.com')) return false;
-        return true;
+        try {
+            if (!url || typeof url !== 'string') return false;
+            const trimmed = url.trim();
+            if (trimmed.startsWith('/') || trimmed.startsWith('./')) return true;
+            const base = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost';
+            const urlObj = new URL(trimmed, base);
+            const host = urlObj.hostname.toLowerCase();
+            const path = urlObj.pathname || '';
+            if (host === 'script.google.com' || host.endsWith('.script.google.com') || host.includes('googleusercontent.com')) {
+                return path.endsWith('/exec');
+            }
+            if (host.includes('safety-icapp.com') || host.includes('safetyicapp-ecru')) return false;
+            if (host.includes('vercel.app') && (path === '/api/exec' || path.endsWith('/api/exec'))) return false;
+            if (host === 'localhost' || host === '127.0.0.1' || host === '') {
+                return true;
+            }
+            return false;
+        } catch (error) {
+            return false;
+        }
     },
 
     /**
@@ -1006,11 +1004,10 @@ const GoogleIntegration = {
                 if (snapshotSessionToken) payload.sessionToken = snapshotSessionToken;
             }
 
-            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
+            // هوية المُنفِّذ للخادم: Code.gs يتطلب postData.userData لعمليات strictAdminActions
             // (deleteUser، resetUserPassword، initializeSheets، إصلاح رؤوس الجداول) وإلا يُرفض الطلب.
-            const _resolvedUser = this.resolveCurrentUser();
-            if (_resolvedUser) {
-                const cu = _resolvedUser;
+            if (typeof AppState !== 'undefined' && AppState.currentUser) {
+                const cu = AppState.currentUser;
                 const envelope = {
                     email: String(cu.email || '').trim(),
                     id: cu.id != null && cu.id !== '' ? String(cu.id).trim() : '',
@@ -1720,10 +1717,6 @@ const GoogleIntegration = {
         return this._addToQueue(action, data, retryCount);
     },
 
-    async callAppsScriptRPC(action, data) {
-        return this.sendToAppsScript(action, data);
-    },
-
     _isTransientRpcError(errorMessage = '') {
         const msg = String(errorMessage || '').toLowerCase();
         return msg.includes('timeout') ||
@@ -1784,20 +1777,6 @@ const GoogleIntegration = {
         const { action, data } = requestData;
         if (!action) {
             throw new Error('يجب إدخال action في الطلب');
-        }
-
-        const currentUser = this.resolveCurrentUser();
-        if (currentUser) {
-            if (!requestData.userData && !requestData.actorUserData) {
-                requestData.actorUserData = currentUser;
-                requestData.userData = currentUser;
-            }
-            if (requestData.data && typeof requestData.data === 'object') {
-                if (!requestData.data.userData && !requestData.data.actorUserData) {
-                    requestData.data.actorUserData = currentUser;
-                    requestData.data.userData = currentUser;
-                }
-            }
         }
 
         // فشل مُهيكل: المستدعي يريد { success:false, message } بدل استثناء.

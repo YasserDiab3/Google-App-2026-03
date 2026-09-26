@@ -1937,6 +1937,9 @@ window.UI = {
     },
 
     _startPermissionScopedBootstrapLoad() {
+        if (typeof AppState !== 'undefined' && AppState.isPageRefresh) {
+            return false;
+        }
         if (this._hasAuthOwnedInitialDataFlow()) {
             return false;
         }
@@ -1976,6 +1979,7 @@ window.UI = {
 
         if (typeof AppState === 'undefined' ||
             !AppState.currentUser ||
+            AppState.isPageRefresh ||
             AppState._autoSyncStarted ||
             typeof Utils === 'undefined' ||
             typeof Utils.hasCloudBackendSync !== 'function' ||
@@ -2390,17 +2394,6 @@ window.UI = {
             window.removeEventListener('syncDataCompleted', this._syncDataCompletedHandler);
         }
 
-        if (this._dataManagerLoadedHandler) {
-            window.removeEventListener('dataManagerLoaded', this._dataManagerLoadedHandler);
-        }
-        this._dataManagerLoadedHandler = () => {
-            if (this._syncSectionRefreshTimer) clearTimeout(this._syncSectionRefreshTimer);
-            this._syncSectionRefreshTimer = setTimeout(() => {
-                this.refreshCurrentSection(true);
-            }, 100);
-        };
-        window.addEventListener('dataManagerLoaded', this._dataManagerLoadedHandler);
-
         // إضافة مستمع جديد
         this._syncDataCompletedHandler = (event) => {
             const { syncedCount, failedSheets, sheets } = event.detail || {};
@@ -2443,12 +2436,14 @@ window.UI = {
                 }
             }
 
-            // تحديث الموديول الحالي أياً كان (بما فيه الداشبورد) بعد المزامنة
-            const currentSection = AppState.currentSection || 'dashboard';
-            if (this._syncSectionRefreshTimer) clearTimeout(this._syncSectionRefreshTimer);
-            this._syncSectionRefreshTimer = setTimeout(() => {
-                this.refreshCurrentSection(true); // silent = true
-            }, 100);
+            // تحديث الموديول الحالي إذا كان موجوداً (مع debouncing لمنع إعادة تحميل متكررة)
+            const currentSection = AppState.currentSection;
+            if (currentSection && currentSection !== 'dashboard' && this._currentSectionNeedsRefreshForSheets(currentSection, sheets)) {
+                if (this._syncSectionRefreshTimer) clearTimeout(this._syncSectionRefreshTimer);
+                this._syncSectionRefreshTimer = setTimeout(() => {
+                    this.refreshCurrentSection(true); // silent = true
+                }, 120);
+            }
 
             // تحديث Dashboard إذا كان مفتوحاً
             if (currentSection === 'dashboard' && typeof Dashboard !== 'undefined' && Dashboard.load) {
@@ -4097,6 +4092,11 @@ window.UI = {
             mobileEl.textContent = valText;
             mobileEl.setAttribute('aria-label', fullText);
             mobileEl.style.display = raw === '—' ? 'none' : 'block';
+        }
+        if (raw && raw !== '—') {
+            document.querySelectorAll('.footer-version-pill, .tbt-version-pill, #lblDailySafetyVersion, #lblFireInspectionVersion, #lblNearMissVersion, #lblAppVersion, #lblTbtVersion').forEach(el => {
+                el.textContent = `v${raw}`;
+            });
         }
     },
 

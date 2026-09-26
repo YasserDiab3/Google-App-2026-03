@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <script src="js/hse-api-url.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
@@ -327,6 +326,16 @@
                 border-radius: 3px;
                 white-space: nowrap;
             }
+        }
+
+        @media (max-width: 375px) {
+            .iso-header-table {
+                grid-template-columns: 70px 1fr 92px !important;
+            }
+            .iso-col-brand { min-width: 70px !important; max-width: 70px !important; padding: 2px !important; }
+            .iso-logo-wrap { width: 44px !important; height: 28px !important; }
+            .iso-doc-title { font-size: 0.75rem !important; }
+            .iso-col-meta { min-width: 92px !important; max-width: 92px !important; padding: 2px !important; }
         }
 
         /* حالة التحميل */
@@ -819,13 +828,77 @@
         .toast-msg.error { background: #dc2626; }
         .toast-msg.success { background: #16a34a; }
 
-        /* التذييل */
-        .footer-card {
+        /* Unified Portal Footer */
+        .portal-unified-footer {
+            margin-top: 28px;
             text-align: center;
-            margin-top: 24px;
-            font-size: 0.72rem;
+            padding: 18px 14px;
+            border-top: 1px solid rgba(226, 232, 240, 0.85);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.2) 0%, rgba(241, 245, 249, 0.65) 100%);
+            border-radius: 0 0 16px 16px;
+            font-size: 0.78rem;
             color: #64748b;
-            line-height: 1.6;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .portal-unified-footer .footer-title {
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 0.84rem;
+            margin: 0 0 4px 0;
+        }
+        .portal-unified-footer .footer-subtitle {
+            margin: 0 0 10px 0;
+            font-size: 0.76rem;
+            color: #64748b;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        .portal-unified-footer .footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+        .portal-unified-footer .footer-version-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 800;
+            color: #1e293b;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+        }
+        .portal-unified-footer .footer-refresh-btn {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .portal-unified-footer .footer-refresh-btn:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .portal-unified-footer .footer-hub-link {
+            color: #0284c7;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .portal-unified-footer .footer-hub-link:hover {
+            color: #0369a1;
+            text-decoration: underline;
         }
     
         /* زر مسح QR المدمج داخل النموذج */
@@ -1093,6 +1166,77 @@
                 min-height: 48px !important;
                 padding: 10px 8px !important;
             }
+
+            /* 7. نوافذ الطوارئ والماسح الضوئي QR كـ Bottom Sheet على الهواتف */
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+
+            .qr-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+            }
+            .qr-modal-box {
+                border-radius: 22px 22px 0 0 !important;
+                max-width: 100vw !important;
+                width: 100vw !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                margin: auto 0 0 0 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .status-options-grid {
+                gap: 5px !important;
+            }
+            .status-option-btn {
+                padding: 8px 4px !important;
+                min-height: 60px !important;
+            }
+            .status-option-icon {
+                font-size: 1rem !important;
+            }
+            .status-option-text {
+                font-size: 0.72rem !important;
+                line-height: 1.25 !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
         }
 
         /* 🌡️ Live Weather & Heat Stress Badge */
@@ -1218,6 +1362,13 @@
         .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
 
 </style>
+<script src="js/modules/hse-smart-media-geo.js"></script>
+<script src="js/modules/hse-dark-mode.js"></script>
+<script src="js/modules/hse-device-audit.js"></script>
+<script src="js/modules/hse-security-alerts.js"></script>
+<script src="js/modules/hse-offline-sync.js"></script>
+<script src="js/modules/hse-push-notifications.js"></script>
+<script src="js/modules/hse-feature-flags.js"></script>
 </head>
 <body>
 
@@ -1327,7 +1478,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -1711,11 +1862,21 @@
             </div>
         </div>
 
-        <!-- التذييل -->
-        <div class="footer-card">
-            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) © 2026</div>
-            <div>نموذج معتمد طبقا لمعايير الأيزو والسلامة المهنية (ISO 45001 / NFPA 10) — جميع الحقوق محفوظة</div>
-        </div>
+        <!-- Unified Portal Footer -->
+        <footer class="portal-unified-footer">
+            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-subtitle">نموذج الفحص الدوري لأنظمة ومعدات الإطفاء PWA • معتمد طبقاً لمعايير ISO 45001 & NFPA 10 / 25</p>
+            <div class="footer-meta-strip">
+                <i class="fas fa-code-branch text-amber-600"></i>
+                <span>إصدار النموذج:</span>
+                <span class="footer-version-pill" id="lblFireInspectionVersion">v1.0.1756</span>
+                <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
+                    <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
+                </button>
+                <span>•</span>
+                <a href="forms-hub.html" class="footer-hub-link">بوابة النماذج الرقمية</a>
+            </div>
+        </footer>
     </div>
 
     <!-- Toast Notification -->
@@ -2015,14 +2176,40 @@
         let currentPhotoBase64 = '';
 
                 function getEffectiveApiUrl() {
-            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
-                return window.getEffectiveApiUrl();
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
             }
             try {
                 var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved) return saved;
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
+                }
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
             } catch (e) {}
-            return '/api/exec';
+            return DEFAULT_GAS;
         }
 
         
@@ -2470,61 +2657,70 @@
             document.getElementById('statusVal').value = status;
         }
 
-        // معالجة الصور وضغطها بكفاءة
+        // معالجة الصور الذكية وضغطها بكفاءة عبر HseSmartMedia
         ['photoInput', 'photoInputCamera', 'photoInputGallery'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('change', function(e) {
+                el.addEventListener('change', async function(e) {
                     const file = e.target.files[0];
                     if (!file) return;
-
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            const maxDim = 1100;
-                            let w = img.width;
-                            let h = img.height;
-                            if (w > maxDim || h > maxDim) {
-                                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                                else { w = Math.round((w * maxDim) / h); h = maxDim; }
-                            }
-                            canvas.width = w;
-                            canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, w, h);
-
-                            // Stamp official inspection watermark
-                            const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
-                            const bannerHeight = Math.max(36, Math.round(h * 0.08));
-                            ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-                            ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
-                            ctx.fillStyle = '#dc2626';
-                            ctx.fillRect(0, h - bannerHeight, w, 3);
-                            
-                            ctx.fillStyle = '#ffffff';
-                            ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
-                            ctx.textAlign = 'right';
-                            const now = new Date();
-                            const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
-                            ctx.fillText(`🧯 ICAPP HSE | فحص معدات الإطفاء (${devId})`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
-                            ctx.fillStyle = '#cbd5e1';
-                            ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
-                            ctx.fillText(`📅 ${dateStr} | تم الفحص والتوثيق الميداني المعتمد`, w - 12, h - (bannerHeight * 0.22));
-
-                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
-                            
-                            document.getElementById('photoPreview').src = currentPhotoBase64;
-                            document.getElementById('photoPreviewWrap').style.display = 'inline-block';
-                            document.getElementById('photoArea').style.display = 'none';
+                    try {
+                        const session = JSON.parse(localStorage.getItem('FIELD_SESSION_KEY') || '{}');
+                        const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
+                        const result = await HseSmartMedia.compressAndWatermarkPhoto(file, {
+                            formType: 'fire-inspection',
+                            formLabel: `🧯 فحص معدات الإطفاء (${devId})`,
+                            employeeName: session.employeeName || '',
+                            employeeCode: session.employeeCode || '',
+                            siteName: session.site || '',
+                            gps: window._currentFieldGps || null
+                        });
+                        currentPhotoBase64 = result.base64;
+                        document.getElementById('photoPreview').src = currentPhotoBase64;
+                        document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                        document.getElementById('photoArea').style.display = 'none';
+                        console.log(`[HSE-Media] Fire inspection photo: ${Math.round(result.originalSize/1024)}KB → ${Math.round(result.compressedSize/1024)}KB`);
+                    } catch (err) {
+                        console.error('[HSE-Media] Compression failed, using fallback:', err);
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const img = new Image();
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                const maxDim = 1100;
+                                let w = img.width, h = img.height;
+                                if (w > maxDim || h > maxDim) {
+                                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                                }
+                                canvas.width = w; canvas.height = h;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, w, h);
+                                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
+                                document.getElementById('photoPreview').src = currentPhotoBase64;
+                                document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                                document.getElementById('photoArea').style.display = 'none';
+                            };
+                            img.src = evt.target.result;
                         };
-                        img.src = evt.target.result;
-                    };
-                    reader.readAsDataURL(file);
+                        reader.readAsDataURL(file);
+                    }
                 });
             }
         });
+
+        // تهيئة GPS للتوثيق الجغرافي
+        (async function initFireInspectionGps() {
+            try {
+                if (typeof HseSmartGeo !== 'undefined' && navigator.geolocation) {
+                    const gps = await HseSmartGeo.getCurrentGps();
+                    window._currentFieldGps = gps;
+                    console.log('[HSE-Geo] Fire inspection GPS acquired:', gps.lat, gps.lng);
+                }
+            } catch (err) {
+                console.log('[HSE-Geo] GPS not available for fire inspection');
+            }
+        })();
 
         function removePhoto() {
             currentPhotoBase64 = '';
@@ -2574,6 +2770,10 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ وتوثيق الفحص بالسجلات...</span>';
             showToast('جاري إرسال وتوثيق الفحص في قاعدة البيانات...', 'info', 0);
+
+            let session = {}; try { session = JSON.parse(localStorage.getItem('FIELD_SESSION_KEY') || '{}'); } catch(e) {}
+            if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('form_submit', { formType: 'fire-inspection', employeeCode: session?.employeeCode || '' });
+            if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onFormSubmission('fire-inspection', session?.employeeCode || '');
 
             const payload = {
                 action: 'submitPublicFireInspection',
@@ -2630,10 +2830,23 @@
 
             if (success && resultData) {
                 showSuccessScreen(resultData.id || 'FEI-0000', payload);
+                if (typeof HsePushNotify !== 'undefined' && payload.assetId) {
+                    try {
+                        // تذكير بالفحص الدوري القادم بعد 30 يوماً
+                        HsePushNotify.scheduleReminder(
+                            '🧯 موعد الفحص الدوري القادم',
+                            `حان موعد الفحص الشهري لمعدة الإطفاء (${payload.assetId})`,
+                            30 * 24 * 60 * 60 * 1000
+                        );
+                    } catch(e) {}
+                }
             } else {
                 // حفظ أوفلاين إذا تعذر الاتصال
                 const offlineRef = 'FEI-OFFLINE-' + Math.floor(1000 + Math.random()*9000);
                 saveFireInspectionOffline(payload, offlineRef);
+                if (typeof HseOfflineSync !== 'undefined') {
+                    try { HseOfflineSync.saveSubmission('fire-inspection', payload, targetApiUrl); } catch(e) {}
+                }
                 showSuccessScreen(offlineRef + ' (محلي)', payload);
                 showToast('تم حفظ الفحص محلياً بنجاح وسيتم مزامنته تلقائياً عند توفر الإنترنت!', 'info', 5000);
             }
@@ -3033,6 +3246,23 @@
                 dotEl.style.background = '#10b981';
                 textEl.textContent = 'متصل بالسحابة';
             }
+        }
+
+        async function forceAppRefresh(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const spin = document.getElementById('refreshIconSpin');
+            if (spin) spin.classList.add('fa-spin');
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (let reg of regs) { await reg.unregister(); }
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) { await caches.delete(key); }
+                }
+            } catch (e) {}
+            window.location.reload(true);
         }
 
         window.addEventListener('DOMContentLoaded', () => {

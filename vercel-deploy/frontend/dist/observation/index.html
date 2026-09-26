@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <script src="../../js/hse-api-url.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f172a">
@@ -49,6 +48,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 🌐 HSE Smart Media & GPS Geofencing Suite -->
+    <script src="js/modules/hse-smart-media-geo.js"></script>
+    <script src="js/modules/hse-dark-mode.js"></script>
+    <script src="js/modules/hse-device-audit.js"></script>
+    <script src="js/modules/hse-security-alerts.js"></script>
+    <script src="js/modules/hse-offline-sync.js"></script>
+    <script src="js/modules/hse-push-notifications.js"></script>
+    <script src="js/modules/hse-feature-flags.js"></script>
     
     <style>
         :root {
@@ -437,6 +445,16 @@
                 font-size: 0.58rem;
                 padding: 1px 5px;
             }
+        }
+
+        @media (max-width: 375px) {
+            .iso-header-table {
+                grid-template-columns: 70px 1fr 92px !important;
+            }
+            .iso-col-brand { min-width: 70px !important; max-width: 70px !important; padding: 2px !important; }
+            .iso-logo-wrap { width: 44px !important; height: 28px !important; }
+            .iso-doc-title { font-size: 0.75rem !important; }
+            .iso-col-meta { min-width: 92px !important; max-width: 92px !important; padding: 2px !important; }
         }
 
         /* 📱 تحسين وتنسيق أزرار وأدوات الهيدر على الموبايل والديسكتوب */
@@ -1308,56 +1326,77 @@
         }
 
         /* فوتر منمق بهوية بصرية فائقة الجمال */
-        .footer-card {
-            margin-top: 24px;
-            margin-bottom: 20px;
-            padding: 16px 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #f1f5f9 100%);
-            border-radius: 16px;
-            border: 1.5px solid #e2e8f0;
-            box-shadow: 0 4px 15px rgba(15, 23, 42, 0.04);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
+        /* Unified Portal Footer */
+        .portal-unified-footer {
+            margin-top: 28px;
             text-align: center;
+            padding: 18px 14px;
+            border-top: 1px solid rgba(226, 232, 240, 0.85);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.2) 0%, rgba(241, 245, 249, 0.65) 100%);
+            border-radius: 0 0 16px 16px;
+            font-size: 0.78rem;
+            color: #64748b;
+            box-sizing: border-box;
+            width: 100%;
         }
-
-        .footer-brand {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+        .portal-unified-footer .footer-title {
             font-weight: 800;
-            font-size: 0.88rem;
-            color: #1e3a8a;
+            color: #1e293b;
+            font-size: 0.84rem;
+            margin: 0 0 4px 0;
+        }
+        .portal-unified-footer .footer-subtitle {
+            margin: 0 0 10px 0;
+            font-size: 0.76rem;
+            color: #64748b;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        .portal-unified-footer .footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+        .portal-unified-footer .footer-version-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 800;
+            color: #1e293b;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+        }
+        .portal-unified-footer .footer-refresh-btn {
             background: #eff6ff;
             border: 1px solid #bfdbfe;
-            padding: 5px 12px;
-            border-radius: 20px;
-            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
-        }
-
-        .footer-company {
-            font-weight: 800;
-            font-size: 0.92rem;
-            color: #0f172a;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .footer-rights {
-            font-size: 0.78rem;
+            color: #2563eb;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: #64748b;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            padding: 5px 10px;
-            border-radius: 20px;
+            cursor: pointer;
             display: inline-flex;
             align-items: center;
             gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .portal-unified-footer .footer-refresh-btn:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .portal-unified-footer .footer-hub-link {
+            color: #0284c7;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .portal-unified-footer .footer-hub-link:hover {
+            color: #0369a1;
+            text-decoration: underline;
         }
 
         @media (max-width: 640px) {
@@ -2030,6 +2069,8 @@
             gap: 4px;
             color: #334155;
             transition: all 0.15s ease;
+            min-height: 38px;
+            touch-action: manipulation;
         }
         .btn-thumb-action:hover {
             background: #f1f5f9;
@@ -2507,6 +2548,88 @@
             }
         }
 
+        /* 📱 Bottom Sheet Dialogs & Touch Ergonomics for Observation Modals */
+        @media (max-width: 640px) {
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+            .app-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+            }
+            .app-modal-box {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(94dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 20px 20px 0 0 !important;
+                margin: auto 0 0 0 !important;
+            }
+            .risk-chip {
+                min-height: 44px !important;
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: center !important;
+                justify-content: center !important;
+                touch-action: manipulation;
+            }
+            .type-card, .status-card, .btn-quick-pill {
+                min-height: 44px !important;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .risk-chips {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+            }
+            .risk-chip {
+                padding: 9px 6px !important;
+                font-size: 0.78rem !important;
+                min-height: 42px !important;
+            }
+            .status-card {
+                padding: 8px 4px !important;
+                font-size: 0.72rem !important;
+                white-space: nowrap !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
+        }
+
         /* 🌡️ Live Weather & Heat Stress Badge */
         .weather-badge {
             padding: 4px 10px;
@@ -2734,7 +2857,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -3059,6 +3182,22 @@
                 </button>
                 <a href="/forms-hub" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px 18px; border-radius: 12px; background: #e0e7ff; color: #3730a3; font-weight: 800; text-decoration: none; font-size: 13px; transition: all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
                     <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع إلى بوابة النماذج</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- 🛑 بطاقة إغلاق استقبال الردود (مثل Google Forms Closed Card) -->
+        <div id="formClosedCard" style="display: none; background: #ffffff; border-radius: 18px; padding: 40px 24px; text-align: center; border: 1.5px solid #fee2e2; box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.1); margin-bottom: 24px; max-width: 600px; width: 100%;">
+            <div style="width: 72px; height: 72px; background: #fef2f2; border: 2px solid #fecaca; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #dc2626; font-size: 32px; margin-bottom: 18px;">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 10px;">النموذج لا يقبل ردوداً حالياً</h2>
+            <p id="formClosedReasonText" style="font-size: 0.92rem; color: #64748b; line-height: 1.7; margin-bottom: 24px; max-width: 480px; margin-inline: auto;">
+                لقد تم إيقاف استقبال الملاحظات اليومية مؤقتاً من قِبل إدارة السلامة والصحة المهنية.
+            </p>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <a href="/forms-hub" style="background: #2563eb; color: #ffffff; text-decoration: none; padding: 12px 22px; border-radius: 12px; font-weight: 700; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.25);">
+                    <i class="fas fa-layer-group"></i> <span>الرجوع لبوابة النماذج</span>
                 </a>
             </div>
         </div>
@@ -3609,20 +3748,21 @@
             </div>
         </div>
 
-        <div class="footer-card">
-            <div class="footer-rights">
-                <i class="fas fa-certificate text-amber-500"></i>
-                <span>جميع الحقوق محفوظة</span>
+        <!-- Unified Portal Footer -->
+        <footer class="portal-unified-footer">
+            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-subtitle">نموذج رصد ملاحظات السلامة والمخاطر الميدانية PWA • معتمد طبقاً لمعايير ISO 45001: 8.1 & OSHA 1910</p>
+            <div class="footer-meta-strip">
+                <i class="fas fa-code-branch text-amber-600"></i>
+                <span>إصدار النموذج:</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1756</span>
+                <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
+                    <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
+                </button>
+                <span>•</span>
+                <a href="forms-hub.html" class="footer-hub-link">بوابة النماذج الرقمية</a>
             </div>
-            <div class="footer-company">
-                <i class="fas fa-industry text-emerald-600"></i>
-                <span>الشركة العالمية للانتاج والتصنيع الزراعي</span>
-            </div>
-            <div class="footer-brand" dir="ltr">
-                <i class="fas fa-shield-halved text-blue-600"></i>
-                <span>SafetyHub Platform | ICAPP © 2026</span>
-            </div>
-        </div>
+        </footer>
     </div>
 
     <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
@@ -4247,15 +4387,21 @@
         window._qrStream = null;
         window._qrScanning = false;
 
-                function getEffectiveApiUrl() {
-            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
-                return window.getEffectiveApiUrl();
-            }
+        function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+
             try {
-                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved) return saved;
+                if (typeof window !== 'undefined' && window.location && window.location.origin) {
+                    var orig = String(window.location.origin);
+                    var host = String(window.location.hostname || '').toLowerCase();
+                    if (orig.indexOf('http') === 0 && host && host !== 'localhost' && host.indexOf('127.0.0.1') === -1) {
+                        return orig + '/api/gas';
+                    }
+                }
             } catch (e) {}
-            return '/api/exec';
+            return DEFAULT_GAS;
         }
         
         const STANDARD_11_HAZARDS = [
@@ -5079,6 +5225,35 @@
                 ? cfg.safetyMembers
                 : getLiveCachedSafetyMembers();
 
+            const KNOWN_RESIGNED_OBSERVERS = new Set([
+                'اسلام السيد علي الزغبي',
+                'حسانين حسن محمد حسانين على',
+                'طارق مصطفى السيد مدين الجوهرى',
+                '112425',
+                '112411',
+                '100780'
+            ]);
+
+            function isResignedSafetyMember(mem) {
+                if (!mem) return false;
+                if (typeof mem === 'string') {
+                    for (const b of KNOWN_RESIGNED_OBSERVERS) {
+                        if (b.length > 3 && mem.includes(b)) return true;
+                    }
+                    return false;
+                }
+                const n = String(mem.name || mem.fullName || '').trim();
+                const code = String(mem.id || mem.employeeCode || mem.code || '').trim();
+                if (code && KNOWN_RESIGNED_OBSERVERS.has(code)) return true;
+                for (const b of KNOWN_RESIGNED_OBSERVERS) {
+                    if (b.length > 3 && n.includes(b)) return true;
+                }
+                if (mem.active === false || mem.active === 'false' || mem.isActive === false || mem.isActive === 'false') return true;
+                if (mem.resignationDate || mem.terminationDate || mem.endDate) return true;
+                const status = String(mem.status || mem.jobStatus || mem.workStatus || '').toLowerCase();
+                return status.includes('مستقيل') || status.includes('استقال') || status.includes('إنهاء') || status.includes('انهاء') || status.includes('مفصول') || status.includes('ترك') || status.includes('غير نشط') || status.includes('resign') || status.includes('terminated') || status.includes('inactive');
+            }
+
             const seenKeys = new Set();
             function normalizeKey(str) {
                 return String(str || '')
@@ -5094,6 +5269,7 @@
             realMembers.forEach(mem => {
                 const mName = typeof mem === 'string' ? mem.trim() : String(mem.name || '').trim();
                 if (!mName || mName.includes('مجهول') || mName.includes('عامة') || mName.length < 3) return;
+                if (isResignedSafetyMember(mem)) return;
                 const key = normalizeKey(mName);
                 if (seenKeys.has(key)) return;
                 seenKeys.add(key);
@@ -5135,22 +5311,47 @@
             loadReporterProfile();
         }
 
+        function formatSubLocationName(str, selectedSite = '') {
+            if (!str) return '';
+            let s = String(str).trim();
+            if (!s || s === '[object Object]') return '';
+            s = s.replace(/^ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP_?/i, (m, p1, p2) => 'ICAPP-' + (p2 || p1) + '_');
+            s = s.replace(/^(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP_?/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)_?/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^(\d+)-ICAPP\s*[-—]\s*ICAPP-(\d+)_?/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^ICAPP-(\d+)\s*[-—]\s*/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^(\d+)-ICAPP\s*[-—]\s*/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^(\d+)-ICAPP_/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/^ICAPP-(\d+)_(\d+)-ICAPP_/i, (m, p1) => 'ICAPP-' + p1 + '_');
+            s = s.replace(/_\s*ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP$/gi, (m, p1, p2) => '_ ' + (p2 || p1) + '-ICAPP');
+            s = s.replace(/_\s*ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)$/gi, (m, p1) => '_ ' + p1 + '-ICAPP');
+            s = s.replace(/_\s*(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP$/gi, (m, p1) => '_ ' + p1 + '-ICAPP');
+            s = s.replace(/_ICAPP-(\d+)$/gi, (m, p1) => '_ ' + p1 + '-ICAPP');
+            s = s.replace(/^(ICAPP-\d+_)\1+/i, '$1');
+            return s.replace(/\s+/g, ' ').trim();
+        }
+
         function getCleanPlaceName(p) {
             if (!p) return '';
+            let str = '';
             if (typeof p === 'string') {
                 const trimmed = p.trim();
                 if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
                     try {
                         const obj = JSON.parse(trimmed);
-                        return String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.title || obj.id || '').trim();
-                    } catch (e) {}
+                        str = String(obj.name || obj.placeName || obj.locationName || obj.place || obj.label || obj.title || obj.id || '').trim();
+                    } catch (e) {
+                        str = trimmed;
+                    }
+                } else {
+                    str = trimmed;
                 }
-                return trimmed;
+            } else if (typeof p === 'object') {
+                str = String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
+            } else {
+                str = String(p).trim();
             }
-            if (typeof p === 'object') {
-                return String(p.name || p.placeName || p.locationName || p.place || p.label || p.title || p.id || '').trim();
-            }
-            return String(p).trim();
+            return formatSubLocationName(str);
         }
 
         window._allCurrentPlaces = [];
@@ -5584,7 +5785,7 @@
             return bestDataUrl;
         }
 
-        function handlePhotoSelect(event) {
+        async function handlePhotoSelect(event) {
             const files = event.target.files;
             if (!files || files.length === 0) return;
 
@@ -5596,76 +5797,46 @@
             }
 
             const filesToProcess = Array.from(files).slice(0, remainingSlots);
-            let processed = 0;
+            showToast('جاري ضغط ومعالجة الصور بالذكاء الاصطناعي وبصيغة WebP السريعة...', 'loading');
 
-            showToast('جاري ضغط ومعالجة الصور بصيغة WebP السريعة...', 'loading');
+            const session = (typeof getActiveFieldSession === 'function') ? getActiveFieldSession() : null;
+            const site = document.getElementById('siteSelect')?.value || (session && session.site) || 'الموقع العام';
+            const place = document.getElementById('locationName')?.value || '';
+            const repName = (session && (session.employeeName || session.inspector)) || document.getElementById('reporterName')?.value || '';
+            const repCode = (session && session.employeeCode) || '';
 
-            filesToProcess.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 1000;
-                        const MAX_HEIGHT = 1000;
-                        let width = img.width;
-                        let height = img.height;
+            for (const file of filesToProcess) {
+                try {
+                    let compressed = null;
+                    if (typeof HseSmartMedia !== 'undefined' && typeof HseSmartMedia.compressAndWatermarkPhoto === 'function') {
+                        compressed = await HseSmartMedia.compressAndWatermarkPhoto(file, {
+                            formTitle: 'توثيق ملاحظة ميدانية',
+                            site: site,
+                            location: place,
+                            employeeName: repName,
+                            employeeCode: repCode,
+                            gps: window._currentGps || (session && session.gps),
+                            accentColor: '#2563eb'
+                        });
+                    } else {
+                        compressed = await new Promise((res) => {
+                            const r = new FileReader();
+                            r.onload = (re) => res(re.target.result);
+                            r.readAsDataURL(file);
+                        });
+                    }
 
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
+                    if (uploadedPhotos.length < 3 && compressed) {
+                        uploadedPhotos.push(compressed);
+                    }
+                } catch(photoErr) {
+                    console.warn('Photo processing error:', photoErr);
+                }
+            }
 
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // Stamp official observation watermark
-                        const site = document.getElementById('siteSelect')?.value || '';
-                        const place = document.getElementById('locationName')?.value || '';
-                        const loc = (site && place) ? `${site} - ${place}` : (site || place || 'الموقع العام');
-                        const bannerHeight = Math.max(36, Math.round(height * 0.08));
-                        ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-                        ctx.fillRect(0, height - bannerHeight, width, bannerHeight);
-                        ctx.fillStyle = '#2563eb';
-                        ctx.fillRect(0, height - bannerHeight, width, 3);
-                        
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
-                        ctx.textAlign = 'right';
-                        const now = new Date();
-                        const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
-                        ctx.fillText(`📋 ICAPP HSE | توثيق ملاحظة ميدانية`, width - 12, height - bannerHeight + (bannerHeight * 0.42));
-                        ctx.fillStyle = '#cbd5e1';
-                        ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
-                        ctx.fillText(`📅 ${dateStr} | 📍 ${loc}`, width - 12, height - (bannerHeight * 0.22));
-
-                        // ضغط الصورة بتقنية WebP الفورية لأقل من 200 كيلوبايت
-                        const compressed = compressCanvasToWebP(canvas, 200 * 1024);
-                        if (uploadedPhotos.length < 3) {
-                            uploadedPhotos.push(compressed);
-                        }
-
-                        processed++;
-                        if (processed === filesToProcess.length) {
-                            hideToast();
-                            renderPhotosGallery();
-                            showToast(`تمت إضافة وضغط ${processed} صورة بنجاح WebP ✅`, 'success', 2500);
-                        }
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-
+            hideToast();
+            renderPhotosGallery();
+            showToast(`تمت إضافة وضغط ${filesToProcess.length} صورة معتمدة بنجاح WebP ✅`, 'success', 2500);
             event.target.value = '';
         }
 
@@ -5881,6 +6052,58 @@
                         }
                     }
                 }
+
+                // فحص الجلسة الميدانية النشطة الموحدة (Active Field Patrol Session)
+                const fieldSessionRaw = localStorage.getItem('HSE_FIELD_ACTIVE_SESSION');
+                if (fieldSessionRaw) {
+                    const session = JSON.parse(fieldSessionRaw);
+                    if (session && session.inspector) {
+                        const elapsed = (Date.now() - (session.timestamp || 0)) / (1000 * 60 * 60);
+                        if (elapsed <= 12) {
+                            const ownerSel = document.getElementById('ownerSelect');
+                            if (ownerSel) {
+                                let matched = false;
+                                for (let i = 0; i < ownerSel.options.length; i++) {
+                                    if (ownerSel.options[i].value === session.inspector || ownerSel.options[i].value.includes(session.inspector)) {
+                                        ownerSel.selectedIndex = i;
+                                        matched = true;
+                                        break;
+                                    }
+                                }
+                                if (!matched) {
+                                    ownerSel.value = '__OTHER_OWNER__';
+                                    const customOwnerGroup = document.getElementById('customOwnerGroup');
+                                    const customOwnerInput = document.getElementById('customOwnerInput');
+                                    if (customOwnerGroup) customOwnerGroup.style.display = 'block';
+                                    if (customOwnerInput) customOwnerInput.value = session.inspector;
+                                }
+                            }
+                            if (session.site) {
+                                const siteSel = document.getElementById('siteSelect');
+                                if (siteSel) {
+                                    for (let i = 0; i < siteSel.options.length; i++) {
+                                        if (siteSel.options[i].value.toLowerCase().includes(session.site.toLowerCase())) {
+                                            siteSel.selectedIndex = i;
+                                            if (typeof handleSiteChange === 'function') handleSiteChange(siteSel.value);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (session.shift) {
+                                const shiftSel = document.getElementById('shiftSelect');
+                                if (shiftSel) {
+                                    for (let i = 0; i < shiftSel.options.length; i++) {
+                                        if (shiftSel.options[i].value.includes(session.shift.split(' ')[0])) {
+                                            shiftSel.selectedIndex = i;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             } catch(e) {}
         }
 
@@ -5898,11 +6121,10 @@
             toast.classList.add('show');
 
             if (window._toastTimer) clearTimeout(window._toastTimer);
-            if (type !== 'loading') {
-                window._toastTimer = setTimeout(() => {
-                    toast.classList.remove('show');
-                }, duration);
-            }
+            const autoHideMs = (type === 'loading') ? Math.min(duration || 3500, 3500) : (duration || 4000);
+            window._toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+            }, autoHideMs);
         }
 
         function hideToast() {
@@ -6978,10 +7200,19 @@
             const badge = document.getElementById('gpsStatusBadge');
             if (!badge) return;
 
-            if (isSuccess) {
+            if (isSuccess && window._currentGps) {
                 badge.classList.add('gps-active');
-                badge.style.color = '#15803d';
-                badge.title = text || 'تم تحديد الموقع الجغرافي تلقائياً وبدقة (GPS نشط)';
+                const site = document.getElementById('siteSelect')?.value || 'الموقع العام';
+                let geoText = text;
+                if (typeof HseSmartGeo !== 'undefined' && typeof HseSmartGeo.checkGeofence === 'function') {
+                    const geo = HseSmartGeo.checkGeofence(window._currentGps.latitude, window._currentGps.longitude, site);
+                    window._currentGps.geofence = geo;
+                    geoText = geo.statusText + ` (دقة: ±${window._currentGps.accuracy}م)`;
+                    badge.style.color = geo.isInside ? '#15803d' : '#d97706';
+                } else {
+                    badge.style.color = '#15803d';
+                }
+                badge.title = geoText;
             } else {
                 badge.classList.remove('gps-active');
                 badge.style.color = '#dc2626';
@@ -7200,8 +7431,15 @@
 
                 let gpsData = window._currentGps || null;
 
+                const clientUuid = (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ('hse_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10));
+
+                let session = {}; try { session = JSON.parse(localStorage.getItem('FIELD_SESSION_KEY') || '{}'); } catch(e) {}
+                if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('form_submit', { formType: 'observation', employeeCode: session?.employeeCode || '' });
+                if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onFormSubmission('observation', session?.employeeCode || '');
+
                 const payload = {
                     action: 'submitPublicObservation',
+                    clientUuid: clientUuid,
                     instantRefCode: instantRefCode,
                     followUpToId: followUpToId,
                     followUpIsoCode: followUpIsoCode,
@@ -7228,15 +7466,15 @@
                 // حفظ نسخة محلية احتياطية فورية
                 try {
                     const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
-                    localHistory.unshift({ refCode: instantRefCode, timestamp: Date.now(), data: payload });
+                    localHistory.unshift({ refCode: instantRefCode, timestamp: Date.now(), synced: true, data: payload });
                     if (localHistory.length > 30) localHistory.pop();
                     localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(localHistory));
                 } catch(le) {}
 
-                // 2. إظهار شاشة النجاح والإيصال فوراً في أقل من 50 مللي ثانية (Optimistic UI)
-                showSuccess(instantRefCode, payload);
+                // 2. إظهار شاشة النجاح والإيصال فوراً بدون انتظار
+                showSuccess(instantRefCode, payload, true);
 
-                // 3. المزامنة والرفع إلى قاعدة البيانات السحابية في الخلفية
+                // 3. المزامنة والرفع السريع إلى قاعدة البيانات السحابية عبر /api/gas
                 syncObservationInBackground(payload, instantRefCode);
 
             } catch (err) {
@@ -7245,24 +7483,37 @@
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = originalBtnHtml;
                 }
-                const now = new Date();
-                const yearMonth = now.toISOString().slice(0, 7).replace('-', '');
-                const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
-                const fallbackRef = 'OBS-' + yearMonth + '-' + randomSuffix;
-                showSuccess(fallbackRef, {
-                    siteName: document.getElementById('siteSelect')?.value || 'الموقع',
-                    locationName: document.getElementById('placeSelect')?.value || 'المكان',
-                    observationType: selectedObservationType || 'ملاحظة عامة',
-                    riskLevel: selectedRiskLevel || 'متوسط',
-                    observerName: document.getElementById('ownerSelect')?.value || 'ميداني'
-                });
+                showToast('حدث خطأ غير متوقع أثناء معالجة النموذج: ' + (err.message || ''), 'error', 5000);
             } finally {
                 _obsSubmitInFlight = false;
             }
         });
 
+        function markLocalObservationSynced(refCode, serverId) {
+            try {
+                const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
+                let changed = false;
+                for (let i = 0; i < localHistory.length; i++) {
+                    if (localHistory[i] && (localHistory[i].refCode === refCode || (localHistory[i].data && localHistory[i].data.instantRefCode === refCode))) {
+                        localHistory[i].synced = true;
+                        if (serverId) localHistory[i].serverId = serverId;
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(localHistory));
+                }
+            } catch (_) {}
+        }
+
         async function syncObservationInBackground(payload, refCode) {
-            const targetApiUrl = getEffectiveApiUrl();
+            const DEFAULT_GAS = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            const fallbackUrls = [];
+            if (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin.indexOf('http') === 0) {
+                fallbackUrls.push(window.location.origin + '/api/gas');
+                fallbackUrls.push(window.location.origin + '/api/exec');
+            }
+            fallbackUrls.push(DEFAULT_GAS);
 
             // فحص إضافي إذا كان الـ GPS وصل في هذه الأثناء
             if ((!payload.gpsCoordinates || payload.gpsCoordinates === '') && window._currentGps) {
@@ -7272,10 +7523,13 @@
             }
 
             let syncSuccess = false;
+            let confirmedId = refCode;
             let lastError = '';
-            for (let attempt = 1; attempt <= 3; attempt++) {
+
+            for (let attempt = 1; attempt <= fallbackUrls.length; attempt++) {
+                const targetUrl = fallbackUrls[attempt - 1];
                 try {
-                    const response = await fetch(targetApiUrl, {
+                    const response = await fetch(targetUrl, {
                         method: 'POST',
                         mode: 'cors',
                         redirect: 'follow',
@@ -7289,29 +7543,25 @@
                     const result = await response.json();
                     if (result && result.success) {
                         syncSuccess = true;
-                        if (result.id && result.id !== refCode) {
-                            const badge = document.getElementById('refBadge');
-                            if (badge) badge.textContent = 'رقم الملاحظة: ' + result.id;
-                        }
-                        console.log('Observation synced in background:', result);
+                        confirmedId = result.id || result.isoCode || refCode;
+                        markLocalObservationSynced(refCode, confirmedId);
+                        const badge = document.getElementById('refBadge');
+                        if (badge) badge.textContent = 'رقم الملاحظة: ' + confirmedId;
+                        console.log('Observation synced to cloud DB:', result);
                         break;
                     }
                     lastError = (result && result.message) ? result.message : 'رفض الخادم الحفظ';
-                    console.warn('Background sync rejected:', result);
+                    console.warn('Cloud sync rejected:', result);
                 } catch (err) {
                     lastError = err && err.message ? err.message : String(err);
-                    console.warn(`Background sync attempt ${attempt} failed:`, err);
-                    if (attempt < 3) {
-                        await new Promise(r => setTimeout(r, 2000));
-                    }
+                    console.warn(`Cloud sync attempt ${attempt} failed:`, err);
                 }
             }
 
             if (!syncSuccess) {
                 saveToOfflineQueue(payload, refCode);
-                const hint = lastError ? (' (' + lastError + ')') : '';
-                showToast('تعذر الاتصال بالخادم الآن. تم حفظ الملاحظة محلياً (Offline) وستتم مزامنتها تلقائياً عند عودة الاتصال.' + hint, 'warning', 6000);
             }
+            return { synced: syncSuccess, id: confirmedId, error: lastError };
         }
 
         
@@ -7865,8 +8115,17 @@
 
         function saveToOfflineQueue(payload, refCode) {
             const queue = getOfflineQueue();
-            queue.push({ payload, refCode, timestamp: Date.now() });
-            saveOfflineQueue(queue);
+            const exists = queue.some(item => 
+                item.refCode === refCode || 
+                (item.payload && item.payload.observerName === payload.observerName && 
+                 item.payload.details === payload.details && 
+                 item.payload.siteName === payload.siteName && 
+                 item.payload.date === payload.date)
+            );
+            if (!exists) {
+                queue.push({ payload, refCode, timestamp: Date.now() });
+                saveOfflineQueue(queue);
+            }
         }
 
         function updateOfflineBadge() {
@@ -7887,55 +8146,94 @@
             }
         }
 
-        async function syncOfflineQueue() {
-            const queue = getOfflineQueue();
-            if (queue.length === 0) return;
-
+        let _isSyncingOfflineQueue = false;
+        async function syncOfflineQueue(manualTrigger = false) {
+            if (_isSyncingOfflineQueue) return;
             if (!navigator.onLine) {
                 updateOfflineBadge();
                 return;
             }
 
-            showToast(`جاري مزامنة ${queue.length} ملاحظة مع السجل السحابي...`, 'loading');
-            const targetApiUrl = getEffectiveApiUrl();
-            const remaining = [];
-            let synced = 0;
-
-            for (const item of queue) {
-                try {
-                    const res = await fetch(targetApiUrl, {
-                        method: 'POST',
-                        mode: 'cors',
-                        redirect: 'follow',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(item.payload)
-                    });
-                    const data = await res.json();
-                    if (data && data.success) {
-                        synced++;
-                    } else {
-                        remaining.push(item);
+            // تنظيف لمرة واحدة لأي عناصر مكررة أو عالقة من الإصدار السابق
+            try {
+                if (!localStorage.getItem('HSE_OBS_QUEUE_CLEAN_V1744')) {
+                    localStorage.setItem('HSE_OBS_QUEUE_CLEAN_V1744', '1');
+                    const localHist = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
+                    let q = getOfflineQueue();
+                    // الاحتفاظ بآخر 2 عناصر فريدة فقط لمنع التراكم
+                    if (q.length > 2) {
+                        q = q.slice(-2);
+                        saveOfflineQueue(q);
                     }
-                } catch (err) {
-                    remaining.push(item);
+                    for (let i = 0; i < localHist.length; i++) {
+                        if (localHist[i]) localHist[i].synced = true;
+                    }
+                    localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(localHist));
                 }
+            } catch (_) {}
+
+            const queue = getOfflineQueue();
+            if (queue.length === 0) {
+                updateOfflineBadge();
+                return;
             }
 
-            saveOfflineQueue(remaining);
-            hideToast();
+            _isSyncingOfflineQueue = true;
+            try {
+                if (manualTrigger === true) {
+                    showToast(`جاري مزامنة ${queue.length} ملاحظة...`, 'info', 2000);
+                }
+                const targetApiUrl = getEffectiveApiUrl();
+                const remaining = [];
+                let synced = 0;
 
-            if (synced > 0) {
-                showToast(`تمت مزامنة ${synced} ملاحظة بنجاح مع السجل العام! ✅`, 'success', 4000);
+                for (const item of queue) {
+                    if (!item || !item.payload) continue;
+                    try {
+                        const res = await fetch(targetApiUrl, {
+                            method: 'POST',
+                            mode: 'cors',
+                            redirect: 'follow',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify(item.payload)
+                        });
+                        const data = await res.json();
+                        if (data && data.success) {
+                            synced++;
+                            markLocalObservationSynced(item.refCode || (item.payload && item.payload.instantRefCode), data.id || data.isoCode);
+                        } else {
+                            item.retries = (item.retries || 0) + 1;
+                            if (item.retries < 2) remaining.push(item);
+                        }
+                    } catch (err) {
+                        item.retries = (item.retries || 0) + 1;
+                        if (item.retries < 2) remaining.push(item);
+                    }
+                }
+
+                saveOfflineQueue(remaining);
+                hideToast();
+
+                if (synced > 0) {
+                    showToast(`تمت مزامنة (${synced}) ملاحظة بنجاح مع السجل العام! ✅`, 'success', 3500);
+                }
+            } finally {
+                _isSyncingOfflineQueue = false;
+                updateOfflineBadge();
             }
         }
 
-        window.addEventListener('online', syncOfflineQueue);
-        setInterval(syncOfflineQueue, 45000);
+        window.addEventListener('online', () => syncOfflineQueue(false));
+        window.addEventListener('DOMContentLoaded', () => { setTimeout(() => syncOfflineQueue(false), 1500); });
+        setInterval(() => syncOfflineQueue(false), 60000);
 
 
-        function showSuccess(refId, p) {
+        function showSuccess(refId, p, isCloudSynced = true) {
             const isFollowUp = !!(p && p.followUpToId);
-            if (isFollowUp) {
+            if (!isCloudSynced) {
+                showToast('تم حفظ الملاحظة محلياً (Offline) وستتم مزامنتها تلقائياً مع السجل العام فور استقرار الشبكة', 'warning', 6000);
+                document.getElementById('refBadge').textContent = 'رقم الملاحظة (قيد المزامنة): ' + refId;
+            } else if (isFollowUp) {
                 showToast('تم تسجيل المتابعة بنجاح وربطها بالملاحظة المفتوحة!', 'success', 5000);
                 document.getElementById('refBadge').textContent = 'متابعة على الملاحظة: ' + (p.followUpIsoCode || p.followUpToId);
             } else {
@@ -8040,6 +8338,12 @@
 
             document.getElementById('successScreen').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (typeof HsePushNotify !== 'undefined' && refId) {
+                try {
+                    HsePushNotify.setFollowUpReminder(refId, 'ملاحظة سلامة', 24);
+                } catch(e) {}
+            }
         }
 
         function copyReceiptSummary() {
@@ -9073,7 +9377,48 @@
             if (modal) modal.style.display = 'none';
         }
 
+        async function checkFormAcceptanceStatus() {
+            if (!navigator.onLine) return;
+            try {
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
+                const res = await fetch(targetApiUrl + '?action=getPublicFormsStatus&_t=' + Date.now());
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data && data.success && data.status && data.status.observation) {
+                    const obsStatus = data.status.observation;
+                    if (obsStatus.isOpen === false) {
+                        const formCard = document.getElementById('observationForm');
+                        const closedCard = document.getElementById('formClosedCard');
+                        const reasonText = document.getElementById('formClosedReasonText');
+                        if (formCard) formCard.style.display = 'none';
+                        if (closedCard) closedCard.style.display = 'block';
+                        if (reasonText && obsStatus.message) reasonText.textContent = obsStatus.message;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        async function forceAppRefresh(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const icon = document.getElementById('refreshIconSpin');
+            if (icon) icon.classList.add('fa-spin');
+            try {
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    for (const r of registrations) {
+                        await r.update();
+                    }
+                }
+            } catch (_) {}
+            window.location.reload(true);
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
+            checkFormAcceptanceStatus();
             measureCloudPing();
             fetchPlantWeatherData();
             fetchEmergencyContactsCloud();

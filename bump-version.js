@@ -146,6 +146,43 @@ function bumpRoot(root, newVersion, cacheVersion) {
         ),
         `app-utils.js appVersion → ${newVersion}`
     );
+
+    // 5) Update version pills across all HTML form files
+    const htmlFilesToUpdate = [
+        'forms-hub.html',
+        'public-daily-safety.html',
+        'public-fire-inspection.html',
+        'public-near-miss.html',
+        'public-observation.html',
+        'public-tbt-record.html'
+    ];
+
+    htmlFilesToUpdate.forEach(fileName => {
+        replaceInFile(
+            path.join(root, fileName),
+            (c) => {
+                let updated = c;
+                updated = updated.replace(
+                    /<span class="iso-meta-val" id="isoHubVersionVal"[^>]*>v?[^<]*<\/span>/g,
+                    `<span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v${newVersion}</span>`
+                );
+                updated = updated.replace(
+                    /<span class="(footer-version-pill|tbt-version-pill)"([^>]*)>v?[^<]*<\/span>/g,
+                    `<span class="$1"$2>v${newVersion}</span>`
+                );
+                updated = updated.replace(
+                    /id="(lblDailySafetyVersion|lblFireInspectionVersion|lblNearMissVersion|lblAppVersion|lblTbtVersion)">v?[^<]*<\/span>/g,
+                    `id="$1">v${newVersion}</span>`
+                );
+                updated = updated.replace(
+                    /service-worker\.js\?v=hse-app-v[\d.]+-\d+/g,
+                    `service-worker.js?v=${cacheVersion}`
+                );
+                return updated;
+            },
+            `${fileName} version → v${newVersion}`
+        );
+    });
 }
 
 function main() {

@@ -87,6 +87,8 @@
     { "source": "/fire", "destination": "/public-fire-inspection.html" },
     { "source": "/fire-inspection", "destination": "/public-fire-inspection.html" },
     { "source": "/daily-safety", "destination": "/public-daily-safety.html" },
-    { "source": "/patrol", "destination": "/public-daily-safety.html" }
+    { "source": "/patrol", "destination": "/public-daily-safety.html" },
+    { "source": "/tbt", "destination": "/public-tbt-record.html" },
+    { "source": "/public-tbt-record", "destination": "/public-tbt-record.html" }
   ]
 }

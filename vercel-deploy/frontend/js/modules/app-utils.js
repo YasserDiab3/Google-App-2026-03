@@ -378,16 +378,6 @@ const Permissions = {
      * يُستخدم لـ Users وإعدادات adminOnly وتبويبات التفصيل ومعدات الحريق.
      */
     isCurrentUserEffectiveAdmin(user = AppState.currentUser) {
-        if (!user) {
-            try {
-                const sess = sessionStorage.getItem('hse_current_session');
-                if (sess) user = JSON.parse(sess);
-                if (!user || !user.email) {
-                    const rem = localStorage.getItem('hse_remember_user');
-                    if (rem) user = JSON.parse(rem);
-                }
-            } catch (_) {}
-        }
         if (!user) return false;
         if (this.isAdminRole(user.role)) return true;
         const spRaw = user.permissions;
@@ -412,10 +402,6 @@ const Permissions = {
             }
         }
         return false;
-    },
-
-    isCurrentUserAdmin(user = AppState.currentUser) {
-        return this.isCurrentUserEffectiveAdmin(user);
     },
 
     /**
@@ -502,18 +488,13 @@ const Permissions = {
 
     getFormSettingsState() {
         // دالة متزامنة للحصول على الحالة (تُستخدم في دوال العرض)
-        if (!this.formSettingsState || !Array.isArray(this.formSettingsState.sites) || this.formSettingsState.sites.length === 0) {
-            const sitesSource = (Array.isArray(AppState?.appData?.observationSites) && AppState.appData.observationSites.length > 0)
-                ? AppState.appData.observationSites
-                : (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SITES) ? DailyObservations.DEFAULT_SITES : []);
-            
-            const selectedSiteId = this.formSettingsState?.selectedSiteId || sitesSource[0]?.id || '';
-            this.formSettingsState = {
-                sites: sitesSource,
-                selectedSiteId,
-                departments: (this.formSettingsState?.departments && this.formSettingsState.departments.length > 0) ? this.formSettingsState.departments : this.getInitialFormDepartments(),
-                safetyTeam: (this.formSettingsState?.safetyTeam && this.formSettingsState.safetyTeam.length > 0) ? this.formSettingsState.safetyTeam : this.getInitialSafetyTeam(),
-                placesSearchQuery: this.formSettingsState?.placesSearchQuery || ''
+        if (!this.formSettingsState) {
+            // إذا لم تكن الحالة مهيأة، إرجاع حالة افتراضية
+            return {
+                sites: [],
+                selectedSiteId: '',
+                departments: [],
+                safetyTeam: []
             };
         }
         if (!this.formSettingsState._persistedSiteIds) {
@@ -537,16 +518,18 @@ const Permissions = {
         // ✅ ضمان وجود AppState.appData لتفادي أخطاء عند التعيين لاحقاً
         if (typeof AppState === 'undefined') return this.getFormSettingsState();
         if (!AppState.appData) AppState.appData = {};
-        
-        const hasRemoteSettingsApi = typeof GoogleIntegration !== 'undefined' &&
-            (typeof GoogleIntegration.sendRequest === 'function' || typeof GoogleIntegration.sendToAppsScript === 'function');
+        // لا نحاول جلب الشيت إلا عند تفعيل رابط Web App — وإلا نعتمد فوراً على المحلي/DEFAULT_SITES (أسرع وأقل أخطاء)
+        const cloudReady = typeof Utils !== 'undefined' && typeof Utils.hasCloudBackendSync === 'function' && Utils.hasCloudBackendSync();
+        const hasRemoteSettingsApi = !!(
+            cloudReady &&
+            typeof GoogleIntegration !== 'undefined' &&
+            typeof GoogleIntegration.sendToAppsScript === 'function'
+        );
 
         // محاولة تحميل إعدادات الشركة من قاعدة SQL أولاً
         if (hasRemoteSettingsApi) {
             try {
-                const companyResult = typeof GoogleIntegration.sendRequest === 'function'
-                    ? await GoogleIntegration.sendRequest({ action: 'getCompanySettings' })
-                    : await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
+                const companyResult = await GoogleIntegration.sendToAppsScript('getCompanySettings', {});
                 if (companyResult && companyResult.success && companyResult.data) {
                     let companyRow = companyResult.data;
                     if (Array.isArray(companyRow)) {
@@ -650,14 +633,21 @@ const Permissions = {
         if (hasRemoteSettingsApi) {
             try {
                 // ✅ إصلاح: تحميل مباشر من قاعدة البيانات بدون تأخير
-                const result = typeof GoogleIntegration.sendRequest === 'function'
-                    ? await GoogleIntegration.sendRequest({ action: 'getFormSettings' })
-                    : await GoogleIntegration.sendToAppsScript('getFormSettings', {});
+                const result = await GoogleIntegration.sendToAppsScript('getFormSettings', {});
                 if (result && result.success && result.data) {
                     // ✅ إصلاح: تحديث AppState بالبيانات من قاعدة SQL مع التأكد من وجود الأماكن الفرعية
                     if (Array.isArray(result.data.sites) && result.data.sites.length > 0) {
                         // ✅ إصلاح: التأكد من أن كل موقع يحتوي على places (حتى لو كانت مصفوفة فارغة)
                         // ✅ إصلاح: ربط صحيح للأماكن بالمواقع باستخدام String() لضمان المطابقة
+                        const cleanSubLocName = (raw) => {
+                            if (!raw || typeof raw !== 'string') return raw || '';
+                            let s = raw.trim();
+                            s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP/gi, '_ $2-ICAPP');
+                            s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)/gi, '_ $1-ICAPP');
+                            s = s.replace(/_?\s*(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP/gi, '_ $1-ICAPP');
+                            s = s.replace(/_ICAPP-(\d+)(?![\w-])/gi, '_ $1-ICAPP');
+                            return s.trim();
+                        };
                         const normalizedSites = result.data.sites.map(site => {
                             const siteId = String(site.id || '').trim();
                             // ✅ إصلاح: التأكد من ربط جميع الأماكن الفرعية بالموقع بشكل صحيح
@@ -668,7 +658,7 @@ const Permissions = {
                                     const placeSiteId = String(place.siteId || site.id || siteId || '').trim();
                                     return {
                                         id: place.id || Utils.generateId('PLACE'),
-                                        name: place.name || '',
+                                        name: cleanSubLocName(place.name || ''),
                                         siteId: placeSiteId || siteId // ✅ إصلاح: ربط صحيح بالموقع
                                     };
                                 })
@@ -865,52 +855,40 @@ const Permissions = {
 
     getInitialFormDepartments() {
         const settings = AppState.companySettings || {};
-        const stored = settings.formDepartments || settings.departments;
-        if (Array.isArray(stored) && stored.length > 0) {
+        const stored = settings.formDepartments;
+        if (Array.isArray(stored)) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string' && stored.trim()) {
+        if (typeof stored === 'string') {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
+        }
+        if (Array.isArray(settings.departments)) {
+            return settings.departments.map((item) => String(item || '').trim()).filter(Boolean);
+        }
+        if (typeof settings.departments === 'string') {
+            return settings.departments.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
         }
         if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getDepartmentOptions === 'function') {
             try {
                 const options = DailyObservations.getDepartmentOptions();
-                if (Array.isArray(options) && options.length > 0) {
+                if (Array.isArray(options)) {
                     return options.map((item) => String(item || '').trim()).filter(Boolean);
                 }
             } catch (error) {
                 Utils.safeWarn('⚠️ تعذر تحميل الإدارات من DailyObservations:', error);
             }
         }
-        return [
-            'إدارة السلامة والصحة المهنية',
-            'إدارة الصيانة',
-            'إدارة الإنتاج',
-            'إدارة الجودة',
-            'إدارة المخازن',
-            'إدارة الموارد البشرية',
-            'إدارة الأمن والحراسة',
-            'إدارة المشروعات',
-            'إدارة المشتريات',
-            'إدارة الخدمات اللوجستية',
-            'إدارة الزراعة',
-            'الإدارة المالية',
-            'إدارة تكنولوجيا المعلومات',
-            'الإدارة العامة'
-        ];
+        return [];
     },
 
     getInitialSafetyTeam() {
         const settings = AppState.companySettings || {};
         const stored = settings.safetyTeam || settings.safetyTeamMembers;
-        if (Array.isArray(stored) && stored.length > 0) {
+        if (Array.isArray(stored)) {
             return stored.map((item) => String(item || '').trim()).filter(Boolean);
         }
-        if (typeof stored === 'string' && stored.trim()) {
+        if (typeof stored === 'string') {
             return stored.split(/\n|,/).map((item) => item.trim()).filter(Boolean);
-        }
-        if (typeof DailyObservations !== 'undefined' && Array.isArray(DailyObservations.DEFAULT_SAFETY_MEMBERS) && DailyObservations.DEFAULT_SAFETY_MEMBERS.length > 0) {
-            return DailyObservations.DEFAULT_SAFETY_MEMBERS.slice();
         }
         return [];
     },
@@ -967,7 +945,7 @@ const Permissions = {
                                     <p class="form-settings-panel__desc">قائمة المصانع أو المواقع؛ انقر على الصف أو زر «اختيار» لتحديد الموقع النشط.</p>
                                 </div>
                                 <div class="form-settings-panel__body">
-                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list">${this.renderFormSitesList()}</div>
+                                    <div id="form-settings-sites-list" class="form-settings-panel__list" role="list"></div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-site">
@@ -1000,7 +978,7 @@ const Permissions = {
                                             </button>
                                         </div>
                                     </div>
-                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list">${this.renderFormPlacesList()}</div>
+                                    <div id="form-settings-places-list" class="form-settings-panel__list" role="list"></div>
                                 </div>
                                 <div class="form-settings-panel__footer">
                                     <button type="button" class="btn-primary btn-sm form-settings-panel__add-btn" data-action="add-place" id="form-settings-add-place-btn">
@@ -1014,7 +992,7 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-briefcase"></i>المسؤولون عن التنفيذ
                         </h3>
-                        <div id="form-settings-departments-list" class="form-settings-subsection__list">${this.renderDepartmentsList()}</div>
+                        <div id="form-settings-departments-list" class="form-settings-subsection__list"></div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-department">
                             <i class="fas fa-plus ml-2"></i>إضافة إدارة
                         </button>
@@ -1023,10 +1001,55 @@ const Permissions = {
                         <h3 class="form-settings-subsection__title">
                             <i class="fas fa-user-shield"></i>فريق السلامة
                         </h3>
-                        <div id="form-settings-safety-list" class="form-settings-subsection__list">${this.renderSafetyTeamList()}</div>
+                        <div id="form-settings-safety-list" class="form-settings-subsection__list"></div>
                         <button type="button" class="btn-secondary btn-sm form-settings-subsection__add" data-action="add-safety-member">
                             <i class="fas fa-plus ml-2"></i>إضافة عضو
                         </button>
+                    </div>
+                    <div class="form-settings-subsection form-settings-availability-section" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 16px; margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                            <h3 class="form-settings-subsection__title" style="margin: 0; color: #1e293b; font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-toggle-on text-emerald-600"></i>
+                                <span>حالة إتاحة واستقبال النماذج العامة (Form Acceptance & Availability)</span>
+                            </h3>
+                            <button type="button" class="btn-primary btn-sm" onclick="savePublicFormsAvailabilitySettings(event)" style="font-size: 0.8rem;">
+                                <i class="fas fa-save ml-1"></i>حفظ حالة النماذج
+                            </button>
+                        </div>
+                        <p style="font-size: 0.84rem; color: #64748b; margin-bottom: 16px;">
+                            يمكنك من هنا إيقاف أو تفعيل استقبال الردود في النماذج العامة (مثل نماذج Google Forms)، وعند إغلاق النموذج يظهر للمستخدمين شاشة إغلاق توضح أسباب الإيقاف وتعطّل عمليات الإرسال.
+                        </p>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                            <!-- بطاقة نموذج الملاحظات اليومية -->
+                            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="font-weight: 800; font-size: 0.9rem; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-clipboard-check text-blue-600"></i>
+                                        <span>الملاحظات اليومية</span>
+                                    </div>
+                                    <label style="position: relative; display: inline-flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" id="toggle_form_obs_open" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span style="font-size: 0.78rem; font-weight: 700; margin-right: 6px; color: #059669;">مفتوح للاستقبال</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="msg_form_obs_closed" class="form-input w-full text-xs" style="margin-top: 6px; font-size: 0.78rem; padding: 6px 10px;" placeholder="رسالة تظهر عند الإغلاق..." value="نموذج تسجيل الملاحظات اليومية لا يقبل ردوداً حالياً بقرار من إدارة السلامة والصحة المهنية.">
+                            </div>
+
+                            <!-- بطاقة نموذج الحوادث الوشيكة -->
+                            <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <div style="font-weight: 800; font-size: 0.9rem; color: #1e3a8a; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fas fa-triangle-exclamation text-amber-500"></i>
+                                        <span>الحوادث الوشيكة (Near Miss)</span>
+                                    </div>
+                                    <label style="position: relative; display: inline-flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" id="toggle_form_nearmiss_open" checked style="width: 18px; height: 18px; cursor: pointer;">
+                                        <span style="font-size: 0.78rem; font-weight: 700; margin-right: 6px; color: #059669;">مفتوح للاستقبال</span>
+                                    </label>
+                                </div>
+                                <input type="text" id="msg_form_nearmiss_closed" class="form-input w-full text-xs" style="margin-top: 6px; font-size: 0.78rem; padding: 6px 10px;" placeholder="رسالة تظهر عند الإغلاق..." value="نموذج الإبلاغ عن الحوادث الوشيكة مغلق حالياً.">
+                            </div>
+                        </div>
                     </div>
                     <div class="form-settings-subsection">
                         <h3 class="form-settings-subsection__title">
@@ -1596,25 +1619,6 @@ const Permissions = {
         const removedSite = state.sites[index];
         const removedHadName = String(removedSite?.name || '').trim().length > 0;
         const siteName = removedSite?.name || 'موقع بدون اسم';
-
-        if (removedHadName) {
-            // فحص السجلات المرتبطة محلياً قبل الحذف
-            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.siteId === siteId || o.siteName === siteName).length;
-            const localPtwCount = (AppState?.ptw || []).filter(p => p.siteId === siteId || p.siteName === siteName).length;
-            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationLocationId === siteId || v.violationLocation === siteName).length;
-            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
-
-            if (totalLocalUsed > 0) {
-                const modulesList = [];
-                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
-                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
-                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
-                
-                Notification.error(`قفل الحذف: لا يمكن حذف الموقع «${siteName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
-                return;
-            }
-        }
-
         if (!confirm(`سيتم حذف الموقع "${siteName}" وجميع الأماكن المرتبطة به. هل ترغب بالمتابعة؟`)) {
             return;
         }
@@ -1749,30 +1753,11 @@ const Permissions = {
         const index = site.places.findIndex((item) => item.id === placeId);
         if (index === -1) return;
         const removedPlace = site.places[index];
-        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         const placeName = removedPlace?.name || 'مكان بدون اسم';
-
-        if (removedHadName) {
-            // فحص السجلات المرتبطة محلياً قبل الحذف
-            const localObsCount = (AppState?.dailyObservations || []).filter(o => o.placeId === placeId || o.locationName === placeName).length;
-            const localPtwCount = (AppState?.ptw || []).filter(p => p.sublocationId === placeId || p.sublocationName === placeName).length;
-            const localViolationsCount = (AppState?.violations || []).filter(v => v.violationPlaceId === placeId || v.violationPlace === placeName).length;
-            const totalLocalUsed = localObsCount + localPtwCount + localViolationsCount;
-
-            if (totalLocalUsed > 0) {
-                const modulesList = [];
-                if (localObsCount) modulesList.push(`الملاحظات (${localObsCount})`);
-                if (localPtwCount) modulesList.push(`التصاريح (${localPtwCount})`);
-                if (localViolationsCount) modulesList.push(`المخالفات (${localViolationsCount})`);
-
-                Notification.error(`قفل الحذف: لا يمكن حذف المكان الفرعي «${placeName}» لوجود ${totalLocalUsed} سجل مرتبط به في (${modulesList.join('، ')}). يُرجى تعديل الاسم أو إلغاء تفعيله بدلاً من حذفه.`);
-                return;
-            }
-        }
-
         if (!confirm(`هل ترغب في حذف المكان "${placeName}"؟`)) {
             return;
         }
+        const removedHadName = String(removedPlace?.name || '').trim().length > 0;
         site.places.splice(index, 1);
         if (state._persistedPlaceIds) {
             state._persistedPlaceIds.delete(String(placeId));
@@ -2227,6 +2212,56 @@ const Permissions = {
         Notification.success('تم حفظ إعدادات النماذج محلياً.');
         this.initFormSettingsState();
         this.refreshFormSettingsUI();
+    },
+
+    async savePublicFormsAvailabilitySettings(event) {
+        if (event) event.preventDefault();
+        const obsOpen = document.getElementById('toggle_form_obs_open')?.checked ?? true;
+        const obsMsg = document.getElementById('msg_form_obs_closed')?.value || '';
+        const nearOpen = document.getElementById('toggle_form_nearmiss_open')?.checked ?? true;
+        const nearMsg = document.getElementById('msg_form_nearmiss_closed')?.value || '';
+
+        const payload = {
+            status: {
+                observation: { isOpen: obsOpen, message: obsMsg },
+                nearmiss: { isOpen: nearOpen, message: nearMsg }
+            }
+        };
+
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendToAppsScript === 'function') {
+                const res = await GoogleIntegration.sendToAppsScript('savePublicFormsStatus', payload);
+                if (res && res.success) {
+                    if (typeof Notification !== 'undefined') Notification.success('تم حفظ وتحديث حالة إتاحة النماذج بنجاح.');
+                    return;
+                }
+            }
+            if (typeof Notification !== 'undefined') Notification.success('تم حفظ حالة النماذج بنجاح.');
+        } catch(err) {
+            if (typeof Notification !== 'undefined') Notification.error('فشل حفظ حالة النماذج: ' + err.message);
+        }
+    },
+
+    async loadPublicFormsAvailabilitySettings() {
+        try {
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendToAppsScript === 'function') {
+                const res = await GoogleIntegration.sendToAppsScript('getPublicFormsStatus', {});
+                if (res && res.success && res.status) {
+                    if (res.status.observation) {
+                        const chk = document.getElementById('toggle_form_obs_open');
+                        const msg = document.getElementById('msg_form_obs_closed');
+                        if (chk) chk.checked = res.status.observation.isOpen !== false;
+                        if (msg && res.status.observation.message) msg.value = res.status.observation.message;
+                    }
+                    if (res.status.nearmiss) {
+                        const chk = document.getElementById('toggle_form_nearmiss_open');
+                        const msg = document.getElementById('msg_form_nearmiss_closed');
+                        if (chk) chk.checked = res.status.nearmiss.isOpen !== false;
+                        if (msg && res.status.nearmiss.message) msg.value = res.status.nearmiss.message;
+                    }
+                }
+            }
+        } catch (_) {}
     },
 
     handleImportFormSettingsFile() {
@@ -4415,7 +4450,7 @@ const DEFAULT_COMPANY_NAME = '';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1730',
+    appVersion: '1.0.1756',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4688,24 +4723,16 @@ const Utils = {
      * هل يوجد مسار مزامنة عبر خادم SQL (تفعيل + رابط Web App /exec)
      */
     hasCloudBackendSync() {
-        if (typeof GoogleIntegration !== 'undefined') {
-            if (typeof GoogleIntegration._isBackendRpcConfigured === 'function' && GoogleIntegration._isBackendRpcConfigured()) {
-                return true;
-            }
-            if (typeof GoogleIntegration.isConfigured === 'function' && GoogleIntegration.isConfigured()) {
-                return true;
-            }
-        }
         try {
             if (typeof this.getAppsScriptScriptUrl === 'function') {
                 const gas = String(this.getAppsScriptScriptUrl() || '').trim();
-                if (gas.length > 0) return true;
+                if (gas.indexOf('script.google.com') !== -1) return true;
             }
         } catch (_e) { /* ignore */ }
         const gc = typeof AppState !== 'undefined' ? AppState.googleConfig : null;
-        if (!gc || !gc.appsScript) return true; // Default true for SQL backend
+        if (!gc || !gc.appsScript) return false;
         const url = String(gc.appsScript.scriptUrl || '').trim();
-        return !!url;
+        return !!(url && url.indexOf('script.google.com') !== -1);
     },
 
     /**
@@ -6098,11 +6125,6 @@ const Utils = {
                 d = date;
             } else {
                 let dateStr = String(date).trim();
-                if ((dateStr.startsWith('"') && dateStr.endsWith('"')) || (dateStr.startsWith("'") && dateStr.endsWith("'"))) {
-                    dateStr = dateStr.slice(1, -1).trim();
-                }
-                if (!dateStr || dateStr === '-' || dateStr === '—' || dateStr === 'null' || dateStr === 'undefined' || dateStr === 'غير محدد') return '-';
-
                 const dmyMatch = dateStr.match(/^(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})(?:[T ](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
                 if (dmyMatch) {
                     const [, day, month, year, hours, minutes, seconds] = dmyMatch;
@@ -7362,29 +7384,6 @@ const ViolationTypesManager = {
                 dm.save();
             }
         }
-    },
-
-    async ensureRemoteLoaded(force = false) {
-        if (!force && AppState?.appData?.violationTypes && AppState.appData.violationTypes.length > 0) {
-            return this.ensureInitialized();
-        }
-        if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
-            try {
-                const res = await GoogleIntegration.sendRequest({ action: 'getAllViolationTypes' });
-                if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-                    AppState.appData.violationTypes = res.data;
-                    if (AppState.syncMeta && AppState.syncMeta.sheets) {
-                        AppState.syncMeta.sheets.ViolationTypes = true;
-                    }
-                    return this.ensureInitialized();
-                }
-            } catch (e) {
-                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
-                    Utils.safeWarn('Could not load remote violation types:', e);
-                }
-            }
-        }
-        return this.ensureInitialized();
     },
 
     getAll() {
@@ -9406,19 +9405,47 @@ const EmployeeHelper = {
     isResignedEmployee(employee) {
         if (!employee || typeof employee !== 'object') return false;
         const normalize = (v) => String(v ?? '').trim().toLowerCase();
+
+        // 1. Explicit resignation or termination date
+        const resDate = employee.resignationDate || employee.terminationDate || employee.endDate;
+        if (resDate && String(resDate).trim()) {
+            const parsed = new Date(resDate);
+            if (!isNaN(parsed.getTime())) {
+                if (parsed <= new Date()) return true;
+            } else {
+                return true;
+            }
+        }
+
+        // 2. Explicit active boolean flags
+        if (employee.active === false || employee.active === 'false' || employee.active === 'FALSE' ||
+            employee.isActive === false || employee.isActive === 'false' || employee.isActive === 'FALSE' ||
+            employee.isActive === 'inactive' || employee.active === 'inactive') {
+            return true;
+        }
+
+        // 3. Status string fields
         const statusFields = [
             employee.status,
             employee.employeeStatus,
             employee.workStatus,
             employee.employmentStatus,
             employee.state,
-            employee.activeStatus
+            employee.activeStatus,
+            employee.jobStatus
         ];
         const statusText = statusFields.map(normalize).filter(Boolean).join(' | ');
         if (!statusText) return false;
         return (
             statusText.includes('مستقيل') ||
             statusText.includes('استقال') ||
+            statusText.includes('إنهاء') ||
+            statusText.includes('انهاء') ||
+            statusText.includes('مفصول') ||
+            statusText.includes('ترك') ||
+            statusText.includes('غير نشط') ||
+            statusText.includes('معاش') ||
+            statusText.includes('وفاة') ||
             statusText.includes('resign') ||
             statusText.includes('resigned') ||
             statusText.includes('terminated') ||

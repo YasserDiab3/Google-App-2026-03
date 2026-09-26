@@ -8,14 +8,15 @@ const { handleRpcRequest } = require('../backend-sql/src/rpc-router');
 const { initDatabase } = require('../backend-sql/src/db/database');
 const { initSchema } = require('../backend-sql/src/db/schema-init');
 
-const GAS_EXEC_URL = process.env.HSE_GAS_EXEC_URL
-    || 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+const ACTIVE_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+const GAS_EXEC_URL = ACTIVE_GAS_EXEC_URL;
 
 const GAS_PUBLIC_ACTIONS = new Set([
     'submitPublicDailySafetyChecklist',
     'getPublicDailySafetyConfig',
     'submitPublicObservation',
     'getPublicObservationConfig',
+    'getPublicObservationsAnalytics',
     'submitPublicNearMiss',
     'getPublicNearMissConfig',
     'submitPublicFireInspection',
@@ -28,14 +29,17 @@ const GAS_PUBLIC_ACTIONS = new Set([
     'getPublicLivePTWSummary',
     'getHseBroadcastMessages',
     'getHseEmergencyContacts',
-    'triggerDailySafetyFormSync',
+    'getPublicFormsStatus',
+    'savePublicFormsStatus',
+    'getPublicTbtConfig',
+    'submitPublicTbtRecord',
+    'trackObservation',
     'testConnection',
     'warmup'
 ]);
 
-async function proxyPublicActionToGas(body) {
-    // GAS يُرجع 302؛ المتصفح يفسد POST. من السيرفر نقرأ Location ثم GET للنتيجة.
-    const first = await fetch(GAS_EXEC_URL, {
+async function fetchGasEndpoint(targetUrl, body) {
+    const first = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body || {}),
@@ -52,16 +56,39 @@ async function proxyPublicActionToGas(body) {
     } else {
         text = await first.text();
     }
-    try {
-        return JSON.parse(text);
-    } catch (_e) {
-        return {
-            success: false,
-            message: 'استجابة غير صالحة من Apps Script',
-            errorCode: 'GAS_PROXY_PARSE',
-            snippet: String(text || '').replace(/\s+/g, ' ').slice(0, 180)
-        };
+    return JSON.parse(text);
+}
+
+async function proxyPublicActionToGas(body) {
+    // دائماً نستخدم الرابط الفعال المعتمد أولاً لتجنب متغيرات البيئة القديمة في Vercel
+    const urlsToTry = [ACTIVE_GAS_EXEC_URL];
+    if (process.env.HSE_GAS_EXEC_URL && process.env.HSE_GAS_EXEC_URL !== ACTIVE_GAS_EXEC_URL) {
+        urlsToTry.push(process.env.HSE_GAS_EXEC_URL);
     }
+    let lastError = null;
+    for (const url of urlsToTry) {
+        try {
+            const parsed = await fetchGasEndpoint(url, body);
+            if (parsed && typeof parsed === 'object') {
+                // مزامنة مساندة غير معطلة مع قاعدة بيانات SQL المحلية إن وجدت
+                try { handleRpcRequest(body).catch(() => {}); } catch (_) {}
+                return parsed;
+            }
+        } catch (err) {
+            lastError = err;
+        }
+    }
+    // في حال تعذر الوصول إلى GAS، ننفذ الطلب عبر محرك SQL الاحتياطي
+    try {
+        const sqlFallback = await handleRpcRequest(body);
+        if (sqlFallback && sqlFallback.success) return sqlFallback;
+    } catch (_) {}
+    return {
+        success: false,
+        message: 'استجابة غير صالحة من Apps Script',
+        errorCode: 'GAS_PROXY_PARSE',
+        snippet: lastError ? String(lastError.message || lastError).slice(0, 180) : ''
+    };
 }
 
 // Initialize DB on cold start

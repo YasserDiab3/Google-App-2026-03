@@ -1,0 +1,5967 @@
+{
+  "success": true,
+  "employees": [
+    {
+      "id": "100703",
+      "employeeNumber": "100703",
+      "sapId": "100703",
+      "name": "سعيد عيسى محمد الحفناوى",
+      "department": "إدارة الجودة",
+      "job": "مراقب شحن",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "100704",
+      "employeeNumber": "100704",
+      "sapId": "100704",
+      "name": "رضا جوده عبد الدايم على",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "100705",
+      "employeeNumber": "100705",
+      "sapId": "100705",
+      "name": "صلاح الدين يحيى فتحى أحمد",
+      "department": "ادارة الاستقبال",
+      "job": "مشرف عام استقبال",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "100706",
+      "employeeNumber": "100706",
+      "sapId": "100706",
+      "name": "وائل عثمان عبد المنعم عثمان",
+      "department": "ادارة الاستقبال",
+      "job": "مهندس استقبال",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "100707",
+      "employeeNumber": "100707",
+      "sapId": "100707",
+      "name": "محمد سعد عيد الشناوى",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "100709",
+      "employeeNumber": "100709",
+      "sapId": "100709",
+      "name": "حمدى صلاح محمد إمام",
+      "department": "إدارة الجودة",
+      "job": "مراقب جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "100756",
+      "employeeNumber": "100756",
+      "sapId": "100756",
+      "name": "محمد حسن البنا محمد عبد الحميد",
+      "department": "إدارة الجودة",
+      "job": "رئيس قسم الجودة",
+      "position": "Quality Control Lead"
+    },
+    {
+      "id": "100775",
+      "employeeNumber": "100775",
+      "sapId": "100775",
+      "name": "صبرى السيد على حسن",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "100779",
+      "employeeNumber": "100779",
+      "sapId": "100779",
+      "name": "محمد منصور عليمى شمس",
+      "department": "الادارة المالية",
+      "job": "مدير مالي",
+      "position": "Senior Manager Control and AR F&V"
+    },
+    {
+      "id": "100780",
+      "employeeNumber": "100780",
+      "sapId": "100780",
+      "name": "محمد رمضان عبده محمد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف وردية صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "100803",
+      "employeeNumber": "100803",
+      "sapId": "100803",
+      "name": "محمد ربيع مهدى منصور",
+      "department": "ادارة المخازن",
+      "job": "مشرف وردية",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "100805",
+      "employeeNumber": "100805",
+      "sapId": "100805",
+      "name": "عبد الحميد فتحى عبد الحميد شبكه",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "100806",
+      "employeeNumber": "100806",
+      "sapId": "100806",
+      "name": "محمد عاطف محمد أحمد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "100808",
+      "employeeNumber": "100808",
+      "sapId": "100808",
+      "name": "أحمد كامل محمود الجوهرى",
+      "department": "ادارة الشئون القانونية",
+      "job": "رئيس القسم القانوني",
+      "position": "Legal Lead"
+    },
+    {
+      "id": "100816",
+      "employeeNumber": "100816",
+      "sapId": "100816",
+      "name": "عماد حمدى طه يس",
+      "department": "ادارة التخطيط",
+      "job": "رئيس قسم التخطيط",
+      "position": "Planning Lead"
+    },
+    {
+      "id": "100824",
+      "employeeNumber": "100824",
+      "sapId": "100824",
+      "name": "خالد السيد عبد الخالق سلامه",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "100825",
+      "employeeNumber": "100825",
+      "sapId": "100825",
+      "name": "صلاح على السيد حسن",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "100827",
+      "employeeNumber": "100827",
+      "sapId": "100827",
+      "name": "إبراهيم محمد على سالم",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم مراقبة المخزن",
+      "position": "Inventory Control Lead"
+    },
+    {
+      "id": "100829",
+      "employeeNumber": "100829",
+      "sapId": "100829",
+      "name": "محمد مصطفى الشامى مصطفى",
+      "department": "إدارة الصيانة",
+      "job": "مشرف وردية صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "100836",
+      "employeeNumber": "100836",
+      "sapId": "100836",
+      "name": "عمر محمد عمر محمد",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "100856",
+      "employeeNumber": "100856",
+      "sapId": "100856",
+      "name": "ياسر محمد عبد العزيز عبد الجواد",
+      "department": "ادارة التصنيع",
+      "job": "اخصائي غرفة التحكم",
+      "position": "Production Shift Leader"
+    },
+    {
+      "id": "100877",
+      "employeeNumber": "100877",
+      "sapId": "100877",
+      "name": "أيمن محمد السعيد سالم",
+      "department": "ادارة النظم والمعلومات",
+      "job": "نائب مدير النظم والمعلومات لشئون الشبكات",
+      "position": "IT Systems Lead - Egypt"
+    },
+    {
+      "id": "100890",
+      "employeeNumber": "100890",
+      "sapId": "100890",
+      "name": "محمد عبد الستار الشربينى العراقى",
+      "department": "ادارة التعبئة",
+      "job": "رئيس قسم التعبئة",
+      "position": "Production Manager Vegetables"
+    },
+    {
+      "id": "100948",
+      "employeeNumber": "100948",
+      "sapId": "100948",
+      "name": "هشام إبراهيم السيد مصطفى",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "100949",
+      "employeeNumber": "100949",
+      "sapId": "100949",
+      "name": "أحمد عوض عبد الصمد متولى",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "100950",
+      "employeeNumber": "100950",
+      "sapId": "100950",
+      "name": "إبتهاله اسعادى أحمد أحمد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تجهيز",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "100951",
+      "employeeNumber": "100951",
+      "sapId": "100951",
+      "name": "إيهاب محمد توفيق حسن",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Lead"
+    },
+    {
+      "id": "100952",
+      "employeeNumber": "100952",
+      "sapId": "100952",
+      "name": "أسامه عبد المنعم على البهنساوى",
+      "department": "ادارة التصنيع",
+      "job": "اخصائي غرفة التحكم",
+      "position": "Production Shift Leader"
+    },
+    {
+      "id": "100953",
+      "employeeNumber": "100953",
+      "sapId": "100953",
+      "name": "السيد حسن محمد الخولى",
+      "department": "ادارة المخازن",
+      "job": "مدير المخازن",
+      "position": "Warehouse Manager"
+    },
+    {
+      "id": "100954",
+      "employeeNumber": "100954",
+      "sapId": "100954",
+      "name": "نبيل حسين أنور حسين",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Lead"
+    },
+    {
+      "id": "100955",
+      "employeeNumber": "100955",
+      "sapId": "100955",
+      "name": "أحمد محمد حسن راشد",
+      "department": "ادارة التعبئة",
+      "job": "مشرف عام تعبئة",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "100956",
+      "employeeNumber": "100956",
+      "sapId": "100956",
+      "name": "أحمد مرعى محمد حسن",
+      "department": "ادارة الاستقبال",
+      "job": "مشغل استقبال",
+      "position": "Operator"
+    },
+    {
+      "id": "100958",
+      "employeeNumber": "100958",
+      "sapId": "100958",
+      "name": "ضياء محمد السيد متولى",
+      "department": "إدارة الصيانة",
+      "job": "مشرف تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "100961",
+      "employeeNumber": "100961",
+      "sapId": "100961",
+      "name": "محمد عبد العاطى عبد الجواد محمد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "100962",
+      "employeeNumber": "100962",
+      "sapId": "100962",
+      "name": "محمد عبد الناصر عبد الفتاح بيومى",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "100964",
+      "employeeNumber": "100964",
+      "sapId": "100964",
+      "name": "سامر أحمد السيد فوده",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مسئول اول مشتريات",
+      "position": "Procurement Lead"
+    },
+    {
+      "id": "100965",
+      "employeeNumber": "100965",
+      "sapId": "100965",
+      "name": "طارق فوزى محمد حجاب",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "100986",
+      "employeeNumber": "100986",
+      "sapId": "100986",
+      "name": "محمد فتحى مصطفى إبراهيم",
+      "department": "ادارة التخطيط",
+      "job": "مدير التخطيط",
+      "position": "Planning Manager"
+    },
+    {
+      "id": "100995",
+      "employeeNumber": "100995",
+      "sapId": "100995",
+      "name": "محمد السيد أحمد مصطفى",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "100996",
+      "employeeNumber": "100996",
+      "sapId": "100996",
+      "name": "محمد أبو مسلم متولى سلامه",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "101052",
+      "employeeNumber": "101052",
+      "sapId": "101052",
+      "name": "أيمن سامى على محمد درغام",
+      "department": "الادارة المالية",
+      "job": "مدير التحليل المالي",
+      "position": "FP&A Senior Manager"
+    },
+    {
+      "id": "101063",
+      "employeeNumber": "101063",
+      "sapId": "101063",
+      "name": "أحمد السيد محمد السكرى",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "101124",
+      "employeeNumber": "101124",
+      "sapId": "101124",
+      "name": "طارق محمد بهاء الدين البنبى",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Manager Strawberry"
+    },
+    {
+      "id": "101134",
+      "employeeNumber": "101134",
+      "sapId": "101134",
+      "name": "سامح حسن أمين صالح",
+      "department": "ادارة شئون العاملين",
+      "job": "رئيس قسم شئون العاملين",
+      "position": "Personnel Lead F&V"
+    },
+    {
+      "id": "101188",
+      "employeeNumber": "101188",
+      "sapId": "101188",
+      "name": "حسن محمد حسن محمد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101189",
+      "employeeNumber": "101189",
+      "sapId": "101189",
+      "name": "عمرو فتحى عبد الجليل زامل",
+      "department": "ادارة التعبئة",
+      "job": "مشرف تعبئة",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "101190",
+      "employeeNumber": "101190",
+      "sapId": "101190",
+      "name": "محمود محمد محمد شادى",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Lead"
+    },
+    {
+      "id": "101211",
+      "employeeNumber": "101211",
+      "sapId": "101211",
+      "name": "سامح محسن محمد محمد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف وردية صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "101244",
+      "employeeNumber": "101244",
+      "sapId": "101244",
+      "name": "أحمد عماد الدين عبد السلام رمضان",
+      "department": "مركز الخدمات المالية المشتركة",
+      "job": "مسئول مالي",
+      "position": "Senior Executive AP"
+    },
+    {
+      "id": "101274",
+      "employeeNumber": "101274",
+      "sapId": "101274",
+      "name": "محمود طلعت عبد الصادق محمد",
+      "department": "ادارة الشئون القانونية",
+      "job": "سكرتير",
+      "position": "Secretary"
+    },
+    {
+      "id": "101276",
+      "employeeNumber": "101276",
+      "sapId": "101276",
+      "name": "محمد فكرى جوده راغب",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم بنوك وخزينة",
+      "position": "Cash Management Specialist ICAPP"
+    },
+    {
+      "id": "101277",
+      "employeeNumber": "101277",
+      "sapId": "101277",
+      "name": "سعد عبد العزيز إبراهيم الحفناوى",
+      "department": "إدارة الصيانة",
+      "job": "مشرف وردية صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "101278",
+      "employeeNumber": "101278",
+      "sapId": "101278",
+      "name": "يسرى محمد عبد الله محمدعلى",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "101300",
+      "employeeNumber": "101300",
+      "sapId": "101300",
+      "name": "محمد طه أحمد عطيه",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مسئول اول مشتريات",
+      "position": "Procurement Specialist"
+    },
+    {
+      "id": "101306",
+      "employeeNumber": "101306",
+      "sapId": "101306",
+      "name": "خالد رجب جعفر إبراهيم",
+      "department": "الادارة العامة",
+      "job": "رئيس القطاع الصناعي",
+      "position": "Projects Operations Director"
+    },
+    {
+      "id": "101310",
+      "employeeNumber": "101310",
+      "sapId": "101310",
+      "name": "جمال عبدالحميد الشحات عبدالرازق",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "رئيس قسم مشتريات زراعية",
+      "position": "Agro. Purchasing Lead"
+    },
+    {
+      "id": "101313",
+      "employeeNumber": "101313",
+      "sapId": "101313",
+      "name": "عيد محمد عيد محمد رجب",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "101314",
+      "employeeNumber": "101314",
+      "sapId": "101314",
+      "name": "شحته صالح رشاد أحمد",
+      "department": "ادارة المخازن",
+      "job": "مشرف وردية",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "101331",
+      "employeeNumber": "101331",
+      "sapId": "101331",
+      "name": "إبراهيم فتحى أحمد إبراهيم",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "101339",
+      "employeeNumber": "101339",
+      "sapId": "101339",
+      "name": "أحمد محمد عبد القادر مسعد فايد",
+      "department": "إدارة الجودة",
+      "job": "مدير توكيد جوده",
+      "position": "Quality Assurance Manager"
+    },
+    {
+      "id": "101372",
+      "employeeNumber": "101372",
+      "sapId": "101372",
+      "name": "عليوة حسين عليوة حسين",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "101373",
+      "employeeNumber": "101373",
+      "sapId": "101373",
+      "name": "محمد عبد الله معوض رزق",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101374",
+      "employeeNumber": "101374",
+      "sapId": "101374",
+      "name": "أحمد حمدى محمد على",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101375",
+      "employeeNumber": "101375",
+      "sapId": "101375",
+      "name": "محمد حمدى عبد الله محمد",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "101376",
+      "employeeNumber": "101376",
+      "sapId": "101376",
+      "name": "محمد سمير إبراهيم عبد الوهاب",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "101377",
+      "employeeNumber": "101377",
+      "sapId": "101377",
+      "name": "أحمد أحمد على على",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101378",
+      "employeeNumber": "101378",
+      "sapId": "101378",
+      "name": "أحمد محمد عبد المنعم السيد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101379",
+      "employeeNumber": "101379",
+      "sapId": "101379",
+      "name": "أحمد محمد أحمد محمد العوضى",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101380",
+      "employeeNumber": "101380",
+      "sapId": "101380",
+      "name": "امين محمد رضوان محمد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101382",
+      "employeeNumber": "101382",
+      "sapId": "101382",
+      "name": "عيد زكريا عبد الحميد سيد أحمد",
+      "department": "الادارة المالية",
+      "job": "مسئول ارشيف",
+      "position": "Archiver"
+    },
+    {
+      "id": "101385",
+      "employeeNumber": "101385",
+      "sapId": "101385",
+      "name": "ابراهيم عراقي عبد الجواد متولي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "101387",
+      "employeeNumber": "101387",
+      "sapId": "101387",
+      "name": "محمود سعيد محمد احمد",
+      "department": "ادارة الاستقبال",
+      "job": "مشغل استقبال",
+      "position": "Operator"
+    },
+    {
+      "id": "101389",
+      "employeeNumber": "101389",
+      "sapId": "101389",
+      "name": "نور نصر يونس حسن",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101392",
+      "employeeNumber": "101392",
+      "sapId": "101392",
+      "name": "طه خضر طه علي",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101393",
+      "employeeNumber": "101393",
+      "sapId": "101393",
+      "name": "يسن محمد فاروق محمد",
+      "department": "ادارة الاستقبال",
+      "job": "مشغل استقبال",
+      "position": "Operator"
+    },
+    {
+      "id": "101425",
+      "employeeNumber": "101425",
+      "sapId": "101425",
+      "name": "احمد علي عبد العاطي سالم",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "101431",
+      "employeeNumber": "101431",
+      "sapId": "101431",
+      "name": "حسام على حافظ على",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101499",
+      "employeeNumber": "101499",
+      "sapId": "101499",
+      "name": "محمد عادل محمد درويش",
+      "department": "ادارة الخدمات",
+      "job": "مشغل عمال",
+      "position": "Operator"
+    },
+    {
+      "id": "101532",
+      "employeeNumber": "101532",
+      "sapId": "101532",
+      "name": "وائل عادل عبد الله أحمد",
+      "department": "ادارة التصدير",
+      "job": "مدير التصدير",
+      "position": "Sr Manager Business Development"
+    },
+    {
+      "id": "101574",
+      "employeeNumber": "101574",
+      "sapId": "101574",
+      "name": "وليد هشام أحمد محمد خليل",
+      "department": "ادارة التصدير",
+      "job": "رئيس القطاع التجاري",
+      "position": "Senior Director Commercial F&V"
+    },
+    {
+      "id": "101597",
+      "employeeNumber": "101597",
+      "sapId": "101597",
+      "name": "جمعه عبد الستار حسين حسين",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "101614",
+      "employeeNumber": "101614",
+      "sapId": "101614",
+      "name": "حازم عبد الحميد مسلم سليمان",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101643",
+      "employeeNumber": "101643",
+      "sapId": "101643",
+      "name": "هنداوي محمد محمد احمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "101684",
+      "employeeNumber": "101684",
+      "sapId": "101684",
+      "name": "محمد حمودة محمد إبراهيم",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "101698",
+      "employeeNumber": "101698",
+      "sapId": "101698",
+      "name": "علاء الدين عاطف عبد الستار الحصرى",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101699",
+      "employeeNumber": "101699",
+      "sapId": "101699",
+      "name": "هانى عادل خليفة عبد الهادى",
+      "department": "ادارة المخازن",
+      "job": "مشرف وردية",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "101700",
+      "employeeNumber": "101700",
+      "sapId": "101700",
+      "name": "أحمد محمد على رفعت على",
+      "department": "إدارة الجودة",
+      "job": "مهندس توكيد جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "101717",
+      "employeeNumber": "101717",
+      "sapId": "101717",
+      "name": "وجيه محمد نعيم سليم",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "101738",
+      "employeeNumber": "101738",
+      "sapId": "101738",
+      "name": "سمير ابراهيم عطوة عطية",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "101757",
+      "employeeNumber": "101757",
+      "sapId": "101757",
+      "name": "ممدوح عبد الهادى أحمد مهدى",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "101782",
+      "employeeNumber": "101782",
+      "sapId": "101782",
+      "name": "عبد الوهاب علي عبد الوهاب علي",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "101785",
+      "employeeNumber": "101785",
+      "sapId": "101785",
+      "name": "محمود اسماعيل عبد الرحمن اسماعيل",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "101786",
+      "employeeNumber": "101786",
+      "sapId": "101786",
+      "name": "محمود سالم احمد سالم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "101788",
+      "employeeNumber": "101788",
+      "sapId": "101788",
+      "name": "محمد السيد يوسف السيد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "101790",
+      "employeeNumber": "101790",
+      "sapId": "101790",
+      "name": "رضا محمد السيد يونس",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "101851",
+      "employeeNumber": "101851",
+      "sapId": "101851",
+      "name": "علي محمد محمد محمد",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "101870",
+      "employeeNumber": "101870",
+      "sapId": "101870",
+      "name": "عوض الله عبد الخالق حسن عبد المجيد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "101894",
+      "employeeNumber": "101894",
+      "sapId": "101894",
+      "name": "السيد على عبد الصبور بلاطه",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101895",
+      "employeeNumber": "101895",
+      "sapId": "101895",
+      "name": "فرحات عادل السيد على",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "101925",
+      "employeeNumber": "101925",
+      "sapId": "101925",
+      "name": "أحمد نبيل محمد السيد حسين",
+      "department": "ادارة شئون العاملين",
+      "job": "مدير الشئون الادارية والافراد",
+      "position": "Personnel Manager F&V"
+    },
+    {
+      "id": "101982",
+      "employeeNumber": "101982",
+      "sapId": "101982",
+      "name": "فتحى عبد اللطيف نصر محمد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "101983",
+      "employeeNumber": "101983",
+      "sapId": "101983",
+      "name": "محمد كمال محمد ماضى",
+      "department": "ادارة المخازن",
+      "job": "مشرف مخازن",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "102046",
+      "employeeNumber": "102046",
+      "sapId": "102046",
+      "name": "محمد فؤاد زكي محمد فهيم",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Lead"
+    },
+    {
+      "id": "102075",
+      "employeeNumber": "102075",
+      "sapId": "102075",
+      "name": "عاطف محمد نجيب على",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102104",
+      "employeeNumber": "102104",
+      "sapId": "102104",
+      "name": "محمد عبد النبي محمود محمدي",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "102105",
+      "employeeNumber": "102105",
+      "sapId": "102105",
+      "name": "احمد فرحات عبد العزيز ابراهيم",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مشرف تخليص جمركي",
+      "position": "Procurement Lead"
+    },
+    {
+      "id": "102137",
+      "employeeNumber": "102137",
+      "sapId": "102137",
+      "name": "سامي سعدون عامر سلامه",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102138",
+      "employeeNumber": "102138",
+      "sapId": "102138",
+      "name": "محمد محمد عبد السميع جمعه",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102140",
+      "employeeNumber": "102140",
+      "sapId": "102140",
+      "name": "اشرف عبد الكريم مصطفى احمد",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "102142",
+      "employeeNumber": "102142",
+      "sapId": "102142",
+      "name": "ابراهيم حمدي محمد علي",
+      "department": "ادارة شئون العاملين",
+      "job": "رئيس قسم شئون ادارية",
+      "position": "Benefits Senior Specialist"
+    },
+    {
+      "id": "102144",
+      "employeeNumber": "102144",
+      "sapId": "102144",
+      "name": "محمد سعد محمد حسن",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات وسائق",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "102146",
+      "employeeNumber": "102146",
+      "sapId": "102146",
+      "name": "سعيد محمد محمد حسن النادى",
+      "department": "إدارة المبيعات",
+      "job": "مشرف حركة السيارات",
+      "position": "Fleet Supervisor"
+    },
+    {
+      "id": "102165",
+      "employeeNumber": "102165",
+      "sapId": "102165",
+      "name": "محمد عبد الله الشلبي حسن",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "102166",
+      "employeeNumber": "102166",
+      "sapId": "102166",
+      "name": "عبدالفتاح السيد عبد الفتاح بدر الدين",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102167",
+      "employeeNumber": "102167",
+      "sapId": "102167",
+      "name": "محمد شعبان عبد الغني الابزاري",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102168",
+      "employeeNumber": "102168",
+      "sapId": "102168",
+      "name": "الحسين محمد محمد محمد",
+      "department": "ادارة التصنيع",
+      "job": "اخصائي غرفة التحكم",
+      "position": "Production Shift Leader"
+    },
+    {
+      "id": "102172",
+      "employeeNumber": "102172",
+      "sapId": "102172",
+      "name": "علاء العارف حافظ عثمان",
+      "department": "إدارة المبيعات",
+      "job": "مديراقليمي الصعيد",
+      "position": "Regional Sales Manager"
+    },
+    {
+      "id": "102196",
+      "employeeNumber": "102196",
+      "sapId": "102196",
+      "name": "خالد محمد عبد الرؤوف محمد",
+      "department": "ادارة التعبئة",
+      "job": "مساعد مدير محطة التعبئة",
+      "position": "Packing Stations Assistant Manager"
+    },
+    {
+      "id": "102197",
+      "employeeNumber": "102197",
+      "sapId": "102197",
+      "name": "هاني محمد رمضان الجندي",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102198",
+      "employeeNumber": "102198",
+      "sapId": "102198",
+      "name": "محمد احمد حسن اسماعيل",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "102199",
+      "employeeNumber": "102199",
+      "sapId": "102199",
+      "name": "احمد عبد المنعم احمد ابراهيم",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102202",
+      "employeeNumber": "102202",
+      "sapId": "102202",
+      "name": "محمد السيد عبد الحميد السيد",
+      "department": "ادارة التخطيط",
+      "job": "مشرف صيانة شبكات ومعدات",
+      "position": "Agro Maintenance Supervisor"
+    },
+    {
+      "id": "102207",
+      "employeeNumber": "102207",
+      "sapId": "102207",
+      "name": "حسن عبد اللطيف حسن محمد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102208",
+      "employeeNumber": "102208",
+      "sapId": "102208",
+      "name": "ابراهيم محمد محمد خليل",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102209",
+      "employeeNumber": "102209",
+      "sapId": "102209",
+      "name": "اسماعيل عبدالرحمن فرج الله محمد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102210",
+      "employeeNumber": "102210",
+      "sapId": "102210",
+      "name": "منصور محمد منصور عبد العال",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري وتسميد",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102212",
+      "employeeNumber": "102212",
+      "sapId": "102212",
+      "name": "محمد عبد السلام عبد الرحمن عسكر",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102213",
+      "employeeNumber": "102213",
+      "sapId": "102213",
+      "name": "نشأت حسن احمد منصور",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102214",
+      "employeeNumber": "102214",
+      "sapId": "102214",
+      "name": "طاهر السعيد علي السيد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانه",
+      "position": "Technician"
+    },
+    {
+      "id": "102215",
+      "employeeNumber": "102215",
+      "sapId": "102215",
+      "name": "احمد حسن محمد مصطفى",
+      "department": "ادارة التخطيط",
+      "job": "مسئول توريد عمال",
+      "position": "Labor Supply Specialist"
+    },
+    {
+      "id": "102219",
+      "employeeNumber": "102219",
+      "sapId": "102219",
+      "name": "ايهاب محمد رمضان عبد المنعم",
+      "department": "الادارة المالية",
+      "job": "مسئول اداري ومالي",
+      "position": "Inventory Control Analyst Nobareya"
+    },
+    {
+      "id": "102225",
+      "employeeNumber": "102225",
+      "sapId": "102225",
+      "name": "محمد احمد محمد عبيد",
+      "department": "إدارة الصيانة",
+      "job": "مهندس صيانة",
+      "position": "Maintenance Engineer"
+    },
+    {
+      "id": "102226",
+      "employeeNumber": "102226",
+      "sapId": "102226",
+      "name": "محمد علي عبد الوهاب ابو السعود",
+      "department": "الادارة المالية",
+      "job": "محاسب اول",
+      "position": "Senior Accountant"
+    },
+    {
+      "id": "102228",
+      "employeeNumber": "102228",
+      "sapId": "102228",
+      "name": "نصر احمد عبد الله اسماعيل",
+      "department": "إدارة الجودة",
+      "job": "مدير توكيد الجودة",
+      "position": "Quality Assurance Manager"
+    },
+    {
+      "id": "102229",
+      "employeeNumber": "102229",
+      "sapId": "102229",
+      "name": "صالح المهدي صالح البيلي",
+      "department": "ادارة التعبئة",
+      "job": "مدير محطة التعبئة",
+      "position": "Agro Packing Stations Manager"
+    },
+    {
+      "id": "102230",
+      "employeeNumber": "102230",
+      "sapId": "102230",
+      "name": "طارق طه عفيفي عبد الغني عفيفي",
+      "department": "إدارة الصيانة",
+      "job": "مدير مزرعة الصالحية",
+      "position": "Farm Manager -� Salheya"
+    },
+    {
+      "id": "102231",
+      "employeeNumber": "102231",
+      "sapId": "102231",
+      "name": "وليد سالم عباس محمود",
+      "department": "الادارة المالية",
+      "job": "محاسب",
+      "position": "Inventory Control Specialist"
+    },
+    {
+      "id": "102244",
+      "employeeNumber": "102244",
+      "sapId": "102244",
+      "name": "ابراهيم عبد الله احمد ابراهيم",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102245",
+      "employeeNumber": "102245",
+      "sapId": "102245",
+      "name": "ادهم صابر عبد الواحد محمد",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102246",
+      "employeeNumber": "102246",
+      "sapId": "102246",
+      "name": "مصطفى محمد بنداري محمد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "102247",
+      "employeeNumber": "102247",
+      "sapId": "102247",
+      "name": "احمد مصطفى ابراهيم اسماعيل",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102248",
+      "employeeNumber": "102248",
+      "sapId": "102248",
+      "name": "محمد احمد عبد الفتاح كيلاني",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "102252",
+      "employeeNumber": "102252",
+      "sapId": "102252",
+      "name": "اكرامي سعد علي عبد الله",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "102255",
+      "employeeNumber": "102255",
+      "sapId": "102255",
+      "name": "محمود سيد محمود مرسي",
+      "department": "الادارة المالية",
+      "job": "مراجع حسابات",
+      "position": "Senior Accountant"
+    },
+    {
+      "id": "102257",
+      "employeeNumber": "102257",
+      "sapId": "102257",
+      "name": "تيمور السيد ابراهيم السيد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102278",
+      "employeeNumber": "102278",
+      "sapId": "102278",
+      "name": "محمود عبد الستار محمد نعمه الله",
+      "department": "ادارة التعبئة",
+      "job": "مهندس جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "102281",
+      "employeeNumber": "102281",
+      "sapId": "102281",
+      "name": "احمد محمد عبد الفتاح محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102285",
+      "employeeNumber": "102285",
+      "sapId": "102285",
+      "name": "صابر محمد توفيق علي",
+      "department": "ادارة التعبئة",
+      "job": "مشرف محطة التعبئة",
+      "position": "Agro - Packing Stations Supervisor"
+    },
+    {
+      "id": "102397",
+      "employeeNumber": "102397",
+      "sapId": "102397",
+      "name": "هيثم احمد محمد محمود",
+      "department": "ادارة المشتريات الاولية",
+      "job": "نائب مدير المشتريات",
+      "position": "Procurement Manager"
+    },
+    {
+      "id": "102401",
+      "employeeNumber": "102401",
+      "sapId": "102401",
+      "name": "شوقي احمد عبد الوهاب علي",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102433",
+      "employeeNumber": "102433",
+      "sapId": "102433",
+      "name": "محمد شوقي عبد الخالق بيومي",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102434",
+      "employeeNumber": "102434",
+      "sapId": "102434",
+      "name": "سليم محمد خيري عبد العزيز",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "102435",
+      "employeeNumber": "102435",
+      "sapId": "102435",
+      "name": "صلاح محمد عبد المنعم ابو مسلم",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102436",
+      "employeeNumber": "102436",
+      "sapId": "102436",
+      "name": "عمرو سامي غنيم مسلم",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "مسئول مشتريات زراعية",
+      "position": "Agro Procurement Engineer"
+    },
+    {
+      "id": "102437",
+      "employeeNumber": "102437",
+      "sapId": "102437",
+      "name": "اسلام رزق ابراهيم احمد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "102440",
+      "employeeNumber": "102440",
+      "sapId": "102440",
+      "name": "محمد فرج احمد بغدادي",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات تسليمات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "102468",
+      "employeeNumber": "102468",
+      "sapId": "102468",
+      "name": "عمرو انور عبد المنعم علي",
+      "department": "ادارة التعبئة",
+      "job": "مهندس جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "102470",
+      "employeeNumber": "102470",
+      "sapId": "102470",
+      "name": "احمد ابراهيم احمد محمد",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102471",
+      "employeeNumber": "102471",
+      "sapId": "102471",
+      "name": "احمد كمال عبد المنعم ابراهيم",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانه",
+      "position": "Technician"
+    },
+    {
+      "id": "102472",
+      "employeeNumber": "102472",
+      "sapId": "102472",
+      "name": "السيد سعيد محمد سليم",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانه",
+      "position": "Technician"
+    },
+    {
+      "id": "102473",
+      "employeeNumber": "102473",
+      "sapId": "102473",
+      "name": "حسن حسين محمد علي مصطفى",
+      "department": "إدارة الصيانة",
+      "job": "مشرف ري",
+      "position": "Agriculture Shift Leader"
+    },
+    {
+      "id": "102478",
+      "employeeNumber": "102478",
+      "sapId": "102478",
+      "name": "محمد سماره طلب بسيوني",
+      "department": "ادارة التعبئة",
+      "job": "مهندس جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "102479",
+      "employeeNumber": "102479",
+      "sapId": "102479",
+      "name": "اسامه احمد السيد محمد",
+      "department": "ادارة التعبئة",
+      "job": "مشرف محطة التعبئة",
+      "position": "Agro - Packing Stations Supervisor"
+    },
+    {
+      "id": "102535",
+      "employeeNumber": "102535",
+      "sapId": "102535",
+      "name": "احمد ابو المعاطي موسى عيسى",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "مشرف مشتريات زراعية",
+      "position": "Agro Purchasing Supervisor"
+    },
+    {
+      "id": "102536",
+      "employeeNumber": "102536",
+      "sapId": "102536",
+      "name": "احمد محمود زكي عبد الحليم",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102538",
+      "employeeNumber": "102538",
+      "sapId": "102538",
+      "name": "عمرو عاطف محمد محمد",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "102539",
+      "employeeNumber": "102539",
+      "sapId": "102539",
+      "name": "عباس كمال عباس محمود",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102542",
+      "employeeNumber": "102542",
+      "sapId": "102542",
+      "name": "احمد مجدي محمد ابراهيم",
+      "department": "إدارة الجودة",
+      "job": "مراقب جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "102544",
+      "employeeNumber": "102544",
+      "sapId": "102544",
+      "name": "علي عبد العال محمد مهدي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102550",
+      "employeeNumber": "102550",
+      "sapId": "102550",
+      "name": "محمد السيد محمد المتولي",
+      "department": "إدارة الجودة",
+      "job": "مراقب جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "102614",
+      "employeeNumber": "102614",
+      "sapId": "102614",
+      "name": "ناصر عبد العزيز دسوقي محمد",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102615",
+      "employeeNumber": "102615",
+      "sapId": "102615",
+      "name": "محمد ممدوح محمد عبد ربه",
+      "department": "إدارة الجودة",
+      "job": "مهندس امان غذائي",
+      "position": "Food Safety Lead"
+    },
+    {
+      "id": "102616",
+      "employeeNumber": "102616",
+      "sapId": "102616",
+      "name": "هاني عبد الباقي نصر عبد العال",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102617",
+      "employeeNumber": "102617",
+      "sapId": "102617",
+      "name": "محمود عبد العزيز محمود حسين",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102618",
+      "employeeNumber": "102618",
+      "sapId": "102618",
+      "name": "نبيل عبد الوهاب ابراهيم مرعي",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102619",
+      "employeeNumber": "102619",
+      "sapId": "102619",
+      "name": "طاهر ابوزيد عبد الفتاح محمد",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "102620",
+      "employeeNumber": "102620",
+      "sapId": "102620",
+      "name": "حازم محمود عبد الرؤوف محمد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس تصنيع",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "102623",
+      "employeeNumber": "102623",
+      "sapId": "102623",
+      "name": "السيد فؤاد عبده سيد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102624",
+      "employeeNumber": "102624",
+      "sapId": "102624",
+      "name": "السيد محمد حسين حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102626",
+      "employeeNumber": "102626",
+      "sapId": "102626",
+      "name": "محمود محمد السيد محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102631",
+      "employeeNumber": "102631",
+      "sapId": "102631",
+      "name": "محمد شحاته محمد علي",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "102662",
+      "employeeNumber": "102662",
+      "sapId": "102662",
+      "name": "السعيد محمد السعيد محمد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "102664",
+      "employeeNumber": "102664",
+      "sapId": "102664",
+      "name": "احمد عماد محمد علي",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مسئول اول مشتريات",
+      "position": "Procurement Specialist"
+    },
+    {
+      "id": "102667",
+      "employeeNumber": "102667",
+      "sapId": "102667",
+      "name": "احمد سعيد ابراهيم مصطفى",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Supervisor"
+    },
+    {
+      "id": "102670",
+      "employeeNumber": "102670",
+      "sapId": "102670",
+      "name": "اسلام خليل محمد ابراهيم",
+      "department": "إدارة الصيانة",
+      "job": "فني لحام",
+      "position": "Technician"
+    },
+    {
+      "id": "102671",
+      "employeeNumber": "102671",
+      "sapId": "102671",
+      "name": "محمد محروس محمد عبده",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Technician"
+    },
+    {
+      "id": "102672",
+      "employeeNumber": "102672",
+      "sapId": "102672",
+      "name": "محمد رضا محمود الباروجي",
+      "department": "ادارة النظم والمعلومات",
+      "job": "رئيس قسم الشبكات",
+      "position": "IT Networks Lead - Egypt"
+    },
+    {
+      "id": "102706",
+      "employeeNumber": "102706",
+      "sapId": "102706",
+      "name": "الشحات نبيل احمد عبد الله",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102707",
+      "employeeNumber": "102707",
+      "sapId": "102707",
+      "name": "حسام الدين فرج علي شعبان",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102708",
+      "employeeNumber": "102708",
+      "sapId": "102708",
+      "name": "احمد عبد البديع عبد المنعم السيد",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "102709",
+      "employeeNumber": "102709",
+      "sapId": "102709",
+      "name": "احمد محمد مصطفى عبد الرازق",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102710",
+      "employeeNumber": "102710",
+      "sapId": "102710",
+      "name": "عبد الحميد فهمي عبد الحميد عبد الرحمن",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "102711",
+      "employeeNumber": "102711",
+      "sapId": "102711",
+      "name": "عبد الرحمن عبد الله عبد الرحمن ابراهيم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102712",
+      "employeeNumber": "102712",
+      "sapId": "102712",
+      "name": "احمد عبد العظيم محمد حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102713",
+      "employeeNumber": "102713",
+      "sapId": "102713",
+      "name": "حامد عبد العليم حامد حلبي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102714",
+      "employeeNumber": "102714",
+      "sapId": "102714",
+      "name": "هاني سيد احمد السيد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102715",
+      "employeeNumber": "102715",
+      "sapId": "102715",
+      "name": "حسن محمد بكري حسين",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102717",
+      "employeeNumber": "102717",
+      "sapId": "102717",
+      "name": "هشام عبد الفتاح عبد النبي سالم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102718",
+      "employeeNumber": "102718",
+      "sapId": "102718",
+      "name": "محمود السيد محمد السيد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102719",
+      "employeeNumber": "102719",
+      "sapId": "102719",
+      "name": "محمد عبسي اسماعيل محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102720",
+      "employeeNumber": "102720",
+      "sapId": "102720",
+      "name": "سليمان رجب عبد الله سليمان",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102765",
+      "employeeNumber": "102765",
+      "sapId": "102765",
+      "name": "وليد عبد الرازق عبد الحميد عبد الرازق",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "102766",
+      "employeeNumber": "102766",
+      "sapId": "102766",
+      "name": "اشرف المتولي المتولي علي الدين",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "102767",
+      "employeeNumber": "102767",
+      "sapId": "102767",
+      "name": "فتحي زكريا عبد الرازق عبد الرازق",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "102768",
+      "employeeNumber": "102768",
+      "sapId": "102768",
+      "name": "ابراهيم حمدي ابراهيم السيد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102769",
+      "employeeNumber": "102769",
+      "sapId": "102769",
+      "name": "محمود صابر سليم السيد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "102770",
+      "employeeNumber": "102770",
+      "sapId": "102770",
+      "name": "شعبان محمد السيد سيد",
+      "department": "ادارة الخدمات",
+      "job": "حارس",
+      "position": "Security Guard"
+    },
+    {
+      "id": "102771",
+      "employeeNumber": "102771",
+      "sapId": "102771",
+      "name": "احمد محمد احمد عبد المطلب",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102774",
+      "employeeNumber": "102774",
+      "sapId": "102774",
+      "name": "جمال عاطف السيد علي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102775",
+      "employeeNumber": "102775",
+      "sapId": "102775",
+      "name": "ابراهيم فتحي ابراهيم سالم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102776",
+      "employeeNumber": "102776",
+      "sapId": "102776",
+      "name": "اسلام عبد السلام محمد غنيمي",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102777",
+      "employeeNumber": "102777",
+      "sapId": "102777",
+      "name": "خالد محمد محمد احمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102778",
+      "employeeNumber": "102778",
+      "sapId": "102778",
+      "name": "محمد السيد السيد احمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Technician"
+    },
+    {
+      "id": "102779",
+      "employeeNumber": "102779",
+      "sapId": "102779",
+      "name": "محمد مسلم عيسى ابراهيم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102780",
+      "employeeNumber": "102780",
+      "sapId": "102780",
+      "name": "طلعت محمد عبده عبد المجيد",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Worker"
+    },
+    {
+      "id": "102804",
+      "employeeNumber": "102804",
+      "sapId": "102804",
+      "name": "عبد المنعم علي محمود علي",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Technician"
+    },
+    {
+      "id": "102807",
+      "employeeNumber": "102807",
+      "sapId": "102807",
+      "name": "جودة ابراهيم السيد محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "102811",
+      "employeeNumber": "102811",
+      "sapId": "102811",
+      "name": "محمد فوزي عباس ابو عوف",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Supervisor"
+    },
+    {
+      "id": "102812",
+      "employeeNumber": "102812",
+      "sapId": "102812",
+      "name": "وليد سيد اسماعيل حسين",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Supervisor"
+    },
+    {
+      "id": "102834",
+      "employeeNumber": "102834",
+      "sapId": "102834",
+      "name": "محسن رضا محمد عبد الرحمن",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "102882",
+      "employeeNumber": "102882",
+      "sapId": "102882",
+      "name": "محمود عدلي سليمان محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Technician"
+    },
+    {
+      "id": "102926",
+      "employeeNumber": "102926",
+      "sapId": "102926",
+      "name": "شفيق علاء شفيق مصطفى",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "102959",
+      "employeeNumber": "102959",
+      "sapId": "102959",
+      "name": "حمدي رزق السيد رزق",
+      "department": "إدارة المبيعات",
+      "job": "مدير منطقة",
+      "position": "Area Sales Manager"
+    },
+    {
+      "id": "102988",
+      "employeeNumber": "102988",
+      "sapId": "102988",
+      "name": "سمير محمد طه بدر",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "103001",
+      "employeeNumber": "103001",
+      "sapId": "103001",
+      "name": "محمود عبد النبى عبد الله محمد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "103002",
+      "employeeNumber": "103002",
+      "sapId": "103002",
+      "name": "محمود جمال محمد محمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103003",
+      "employeeNumber": "103003",
+      "sapId": "103003",
+      "name": "محمد اسماعيل علي ابراهيم",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103005",
+      "employeeNumber": "103005",
+      "sapId": "103005",
+      "name": "عبدالله سامي محمود يوسف",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "103006",
+      "employeeNumber": "103006",
+      "sapId": "103006",
+      "name": "احمد سمير عبد النبي رمضان",
+      "department": "الادارة المالية",
+      "job": "مساعد مدير المقبوضات",
+      "position": "AR Assistant Manager"
+    },
+    {
+      "id": "103007",
+      "employeeNumber": "103007",
+      "sapId": "103007",
+      "name": "امير محمد محمد يحيي",
+      "department": "ادارة شئون العاملين",
+      "job": "مندوب اداري",
+      "position": "Administrator"
+    },
+    {
+      "id": "103020",
+      "employeeNumber": "103020",
+      "sapId": "103020",
+      "name": "محمد ممدوح انور حسن",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "103032",
+      "employeeNumber": "103032",
+      "sapId": "103032",
+      "name": "وليد سعيد ابراهيم شافعي",
+      "department": "إدارة الجودة",
+      "job": "فني معمل",
+      "position": "Technician"
+    },
+    {
+      "id": "103042",
+      "employeeNumber": "103042",
+      "sapId": "103042",
+      "name": "عبدالصادق شوقي عبد الصادق سليمان",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103043",
+      "employeeNumber": "103043",
+      "sapId": "103043",
+      "name": "كريم محمد صبحي عبد الله",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "103044",
+      "employeeNumber": "103044",
+      "sapId": "103044",
+      "name": "خالد سعيد عبد الله محمد",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "103045",
+      "employeeNumber": "103045",
+      "sapId": "103045",
+      "name": "محمود ممدوح عبد المنعم مصطفى",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103046",
+      "employeeNumber": "103046",
+      "sapId": "103046",
+      "name": "اسامه ابراهيم عطوه السيد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103047",
+      "employeeNumber": "103047",
+      "sapId": "103047",
+      "name": "رضا عبد المنعم محمد جاب الله",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103048",
+      "employeeNumber": "103048",
+      "sapId": "103048",
+      "name": "عبد الله عليوه طه عبد العزيز",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "103050",
+      "employeeNumber": "103050",
+      "sapId": "103050",
+      "name": "اشرف محمد حمدي عبد الملك",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103053",
+      "employeeNumber": "103053",
+      "sapId": "103053",
+      "name": "محمد عاطف رجب غنيم",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "103054",
+      "employeeNumber": "103054",
+      "sapId": "103054",
+      "name": "محمد حامد عبد العزيز علي",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم المدفوعات",
+      "position": "Control Manager"
+    },
+    {
+      "id": "103055",
+      "employeeNumber": "103055",
+      "sapId": "103055",
+      "name": "سمير يوسف فتحي مصطفى",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "103056",
+      "employeeNumber": "103056",
+      "sapId": "103056",
+      "name": "وليد طه حسن مصطفى",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "103075",
+      "employeeNumber": "103075",
+      "sapId": "103075",
+      "name": "فرج جوده محمد محمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103076",
+      "employeeNumber": "103076",
+      "sapId": "103076",
+      "name": "صابر صلاح محمد الزير",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103079",
+      "employeeNumber": "103079",
+      "sapId": "103079",
+      "name": "فيصل ابراهيم ابراهيم زايد",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "103081",
+      "employeeNumber": "103081",
+      "sapId": "103081",
+      "name": "نبيل عبد الفتاح عبد الصادق عزب",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "103158",
+      "employeeNumber": "103158",
+      "sapId": "103158",
+      "name": "ابراهيم بدري حسن فرغلي",
+      "department": "ادارة المخازن",
+      "job": "مشرف وردية",
+      "position": "WH - Shift Leader"
+    },
+    {
+      "id": "103159",
+      "employeeNumber": "103159",
+      "sapId": "103159",
+      "name": "محمد الحسيني السيد علوان",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103160",
+      "employeeNumber": "103160",
+      "sapId": "103160",
+      "name": "سالم محمد سالم ابراهيم",
+      "department": "ادارة التصنيع",
+      "job": "اخصائي غرفة التحكم",
+      "position": "Production Shift Leader"
+    },
+    {
+      "id": "103206",
+      "employeeNumber": "103206",
+      "sapId": "103206",
+      "name": "احمد مصطفى حسن احمد",
+      "department": "إدارة المبيعات",
+      "job": "مشرف مبيعات",
+      "position": "Sales Supervisor"
+    },
+    {
+      "id": "103209",
+      "employeeNumber": "103209",
+      "sapId": "103209",
+      "name": "مصطفى عادل مصطفى علوان",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "103210",
+      "employeeNumber": "103210",
+      "sapId": "103210",
+      "name": "مصطفى عثمان مصطفى الصادق",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "103219",
+      "employeeNumber": "103219",
+      "sapId": "103219",
+      "name": "رضا احمد السيد علوان",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "103238",
+      "employeeNumber": "103238",
+      "sapId": "103238",
+      "name": "احمد حسنين مسعود علي",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "103239",
+      "employeeNumber": "103239",
+      "sapId": "103239",
+      "name": "احمد عراقي محمد عراقي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103242",
+      "employeeNumber": "103242",
+      "sapId": "103242",
+      "name": "محمد صابر عبد الحميد عبده",
+      "department": "الادارة المالية",
+      "job": "مساعد مدير التكاليف",
+      "position": "SC Finance Manager ICAPP"
+    },
+    {
+      "id": "103294",
+      "employeeNumber": "103294",
+      "sapId": "103294",
+      "name": "احمد محمد علي محمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103299",
+      "employeeNumber": "103299",
+      "sapId": "103299",
+      "name": "محمد عيسى عبد الفتاح عيسى",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103300",
+      "employeeNumber": "103300",
+      "sapId": "103300",
+      "name": "سامح السيد المغاوري عوض",
+      "department": "إدارة الصيانة",
+      "job": "مهندس كهرباء",
+      "position": "Maintenance Lead"
+    },
+    {
+      "id": "103301",
+      "employeeNumber": "103301",
+      "sapId": "103301",
+      "name": "طه محمد عبد الحليم محمد",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "103343",
+      "employeeNumber": "103343",
+      "sapId": "103343",
+      "name": "محمد محمود زكي ابراهيم",
+      "department": "إدارة الصيانة",
+      "job": "مساعد فني كهرباء",
+      "position": "Technician"
+    },
+    {
+      "id": "103374",
+      "employeeNumber": "103374",
+      "sapId": "103374",
+      "name": "محمود السيد ابراهيم السيد",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "103375",
+      "employeeNumber": "103375",
+      "sapId": "103375",
+      "name": "توكل عبد الله انور مصطفى",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "103376",
+      "employeeNumber": "103376",
+      "sapId": "103376",
+      "name": "احمد عبد الهادي السيد حسن",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "مسئول مشتريات زراعية",
+      "position": "Agro Procurement Engineer"
+    },
+    {
+      "id": "103377",
+      "employeeNumber": "103377",
+      "sapId": "103377",
+      "name": "محمود تهامي عبد الله عبد العال",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103378",
+      "employeeNumber": "103378",
+      "sapId": "103378",
+      "name": "مصطفى عبد الله محمد مصطفى",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103379",
+      "employeeNumber": "103379",
+      "sapId": "103379",
+      "name": "رجب محمد علي موسى",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "103380",
+      "employeeNumber": "103380",
+      "sapId": "103380",
+      "name": "احمد عاطف عبد المولى عبد الله",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Technician"
+    },
+    {
+      "id": "103381",
+      "employeeNumber": "103381",
+      "sapId": "103381",
+      "name": "باهر سيد دكروني محمد",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مسئول اول مشتريات اولية",
+      "position": "Agro Procurement Engineer"
+    },
+    {
+      "id": "103382",
+      "employeeNumber": "103382",
+      "sapId": "103382",
+      "name": "السيد امين محمد بخيت",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103396",
+      "employeeNumber": "103396",
+      "sapId": "103396",
+      "name": "ماري نبيل جاولي وليم زكي",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "مسئول مشتريات زراعية",
+      "position": "Secretary"
+    },
+    {
+      "id": "103398",
+      "employeeNumber": "103398",
+      "sapId": "103398",
+      "name": "علاء عباس ابراهيم عاشور",
+      "department": "إدارة الجودة",
+      "job": "مراقب جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "103410",
+      "employeeNumber": "103410",
+      "sapId": "103410",
+      "name": "اشرف شعبان حسن عبد الله",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "103414",
+      "employeeNumber": "103414",
+      "sapId": "103414",
+      "name": "محمد حسن حلمي محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "103451",
+      "employeeNumber": "103451",
+      "sapId": "103451",
+      "name": "عادل احمد محمود حموده",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103455",
+      "employeeNumber": "103455",
+      "sapId": "103455",
+      "name": "هشام صبري محمد ابراهيم",
+      "department": "إدارة الصيانة",
+      "job": "مشرف غلايات",
+      "position": "Technician"
+    },
+    {
+      "id": "103456",
+      "employeeNumber": "103456",
+      "sapId": "103456",
+      "name": "حسام محمد محمود عيد",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "103487",
+      "employeeNumber": "103487",
+      "sapId": "103487",
+      "name": "محسن محمد السيد خطاب",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "103491",
+      "employeeNumber": "103491",
+      "sapId": "103491",
+      "name": "عمرو عبد المعطي حسن محمد",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "103494",
+      "employeeNumber": "103494",
+      "sapId": "103494",
+      "name": "سامي عبد النبي حسن خليل",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103506",
+      "employeeNumber": "103506",
+      "sapId": "103506",
+      "name": "محمد خيري احمد ابراهيم",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات تسليمات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "103532",
+      "employeeNumber": "103532",
+      "sapId": "103532",
+      "name": "احمد عبد السلام محمد حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103570",
+      "employeeNumber": "103570",
+      "sapId": "103570",
+      "name": "كريم محسن عبد الباسط حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103573",
+      "employeeNumber": "103573",
+      "sapId": "103573",
+      "name": "محمد ابراهيم مصطفى عرفات",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103578",
+      "employeeNumber": "103578",
+      "sapId": "103578",
+      "name": "محمد محمود احمد السيد",
+      "department": "إدارة الجودة",
+      "job": "مشرف توكيد جودة",
+      "position": "Quality Assurance Lead"
+    },
+    {
+      "id": "103732",
+      "employeeNumber": "103732",
+      "sapId": "103732",
+      "name": "محمد شوقي جاد محمد",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "103746",
+      "employeeNumber": "103746",
+      "sapId": "103746",
+      "name": "شادي محمود عطيه جاب الله",
+      "department": "ادارة النظم والمعلومات",
+      "job": "محلل اول نظم",
+      "position": "IT Lead - Supply Chain - Egypt"
+    },
+    {
+      "id": "103767",
+      "employeeNumber": "103767",
+      "sapId": "103767",
+      "name": "خالد جابر احمد غريب",
+      "department": "ادارة التخطيط",
+      "job": "مهندس ممثل حقلي",
+      "position": "Field Technical Engineer"
+    },
+    {
+      "id": "103768",
+      "employeeNumber": "103768",
+      "sapId": "103768",
+      "name": "محمد السيد عطيه عثمان",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "103842",
+      "employeeNumber": "103842",
+      "sapId": "103842",
+      "name": "ابراهيم علي السيد شاهين",
+      "department": "إدارة الصيانة",
+      "job": "فني كهرباء",
+      "position": "Technician"
+    },
+    {
+      "id": "103910",
+      "employeeNumber": "103910",
+      "sapId": "103910",
+      "name": "محمد فتحي سعد حسانين",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "103911",
+      "employeeNumber": "103911",
+      "sapId": "103911",
+      "name": "نادر محمد عبد الحميد محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "103960",
+      "employeeNumber": "103960",
+      "sapId": "103960",
+      "name": "احمد سليمان موسى حسن",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104033",
+      "employeeNumber": "104033",
+      "sapId": "104033",
+      "name": "سنوسي مبروك سنوسي محمد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104134",
+      "employeeNumber": "104134",
+      "sapId": "104134",
+      "name": "احمد وحيد ابراهيم محمد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104166",
+      "employeeNumber": "104166",
+      "sapId": "104166",
+      "name": "علاء سمير زكي زكي",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104167",
+      "employeeNumber": "104167",
+      "sapId": "104167",
+      "name": "عبد الله صباح عبد المنعم السيد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "104168",
+      "employeeNumber": "104168",
+      "sapId": "104168",
+      "name": "محمد السيد عليوة خطاب",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "104169",
+      "employeeNumber": "104169",
+      "sapId": "104169",
+      "name": "محمد سامي محمود محمد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "104170",
+      "employeeNumber": "104170",
+      "sapId": "104170",
+      "name": "طارق السيد علي كف",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "104171",
+      "employeeNumber": "104171",
+      "sapId": "104171",
+      "name": "محمد فرحان عبد الحكيم ابراهيم",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104172",
+      "employeeNumber": "104172",
+      "sapId": "104172",
+      "name": "عادل محمد فرج حسن",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104173",
+      "employeeNumber": "104173",
+      "sapId": "104173",
+      "name": "احمد فتحي راشد محمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104174",
+      "employeeNumber": "104174",
+      "sapId": "104174",
+      "name": "احمد صابر محمد علي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104175",
+      "employeeNumber": "104175",
+      "sapId": "104175",
+      "name": "اسلام سعيد محمد سيد",
+      "department": "ادارة التعبئة",
+      "job": "مشغل تعبئة",
+      "position": "Operator"
+    },
+    {
+      "id": "104176",
+      "employeeNumber": "104176",
+      "sapId": "104176",
+      "name": "اسلام شحته محمد عبد الحميد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104177",
+      "employeeNumber": "104177",
+      "sapId": "104177",
+      "name": "احمد محمد ابو زيد محمد",
+      "department": "الادارة المالية",
+      "job": "موظف ارشيف",
+      "position": "Archiver"
+    },
+    {
+      "id": "104178",
+      "employeeNumber": "104178",
+      "sapId": "104178",
+      "name": "انس جمال لبيب عبد العال",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "104179",
+      "employeeNumber": "104179",
+      "sapId": "104179",
+      "name": "عصام سعيد ابراهيم حسن",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "104180",
+      "employeeNumber": "104180",
+      "sapId": "104180",
+      "name": "محمود حمدي ابراهيم عطيه",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "104181",
+      "employeeNumber": "104181",
+      "sapId": "104181",
+      "name": "محمد صبحي فوزي ابراهيم",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104182",
+      "employeeNumber": "104182",
+      "sapId": "104182",
+      "name": "محمد يوسف ابراهيم محمد",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "104183",
+      "employeeNumber": "104183",
+      "sapId": "104183",
+      "name": "سعيد شكري عبد الحميد مصطفى",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104210",
+      "employeeNumber": "104210",
+      "sapId": "104210",
+      "name": "مصطفى محمد مصطفى الشريف",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "104212",
+      "employeeNumber": "104212",
+      "sapId": "104212",
+      "name": "كريم محمد عبده عبد العزيز المسيدى",
+      "department": "مركز الخدمات المالية المشتركة",
+      "job": "محاسب",
+      "position": "Process Lead AP - QC"
+    },
+    {
+      "id": "104338",
+      "employeeNumber": "104338",
+      "sapId": "104338",
+      "name": "محمد عبد الرحمن السيد علي سبيع",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "104341",
+      "employeeNumber": "104341",
+      "sapId": "104341",
+      "name": "محمد سليم محمد سالم",
+      "department": "إدارة المبيعات",
+      "job": "مدير الحركة",
+      "position": "Fleet Manager"
+    },
+    {
+      "id": "104363",
+      "employeeNumber": "104363",
+      "sapId": "104363",
+      "name": "حسام ذكي عبد الحليم ذكي",
+      "department": "ادارة المشتريات الزراعية",
+      "job": "مسئول مشتريات زراعية",
+      "position": "Procurement Specialist"
+    },
+    {
+      "id": "104364",
+      "employeeNumber": "104364",
+      "sapId": "104364",
+      "name": "محمود الشمسي اسماعيل حسن",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104405",
+      "employeeNumber": "104405",
+      "sapId": "104405",
+      "name": "محمود السيد البدوي محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "104412",
+      "employeeNumber": "104412",
+      "sapId": "104412",
+      "name": "احمد عبد المقصود مصطفى بدوي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104413",
+      "employeeNumber": "104413",
+      "sapId": "104413",
+      "name": "احمد عبد المنعم هادي محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "104510",
+      "employeeNumber": "104510",
+      "sapId": "104510",
+      "name": "احمد محمد صابر السيد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "104515",
+      "employeeNumber": "104515",
+      "sapId": "104515",
+      "name": "شحته فكري عبد العظيم صالح",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "104528",
+      "employeeNumber": "104528",
+      "sapId": "104528",
+      "name": "وليد عبد العزيز ابو عيد سليم",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "104536",
+      "employeeNumber": "104536",
+      "sapId": "104536",
+      "name": "محمد احمد عبد السلام ابو العزم",
+      "department": "ادارة المشتريات الاولية",
+      "job": "مدير مشتريات اولية",
+      "position": "F&V Procurement Head"
+    },
+    {
+      "id": "104585",
+      "employeeNumber": "104585",
+      "sapId": "104585",
+      "name": "عبد الهادي احمد السيد محمد",
+      "department": "ادارة الاستقبال",
+      "job": "عامل استقبال",
+      "position": "Worker"
+    },
+    {
+      "id": "104589",
+      "employeeNumber": "104589",
+      "sapId": "104589",
+      "name": "سيد جلال عبد العال علي",
+      "department": "إدارة المبيعات",
+      "job": "مدير مبيعات اقليمي القاهرة",
+      "position": "Regional Sales Manager"
+    },
+    {
+      "id": "104635",
+      "employeeNumber": "104635",
+      "sapId": "104635",
+      "name": "احمد ابراهيم محمد محمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104636",
+      "employeeNumber": "104636",
+      "sapId": "104636",
+      "name": "محمد جمال محمد عبد الرازق",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104670",
+      "employeeNumber": "104670",
+      "sapId": "104670",
+      "name": "احمد سعد محمد صديق",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "104676",
+      "employeeNumber": "104676",
+      "sapId": "104676",
+      "name": "محمد احمد محمد عبد السميع",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104716",
+      "employeeNumber": "104716",
+      "sapId": "104716",
+      "name": "ايمن السيد عبد الرازق رمضان",
+      "department": "إدارة الجودة",
+      "job": "مشرف جوده",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "104717",
+      "employeeNumber": "104717",
+      "sapId": "104717",
+      "name": "فتحي جمال فتحي عوض الله",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104719",
+      "employeeNumber": "104719",
+      "sapId": "104719",
+      "name": "عادل فتحي محمد حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104720",
+      "employeeNumber": "104720",
+      "sapId": "104720",
+      "name": "كريم خليل محمد حبيش",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104722",
+      "employeeNumber": "104722",
+      "sapId": "104722",
+      "name": "محمد ابراهيم احمد عفيفي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104724",
+      "employeeNumber": "104724",
+      "sapId": "104724",
+      "name": "مصطفى ناصر محمد محمود",
+      "department": "الادارة المالية",
+      "job": "محاسب اول",
+      "position": "Senior Accountant"
+    },
+    {
+      "id": "104762",
+      "employeeNumber": "104762",
+      "sapId": "104762",
+      "name": "ايمن محمود احمد احمد",
+      "department": "ادارة المخازن",
+      "job": "مساعد امين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "104763",
+      "employeeNumber": "104763",
+      "sapId": "104763",
+      "name": "مصطفى عبد الباسط عثمان محمد",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "104764",
+      "employeeNumber": "104764",
+      "sapId": "104764",
+      "name": "محمد حسين جوده عبد الله",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "104766",
+      "employeeNumber": "104766",
+      "sapId": "104766",
+      "name": "اسر محمد عنتر حلمي",
+      "department": "ادارة التصدير",
+      "job": "رئيس قسم التصدير",
+      "position": "Accounts Management Manager ICAPP"
+    },
+    {
+      "id": "104847",
+      "employeeNumber": "104847",
+      "sapId": "104847",
+      "name": "محمد علي عيسى علي",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانة",
+      "position": "Supervisor"
+    },
+    {
+      "id": "104848",
+      "employeeNumber": "104848",
+      "sapId": "104848",
+      "name": "نادر محمد صالح علي",
+      "department": "إدارة الصيانة",
+      "job": "فنى صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "104876",
+      "employeeNumber": "104876",
+      "sapId": "104876",
+      "name": "خالد مختار طه يس",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104905",
+      "employeeNumber": "104905",
+      "sapId": "104905",
+      "name": "احمد عبد الوهاب عبد الوهاب محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "104979",
+      "employeeNumber": "104979",
+      "sapId": "104979",
+      "name": "احمد عبد الحميد السيد محمود",
+      "department": "ادارة المخازن",
+      "job": "عامل مخازن",
+      "position": "Worker"
+    },
+    {
+      "id": "104980",
+      "employeeNumber": "104980",
+      "sapId": "104980",
+      "name": "جميل محمد فتحي حسن",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104981",
+      "employeeNumber": "104981",
+      "sapId": "104981",
+      "name": "هشام سعد عبد الرشيد زكي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "104982",
+      "employeeNumber": "104982",
+      "sapId": "104982",
+      "name": "تيسير فتحي محمد اسماعيل",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105023",
+      "employeeNumber": "105023",
+      "sapId": "105023",
+      "name": "السيد عبد الموجود السيد عيد",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Technician"
+    },
+    {
+      "id": "105107",
+      "employeeNumber": "105107",
+      "sapId": "105107",
+      "name": "ابراهيم السيد خيري جوده",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "105108",
+      "employeeNumber": "105108",
+      "sapId": "105108",
+      "name": "محمد السيد عبد العزيز سيد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "105157",
+      "employeeNumber": "105157",
+      "sapId": "105157",
+      "name": "علاء عبد العزيز محمد عبد العزيز",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "105183",
+      "employeeNumber": "105183",
+      "sapId": "105183",
+      "name": "محمد فايق عبد الهادي احمد",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105184",
+      "employeeNumber": "105184",
+      "sapId": "105184",
+      "name": "احمد محمد محمد محمد ريان",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "105185",
+      "employeeNumber": "105185",
+      "sapId": "105185",
+      "name": "محمد عبد الله عبد الله سليمان",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "105201",
+      "employeeNumber": "105201",
+      "sapId": "105201",
+      "name": "احمد محمود عبد العظيم محمود بدوي",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "105222",
+      "employeeNumber": "105222",
+      "sapId": "105222",
+      "name": "محمد فكري محمد هاشم خليل",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105229",
+      "employeeNumber": "105229",
+      "sapId": "105229",
+      "name": "حسام حسن السيد عبد الرحيم",
+      "department": "ادارة التصدير",
+      "job": "منسق لوجيستيك",
+      "position": "Export Documentation Specialist ICAPP"
+    },
+    {
+      "id": "105361",
+      "employeeNumber": "105361",
+      "sapId": "105361",
+      "name": "رضا فوزي جوده محمد",
+      "department": "ادارة المخازن",
+      "job": "سائق معدات",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "105362",
+      "employeeNumber": "105362",
+      "sapId": "105362",
+      "name": "ايمن محمد عبد المقصود محمد يوسف",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105366",
+      "employeeNumber": "105366",
+      "sapId": "105366",
+      "name": "احمد خالد محمد مهدي عوض",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Technician"
+    },
+    {
+      "id": "105393",
+      "employeeNumber": "105393",
+      "sapId": "105393",
+      "name": "محمد عثمان محمد السيد سبيع",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Worker"
+    },
+    {
+      "id": "105428",
+      "employeeNumber": "105428",
+      "sapId": "105428",
+      "name": "السيد عبد الله عبد المعطي علي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105476",
+      "employeeNumber": "105476",
+      "sapId": "105476",
+      "name": "دينا ناجي لويس عبد الله",
+      "department": "الادارة العامة",
+      "job": "سكرتيرة تنفيذية",
+      "position": "Secretary"
+    },
+    {
+      "id": "105623",
+      "employeeNumber": "105623",
+      "sapId": "105623",
+      "name": "احمد سمير عبد العزيز احمد بدوي",
+      "department": "ادارة التعبئة",
+      "job": "عامل تعبئة",
+      "position": "Worker"
+    },
+    {
+      "id": "105699",
+      "employeeNumber": "105699",
+      "sapId": "105699",
+      "name": "رضا عزيز احمد محمد سالم",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "105812",
+      "employeeNumber": "105812",
+      "sapId": "105812",
+      "name": "صابر عبد الفتاح سعيد عبد الفتاح",
+      "department": "ادارة التصدير",
+      "job": "مندوب لوجيستيك",
+      "position": "Export Documentation Specialist ICAPP"
+    },
+    {
+      "id": "105828",
+      "employeeNumber": "105828",
+      "sapId": "105828",
+      "name": "رمضان عبد الحميد محمد عبد الجواد",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "105844",
+      "employeeNumber": "105844",
+      "sapId": "105844",
+      "name": "محمد مصطفى حامد سليم",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "106164",
+      "employeeNumber": "106164",
+      "sapId": "106164",
+      "name": "عوض داود مختارحسب الله قمح",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "106213",
+      "employeeNumber": "106213",
+      "sapId": "106213",
+      "name": "احمد محمد السيد عبد الكريم",
+      "department": "ادارة الخدمات",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "106829",
+      "employeeNumber": "106829",
+      "sapId": "106829",
+      "name": "وليد عبد الحميد عبد النبي خطاب",
+      "department": "ادارة الخدمات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "106895",
+      "employeeNumber": "106895",
+      "sapId": "106895",
+      "name": "محمد سعد محمود بدوي",
+      "department": "إدارة الجودة",
+      "job": "مساعد مدير توكيد جودة",
+      "position": "Quality Assurance Lead"
+    },
+    {
+      "id": "107418",
+      "employeeNumber": "107418",
+      "sapId": "107418",
+      "name": "نادر محمد عبد المنعم ابو مسلم علي",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "107452",
+      "employeeNumber": "107452",
+      "sapId": "107452",
+      "name": "احمد عادل عبد الحميد حسن درويش",
+      "department": "إدارة الصيانة",
+      "job": "مهندس صيانة",
+      "position": "Maintenance Lead"
+    },
+    {
+      "id": "107522",
+      "employeeNumber": "107522",
+      "sapId": "107522",
+      "name": "محمود محمد محمد علي",
+      "department": "ادارة التخطيط",
+      "job": "مسئول تخطيط",
+      "position": "Planning Specialist"
+    },
+    {
+      "id": "107594",
+      "employeeNumber": "107594",
+      "sapId": "107594",
+      "name": "ابراهيم شكري محمد عبد الرؤف الشاهد",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم الضرائب",
+      "position": "Tax Manager F&V"
+    },
+    {
+      "id": "108361",
+      "employeeNumber": "108361",
+      "sapId": "108361",
+      "name": "محمد حمد فرج نايل",
+      "department": "الادارة العامة",
+      "job": "ممثل علاقات حكومية",
+      "position": "Government Affairs Representative"
+    },
+    {
+      "id": "108384",
+      "employeeNumber": "108384",
+      "sapId": "108384",
+      "name": "سعيد محمد عادل محمد حسن",
+      "department": "إدارة المبيعات",
+      "job": "مشرف مبيعات",
+      "position": "Sales Supervisor"
+    },
+    {
+      "id": "108508",
+      "employeeNumber": "108508",
+      "sapId": "108508",
+      "name": "السيد عبد الفضيل قاسم عبد الونيس",
+      "department": "إدارة الجودة",
+      "job": "مهندس جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "108511",
+      "employeeNumber": "108511",
+      "sapId": "108511",
+      "name": "حسام عبد الله محمد يوسف محمد",
+      "department": "إدارة الجودة",
+      "job": "مهندس نظم ومعلومات",
+      "position": "IT Engineer"
+    },
+    {
+      "id": "108514",
+      "employeeNumber": "108514",
+      "sapId": "108514",
+      "name": "خالد صفوت محمد عبد المطلب",
+      "department": "الادارة العامة",
+      "job": "ترجمة ومراسلات وتخطيط",
+      "position": "Secretary"
+    },
+    {
+      "id": "108515",
+      "employeeNumber": "108515",
+      "sapId": "108515",
+      "name": "محمود عبد اللطيف ابراهيم علواني حرب",
+      "department": "إدارة الصيانة",
+      "job": "مشرف صيانة",
+      "position": "Technician"
+    },
+    {
+      "id": "108520",
+      "employeeNumber": "108520",
+      "sapId": "108520",
+      "name": "محمد سبيته عبد ربه عبد الجواد",
+      "department": "إدارة الجودة",
+      "job": "مهندس توكيد جودة",
+      "position": "Quality Assurance Specialist"
+    },
+    {
+      "id": "108552",
+      "employeeNumber": "108552",
+      "sapId": "108552",
+      "name": "هشام سليم عبد الله سليم",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "108561",
+      "employeeNumber": "108561",
+      "sapId": "108561",
+      "name": "السيد عبد العزيز حسن عبد العزيز",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "108599",
+      "employeeNumber": "108599",
+      "sapId": "108599",
+      "name": "محمد الشبراوي السيد عبد الفتاح",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "108696",
+      "employeeNumber": "108696",
+      "sapId": "108696",
+      "name": "محمود عبد الله محمد شكري",
+      "department": "إدارة المبيعات",
+      "job": "مشرف مبيعات",
+      "position": "Sales Supervisor"
+    },
+    {
+      "id": "108899",
+      "employeeNumber": "108899",
+      "sapId": "108899",
+      "name": "يوسف ايمن فوزى مدنى",
+      "department": "ادارة التصدير",
+      "job": "أخصائي أول إدارة الحسابات",
+      "position": "Accounts Management Sr Specialist ICAPP"
+    },
+    {
+      "id": "108903",
+      "employeeNumber": "108903",
+      "sapId": "108903",
+      "name": "مريم فريد داود ميخائيل",
+      "department": "ادارة الموارد البشرية",
+      "job": "مدير اول موارد بشرية",
+      "position": "Sr Manager HR F&V"
+    },
+    {
+      "id": "109032",
+      "employeeNumber": "109032",
+      "sapId": "109032",
+      "name": "عبده مجدى عبده مصطفى",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "109033",
+      "employeeNumber": "109033",
+      "sapId": "109033",
+      "name": "عبد العظيم رأفت عبد العظيم محمد",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "109046",
+      "employeeNumber": "109046",
+      "sapId": "109046",
+      "name": "محمد رمضان محمد بسيونى",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "109119",
+      "employeeNumber": "109119",
+      "sapId": "109119",
+      "name": "محمد يسرى على حسن",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "109120",
+      "employeeNumber": "109120",
+      "sapId": "109120",
+      "name": "سيف الدين هشام مصطفى كمال خفاجى",
+      "department": "ادارة التصدير",
+      "job": "أخصائي خدمة العملاء",
+      "position": "Business Development Lead ICAPP"
+    },
+    {
+      "id": "109269",
+      "employeeNumber": "109269",
+      "sapId": "109269",
+      "name": "محمد ثروت احمد عبد الحميد",
+      "department": "ادارة الشئون الادارية",
+      "job": "مسئول ادارى",
+      "position": "Administrator"
+    },
+    {
+      "id": "109283",
+      "employeeNumber": "109283",
+      "sapId": "109283",
+      "name": "مؤمن مرتضى مبارك بغدادى",
+      "department": "إدارة المبيعات",
+      "job": "مندوب مبيعات",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "109551",
+      "employeeNumber": "109551",
+      "sapId": "109551",
+      "name": "مهاب احمد عفيفى سالم محمد",
+      "department": "ادارة التخطيط",
+      "job": "رئيس قسم التخطيط",
+      "position": "Planning Lead"
+    },
+    {
+      "id": "109905",
+      "employeeNumber": "109905",
+      "sapId": "109905",
+      "name": "احمد محمد احمد قطب",
+      "department": "إدارة المبيعات",
+      "job": "سائق مبيعات",
+      "position": "Driver"
+    },
+    {
+      "id": "110058",
+      "employeeNumber": "110058",
+      "sapId": "110058",
+      "name": "دانيه ياسر عبد الحميد الغريب اسماعيل",
+      "department": "ادارة التصدير",
+      "job": "أخصائى تصدير",
+      "position": "Account Management Specialist"
+    },
+    {
+      "id": "110072",
+      "employeeNumber": "110072",
+      "sapId": "110072",
+      "name": "مصطفى اسماعيل مصطفى السيد",
+      "department": "ادارة التصدير",
+      "job": "اخصائى لوجيستيك",
+      "position": "Logistics Specialist"
+    },
+    {
+      "id": "110118",
+      "employeeNumber": "110118",
+      "sapId": "110118",
+      "name": "عبد الله ياسر محمد عبد الله جاد الله",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "110180",
+      "employeeNumber": "110180",
+      "sapId": "110180",
+      "name": "محمود عبد السلام عبد المقصود على",
+      "department": "ادارة الشئون الادارية",
+      "job": "مسئول ادارى",
+      "position": "Administrator"
+    },
+    {
+      "id": "110264",
+      "employeeNumber": "110264",
+      "sapId": "110264",
+      "name": "احمد عبد الفتاح السعيد الملهود",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "110346",
+      "employeeNumber": "110346",
+      "sapId": "110346",
+      "name": "محمد سعيد عبد النبى عطيه",
+      "department": "إدارة المبيعات",
+      "job": "سائق مبيعات",
+      "position": "Driver"
+    },
+    {
+      "id": "110469",
+      "employeeNumber": "110469",
+      "sapId": "110469",
+      "name": "عبد الرحمن ايمن مختار فهمي",
+      "department": "ادارة التصنيع",
+      "job": "عامل انتاج",
+      "position": "worker"
+    },
+    {
+      "id": "110470",
+      "employeeNumber": "110470",
+      "sapId": "110470",
+      "name": "احمد محمود هاشم عبد النبى هاشم",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "110471",
+      "employeeNumber": "110471",
+      "sapId": "110471",
+      "name": "علاء الدين احمد صبحى درويش",
+      "department": "الادارة العامة",
+      "job": "رئيس اول قطاع التشغيل",
+      "position": "ISC Senior Director"
+    },
+    {
+      "id": "110527",
+      "employeeNumber": "110527",
+      "sapId": "110527",
+      "name": "هشام محمد تاج الدين محمد دسوقى",
+      "department": "الادارة العامة",
+      "job": "مدير اول مصنع",
+      "position": "Plant Sr. Manager"
+    },
+    {
+      "id": "110586",
+      "employeeNumber": "110586",
+      "sapId": "110586",
+      "name": "أحمد حسين عمر متولى",
+      "department": "مركز الخدمات المالية المشتركة",
+      "job": "محاسب",
+      "position": "Process Executive"
+    },
+    {
+      "id": "110632",
+      "employeeNumber": "110632",
+      "sapId": "110632",
+      "name": "عمر محمد عمر مدنى",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "110929",
+      "employeeNumber": "110929",
+      "sapId": "110929",
+      "name": "محمد احمد عبد المنعم محمود",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Technician"
+    },
+    {
+      "id": "110934",
+      "employeeNumber": "110934",
+      "sapId": "110934",
+      "name": "احمد شريف احمد محمد البنا",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Specialist"
+    },
+    {
+      "id": "111036",
+      "employeeNumber": "111036",
+      "sapId": "111036",
+      "name": "محمد هشام مصطفى صديق",
+      "department": "مركز الخدمات المالية المشتركة",
+      "job": "محاسب",
+      "position": "Junior Executive AP"
+    },
+    {
+      "id": "111047",
+      "employeeNumber": "111047",
+      "sapId": "111047",
+      "name": "إياد محمد فرج عبدربه الزهيري",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "111048",
+      "employeeNumber": "111048",
+      "sapId": "111048",
+      "name": "سعيد محمد حامد محمد محمد المليجي",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "111059",
+      "employeeNumber": "111059",
+      "sapId": "111059",
+      "name": "احمد يسرى احمد عيسى ابراهيم",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Technician"
+    },
+    {
+      "id": "111069",
+      "employeeNumber": "111069",
+      "sapId": "111069",
+      "name": "احمد بدوى احمد محمد",
+      "department": "الادارة المالية",
+      "job": "محاسب",
+      "position": "Senior AR Accountant"
+    },
+    {
+      "id": "111083",
+      "employeeNumber": "111083",
+      "sapId": "111083",
+      "name": "يوسف أكمل إسكندر عيد",
+      "department": "ادارة التصدير",
+      "job": "أخصائى تصدير",
+      "position": "Export Specialist"
+    },
+    {
+      "id": "111183",
+      "employeeNumber": "111183",
+      "sapId": "111183",
+      "name": "محمد احميده عطيه حسين",
+      "department": "ادارة المخازن",
+      "job": "سائق فوركلفت",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "111184",
+      "employeeNumber": "111184",
+      "sapId": "111184",
+      "name": "عمرو السيد السعيد سراج",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "111185",
+      "employeeNumber": "111185",
+      "sapId": "111185",
+      "name": "محمد طارق محمد عبد الرحمن صوابي",
+      "department": "إدارة الجودة",
+      "job": "أخصائي صحة وسلامة غذاء",
+      "position": "Food Safety Specialist"
+    },
+    {
+      "id": "111186",
+      "employeeNumber": "111186",
+      "sapId": "111186",
+      "name": "عبد الله ممدوح موسي عبد الوهاب",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "Quality Control Specialist"
+    },
+    {
+      "id": "111189",
+      "employeeNumber": "111189",
+      "sapId": "111189",
+      "name": "حسين السيد كليب إسماعيل كليب",
+      "department": "ادارة المخازن",
+      "job": "سائق فوركلفت",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "111191",
+      "employeeNumber": "111191",
+      "sapId": "111191",
+      "name": "حسين أبو العنين محمد أبو ذكري",
+      "department": "ادارة المخازن",
+      "job": "سائق فوركلفت",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "111270",
+      "employeeNumber": "111270",
+      "sapId": "111270",
+      "name": "عمر هشام السيد جابر",
+      "department": "ادارة التصدير",
+      "job": "أخصائي أول لوجيستيك",
+      "position": "Accounts Management Sr Specialist ICAPP"
+    },
+    {
+      "id": "111279",
+      "employeeNumber": "111279",
+      "sapId": "111279",
+      "name": "السيد عبد الله السيد أحمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111280",
+      "employeeNumber": "111280",
+      "sapId": "111280",
+      "name": "أحمد مجدي أحمد محمد عرابي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111281",
+      "employeeNumber": "111281",
+      "sapId": "111281",
+      "name": "عبد الرحمن مسعد زكريا حسين زربه",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111282",
+      "employeeNumber": "111282",
+      "sapId": "111282",
+      "name": "عبدالباسط عبدالمعز عبدالنبي عبدالمطلب",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111283",
+      "employeeNumber": "111283",
+      "sapId": "111283",
+      "name": "أحمد محمد عبد الحميد محمود",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111284",
+      "employeeNumber": "111284",
+      "sapId": "111284",
+      "name": "أحمد مصطفي عوض عبد الله",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "111285",
+      "employeeNumber": "111285",
+      "sapId": "111285",
+      "name": "إسلام محمد شعبان أبو طالب",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111286",
+      "employeeNumber": "111286",
+      "sapId": "111286",
+      "name": "أمير طنطاوي وديع أحمد طنطاوي",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111287",
+      "employeeNumber": "111287",
+      "sapId": "111287",
+      "name": "رمضان السيد رمضان السيد",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111288",
+      "employeeNumber": "111288",
+      "sapId": "111288",
+      "name": "سعد عصام سعيد سعيد أحمد العربي",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111289",
+      "employeeNumber": "111289",
+      "sapId": "111289",
+      "name": "أحمد سعيد حسين خضري قنديل",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "111290",
+      "employeeNumber": "111290",
+      "sapId": "111290",
+      "name": "السيد وائل شحاتة خليل حسن",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111292",
+      "employeeNumber": "111292",
+      "sapId": "111292",
+      "name": "أميرعصام أحمد علي",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111294",
+      "employeeNumber": "111294",
+      "sapId": "111294",
+      "name": "محيي محمود محيي الصباح البحراوي",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Store Keeper"
+    },
+    {
+      "id": "111295",
+      "employeeNumber": "111295",
+      "sapId": "111295",
+      "name": "يوسف عبد الخالق معروف عبد الخالق",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111296",
+      "employeeNumber": "111296",
+      "sapId": "111296",
+      "name": "علاء بسيوني السيد يوسف",
+      "department": "ادارة المخازن",
+      "job": "سائق فوركلفت",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "111297",
+      "employeeNumber": "111297",
+      "sapId": "111297",
+      "name": "محيي حسني محيي حسنين النجار",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "111298",
+      "employeeNumber": "111298",
+      "sapId": "111298",
+      "name": "محمود السيد عبد القادر فتح الله العيسوي",
+      "department": "إدارة الصيانة",
+      "job": "فني غلايات",
+      "position": "Manufacturing Technician"
+    },
+    {
+      "id": "111299",
+      "employeeNumber": "111299",
+      "sapId": "111299",
+      "name": "محمد حسين حافظ بيومي",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111301",
+      "employeeNumber": "111301",
+      "sapId": "111301",
+      "name": "محمد السيد إبراهيم محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111302",
+      "employeeNumber": "111302",
+      "sapId": "111302",
+      "name": "محمد عبد الناصر رشاد توفيق محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111306",
+      "employeeNumber": "111306",
+      "sapId": "111306",
+      "name": "فتحي السعيد فتحي اللبان",
+      "department": "ادارة التصنيع",
+      "job": "مشغل تصنيع",
+      "position": "Operator"
+    },
+    {
+      "id": "111307",
+      "employeeNumber": "111307",
+      "sapId": "111307",
+      "name": "أحمد محمد عطية عطية البوص",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111308",
+      "employeeNumber": "111308",
+      "sapId": "111308",
+      "name": "عبد الرحمن رأفت كمال محمود",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111310",
+      "employeeNumber": "111310",
+      "sapId": "111310",
+      "name": "محمد ناصر السيد محمد عيسي",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111312",
+      "employeeNumber": "111312",
+      "sapId": "111312",
+      "name": "محمد جمال إبراهيم دسوقي ماضي",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111345",
+      "employeeNumber": "111345",
+      "sapId": "111345",
+      "name": "السيد عادل السيد احمد متولى",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111346",
+      "employeeNumber": "111346",
+      "sapId": "111346",
+      "name": "احمد عبدالحميد احمد عبدالتواب",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111347",
+      "employeeNumber": "111347",
+      "sapId": "111347",
+      "name": "احمد خالد عبدالحميد عبدالمجيد شرف الدين",
+      "department": "ادارة المخازن",
+      "job": "مسئول ميزان",
+      "position": "Weigher"
+    },
+    {
+      "id": "111348",
+      "employeeNumber": "111348",
+      "sapId": "111348",
+      "name": "عبدالعليم لطفى عبدالعليم عبدالسلام",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111349",
+      "employeeNumber": "111349",
+      "sapId": "111349",
+      "name": "عبدالرحمن عادل بيومى رجب مصطفى",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Specialist"
+    },
+    {
+      "id": "111351",
+      "employeeNumber": "111351",
+      "sapId": "111351",
+      "name": "احمد سامى شعبان محمد مسعود",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111352",
+      "employeeNumber": "111352",
+      "sapId": "111352",
+      "name": "احمد ابراهيم ابراهيم يونس شوشة",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Engineer"
+    },
+    {
+      "id": "111355",
+      "employeeNumber": "111355",
+      "sapId": "111355",
+      "name": "احمد سامى زكى المسلمى",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم الحسابات",
+      "position": "Accounting Lead"
+    },
+    {
+      "id": "111379",
+      "employeeNumber": "111379",
+      "sapId": "111379",
+      "name": "احمد صبرى احمد عبدالشافى الجمل",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111535",
+      "employeeNumber": "111535",
+      "sapId": "111535",
+      "name": "محمود يسرى زغلول حسين محمد",
+      "department": "إدارة الصيانة",
+      "job": "فنى ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111536",
+      "employeeNumber": "111536",
+      "sapId": "111536",
+      "name": "احمد خالد عطية محمد عطية إسماعيل",
+      "department": "إدارة الصيانة",
+      "job": "فنى صيانه",
+      "position": "Technician"
+    },
+    {
+      "id": "111594",
+      "employeeNumber": "111594",
+      "sapId": "111594",
+      "name": "ياسر محمد محمد دياب",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "مدير السلامة والصحة المهنية",
+      "position": "Safety Lead"
+    },
+    {
+      "id": "111595",
+      "employeeNumber": "111595",
+      "sapId": "111595",
+      "name": "صابر على عبدالرحمن محمد",
+      "department": "ادارة التصنيع",
+      "job": "عامل انتاج",
+      "position": "Operator"
+    },
+    {
+      "id": "111597",
+      "employeeNumber": "111597",
+      "sapId": "111597",
+      "name": "محمد هشام عبدالنبى فرماوى",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111601",
+      "employeeNumber": "111601",
+      "sapId": "111601",
+      "name": "محمد السيد عبدالعزيز سالم",
+      "department": "إدارة الصيانة",
+      "job": "فنى صيانه",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111603",
+      "employeeNumber": "111603",
+      "sapId": "111603",
+      "name": "عبدالله عبدالمنعم عبدالفتاح عبدالمنعم",
+      "department": "ادارة التصنيع",
+      "job": "عامل انتاج",
+      "position": "Worker"
+    },
+    {
+      "id": "111632",
+      "employeeNumber": "111632",
+      "sapId": "111632",
+      "name": "مصطفى شريف عادل عبدالحميد",
+      "department": "إدارة الجودة",
+      "job": "مدير اول الجودة",
+      "position": "Senior Quality Manager"
+    },
+    {
+      "id": "111686",
+      "employeeNumber": "111686",
+      "sapId": "111686",
+      "name": "على جمال على عبداللطيف",
+      "department": "إدارة الصيانة",
+      "job": "فنى كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "111692",
+      "employeeNumber": "111692",
+      "sapId": "111692",
+      "name": "محمد جمال عقل عقل",
+      "department": "إدارة الصيانة",
+      "job": "مهندس ميكانيكا",
+      "position": "Mechanical Engineer"
+    },
+    {
+      "id": "111712",
+      "employeeNumber": "111712",
+      "sapId": "111712",
+      "name": "مصطفى عبدالنبى السعيد محمد عرفان",
+      "department": "إدارة الصيانة",
+      "job": "مهندس كهرباء",
+      "position": "Electrical Engineer"
+    },
+    {
+      "id": "111804",
+      "employeeNumber": "111804",
+      "sapId": "111804",
+      "name": "محمد السيد عبدالله السعدني",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "اخصائى سلامه وصحة مهنية",
+      "position": "Safety Specialist"
+    },
+    {
+      "id": "111854",
+      "employeeNumber": "111854",
+      "sapId": "111854",
+      "name": "محمد هاني محمد لبيب",
+      "department": "إدارة الصيانة",
+      "job": "فني ميكانيكا",
+      "position": "Mechanical Technician"
+    },
+    {
+      "id": "111876",
+      "employeeNumber": "111876",
+      "sapId": "111876",
+      "name": "محمود خالد قدرى حافظ",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فنى السلامة والصحة المهنية",
+      "position": "Safety Technician"
+    },
+    {
+      "id": "111917",
+      "employeeNumber": "111917",
+      "sapId": "111917",
+      "name": "عبدالرحمن احمد عبدالعزيز احمد",
+      "department": "ادارة النظم والمعلومات",
+      "job": "اخصائى دعم تكنولوجيا المعلومات",
+      "position": "IT Support Specialist"
+    },
+    {
+      "id": "111920",
+      "employeeNumber": "111920",
+      "sapId": "111920",
+      "name": "مصطفى عبدالحميد احمد محمود محمد",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Specialist"
+    },
+    {
+      "id": "111926",
+      "employeeNumber": "111926",
+      "sapId": "111926",
+      "name": "محمد ابراهيم عبدالفتاح محمد حافظ",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "111934",
+      "employeeNumber": "111934",
+      "sapId": "111934",
+      "name": "احمد عبدالرءوف محمد مصطفى",
+      "department": "ادارة التصدير",
+      "job": "منسق لوجيستيك",
+      "position": "Logistics Coordinator"
+    },
+    {
+      "id": "111965",
+      "employeeNumber": "111965",
+      "sapId": "111965",
+      "name": "ايهاب جبر محمد التابعى",
+      "department": "الادارة المالية",
+      "job": "مدير التخطيط والتحليل المالى",
+      "position": "FP&A Manager ICAPP"
+    },
+    {
+      "id": "111966",
+      "employeeNumber": "111966",
+      "sapId": "111966",
+      "name": "محمد عبده عباس محمد",
+      "department": "الادارة المالية",
+      "job": "رئيس قسم التكاليف",
+      "position": "Costing Lead ICAPP"
+    },
+    {
+      "id": "111978",
+      "employeeNumber": "111978",
+      "sapId": "111978",
+      "name": "محمود ايهاب عاصم عبدالجواد يوسف",
+      "department": "الادارة العامة",
+      "job": "مدير تطوير التصنيع",
+      "position": "Manufacturing Excellence Manager"
+    },
+    {
+      "id": "111999",
+      "employeeNumber": "111999",
+      "sapId": "111999",
+      "name": "بسملة عبدالحليم على عبدالحليم",
+      "department": "إدارة الجودة",
+      "job": "أخصائى سلامة الغذاء",
+      "position": "Specialist"
+    },
+    {
+      "id": "112000",
+      "employeeNumber": "112000",
+      "sapId": "112000",
+      "name": "احمد السيد سليمان سالم",
+      "department": "إدارة الصيانة",
+      "job": "فنى تبريد",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112003",
+      "employeeNumber": "112003",
+      "sapId": "112003",
+      "name": "اسماعيل اسامة اسماعيل محمد محمود السيد",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "Specialist"
+    },
+    {
+      "id": "112022",
+      "employeeNumber": "112022",
+      "sapId": "112022",
+      "name": "احمد محمود جابر محمد عفيفى",
+      "department": "إدارة الجودة",
+      "job": "مدير الجودة",
+      "position": "Quality Manager - Danone"
+    },
+    {
+      "id": "112151",
+      "employeeNumber": "112151",
+      "sapId": "112151",
+      "name": "عمرو احمد صلاح الدين عبدالصمد",
+      "department": "إدارة الجودة",
+      "job": "اخصائى مراقبة جودة",
+      "position": "QC Specialist"
+    },
+    {
+      "id": "112152",
+      "employeeNumber": "112152",
+      "sapId": "112152",
+      "name": "محمد سعيد حسن محمد شرف",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فنى سلامة وصحة مهنيه",
+      "position": "Safety Technician"
+    },
+    {
+      "id": "112285",
+      "employeeNumber": "112285",
+      "sapId": "112285",
+      "name": "محمود صلاح عبدالمعبود موسى محمد",
+      "department": "ادارة التصنيع",
+      "job": "مشغل",
+      "position": "Operator"
+    },
+    {
+      "id": "112286",
+      "employeeNumber": "112286",
+      "sapId": "112286",
+      "name": "محمود محمد مهدى السيد",
+      "department": "ادارة التصنيع",
+      "job": "عامل",
+      "position": "worker"
+    },
+    {
+      "id": "112287",
+      "employeeNumber": "112287",
+      "sapId": "112287",
+      "name": "آلاء محمد جودة منصور عوض",
+      "department": "ادارة التصنيع",
+      "job": "مشغل",
+      "position": "Operator"
+    },
+    {
+      "id": "112288",
+      "employeeNumber": "112288",
+      "sapId": "112288",
+      "name": "احمد عباس السيد محمد",
+      "department": "إدارة الصيانة",
+      "job": "فني كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "112290",
+      "employeeNumber": "112290",
+      "sapId": "112290",
+      "name": "احمد بخيت حسن احمد",
+      "department": "ادارة المخازن",
+      "job": "امين مخزن",
+      "position": "Warehouse General"
+    },
+    {
+      "id": "112291",
+      "employeeNumber": "112291",
+      "sapId": "112291",
+      "name": "احمد فتحى محمد خطاب",
+      "department": "ادارة المخازن",
+      "job": "سائق كلارك",
+      "position": "Forklift Driver"
+    },
+    {
+      "id": "112292",
+      "employeeNumber": "112292",
+      "sapId": "112292",
+      "name": "عبدالعظيم عفت عبدالعظيم احمد منصور",
+      "department": "ادارة التصنيع",
+      "job": "عامل انتاج",
+      "position": "worker"
+    },
+    {
+      "id": "112293",
+      "employeeNumber": "112293",
+      "sapId": "112293",
+      "name": "محمد شحاته محمد عبدالرازق",
+      "department": "ادارة التصنيع",
+      "job": "عامل انتاج",
+      "position": "worker"
+    },
+    {
+      "id": "112294",
+      "employeeNumber": "112294",
+      "sapId": "112294",
+      "name": "محمود امبارك شعبان منصور",
+      "department": "ادارة التصنيع",
+      "job": "مهندس انتاج",
+      "position": "Production engineer"
+    },
+    {
+      "id": "112304",
+      "employeeNumber": "112304",
+      "sapId": "112304",
+      "name": "هبه عادل محمد عبدالرحمن بدوى",
+      "department": "ادارة التصدير",
+      "job": "مدير أول تطوير الأعمال",
+      "position": "Senior Business Development Manager"
+    },
+    {
+      "id": "112339",
+      "employeeNumber": "112339",
+      "sapId": "112339",
+      "name": "محمود محمد محمود احمد الشيوى",
+      "department": "ادارة التصدير",
+      "job": "رئيس تطوير الأعمال",
+      "position": "Head of Business Development"
+    },
+    {
+      "id": "112368",
+      "employeeNumber": "112368",
+      "sapId": "112368",
+      "name": "عبدالله محمد يوسف احمد زيد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112371",
+      "employeeNumber": "112371",
+      "sapId": "112371",
+      "name": "محمود مصطفى عطية السيد كف",
+      "department": "ادارة التصنيع",
+      "job": "عامل",
+      "position": "worker"
+    },
+    {
+      "id": "112371",
+      "employeeNumber": "112371",
+      "sapId": "112371",
+      "name": "عبدالله محمد يوسف احمد زيد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112371",
+      "employeeNumber": "112371",
+      "sapId": "112371",
+      "name": "عبدالله محمد يوسف احمد زيد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112372",
+      "employeeNumber": "112372",
+      "sapId": "112372",
+      "name": "خالد ابراهيم غريب على",
+      "department": "إدارة الصيانة",
+      "job": "فني غلايات",
+      "position": "Boiler Technician"
+    },
+    {
+      "id": "112373",
+      "employeeNumber": "112373",
+      "sapId": "112373",
+      "name": "محمد احمد ريان نصر محمد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس إنتاج",
+      "position": "Production engineer"
+    },
+    {
+      "id": "112374",
+      "employeeNumber": "112374",
+      "sapId": "112374",
+      "name": "اسلام عبدالمنعم ابراهيم عبدالمنعم السيد",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112375",
+      "employeeNumber": "112375",
+      "sapId": "112375",
+      "name": "احمد ناصر حامد محمد عبدالباقى",
+      "department": "إدارة الجودة",
+      "job": "أخصائي ضبط الجودة",
+      "position": "QC Specialist"
+    },
+    {
+      "id": "112376",
+      "employeeNumber": "112376",
+      "sapId": "112376",
+      "name": "احمد إمام ثابت محمد ابورزه",
+      "department": "إدارة الصيانة",
+      "job": "فني تبريد",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112377",
+      "employeeNumber": "112377",
+      "sapId": "112377",
+      "name": "عبدالرحمن حسن صالح حسن سعودى",
+      "department": "ادارة التصنيع",
+      "job": "مهندس إنتاج",
+      "position": "Production engineer"
+    },
+    {
+      "id": "112378",
+      "employeeNumber": "112378",
+      "sapId": "112378",
+      "name": "عبدالرحمن عباس عبدالعزيز بندارى",
+      "department": "ادارة التصنيع",
+      "job": "عامل",
+      "position": "worker"
+    },
+    {
+      "id": "112379",
+      "employeeNumber": "112379",
+      "sapId": "112379",
+      "name": "احمد عرفه السيد عرفه",
+      "department": "ادارة المخازن",
+      "job": "أمين مخزن",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112382",
+      "employeeNumber": "112382",
+      "sapId": "112382",
+      "name": "محمد نبيل جلال الدين حموده",
+      "department": "ادارة التصنيع",
+      "job": "مهندس إنتاج",
+      "position": "Production engineer"
+    },
+    {
+      "id": "112383",
+      "employeeNumber": "112383",
+      "sapId": "112383",
+      "name": "اسلام احمد عبدالفتاح هاشم",
+      "department": "إدارة المبيعات",
+      "job": "سائق",
+      "position": "Driver"
+    },
+    {
+      "id": "112395",
+      "employeeNumber": "112395",
+      "sapId": "112395",
+      "name": "عمر ابراهيم ممدوح مرسى",
+      "department": "الادارة العامة",
+      "job": "مدير المزارع",
+      "position": "Farms Director"
+    },
+    {
+      "id": "112395",
+      "employeeNumber": "112395",
+      "sapId": "112395",
+      "name": "عمر ابراهيم ممدوح مرسى",
+      "department": "الادارة العامة",
+      "job": "مدير المزارع",
+      "position": "Farms Director"
+    },
+    {
+      "id": "112399",
+      "employeeNumber": "112399",
+      "sapId": "112399",
+      "name": "محمد بدوى جابرعبدالمجيد",
+      "department": "إدارة الصيانة",
+      "job": "فني تبريد",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112423",
+      "employeeNumber": "112423",
+      "sapId": "112423",
+      "name": "محمد ابراهيم محمد عبدالعزيز",
+      "department": "إدارة الصيانة",
+      "job": "فني تبريد",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112424",
+      "employeeNumber": "112424",
+      "sapId": "112424",
+      "name": "محمود حسين محمد السيد زحافة",
+      "department": "إدارة الصيانة",
+      "job": "فني غلايات",
+      "position": "Boiler technician"
+    },
+    {
+      "id": "112438",
+      "employeeNumber": "112438",
+      "sapId": "112438",
+      "name": "سيف ايهاب بدر عبدالمجيد بدوى",
+      "department": "ادارة التصدير",
+      "job": "أخصائي لوجستيات",
+      "position": "logistics specialist"
+    },
+    {
+      "id": "112459",
+      "employeeNumber": "112459",
+      "sapId": "112459",
+      "name": "عبدالله سليمان عبده موسى موسى",
+      "department": "ادارة المخازن",
+      "job": "أمين مستودع",
+      "position": "Storekeeper"
+    },
+    {
+      "id": "112464",
+      "employeeNumber": "112464",
+      "sapId": "112464",
+      "name": "محمد على على سيف الدين",
+      "department": "إدارة المبيعات",
+      "job": "مدير مبيعات إقليمي",
+      "position": "Regional Sales Manager"
+    },
+    {
+      "id": "112466",
+      "employeeNumber": "112466",
+      "sapId": "112466",
+      "name": "احمد محمد فرحان سالم مصبح",
+      "department": "ادارة المخازن",
+      "job": "سائق رافعة شوكية",
+      "position": "Forklift driver"
+    },
+    {
+      "id": "112467",
+      "employeeNumber": "112467",
+      "sapId": "112467",
+      "name": "اسلام عبدالقادر محمد عوض الشويل",
+      "department": "إدارة المبيعات",
+      "job": "مشرف مبيعات",
+      "position": "Sales Supervisor"
+    },
+    {
+      "id": "112575",
+      "employeeNumber": "112575",
+      "sapId": "112575",
+      "name": "عمرو كمال عبداللطيف محمد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس إنتاج",
+      "position": "Production general"
+    },
+    {
+      "id": "112646",
+      "employeeNumber": "112646",
+      "sapId": "112646",
+      "name": "روان مدحت طه محمد النادى",
+      "department": "إدارة الجودة",
+      "job": "أخصائي ضمان الجودة",
+      "position": "Quality Assurance"
+    },
+    {
+      "id": "112666",
+      "employeeNumber": "112666",
+      "sapId": "112666",
+      "name": "محمود إبراهيم محمود على",
+      "department": "إدارة الصيانة",
+      "job": "مشرف",
+      "position": "Supervisor"
+    },
+    {
+      "id": "112667",
+      "employeeNumber": "112667",
+      "sapId": "112667",
+      "name": "ساره يوسف حسن كامل يوسف أبوحطب",
+      "department": "إدارة المشروعات",
+      "job": "رئيس قسم المشروعات",
+      "position": "CI & Projects Lead"
+    },
+    {
+      "id": "112668",
+      "employeeNumber": "112668",
+      "sapId": "112668",
+      "name": "احمد محمد محمود إبراهيم عوض",
+      "department": "إدارة الصيانة",
+      "job": "مهندس كهرباء",
+      "position": "Electrical Engineer"
+    },
+    {
+      "id": "112669",
+      "employeeNumber": "112669",
+      "sapId": "112669",
+      "name": "احمد على محمد خطابى",
+      "department": "إدارة الصيانة",
+      "job": "مدير الصيانة",
+      "position": "Maintenance Manager"
+    },
+    {
+      "id": "112673",
+      "employeeNumber": "112673",
+      "sapId": "112673",
+      "name": "احمد محمد فتحى عبدالمعطى",
+      "department": "إدارة الصيانة",
+      "job": "فني تبريد وتكييف",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112675",
+      "employeeNumber": "112675",
+      "sapId": "112675",
+      "name": "محمد صبرى محمد دسوقى مصطفى خليل",
+      "department": "ادارة التصنيع",
+      "job": "أخصائي أول",
+      "position": "Senior Specialist"
+    },
+    {
+      "id": "112676",
+      "employeeNumber": "112676",
+      "sapId": "112676",
+      "name": "علاء معتمد رشاد جاب الله",
+      "department": "ادارة التصنيع",
+      "job": "أخصائي",
+      "position": "Specialist"
+    },
+    {
+      "id": "112679",
+      "employeeNumber": "112679",
+      "sapId": "112679",
+      "name": "محمد ناصر صالح حسن حجاج",
+      "department": "إدارة الصيانة",
+      "job": "فني كهرباء",
+      "position": "Electrical Technician"
+    },
+    {
+      "id": "112783",
+      "employeeNumber": "112783",
+      "sapId": "112783",
+      "name": "يسرى عمادالدين حسن إبراهيم عباس",
+      "department": "ادارة المخازن",
+      "job": "Weigher",
+      "position": "Weigher"
+    },
+    {
+      "id": "112819",
+      "employeeNumber": "112819",
+      "sapId": "112819",
+      "name": "محمود محمد احمد عمران احمد",
+      "department": "إدارة المبيعات",
+      "job": "Driver",
+      "position": "Driver"
+    },
+    {
+      "id": "112820",
+      "employeeNumber": "112820",
+      "sapId": "112820",
+      "name": "محمد حسنى هيبه محمود",
+      "department": "إدارة المبيعات",
+      "job": "Driver",
+      "position": "Driver"
+    },
+    {
+      "id": "112830",
+      "employeeNumber": "112830",
+      "sapId": "112830",
+      "name": "علاء نبيل عبدالمنعم عبدالصادق عرفه",
+      "department": "ادارة التصنيع",
+      "job": "Production Supervisor",
+      "position": "Production Supervisor"
+    },
+    {
+      "id": "112835",
+      "employeeNumber": "112835",
+      "sapId": "112835",
+      "name": "هشام سيف حسن عبدالقادر",
+      "department": "إدارة المبيعات",
+      "job": "Sales Representative",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "112837",
+      "employeeNumber": "112837",
+      "sapId": "112837",
+      "name": "محمد ناجى محمود السيد",
+      "department": "ادارة التصنيع",
+      "job": "مهندس إنتاج",
+      "position": "Production Engineer"
+    },
+    {
+      "id": "112838",
+      "employeeNumber": "112838",
+      "sapId": "112838",
+      "name": "احمد عبدالمعطى السيد غنيمى",
+      "department": "ادارة التصنيع",
+      "job": "Production Supervisor",
+      "position": "Production Supervisor"
+    },
+    {
+      "id": "112839",
+      "employeeNumber": "112839",
+      "sapId": "112839",
+      "name": "يوسف عبدالرحمن محمد محمد عزمى",
+      "department": "ادارة التصدير",
+      "job": "logistics Sr Specialist ICAPP",
+      "position": "logistics Sr Specialist ICAPP"
+    },
+    {
+      "id": "112868",
+      "employeeNumber": "112868",
+      "sapId": "112868",
+      "name": "إبراهيم عبدالله خليل عبده",
+      "department": "إدارة المبيعات",
+      "job": "Driver",
+      "position": "Driver"
+    },
+    {
+      "id": "112879",
+      "employeeNumber": "112879",
+      "sapId": "112879",
+      "name": "محمد حمدى محمد عبدالظاهر",
+      "department": "إدارة المبيعات",
+      "job": "Driver",
+      "position": "Driver"
+    },
+    {
+      "id": "112880",
+      "employeeNumber": "112880",
+      "sapId": "112880",
+      "name": "احمد يحيى محمد إبراهيم الصوالحى",
+      "department": "ادارة التصنيع",
+      "job": "worker",
+      "position": "worker"
+    },
+    {
+      "id": "112905",
+      "employeeNumber": "112905",
+      "sapId": "112905",
+      "name": "مارلينا أورزيكوفسكا",
+      "department": "ادارة التصنيع",
+      "job": "Quality Director",
+      "position": "Quality Director"
+    },
+    {
+      "id": "112906",
+      "employeeNumber": "112906",
+      "sapId": "112906",
+      "name": "هاجر عبدالعزيز شافعى عبدالعزيز",
+      "department": "ادارة التصنيع",
+      "job": "Food Safety Specialist",
+      "position": "Food Safety Specialist"
+    },
+    {
+      "id": "112932",
+      "employeeNumber": "112932",
+      "sapId": "112932",
+      "name": "انطونيوس جمال محروس سعد",
+      "department": "ادارة التصنيع",
+      "job": "Production Supervisor",
+      "position": "Production Supervisor"
+    },
+    {
+      "id": "112933",
+      "employeeNumber": "112933",
+      "sapId": "112933",
+      "name": "احمد اشرف حسنى مصطفى يونس",
+      "department": "إدارة الصيانة",
+      "job": "فني تبريد وتكييف",
+      "position": "Refrigeration Technician"
+    },
+    {
+      "id": "112934",
+      "employeeNumber": "112934",
+      "sapId": "112934",
+      "name": "عبدالرحمن محمد عبدالخالق الحسينى",
+      "department": "إدارة المبيعات",
+      "job": "Sales Representative",
+      "position": "Sales Representative"
+    },
+    {
+      "id": "112945",
+      "employeeNumber": "112945",
+      "sapId": "112945",
+      "name": "على محمد عبدالفتاح على",
+      "department": "ادارة التصنيع",
+      "job": "Production Supervisor",
+      "position": "Production Supervisor"
+    },
+    {
+      "id": "112946",
+      "employeeNumber": "112946",
+      "sapId": "112946",
+      "name": "احمد سعيد محمد الحسينى محمد",
+      "department": "ادارة التصنيع",
+      "job": "worker",
+      "position": "worker"
+    },
+    {
+      "id": "112947",
+      "employeeNumber": "112947",
+      "sapId": "112947",
+      "name": "مصطفى السيد عبداللطيف محمد",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "112948",
+      "employeeNumber": "112948",
+      "sapId": "112948",
+      "name": "إبراهيم مصطفى إبراهيم إبراهيم سالم",
+      "department": "إدارة السلامة والصحة المهنية",
+      "job": "فني سلامة وصحة مهنية",
+      "position": "HSE Technician"
+    },
+    {
+      "id": "112949",
+      "employeeNumber": "112949",
+      "sapId": "112949",
+      "name": "محمد طارق جميل عبدالمجيد",
+      "department": "إدارة المبيعات",
+      "job": "Driver",
+      "position": "Driver"
+    }
+  ],
+  "contractors": [
+    {
+      "id": "APPCON_1765747922797_9cx9rdqtl",
+      "code": "CON-020",
+      "name": "البراء",
+      "companyName": "البراء",
+      "serviceType": "توريد عمالة"
+    },
+    {
+      "id": "APPCON_1765748065322_gdjuul0on",
+      "code": "CON-002",
+      "name": "الرحاب",
+      "companyName": "الرحاب",
+      "serviceType": "توريد عمالة يومية"
+    },
+    {
+      "id": "APPCON_1765748308338_h7l6n0xq7",
+      "code": "CON-011",
+      "name": "اوبك",
+      "companyName": "اوبك",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765749007004_gkrytc6y1",
+      "code": "CON-016",
+      "name": "GCC",
+      "companyName": "GCC",
+      "serviceType": "اعمال مقاولات ومشروعات"
+    },
+    {
+      "id": "APPCON_1765749108958_80svnk6yg",
+      "code": "CON-014",
+      "name": "أمان للامن",
+      "companyName": "أمان للامن",
+      "serviceType": "خدمات امن وحراسة"
+    },
+    {
+      "id": "APPCON_1765777496295_j0pqasng0",
+      "code": "CON-022",
+      "name": "كايرو سيرفس",
+      "companyName": "كايرو سيرفس",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778376681_ohzgo36hr",
+      "code": "CON-023",
+      "name": "Nass",
+      "companyName": "Nass",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b22",
+      "code": "CON-024",
+      "name": "CMC",
+      "companyName": "CMC",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi10",
+      "code": "CON-027",
+      "name": "السلام",
+      "companyName": "السلام",
+      "serviceType": "مورد عمالة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi11",
+      "code": "CON-029",
+      "name": "الصابرين",
+      "companyName": "الصابرين",
+      "serviceType": "توريد عمالة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi12",
+      "code": "CON-031",
+      "name": "المصرية للاتصالات",
+      "companyName": "المصرية للاتصالات",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b26",
+      "code": "CON-032",
+      "name": "اورنج",
+      "companyName": "اورنج",
+      "serviceType": "خدمة الانترنت والهاتف"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b28",
+      "code": "CON-036",
+      "name": "يوني برو",
+      "companyName": "يوني برو",
+      "serviceType": "صيانة نظام الانذار"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b29",
+      "code": "CON-038",
+      "name": "سمارت",
+      "companyName": "سمارت",
+      "serviceType": "اعمال صيانة ومقاولات"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi16",
+      "code": "CON-039",
+      "name": "بناء",
+      "companyName": "بناء",
+      "serviceType": "مشروعات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b30",
+      "code": "CON-040",
+      "name": "اون سيت",
+      "companyName": "اون سيت",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi17",
+      "code": "CON-041",
+      "name": "لينك مصر",
+      "companyName": "لينك مصر",
+      "serviceType": "اعمال تركيبات مخازن"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi18",
+      "code": "CON-043",
+      "name": "ماب",
+      "companyName": "ماب",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi19",
+      "code": "CON-045",
+      "name": "النور",
+      "companyName": "النور",
+      "serviceType": "مقاولات وخدمات"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b33",
+      "code": "CON-046",
+      "name": "اكريكلون",
+      "companyName": "اكريكلون",
+      "serviceType": "مقاولات اعمال ارضيات"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi20",
+      "code": "CON-047",
+      "name": "الصفوة",
+      "companyName": "الصفوة",
+      "serviceType": "اعمال مقاولات ومشروعات"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b34",
+      "code": "CON-048",
+      "name": "جبالية",
+      "companyName": "جبالية",
+      "serviceType": "مقاولات عامة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi21",
+      "code": "CON-049",
+      "name": "بافلي",
+      "companyName": "بافلي",
+      "serviceType": "مكافحة حشرات وقوارض"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi22",
+      "code": "CON-051",
+      "name": "GTC",
+      "companyName": "GTC",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b36",
+      "code": "CON-052",
+      "name": "H-A",
+      "companyName": "H-A",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi23",
+      "code": "CON-053",
+      "name": "طيبة",
+      "companyName": "طيبة",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778692981_v59vp2b37",
+      "code": "CON-054",
+      "name": "هيكسو",
+      "companyName": "هيكسو",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "APPCON_1765778821250_9cru2hpi24",
+      "code": "CON-055",
+      "name": "ايجي برينت",
+      "companyName": "ايجي برينت",
+      "serviceType": "مقاولات وصيانة"
+    },
+    {
+      "id": "ACN_1",
+      "code": "CON-056",
+      "name": "البعلي",
+      "companyName": "البعلي",
+      "serviceType": "مكتب شحن"
+    },
+    {
+      "id": "ACN_2",
+      "code": "CON-057",
+      "name": "زائرين - خدمات داخلية",
+      "companyName": "زائرين - خدمات داخلية",
+      "serviceType": "زائرين -اخري"
+    },
+    {
+      "id": "ACN_3",
+      "code": "CON-058",
+      "name": "Inove Foods",
+      "companyName": "Inove Foods",
+      "serviceType": "استشاري مشروع"
+    },
+    {
+      "id": "ACN_4",
+      "code": "CON-001",
+      "name": "دايتك",
+      "companyName": "دايتك",
+      "serviceType": "مقاول تركيب انظمة تهوية"
+    },
+    {
+      "id": "ACN_6",
+      "code": "CON-060",
+      "name": "تمري",
+      "companyName": "تمري",
+      "serviceType": "صيانة مكينة التعبئة"
+    },
+    {
+      "id": "ACN_7",
+      "code": "CON-099",
+      "name": "كولينج تاور",
+      "companyName": "كولينج تاور",
+      "serviceType": "شحن امونيا"
+    },
+    {
+      "id": "ACN_8",
+      "code": "CON-077",
+      "name": "الفرقان",
+      "companyName": "الفرقان",
+      "serviceType": "خدمات ادارية ونظافة"
+    },
+    {
+      "id": "ACN_9",
+      "code": "CON-075",
+      "name": "ارشاد",
+      "companyName": "ارشاد",
+      "serviceType": "صيانة تكييف وتبريد"
+    },
+    {
+      "id": "ACN_10",
+      "code": "CON-078",
+      "name": "العربية للاتصالات",
+      "companyName": "العربية للاتصالات",
+      "serviceType": "مقاولات وكاميرت"
+    },
+    {
+      "id": "ACN_11",
+      "code": "CON-079",
+      "name": "النور",
+      "companyName": "النور",
+      "serviceType": "خدمات ادارية ونظافة"
+    },
+    {
+      "id": "ACN_12",
+      "code": "CON-080",
+      "name": "الاسلامي",
+      "companyName": "الاسلامي",
+      "serviceType": "عميل خارجي -تصنيع"
+    },
+    {
+      "id": "ACN_13",
+      "code": "CON-081",
+      "name": "الرحمة",
+      "companyName": "الرحمة",
+      "serviceType": "توريدات واعمال نظافة"
+    },
+    {
+      "id": "ACN_14",
+      "code": "CON-095",
+      "name": "I.O.T",
+      "companyName": "I.O.T",
+      "serviceType": "مقاولات اجهزة اكسس"
+    },
+    {
+      "id": "ACN_15",
+      "code": "CON-083",
+      "name": "زائرين -موردين",
+      "companyName": "زائرين -موردين",
+      "serviceType": "زائرين -موردين"
+    },
+    {
+      "id": "ACN_16",
+      "code": "CON-088",
+      "name": "المنشأت الذكية",
+      "companyName": "المنشأت الذكية",
+      "serviceType": "مقاولات وصيانة البوابات"
+    },
+    {
+      "id": "ACN_17",
+      "code": "CON-089",
+      "name": "اشتكس",
+      "companyName": "اشتكس",
+      "serviceType": "اعمال صيانة ومقاولات"
+    },
+    {
+      "id": "ACN_18",
+      "code": "CON-090",
+      "name": "ستار بيكون",
+      "companyName": "ستار بيكون",
+      "serviceType": "وكيل مكينة التعبئة"
+    },
+    {
+      "id": "ACN_19",
+      "code": "CON-092",
+      "name": "ريتش مصر",
+      "companyName": "ريتش مصر",
+      "serviceType": "صيانة معدات شاتل"
+    },
+    {
+      "id": "ACN_20",
+      "code": "CON-093",
+      "name": "نيلكون",
+      "companyName": "نيلكون",
+      "serviceType": "كيماويات ابلراج التبريد والغلاية"
+    },
+    {
+      "id": "ACN_21",
+      "code": "CON-094",
+      "name": "شركة جرجور",
+      "companyName": "شركة جرجور",
+      "serviceType": "صيانة مكينة طباعة"
+    },
+    {
+      "id": "ACN_22",
+      "code": "CON-096",
+      "name": "ايجيبت كيمكال",
+      "companyName": "ايجيبت كيمكال",
+      "serviceType": "مكافحة حشرات وقوارض"
+    },
+    {
+      "id": "ACN_23",
+      "code": "CON-101",
+      "name": "تراك انترناشونال",
+      "companyName": "تراك انترناشونال",
+      "serviceType": "وكيل مكينة الطباعة"
+    },
+    {
+      "id": "ACN_24",
+      "code": "CON-104",
+      "name": "النظم المتكامله",
+      "companyName": "النظم المتكامله",
+      "serviceType": "مقاولات واعمال صيانة -ابواب الشتر"
+    },
+    {
+      "id": "ACN_25",
+      "code": "CON-105",
+      "name": "ميداست",
+      "companyName": "ميداست",
+      "serviceType": "مقاولات عامة -تركيبات"
+    },
+    {
+      "id": "ACN_26",
+      "code": "CON-106",
+      "name": "الفجر",
+      "companyName": "الفجر",
+      "serviceType": "صيانة الغلايات"
+    },
+    {
+      "id": "ACN_27",
+      "code": "CON-107",
+      "name": "إما",
+      "companyName": "إما",
+      "serviceType": "صيانة تندة السيارات"
+    },
+    {
+      "id": "ACN_28",
+      "code": "CON-108",
+      "name": "شركة الفتح",
+      "companyName": "شركة الفتح",
+      "serviceType": "مقاولات واعمال مدنية"
+    },
+    {
+      "id": "ACN_29",
+      "code": "CON-109",
+      "name": "المصرية الالمانية",
+      "companyName": "المصرية الالمانية",
+      "serviceType": "اعمال مقاولات وصيانة انظمة الاطفاء"
+    },
+    {
+      "id": "ACN_30",
+      "code": "CON-110",
+      "name": "شركة اطلس",
+      "companyName": "شركة اطلس",
+      "serviceType": "صيانة كمبروسر الهواء"
+    },
+    {
+      "id": "ACN_0031",
+      "code": "CON-111",
+      "name": "JBT",
+      "companyName": "JBT",
+      "serviceType": "وكيل نفق التبريد"
+    },
+    {
+      "id": "ACN_0032",
+      "code": "CON-112",
+      "name": "one Agent",
+      "companyName": "one Agent",
+      "serviceType": "consultant"
+    },
+    {
+      "id": "ACN_0033",
+      "code": "CON-113",
+      "name": "اسواق البدر",
+      "companyName": "اسواق البدر",
+      "serviceType": "خدمات  الكافتريا"
+    },
+    {
+      "id": "ACN_0034",
+      "code": "CON-114",
+      "name": "المصرية لصناعة خطوط الانتاج",
+      "companyName": "المصرية لصناعة خطوط الانتاج",
+      "serviceType": "وكيل منظومة فراز البامية"
+    },
+    {
+      "id": "ACN_0035",
+      "code": "CON-116",
+      "name": "برو-أكتف",
+      "companyName": "برو-أكتف",
+      "serviceType": "تصميم وتركيب سقالات - أعمال ميكانيكا"
+    },
+    {
+      "id": "ACN_0036",
+      "code": "CON-117",
+      "name": "TRSC",
+      "companyName": "TRSC",
+      "serviceType": "تركيب خلايا ضوئيه"
+    },
+    {
+      "id": "ACN_0037",
+      "code": "CON-118",
+      "name": "شركة بافت",
+      "companyName": "شركة بافت",
+      "serviceType": "توريد بلتات بلاستك"
+    },
+    {
+      "id": "ACN_0038",
+      "code": "CON-119",
+      "name": "تكنو ستيل",
+      "companyName": "تكنو ستيل",
+      "serviceType": "صيانة ابواب الهاى سبيد"
+    },
+    {
+      "id": "ACN_0039",
+      "code": "CON-120",
+      "name": "هرم للمقاولات",
+      "companyName": "هرم للمقاولات",
+      "serviceType": "صيانة ابواب الشاتر"
+    },
+    {
+      "id": "ACN_0040",
+      "code": "CON-122",
+      "name": "ماجيك برينت",
+      "companyName": "ماجيك برينت",
+      "serviceType": "تركيب مكينة الطباعه"
+    },
+    {
+      "id": "ACN_0041",
+      "code": "CON-123",
+      "name": "شركة MFP",
+      "companyName": "شركة MFP",
+      "serviceType": "اصلاح ماكينات الطباعه"
+    },
+    {
+      "id": "ACN_0042",
+      "code": "CON-124",
+      "name": "التوكيلات المصريه",
+      "companyName": "التوكيلات المصريه",
+      "serviceType": "معاينه وصيانة الغلايات"
+    },
+    {
+      "id": "ACN_0043",
+      "code": "CON-125",
+      "name": "شركة اكترا",
+      "companyName": "شركة اكترا",
+      "serviceType": "صيانة الكلاركات"
+    },
+    {
+      "id": "ACN_0044",
+      "code": "CON-126",
+      "name": "نالكو",
+      "companyName": "نالكو",
+      "serviceType": "تحليل مياة"
+    },
+    {
+      "id": "ACN_0045",
+      "code": "CON-127",
+      "name": "المعيرجى للموازين",
+      "companyName": "المعيرجى للموازين",
+      "serviceType": "صيانة الموازين"
+    },
+    {
+      "id": "ACN_0046",
+      "code": "CON-129",
+      "name": "بيور كيم",
+      "companyName": "بيور كيم",
+      "serviceType": "تحليل المياة"
+    },
+    {
+      "id": "ACN_0047",
+      "code": "CON-131",
+      "name": "دايفرسي",
+      "companyName": "دايفرسي",
+      "serviceType": "كيماويات"
+    },
+    {
+      "id": "ACN_0048",
+      "code": "CON-132",
+      "name": "مرقص",
+      "companyName": "مرقص",
+      "serviceType": "بوابة الدخول مكينات"
+    },
+    {
+      "id": "ACN_0049",
+      "code": "CON-133",
+      "name": "الهندسيه للتشحيم",
+      "companyName": "الهندسيه للتشحيم",
+      "serviceType": "تشحيم ماكينة خط الجزر"
+    },
+    {
+      "id": "ACN_0050",
+      "code": "CON-134",
+      "name": "الامل",
+      "companyName": "الامل",
+      "serviceType": "عمالة"
+    },
+    {
+      "id": "ACN_0051",
+      "code": "CON-135",
+      "name": "أمان للامن",
+      "companyName": "أمان للامن",
+      "serviceType": "خدمات امن وحراسة"
+    },
+    {
+      "id": "ACN_0052",
+      "code": "CON-137",
+      "name": "ايما",
+      "companyName": "ايما",
+      "serviceType": "مقاولات عامة"
+    },
+    {
+      "id": "ACN_0053",
+      "code": "CON-139",
+      "name": "شركة ميديل ايست",
+      "companyName": "شركة ميديل ايست",
+      "serviceType": "تركيبات ميكانيكية- التجفيد"
+    },
+    {
+      "id": "ACN_0054",
+      "code": "CON-141",
+      "name": "المصريه لصناعة خطوط الانتاج",
+      "companyName": "المصريه لصناعة خطوط الانتاج",
+      "serviceType": "تركيب خط انتاج الباميه"
+    },
+    {
+      "id": "ACN_0055",
+      "code": "CON-142",
+      "name": "ماتك",
+      "companyName": "ماتك",
+      "serviceType": "فحص ماكينة التعبئه"
+    },
+    {
+      "id": "ACN_0056",
+      "code": "CON-143",
+      "name": "تكنو لاب",
+      "companyName": "تكنو لاب",
+      "serviceType": "اخذ عينات فراوله"
+    },
+    {
+      "id": "ACN_0057",
+      "code": "CON-144",
+      "name": "الهندسيه 3M",
+      "companyName": "الهندسيه 3M",
+      "serviceType": "رفع مقاسات السيور"
+    },
+    {
+      "id": "ACN_0058",
+      "code": "CON-145",
+      "name": "R.S",
+      "companyName": "R.S",
+      "serviceType": "عمل حامل لبرج التبريد"
+    },
+    {
+      "id": "ACN_0059",
+      "code": "CON-147",
+      "name": "القناه لتوزيع الكهرباء",
+      "companyName": "القناه لتوزيع الكهرباء",
+      "serviceType": "صيانة لمحول الكهرباء"
+    },
+    {
+      "id": "ACN_0060",
+      "code": "CON-148",
+      "name": "L.C.G",
+      "companyName": "L.C.G",
+      "serviceType": "معاينه لمنطقة ابراج البتريد"
+    },
+    {
+      "id": "ACN_0061",
+      "code": "CON-149",
+      "name": "اتشيدا",
+      "companyName": "اتشيدا",
+      "serviceType": "صيانة ماكينة التعبئه الالى"
+    },
+    {
+      "id": "ACN_0062",
+      "code": "CON-150",
+      "name": "ماك راك",
+      "companyName": "ماك راك",
+      "serviceType": "فحص المعدات الكلارك"
+    },
+    {
+      "id": "ACN_0063",
+      "code": "CON-151",
+      "name": "سيتى باك",
+      "companyName": "سيتى باك",
+      "serviceType": "صيانة ماكينة سيتى باك بالتعبئه اليدوى"
+    },
+    {
+      "id": "ACN_0064",
+      "code": "CON-152",
+      "name": "شهاب للهندسيه",
+      "companyName": "شهاب للهندسيه",
+      "serviceType": "صيانة جهاز الميتل للمعادن"
+    },
+    {
+      "id": "ACN_0065",
+      "code": "CON-153",
+      "name": "الروضه",
+      "companyName": "الروضه",
+      "serviceType": "رفع مقاسات فى نفق الورقيات"
+    },
+    {
+      "id": "ACN_0066",
+      "code": "CON-155",
+      "name": "شيتال",
+      "companyName": "شيتال",
+      "serviceType": "رفع مقاسات فى خط الورقيات"
+    },
+    {
+      "id": "ACN_0067",
+      "code": "CON-156",
+      "name": "الهندسيه للمقاولات",
+      "companyName": "الهندسيه للمقاولات",
+      "serviceType": "معاينة البلات فورم"
+    },
+    {
+      "id": "ACN_0068",
+      "code": "CON-157",
+      "name": "دريم تك",
+      "companyName": "دريم تك",
+      "serviceType": "رفع مقاسات خط الورقيات"
+    },
+    {
+      "id": "ACN_0069",
+      "code": "CON-158",
+      "name": "smi",
+      "companyName": "smi",
+      "serviceType": "رفع مقاسات"
+    },
+    {
+      "id": "ACN_0070",
+      "code": "CON-160",
+      "name": "future",
+      "companyName": "future",
+      "serviceType": "تركيب سبورتات لخط الغاز فى الغلايه"
+    },
+    {
+      "id": "ACN_0071",
+      "code": "CON-161",
+      "name": "جاسكو",
+      "companyName": "جاسكو",
+      "serviceType": "صيانة وتركيبات - الغاز الطبيبعي"
+    },
+    {
+      "id": "ACN_0072",
+      "code": "CON-163",
+      "name": "الفا",
+      "companyName": "الفا",
+      "serviceType": "اخذ مساحات"
+    },
+    {
+      "id": "ACN_0073",
+      "code": "CON-164",
+      "name": "TUV Austria",
+      "companyName": "TUV Austria",
+      "serviceType": "مفتش تحميل السعوديه"
+    }
+  ],
+  "safetyTeam": [
+    {
+      "name": "ياسر محمد محمد دياب",
+      "fullName": "ياسر محمد محمد دياب",
+      "role": "مدير السلامة والصحة المهنية",
+      "employeeCode": "111594"
+    },
+    {
+      "name": "احمد محمود عبد العظيم محمود بدوي",
+      "fullName": "احمد محمود عبد العظيم محمود بدوي",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "105201"
+    },
+    {
+      "name": "فيصل ابراهيم ابراهيم زايد",
+      "fullName": "فيصل ابراهيم ابراهيم زايد",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "103079"
+    },
+    {
+      "name": "محمد السيد عبدالله السعدني",
+      "fullName": "محمد السيد عبدالله السعدني",
+      "role": "اخصائى سلامه وصحة مهنية",
+      "employeeCode": "111804"
+    },
+    {
+      "name": "محمد سعيد حسن محمد شرف",
+      "fullName": "محمد سعيد حسن محمد شرف",
+      "role": "فنى سلامة وصحة مهنيه",
+      "employeeCode": "112152"
+    },
+    {
+      "name": "محمود خالد قدرى حافظ",
+      "fullName": "محمود خالد قدرى حافظ",
+      "role": "فنى السلامة والصحة المهنية",
+      "employeeCode": "111876"
+    },
+    {
+      "name": "نادر محمد عبد المنعم ابو مسلم علي",
+      "fullName": "نادر محمد عبد المنعم ابو مسلم علي",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "107418"
+    },
+    {
+      "name": "نبيل عبد الفتاح عبد الصادق عزب",
+      "fullName": "نبيل عبد الفتاح عبد الصادق عزب",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "103081"
+    },
+    {
+      "name": "إبراهيم مصطفى إبراهيم إبراهيم سالم",
+      "fullName": "إبراهيم مصطفى إبراهيم إبراهيم سالم",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "112948"
+    },
+    {
+      "name": "مصطفى السيد عبداللطيف محمد",
+      "fullName": "مصطفى السيد عبداللطيف محمد",
+      "role": "فني سلامة وصحة مهنية",
+      "employeeCode": "112947"
+    }
+  ],
+  "resignedNames": [
+    "أحمد السيد محمد السيد",
+    "ابراهيم السيد عبد الجواد عبد الحميد",
+    "ابراهيم حماده عبد النعيم حسان",
+    "ابراهيم رمضان احمد محمد",
+    "ابراهيم عطية عبد العزيز ابراهيم",
+    "احمد رضا عواد حسن",
+    "احمد شوقي فتح الله محمد",
+    "احمد عبد الباقي محمد عشري",
+    "احمد عبد المعبود غمري عبد الله",
+    "احمد عفت حامد محمد",
+    "احمد محمد احمد عبد الحق",
+    "احمد محمود ابراهيم سالم الشافعى",
+    "اسماء جمال عبد العظيم يوسف",
+    "اسماء عثمان حسن على جاد",
+    "السيد ابراهيم احمد محمد شاهين",
+    "السيد فوزى على حسن",
+    "السيد محمد السيد محمد",
+    "انتصار محمد البدرى عبد السلام نصر",
+    "بهاء الدين عبد العظيم محمد حسن شديد",
+    "جلال عبد الحميد يونس ناصف",
+    "جميل محمد احمد السيد",
+    "حماده فؤاد عبد العاطي علي",
+    "خالد علي احمد حامد",
+    "دعاء ماهرفريج بحيري",
+    "رجب عثمان منصور رمضان",
+    "رشا غريب عبد المقصود عامر",
+    "سامح علي محمد عنتر",
+    "سامي محمد علي علي",
+    "سعيد السيد السيد محمد دهب",
+    "سلامه محمد علي حسين",
+    "سمير نبيل عبد العظيم محمد احمد",
+    "شريف علاء جمعه ابو شعيشع عيسى",
+    "شفيق جلال محمد ابراهيم",
+    "شيماء ماهرفريج بحيري",
+    "صابر محمد شحاته عبد العال",
+    "صالح ابراهيم عيد محمد",
+    "صالح السيد كامل الجزيري",
+    "طارق مصطفى السيد مدين الجوهرى",
+    "عاصم نجيب الشحات الحداد",
+    "عبد الحميد عزام يوسف يوسف",
+    "عبد الله محمد السيد أحمد السيد النجار",
+    "عبد المنعم عبد الفتاح احمد السيد",
+    "عز كساب احمد محمود",
+    "عماد حمدى محمد عبد الحميد",
+    "عمر شامخ هيبه على",
+    "عمر عبد القادر محمد حسانين",
+    "عمر محمد عبد الله عبد الرسول",
+    "عمرو عبد ربه علي محمد مصطفى",
+    "كرم عوض عبد الجواد علي",
+    "مؤمن صلاح عبد المنعم عبد الله",
+    "ماجد حسنى على جاد الحق",
+    "محمد ابراهيم محمد السيد خليل",
+    "محمد احمد السيد عبد الله احمد",
+    "محمد اشرف عبد الله محمد احمد",
+    "محمد جمال عوض حماد",
+    "محمد جمعه سنوسي احمد",
+    "محمد رمضان شمس الدين عبد الهاي",
+    "محمد طلعت شحاته علي",
+    "محمد عادل منصور يوسف",
+    "محمد عبد الرؤوف ضيف محمد",
+    "محمد عبد الرحمن قنديل ابراهيم",
+    "محمد علي احمد اسماعيل",
+    "محمد عوض عيد علي",
+    "محمد فهيم عفيفى محمد جاد",
+    "محمد محمد احمد عبد الله",
+    "محمد محمود احمد علي",
+    "محمود احمد امام مرسي الدرع",
+    "محمود سيد محمود احمد",
+    "محمود محمد يوسف علي",
+    "نبيل السيد حسين محمد",
+    "نبيهه احمد اسماعيل على الظواهرى",
+    "نسمة ناجى عبد الصمد عبد الوهاب",
+    "نورا احمد محمد موسى",
+    "هانى عبدالرازق محمد السيد الشربينى",
+    "هاني مصطفى احمد محمد عبيد",
+    "هناء متولي ابراهيم مصطفى",
+    "هند شحاته محمد عبد الله",
+    "هند محمد طه عبد الرازق",
+    "هيثم فتحي عبد الجواد هاشم",
+    "ولاء عبد الله عبد العظيم محمد",
+    "ياسر عبد المحسن السيد عبد الحميد",
+    "ياسمين محمد فتحي يوسف",
+    "يسري ناصف مهدي رحيم",
+    "اسلام السيد علي الزغبي",
+    "حسانين حسن محمد حسانين على",
+    "وليد عطية سيد احمد محمد"
+  ],
+  "resignedCodes": [
+    "100804",
+    "104290",
+    "102201",
+    "106071",
+    "105537",
+    "108505",
+    "108507",
+    "104289",
+    "105224",
+    "111977",
+    "102280",
+    "110813",
+    "105158",
+    "105968",
+    "102205",
+    "109954",
+    "106042",
+    "105970",
+    "105924",
+    "102200",
+    "103726",
+    "102206",
+    "104263",
+    "105373",
+    "105301",
+    "103733",
+    "108526",
+    "102204",
+    "105979",
+    "102203",
+    "105980",
+    "110631",
+    "102279",
+    "105397",
+    "105162",
+    "103769",
+    "108524",
+    "111724",
+    "101426",
+    "102469",
+    "111187",
+    "105964",
+    "105375",
+    "105969",
+    "110629",
+    "105298",
+    "108521",
+    "105324",
+    "108513",
+    "105971",
+    "111743",
+    "105974",
+    "105976",
+    "105394",
+    "104952",
+    "104291",
+    "108519",
+    "104269",
+    "105972",
+    "105975",
+    "102211",
+    "102474",
+    "108518",
+    "105973",
+    "106007",
+    "102475",
+    "108516",
+    "103844",
+    "103843",
+    "103845",
+    "105977",
+    "105978",
+    "103113",
+    "110630",
+    "105536",
+    "103412",
+    "103727",
+    "105193",
+    "108510",
+    "105164",
+    "104271",
+    "104885",
+    "108528",
+    "112425",
+    "112576",
+    "112645"
+  ]
+}

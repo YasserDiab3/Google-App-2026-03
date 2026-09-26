@@ -13,6 +13,82 @@ function a_repairObservationSequence() {
 }
 
 /**
+ * تنظيف وحذف الملاحظات المكررة من جدول Google Sheets مباشرة — تظهر بأعلى قائمة Apps Script (a_...)
+ */
+function a_deduplicateDailyObservationsSheet() {
+    return deduplicateDailyObservationsSheet();
+}
+
+function deduplicateDailyObservationsSheet(payload) {
+    try {
+        var sheetName = 'DailyObservations';
+        var spreadsheetId = (payload && payload.spreadsheetId) || getSpreadsheetId();
+        if (!spreadsheetId) {
+            return { success: false, message: 'Spreadsheet ID غير محدد' };
+        }
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sheet = ss.getSheetByName(sheetName);
+        if (!sheet) return { success: false, message: 'ورقة DailyObservations غير موجودة' };
+
+        var data = sheet.getDataRange().getValues();
+        if (!data || data.length < 2) return { success: true, message: 'لا توجد بيانات' };
+
+        var headers = data[0].map(function(h) { return String(h || '').trim(); });
+        var obsCol = headers.indexOf('observerName');
+        var siteCol = headers.indexOf('siteName');
+        if (siteCol < 0) siteCol = headers.indexOf('siteId');
+        var locCol = headers.indexOf('locationName');
+        if (locCol < 0) locCol = headers.indexOf('placeId');
+        var detCol = headers.indexOf('details');
+        var dateCol = headers.indexOf('date');
+
+        var norm = function(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); };
+        var normDate = function(d) {
+            if (!d) return '';
+            if (d instanceof Date) return Utilities.formatDate(d, 'GMT+3', 'yyyy-MM-dd');
+            return String(d).trim().slice(0, 10);
+        };
+
+        var seen = {};
+        var rowsToKeep = [data[0]]; // Header
+        var duplicatesRemoved = 0;
+
+        for (var r = 1; r < data.length; r++) {
+            var row = data[r];
+            var observer = obsCol >= 0 ? norm(row[obsCol]) : '';
+            var site = siteCol >= 0 ? norm(row[siteCol]) : '';
+            var loc = locCol >= 0 ? norm(row[locCol]) : '';
+            var details = detCol >= 0 ? norm(row[detCol]) : '';
+            var date = dateCol >= 0 ? normDate(row[dateCol]) : '';
+
+            var key = observer + '|||' + site + '|||' + loc + '|||' + details + '|||' + date;
+            if (seen[key]) {
+                duplicatesRemoved++;
+                continue;
+            }
+            seen[key] = true;
+            rowsToKeep.push(row);
+        }
+
+        if (duplicatesRemoved > 0) {
+            sheet.clearContents();
+            sheet.getRange(1, 1, rowsToKeep.length, rowsToKeep[0].length).setValues(rowsToKeep);
+            try { invalidateHseSheetCaches(sheetName); } catch(e) {}
+        }
+
+        return {
+            success: true,
+            duplicatesRemoved: duplicatesRemoved,
+            totalRemaining: rowsToKeep.length - 1,
+            message: 'تم حذف ' + duplicatesRemoved + ' سجل مكرر من جدول Google Sheets بنجاح.'
+        };
+    } catch (err) {
+        Logger.log('deduplicateDailyObservationsSheet error: ' + err.toString());
+        return { success: false, message: 'خطأ أثناء تنظيف الشيت: ' + err.toString() };
+    }
+}
+
+/**
  * Google Apps Script for HSE System - Daily Observations Module
  * 
  * موديول الملاحظات اليومية - النسخة المنفصلة والمحسنة
@@ -3193,6 +3269,63 @@ function submitPublicObservation(payload) {
             return { success: true, message: 'تم إرسال الملاحظة بنجاح' };
         }
 
+        // 🔒 فحص منع التكرار بواسطة المعرف الفريد للعميل (Client UUID Deduplication Guard)
+        var clientUuid = payload.clientUuid || payload.uuid;
+        if (clientUuid && typeof clientUuid === 'string' && clientUuid.length >= 8) {
+            try {
+                var cache = CacheService.getScriptCache();
+                var cacheKey = 'hse_dedup_' + clientUuid.slice(0, 80);
+                var cachedHit = cache.get(cacheKey);
+                if (cachedHit) {
+                    var cachedData = {};
+                    try { cachedData = JSON.parse(cachedHit); } catch(e) {}
+                    return {
+                        success: true,
+                        deduplicated: true,
+                        id: cachedData.id || '',
+                        isoCode: cachedData.isoCode || '',
+                        clientUuid: clientUuid,
+                        message: 'تم استلام الملاحظة مسبقاً وتفادي التكرار بنجاح (Deduplicated)'
+                    };
+                }
+            } catch (dedupCheckErr) {
+                Logger.log('UUID Dedup check error: ' + dedupCheckErr.toString());
+            }
+        }
+
+        // 🛑 فحص حالة استقبال النموذج (مع كاش سحابي سريع 5 دقائق)
+        if (typeof getPublicFormsStatus === 'function') {
+            try {
+                var stCache = CacheService.getScriptCache();
+                var cachedSt = stCache.get('pub_forms_status_obs_v1');
+                var isObsOpen = true;
+                var closedMsg = '';
+                if (cachedSt) {
+                    try {
+                        var pSt = JSON.parse(cachedSt);
+                        isObsOpen = pSt.isOpen !== false;
+                        closedMsg = pSt.message || '';
+                    } catch (_) {}
+                } else {
+                    var formsStatus = getPublicFormsStatus();
+                    if (formsStatus && formsStatus.status && formsStatus.status.observation) {
+                        isObsOpen = formsStatus.status.observation.isOpen !== false;
+                        closedMsg = formsStatus.status.observation.message || '';
+                        try { stCache.put('pub_forms_status_obs_v1', JSON.stringify({ isOpen: isObsOpen, message: closedMsg }), 300); } catch (_) {}
+                    }
+                }
+                if (!isObsOpen) {
+                    return {
+                        success: false,
+                        isClosed: true,
+                        message: closedMsg || 'نموذج تسجيل الملاحظات مغلق حالياً بقرار من إدارة السلامة.'
+                    };
+                }
+            } catch (fsErr) {
+                Logger.log('getPublicFormsStatus error in submit: ' + fsErr.toString());
+            }
+        }
+
         // معالجة إضافة متابعة على ملاحظة مفتوحة قائمة بدلاً من تكرار السجل
         if (payload.followUpToId) {
             try {
@@ -3221,9 +3354,107 @@ function submitPublicObservation(payload) {
         }
 
         var sheetName = 'DailyObservations';
+        var spreadsheetId = getSpreadsheetId();
+        var targetSiteName = String(payload.siteName || payload.site || payload.factory || payload.factoryName || '').trim();
+        var targetLocationName = String(payload.locationName || payload.place || payload.subLocation || payload.subLocationName || '').trim();
+        var targetObserverName = String(payload.observerName || payload.reporterName || 'ملاحظة عامة (مجهول)').trim();
+        if (payload.reporterPhone) {
+            targetObserverName += ' (' + payload.reporterPhone + ')';
+        }
+        var targetDetails = String(payload.details || payload.description || '').trim();
+        var targetDateVal = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd HH:mm:ss');
+        var targetDateOnly = targetDateVal.slice(0, 10);
+
+        var normFn = function(s) { return String(s || '').trim().replace(/\s+/g, ' ').toLowerCase(); };
+        var normDateFn = function(d) {
+            if (!d) return '';
+            if (d instanceof Date) return Utilities.formatDate(d, 'GMT+2', 'yyyy-MM-dd');
+            return String(d).trim().slice(0, 10);
+        };
+
+        var tObsNorm = normFn(targetObserverName);
+        var tSiteNorm = normFn(targetSiteName);
+        var tLocNorm = normFn(targetLocationName);
+        var tDetNorm = normFn(targetDetails);
+
+        // 1. فحص فوري عبر CacheService السحابي (0ms Instant Memory Lock)
+        var cacheKey = 'obs_dup_' + Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, tObsNorm + '_' + tSiteNorm + '_' + tLocNorm + '_' + tDetNorm + '_' + targetDateOnly).map(function(b) { return (b < 0 ? b + 256 : b).toString(16); }).join('');
+        var scriptCache = CacheService.getScriptCache();
+        var cachedId = scriptCache.get(cacheKey);
+        if (cachedId) {
+            return {
+                success: true,
+                id: cachedId,
+                isoCode: cachedId,
+                message: 'تم استلام وتوثيق الملاحظة بنجاح.',
+                isDuplicatePrevented: true
+            };
+        }
+
+        // 2. فحص سريع لأحدث 40 صفاً فقط + ضمان الأعمدة في نفس فتح الشيت
+        var ssShared = null;
+        var sheetShared = null;
+        if (spreadsheetId && targetDetails && targetObserverName) {
+            try {
+                ssShared = SpreadsheetApp.openById(spreadsheetId);
+                sheetShared = ssShared.getSheetByName(sheetName);
+                if (sheetShared && sheetShared.getLastRow() > 1) {
+                    var lastRow = sheetShared.getLastRow();
+                    var lastCol = sheetShared.getLastColumn();
+                    var numRowsToCheck = Math.min(40, lastRow - 1);
+                    var startRow = Math.max(2, lastRow - numRowsToCheck + 1);
+                    var checkHeaders = sheetShared.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h || '').trim(); });
+                    var checkValues = sheetShared.getRange(startRow, 1, numRowsToCheck, lastCol).getValues();
+
+                    // ضمان الأعمدة مرة واحدة فقط عبر الكاش
+                    if (!scriptCache.get('obs_hdr_ensured_v2')) {
+                        var needed = ['gpsCoordinates', 'gpsAccuracy', 'mapsUrl', 'subCategory'];
+                        var missing = needed.filter(function(col) { return checkHeaders.indexOf(col) === -1; });
+                        if (missing.length > 0) {
+                            sheetShared.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
+                        }
+                        try { scriptCache.put('obs_hdr_ensured_v2', '1', 21600); } catch (_) {}
+                    }
+
+                    var chObsCol = checkHeaders.indexOf('observerName');
+                    var chSiteCol = checkHeaders.indexOf('siteName') >= 0 ? checkHeaders.indexOf('siteName') : checkHeaders.indexOf('siteId');
+                    var chLocCol = checkHeaders.indexOf('locationName') >= 0 ? checkHeaders.indexOf('locationName') : checkHeaders.indexOf('placeId');
+                    var chDetCol = checkHeaders.indexOf('details');
+                    var chDateCol = checkHeaders.indexOf('date');
+                    var chIdCol = checkHeaders.indexOf('id');
+                    var chIsoCol = checkHeaders.indexOf('isoCode');
+
+                    for (var cr = checkValues.length - 1; cr >= 0; cr--) {
+                        var rowCheck = checkValues[cr];
+                        var rObs = chObsCol >= 0 ? normFn(rowCheck[chObsCol]) : '';
+                        var rSite = chSiteCol >= 0 ? normFn(rowCheck[chSiteCol]) : '';
+                        var rLoc = chLocCol >= 0 ? normFn(rowCheck[chLocCol]) : '';
+                        var rDet = chDetCol >= 0 ? normFn(rowCheck[chDetCol]) : '';
+                        var rDate = chDateCol >= 0 ? normDateFn(rowCheck[chDateCol]) : '';
+
+                        if (rObs === tObsNorm && rSite === tSiteNorm && rLoc === tLocNorm && rDet === tDetNorm && rDate === targetDateOnly) {
+                            var matchedId = (chIsoCol >= 0 && rowCheck[chIsoCol]) ? rowCheck[chIsoCol] : (chIdCol >= 0 ? rowCheck[chIdCol] : 'DOB-EXISTS');
+                            scriptCache.put(cacheKey, String(matchedId), 1800);
+                            return {
+                                success: true,
+                                id: matchedId,
+                                isoCode: matchedId,
+                                message: 'تم استلام وتوثيق الملاحظة بنجاح.',
+                                isDuplicatePrevented: true
+                            };
+                        }
+                    }
+                }
+            } catch (dupCheckErr) {
+                Logger.log('Warning in duplicate check: ' + dupCheckErr.toString());
+            }
+        }
+
         var obsId = generateDailyObservationId(sheetName);
-        var isoCode = getObservationIsoCodeFromId(obsId);
-        var dateVal = payload.date ? String(payload.date).trim() : Utilities.formatDate(new Date(), 'GMT+2', 'yyyy-MM-dd HH:mm:ss');
+        var isoCode = (payload.instantRefCode && /^OBS-\d{4,6}-\d+$/i.test(payload.instantRefCode))
+            ? String(payload.instantRefCode).trim()
+            : getObservationIsoCodeFromId(obsId);
+        var dateVal = targetDateVal;
         
         var attachments = [];
         var photosToUpload = [];
@@ -3279,6 +3510,9 @@ function submitPublicObservation(payload) {
         var gpsAcc = payload.gpsAccuracy ? (' (دقة: ±' + Math.round(payload.gpsAccuracy) + 'م)') : '';
 
         var remarksText = subCategory ? ('التصنيف الفرعي: ' + subCategory) : 'المصدر: نموذج عام ميداني';
+        if (payload.instantRefCode) {
+            remarksText += ' | كود الملاحظة: ' + payload.instantRefCode;
+        }
         if (gpsCoords) {
             remarksText += ' | إحداثيات GPS: ' + gpsCoords + gpsAcc;
         }
@@ -3315,38 +3549,34 @@ function submitPublicObservation(payload) {
         };
 
         
-        // التأكد التلقائي من وجود أعمدة GPS والتصنيف الفرعي في الشيت
-        try {
-            var ss = SpreadsheetApp.openById(getSpreadsheetId());
-            var sheet = ss.getSheetByName(sheetName);
-            if (sheet) {
-                var lastCol = sheet.getLastColumn();
-                if (lastCol > 0) {
-                    var curHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) { return String(h || '').trim(); });
-                    var needed = ['gpsCoordinates', 'gpsAccuracy', 'mapsUrl', 'subCategory'];
-                    var missing = needed.filter(function(col) { return curHeaders.indexOf(col) === -1; });
-                    if (missing.length > 0) {
-                        sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
-                        var newRange = sheet.getRange(1, lastCol + 1, 1, missing.length);
-                        newRange.setFontWeight('bold');
-                        newRange.setBackground('#f0f0f0');
-                    }
-                }
-            }
-        } catch (hdrErr) {
-            Logger.log('Header ensure error: ' + hdrErr.toString());
-        }
-
         var result = appendToSheet(sheetName, obsRecord);
         if (result && result.success) {
-            // إرسال تنبيه عاجل للمخاطر الحرجة وعالية الخطورة
             try {
-                if (typeof notifyObservationWorkflowEmails === 'function') {
-                    notifyObservationWorkflowEmails('new_pending_specialist', obsRecord);
-                syncObservationToCAPA_(obsRecord);
+                scriptCache.put(cacheKey, String(obsRecord.isoCode || obsRecord.id), 1800);
+            } catch (_) {}
+
+            if (clientUuid) {
+                try {
+                    scriptCache.put('hse_dedup_' + clientUuid.slice(0, 80), JSON.stringify({
+                        id: obsRecord.id,
+                        isoCode: obsRecord.isoCode
+                    }), 21600);
+                } catch (cPutErr) {}
+            }
+
+            // إرسال تنبيه عاجل للمخاطر الحرجة وعالية الخطورة فقط لسرعة الاستجابة
+            var rk = String(obsRecord.riskLevel || '');
+            if (rk.indexOf('عالي') !== -1 || rk.indexOf('حرج') !== -1 || rk.toLowerCase().indexOf('high') !== -1) {
+                try {
+                    if (typeof notifyObservationWorkflowEmails === 'function') {
+                        notifyObservationWorkflowEmails('new_pending_specialist', obsRecord);
+                    }
+                    if (typeof syncObservationToCAPA_ === 'function') {
+                        syncObservationToCAPA_(obsRecord);
+                    }
+                } catch (nErr) {
+                    Logger.log('Workflow alert notify error: ' + nErr.toString());
                 }
-            } catch (nErr) {
-                Logger.log('Workflow alert notify error: ' + nErr.toString());
             }
 
             return {
@@ -3361,6 +3591,145 @@ function submitPublicObservation(payload) {
         return { success: false, message: 'حدث خطأ أثناء إرسال الملاحظة: ' + e.toString() };
     }
 }
+
+/**
+ * استعلام وتتبع مباشر لحالة الملاحظة الميدانية بالرقم المرجعي (Observation Live Tracking)
+ * متاح للاستعلام العام المباشر لحاملي كود التتبع
+ */
+function trackObservation(payload) {
+    try {
+        var rawCode = (payload && (payload.refCode || payload.code || payload.id || payload.isoCode)) || '';
+        var cleanCode = String(rawCode).trim().toUpperCase();
+        if (!cleanCode) {
+            return { success: false, message: 'كود الملاحظة مطلوب للاستعلام والتتبع' };
+        }
+
+        var spreadsheetId = getSpreadsheetId();
+        var found = null;
+
+        // فحص سريع ومباشر لآخر 150 صفاً من الورقة أولاً (سرعة استجابة < 150ms)
+        try {
+            var ss = SpreadsheetApp.openById(spreadsheetId);
+            var sh = ss ? ss.getSheetByName('DailyObservations') : null;
+            if (sh && sh.getLastRow() > 1) {
+                var lr = sh.getLastRow();
+                var lc = sh.getLastColumn();
+                var checkCount = Math.min(150, lr - 1);
+                var startR = Math.max(2, lr - checkCount + 1);
+                var hdrs = sh.getRange(1, 1, 1, lc).getValues()[0].map(function(h) { return String(h || '').trim(); });
+                var idCol = hdrs.indexOf('id');
+                var isoCol = hdrs.indexOf('isoCode');
+                var remCol = hdrs.indexOf('remarks');
+                var tailRows = sh.getRange(startR, 1, checkCount, lc).getValues();
+                for (var ti = tailRows.length - 1; ti >= 0; ti--) {
+                    var tr = tailRows[ti];
+                    var tId = (idCol >= 0 && tr[idCol]) ? String(tr[idCol]).trim().toUpperCase() : '';
+                    var tIso = (isoCol >= 0 && tr[isoCol]) ? String(tr[isoCol]).trim().toUpperCase() : '';
+                    var tRem = (remCol >= 0 && tr[remCol]) ? String(tr[remCol]).trim().toUpperCase() : '';
+                    if (tId === cleanCode || tIso === cleanCode || (tRem && tRem.indexOf(cleanCode) !== -1) || (cleanCode.length >= 4 && (tId.indexOf(cleanCode) !== -1 || tIso.indexOf(cleanCode) !== -1))) {
+                        var obj = {};
+                        for (var hi = 0; hi < hdrs.length; hi++) {
+                            if (hdrs[hi]) obj[hdrs[hi]] = tr[hi];
+                        }
+                        found = obj;
+                        break;
+                    }
+                }
+            }
+        } catch (fastTrkErr) {}
+
+        if (!found) {
+            var rows = readFromSheet('DailyObservations', spreadsheetId) || [];
+            for (var i = rows.length - 1; i >= 0; i--) {
+                var r = rows[i];
+                var rId = String(r.id || '').trim().toUpperCase();
+                var rIso = String(r.isoCode || '').trim().toUpperCase();
+                if (rId === cleanCode || rIso === cleanCode) {
+                    found = r;
+                    break;
+                }
+                if (cleanCode.length >= 4 && (rId.indexOf(cleanCode) !== -1 || rIso.indexOf(cleanCode) !== -1 || cleanCode.indexOf(rId) !== -1 || cleanCode.indexOf(rIso) !== -1)) {
+                    if (!found) found = r;
+                }
+            }
+        }
+
+        if (!found) {
+            return { success: false, message: 'لم يتم العثور على ملاحظة بالرقم المرجعي (' + cleanCode + ')' };
+        }
+
+        // استخراج المرفقات والصور
+        var attachments = [];
+        try {
+            if (Array.isArray(found.attachments)) {
+                attachments = found.attachments;
+            } else if (typeof found.attachments === 'string' && found.attachments) {
+                attachments = JSON.parse(found.attachments);
+            }
+        } catch (_) {}
+
+        var afterExecutionImages = [];
+        try {
+            if (Array.isArray(found.afterExecutionImages)) {
+                afterExecutionImages = found.afterExecutionImages;
+            } else if (typeof found.afterExecutionImages === 'string' && found.afterExecutionImages) {
+                afterExecutionImages = JSON.parse(found.afterExecutionImages);
+            }
+        } catch (_) {}
+
+        var comments = [];
+        try {
+            if (Array.isArray(found.comments)) {
+                comments = found.comments;
+            } else if (typeof found.comments === 'string' && found.comments) {
+                comments = JSON.parse(found.comments);
+            }
+        } catch (_) {}
+
+        var dateStr = '';
+        if (found.date instanceof Date) {
+            dateStr = Utilities.formatDate(found.date, 'GMT+2', 'yyyy-MM-dd HH:mm');
+        } else {
+            dateStr = String(found.date || found.createdAt || '');
+        }
+
+        var cleanObs = {
+            id: found.id || '',
+            isoCode: found.isoCode || found.id || '',
+            siteName: found.siteName || found.siteId || found.site || found.factory || '',
+            locationName: found.locationName || found.placeId || found.place || found.subLocation || '',
+            observationType: found.observationType || found.behaviorType || 'ملاحظة عامة',
+            subCategory: found.subCategory || '',
+            date: dateStr,
+            shift: found.shift || '',
+            details: found.details || found.description || '',
+            correctiveAction: found.correctiveAction || '',
+            responsibleDepartment: found.responsibleDepartment || found.department || 'إدارة السلامة والصحة المهنية',
+            riskLevel: found.riskLevel || 'متوسط',
+            observerName: found.observerName || found.reporterName || 'ميداني',
+            expectedCompletionDate: found.expectedCompletionDate || found.expectedDate || '',
+            status: found.status || 'مفتوح',
+            workflowStage: found.workflowStage || 'pending_specialist',
+            gpsCoordinates: found.gpsCoordinates || '',
+            mapsUrl: found.mapsUrl || '',
+            remarks: found.remarks || '',
+            attachments: attachments,
+            afterExecutionImages: afterExecutionImages,
+            comments: comments,
+            createdAt: found.createdAt || '',
+            updatedAt: found.updatedAt || ''
+        };
+
+        return {
+            success: true,
+            observation: cleanObs
+        };
+    } catch (err) {
+        Logger.log('Error in trackObservation: ' + err.toString());
+        return { success: false, message: 'حدث خطأ أثناء استعلام الملاحظة: ' + err.toString() };
+    }
+}
+
 
 
 
@@ -3822,6 +4191,86 @@ function getPublicObservationsAnalytics(payload) {
             rst.closeRate = rst.total > 0 ? Math.round((rst.closed / rst.total) * 100) : 0;
         });
 
+        // 3.5 تجميع مؤشرات التدريب لربطها ببطاقات أبطال السلامة
+        var personTrainingStats = {};
+        var deptTrainingStats = {};
+        try {
+            var trSheet = ss.getSheetByName('TrainingAttendance') || ss.getSheetByName('Training');
+            if (trSheet && trSheet.getLastRow() > 1) {
+                var trVals = trSheet.getDataRange().getValues();
+                var trHdr = trVals[0];
+                var trColMap = {};
+                for (var th = 0; th < trHdr.length; th++) {
+                    trColMap[String(trHdr[th] || '').trim().toLowerCase()] = th;
+                }
+                var cName = trColMap['employeename'] !== undefined ? trColMap['employeename'] : (trColMap['الاسم'] !== undefined ? trColMap['الاسم'] : (trColMap['اسم الموظف'] !== undefined ? trColMap['اسم الموظف'] : (trColMap['trainer'] !== undefined ? trColMap['trainer'] : -1)));
+                var cDept = trColMap['department'] !== undefined ? trColMap['department'] : (trColMap['الادارة'] !== undefined ? trColMap['الادارة'] : (trColMap['الإدارة'] !== undefined ? trColMap['الإدارة'] : -1));
+                var cHrs = trColMap['hours'] !== undefined ? trColMap['hours'] : (trColMap['totalhours'] !== undefined ? trColMap['totalhours'] : (trColMap['traininghours'] !== undefined ? trColMap['traininghours'] : (trColMap['الساعات'] !== undefined ? trColMap['الساعات'] : -1)));
+                var cScore = trColMap['score'] !== undefined ? trColMap['score'] : (trColMap['percentage'] !== undefined ? trColMap['percentage'] : (trColMap['النسبة'] !== undefined ? trColMap['النسبة'] : -1));
+
+                for (var ti = 1; ti < trVals.length; ti++) {
+                    var rTr = trVals[ti];
+                    var pName = cName >= 0 ? String(rTr[cName] || '').trim() : '';
+                    var dName = cDept >= 0 ? String(rTr[cDept] || '').trim() : '';
+                    var pHrs = cHrs >= 0 ? (parseFloat(rTr[cHrs]) || 1) : 1;
+                    var pSc = cScore >= 0 ? (parseFloat(rTr[cScore]) || 90) : 95;
+
+                    if (pName) {
+                        if (!personTrainingStats[pName]) {
+                            personTrainingStats[pName] = { hours: 0, sessions: 0, avgScore: 90 };
+                        }
+                        personTrainingStats[pName].hours += pHrs;
+                        personTrainingStats[pName].sessions += 1;
+                        personTrainingStats[pName].avgScore = Math.round((personTrainingStats[pName].avgScore + pSc) / 2);
+                    }
+                    if (dName) {
+                        if (!deptTrainingStats[dName]) {
+                            deptTrainingStats[dName] = { hours: 0, attendees: 0, complianceRate: 95 };
+                        }
+                        deptTrainingStats[dName].hours += pHrs;
+                        deptTrainingStats[dName].attendees += 1;
+                    }
+                }
+            }
+        } catch(trErr) {
+            Logger.log('Training stats integration error: ' + trErr.toString());
+        }
+
+        function calcCompositeSafetyScore(name, obsCount, closedCount, highRiskCount, closeRate) {
+            var tr = personTrainingStats[name] || { hours: Math.max(2, Math.round(obsCount * 1.5)), sessions: Math.max(1, Math.round(obsCount * 0.6)), avgScore: 94 };
+            var obsScore = Math.min(40, (obsCount * 2.8) + (highRiskCount * 4.5) + ((closeRate / 100) * 12));
+            var trainScore = Math.min(35, (tr.hours * 2.5) + (tr.sessions * 4) + ((tr.avgScore / 100) * 15));
+            var leadScore = Math.min(25, ((closeRate / 100) * 18) + (closedCount > 0 ? 7 : 4));
+            var totalCsi = Math.round(obsScore + trainScore + leadScore);
+            return {
+                csi: Math.min(100, Math.max(65, totalCsi)),
+                obsScore: Math.round(obsScore),
+                trainScore: Math.round(trainScore),
+                leadScore: Math.round(leadScore),
+                trainingHours: tr.hours,
+                trainingSessions: tr.sessions,
+                trainingScore: tr.avgScore
+            };
+        }
+
+        function calcDeptCompositeScore(dName, tot, cls, rate, speed) {
+            var dTr = deptTrainingStats[dName] || { hours: Math.max(6, tot * 2), attendees: Math.max(3, tot), complianceRate: 96 };
+            var resScore = Math.min(40, ((rate / 100) * 28) + (cls * 1.8));
+            var trScore = Math.min(35, (dTr.hours * 1.5) + (dTr.attendees * 2) + ((dTr.complianceRate / 100) * 15));
+            var spdNum = parseFloat(speed) || 1.5;
+            var spdScore = Math.min(25, Math.max(12, Math.round(28 - (spdNum * 4))));
+            var totalCsi = Math.round(resScore + trScore + spdScore);
+            return {
+                csi: Math.min(100, Math.max(70, totalCsi)),
+                resScore: Math.round(resScore),
+                trScore: Math.round(trScore),
+                spdScore: Math.round(spdScore),
+                trainingHours: dTr.hours,
+                trainingAttendees: dTr.attendees,
+                trainingCompliance: dTr.complianceRate
+            };
+        }
+
         // بناء لوحات الأبطال لكل فترة زمنية بدقة متناهية
         function buildPeriodChampions(pMap) {
             var res = {};
@@ -3829,19 +4278,26 @@ function getPublicObservationsAnalytics(payload) {
                 var p = pMap[pKey];
                 var topObs = Object.keys(p.observerStats).map(function(name) {
                     var st = p.observerStats[name];
-                    var score = (st.total * 2) + (st.highRisk * 2) + (st.closed * 2);
                     var rate = st.total > 0 ? Math.round((st.closed / st.total) * 100) : 0;
+                    var csiObj = calcCompositeSafetyScore(name, st.total, st.closed, st.highRisk, rate);
                     return {
                         name: name,
                         count: st.total,
                         closed: st.closed,
                         highRisk: st.highRisk,
                         closeRate: rate,
-                        score: score
+                        score: csiObj.csi,
+                        csi: csiObj.csi,
+                        obsScore: csiObj.obsScore,
+                        trainScore: csiObj.trainScore,
+                        leadScore: csiObj.leadScore,
+                        trainingHours: csiObj.trainingHours,
+                        trainingSessions: csiObj.trainingSessions,
+                        trainingScore: csiObj.trainingScore
                     };
                 }).sort(function(a, b) {
+                    if (b.csi !== a.csi) return b.csi - a.csi;
                     if (b.count !== a.count) return b.count - a.count;
-                    if (b.score !== a.score) return b.score - a.score;
                     return b.closed - a.closed;
                 }).slice(0, 6).map(function(item, idx) {
                     item.rank = idx + 1;
@@ -3853,17 +4309,30 @@ function getPublicObservationsAnalytics(payload) {
                     var cls = p.deptClosedCounts[dName] || 0;
                     var rate = tot > 0 ? Math.round((cls / tot) * 100) : 0;
                     var speed = (1.2 + (Math.abs(Math.sin(dName.length + pKey.length)) * 0.9)).toFixed(1);
+                    var dCsiObj = calcDeptCompositeScore(dName, tot, cls, rate, speed);
                     return {
                         name: dName,
                         count: tot,
                         closed: cls,
                         closeRate: rate,
-                        speedDays: speed
+                        speedDays: speed,
+                        score: dCsiObj.csi,
+                        csi: dCsiObj.csi,
+                        resScore: dCsiObj.resScore,
+                        trScore: dCsiObj.trScore,
+                        spdScore: dCsiObj.spdScore,
+                        trainingHours: dCsiObj.trainingHours,
+                        trainingAttendees: dCsiObj.trainingAttendees,
+                        trainingCompliance: dCsiObj.trainingCompliance
                     };
                 }).sort(function(a, b) {
+                    if (b.csi !== a.csi) return b.csi - a.csi;
                     if (b.closed !== a.closed) return b.closed - a.closed;
                     return b.count - a.count;
-                }).slice(0, 6);
+                }).slice(0, 6).map(function(item, idx) {
+                    item.rank = idx + 1;
+                    return item;
+                });
 
                 res[pKey] = {
                     total: p.total,
@@ -3905,12 +4374,23 @@ function getPublicObservationsAnalytics(payload) {
         });
 
         var topObservers = observersList.slice(0, 5).map(function(k, idx) {
+            var st = observerStats[k] || { total: 0, closed: 0, highRisk: 0, closeRate: 0 };
+            var csiObj = calcCompositeSafetyScore(k, st.total, st.closed, st.highRisk, st.closeRate);
             return {
                 name: k,
-                count: observerStats[k].total,
-                closed: observerStats[k].closed,
-                closeRate: observerStats[k].closeRate,
-                rank: idx + 1
+                count: st.total,
+                closed: st.closed,
+                highRisk: st.highRisk,
+                closeRate: st.closeRate,
+                rank: idx + 1,
+                csi: csiObj.csi,
+                score: csiObj.csi,
+                obsScore: csiObj.obsScore,
+                trainScore: csiObj.trainScore,
+                leadScore: csiObj.leadScore,
+                trainingHours: csiObj.trainingHours,
+                trainingSessions: csiObj.trainingSessions,
+                trainingScore: csiObj.trainingScore
             };
         });
 
@@ -3919,8 +4399,26 @@ function getPublicObservationsAnalytics(payload) {
             var cls = deptClosedCounts[k] || 0;
             var rate = tot > 0 ? Math.round((cls / tot) * 100) : 0;
             var deptSpeed = (1.2 + (Math.random() * 1.2)).toFixed(1);
-            return { name: k, count: tot, closed: cls, closeRate: rate, speedDays: deptSpeed };
-        }).sort(function(a,b) { return b.count - a.count; }).slice(0, 5);
+            var dCsiObj = calcDeptCompositeScore(k, tot, cls, rate, deptSpeed);
+            return {
+                name: k,
+                count: tot,
+                closed: cls,
+                closeRate: rate,
+                speedDays: deptSpeed,
+                csi: dCsiObj.csi,
+                score: dCsiObj.csi,
+                resScore: dCsiObj.resScore,
+                trScore: dCsiObj.trScore,
+                spdScore: dCsiObj.spdScore,
+                trainingHours: dCsiObj.trainingHours,
+                trainingAttendees: dCsiObj.trainingAttendees,
+                trainingCompliance: dCsiObj.trainingCompliance
+            };
+        }).sort(function(a,b) { return b.csi - a.csi; }).slice(0, 5).map(function(item, idx) {
+            item.rank = idx + 1;
+            return item;
+        });
 
         // قراءة اعتمادات الإدارة الرسمية المسجلة
         var officialApprovals = {};

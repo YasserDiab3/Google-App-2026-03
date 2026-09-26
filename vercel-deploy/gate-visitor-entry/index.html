@@ -9,8 +9,8 @@
     <meta name="theme-color" content="#1e40af" id="metaThemeColor">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="/manifest-visitor.json">
-    <link rel="icon" type="image/png" href="/icons/icapp-logo.png">
+    <link rel="manifest" href="manifest-visitor.json">
+    <link rel="icon" type="image/png" href="icons/icapp-logo.png">
     
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1269,7 +1269,96 @@
         }
         .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
 
+        /* 📱 تحسينات الهاتف والأجهزة الذكية الشاملة لنموذج الزوار والبوابات */
+        @media (max-width: 640px) {
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+            input, select, textarea, .form-control {
+                font-size: 16px !important;
+                min-height: 44px !important;
+            }
+            button, .tab-btn, .btn-submit, .tool-btn {
+                min-height: 44px !important;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tabs-nav {
+                gap: 6px !important;
+            }
+            .tab-btn {
+                padding: 9px 6px !important;
+                font-size: 0.78rem !important;
+                gap: 4px !important;
+            }
+            .tab-btn i {
+                font-size: 0.85rem !important;
+            }
+            .tab-btn span {
+                white-space: normal !important;
+                text-align: center !important;
+                line-height: 1.25 !important;
+            }
+            .tab-counter-badge {
+                font-size: 0.68rem !important;
+                padding: 1px 5px !important;
+            }
+            .active-summary-stats {
+                gap: 5px !important;
+            }
+            .stat-box {
+                padding: 8px 4px !important;
+            }
+            .stat-num {
+                font-size: 1.15rem !important;
+            }
+            .stat-label {
+                font-size: 0.62rem !important;
+            }
+            .visitor-info-grid {
+                grid-template-columns: 1fr !important;
+                gap: 4px !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
+        }
 </style>
+<script src="js/modules/hse-dark-mode.js"></script>
 </head>
 <body>
     <div id="toastMsg" class="toast-msg"></div>
@@ -1380,7 +1469,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -1414,7 +1503,7 @@
     <div id="pwaBanner" role="banner" aria-label="تثبيت التطبيق">
         <div class="pwa-banner-content">
             <div class="pwa-banner-icon">
-                <img src="/icons/icapp-logo.png" alt="ICAPP" style="width:32px;height:32px;object-fit:contain;border-radius:6px;" onerror="this.style.display='none';this.parentElement.innerHTML='🛡️'">
+                <img src="icons/icapp-logo.png" alt="ICAPP" style="width:32px;height:32px;object-fit:contain;border-radius:6px;" onerror="this.style.display='none';this.parentElement.innerHTML='🛡️'">
             </div>
             <div class="pwa-banner-text">
                 <div class="pwa-banner-title">بوابة الأمن — SafetyHub</div>
@@ -1481,7 +1570,7 @@
             <div class="iso-header-table">
                 <div class="iso-col-brand">
                     <div class="iso-logo-wrap">
-                        <img id="isoLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
+                        <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                     </div>
                     <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
                 </div>
@@ -2256,7 +2345,7 @@
 
             // 2. مزامنة حية مع الخادم السحابي وقاعدة البيانات
             try {
-                const endpoint = GATE_CONFIG.cloudEndpoint;
+                const endpoint = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 if (endpoint) {
                     const res = await fetch(endpoint, {
                         method: 'POST',
@@ -2378,11 +2467,22 @@
                 if (fallback && Array.isArray(fallback.places)) places = fallback.places;
             }
 
+            const cleanSubLoc = (str) => {
+                if (!str) return '';
+                let s = String(str).trim();
+                s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP/gi, '_ $2-ICAPP');
+                s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)/gi, '_ $1-ICAPP');
+                s = s.replace(/_?\s*(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP/gi, '_ $1-ICAPP');
+                s = s.replace(/_ICAPP-(\d+)(?![\w-])/gi, '_ $1-ICAPP');
+                return s.trim();
+            };
+
             places.forEach(p => {
-                if (p && p.trim()) {
+                const cleaned = cleanSubLoc(p);
+                if (cleaned) {
                     const opt = document.createElement('option');
-                    opt.value = p.trim();
-                    opt.textContent = p.trim();
+                    opt.value = cleaned;
+                    opt.textContent = cleaned;
                     areaSelect.appendChild(opt);
                 }
             });
@@ -3075,7 +3175,7 @@ _نظام إدارة أمن البوابات والسلامة المهنية —
                     </div>
                     <div class="pass-card">
                         <div class="pass-header">
-                            <img src="/icons/icapp-logo.png" style="max-height: 32px; max-width: 60px; object-fit: contain;" onerror="this.style.display='none'">
+                            <img src="icons/icapp-logo.png" style="max-height: 32px; max-width: 60px; object-fit: contain;" onerror="this.style.display='none'">
                             <div>
                                 <div class="pass-title">تصريح دخول زائر / مقاول</div>
                                 <div class="pass-sub">ICAPP Visitor Access Pass</div>
@@ -3114,6 +3214,16 @@ function resetCheckInForm() {
             document.getElementById('checkInTabContainer').style.display = 'block';
         }
 
+                async function parseExecApiResponse(res) {
+                    const text = await res.text();
+                    if (!text) return null;
+                    let data = JSON.parse(text);
+                    if (typeof data === 'string') {
+                        try { data = JSON.parse(data); } catch (_e) {}
+                    }
+                    return data;
+                }
+
                 async function fetchActiveVisitorsFromCloud() {
             if (!navigator.onLine) return;
             try {
@@ -3122,16 +3232,20 @@ function resetCheckInForm() {
                 try {
                     const res = await fetch(targetUrl, {
                         method: 'POST',
+                        mode: 'cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({ action: 'getAllGateVisitors', data: {} })
                     });
-                    json = await res.json();
+                    if (res.ok) json = await parseExecApiResponse(res);
                 } catch(pErr) {
-                    const res = await fetch(targetUrl + '?action=getAllGateVisitors', { method: 'GET', mode: 'cors' });
-                    json = await res.json();
+                    /* fallback below */
+                }
+                if (!json || !json.success) {
+                    const res = await fetch(targetUrl + (targetUrl.includes('?') ? '&' : '?') + 'action=getAllGateVisitors&_t=' + Date.now(), { method: 'GET', mode: 'cors' });
+                    if (res.ok) json = await parseExecApiResponse(res);
                 }
 
-                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || []) : null;
+                const cloudList = (json && json.success) ? (json.visitors || json.activeVisitors || json.data || []) : null;
                 if (Array.isArray(cloudList)) {
                     const now = Date.now();
                     const listWithTs = cloudList.map(v => {
@@ -3430,7 +3544,7 @@ function resetCheckInForm() {
                     <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
                     <div class="iso-print-header">
                         <div class="iso-box-brand">
-                            <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
+                            <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
                             <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
                         </div>
 
@@ -3525,26 +3639,41 @@ function resetCheckInForm() {
             win.document.close();
         }
 
-        const LIVE_BACKEND_URL = 'https://www.safety-icapp.com/api/exec';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
-
-        function getEffectiveApiUrl() {
+                function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
+            }
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p) return p;
-                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                if (s1) {
-                    const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
                 }
-                const s2 = localStorage.getItem('hse_app_settings');
-                if (s2) {
-                    const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-            } catch(e) {}
-            return DEFAULT_API_URL;
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+            } catch (e) {}
+            return DEFAULT_GAS;
         }
 
         async function syncVisitorCheckInToCloud(visitorRecord) {
@@ -3712,7 +3841,7 @@ function resetCheckInForm() {
         // ════════════════════════════════════════════════════
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=' + Date.now())
+                navigator.serviceWorker.register('./service-worker.js?v=' + Date.now())
                     .then(reg => {
                         reg.update();
                     })
@@ -3841,7 +3970,7 @@ function resetCheckInForm() {
             renderEmergencyContacts();
             if (!navigator.onLine) return;
             try {
-                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetApiUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 const res = await fetch(`${targetApiUrl}?action=getHseEmergencyContacts&_t=${Date.now()}`);
                 if (!res.ok) return;
                 const data = await res.json();
@@ -3969,7 +4098,7 @@ function resetCheckInForm() {
 
             try {
                 const startTime = performance.now();
-                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const targetUrl = (typeof SCRIPT_URL !== 'undefined' && SCRIPT_URL) ? SCRIPT_URL : (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 await fetch(`${targetUrl}?action=ping&_t=${Date.now()}`, { method: 'HEAD', mode: 'no-cors', cache: 'no-store' });
                 const latency = Math.round(performance.now() - startTime);
 

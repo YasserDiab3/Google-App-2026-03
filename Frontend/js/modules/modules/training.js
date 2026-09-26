@@ -4808,9 +4808,12 @@ const Training = {
         const resolveSettingsMemberLabel = (raw) => {
             const s = String(raw || '').trim();
             if (!s) return '';
+            const emp = (AppState.appData?.employees || []).find((e) => 
+                String(e.email || '').toLowerCase() === s.toLowerCase() ||
+                String(e.name || e.fullName || '').trim() === s
+            );
+            if (emp && isResigned(emp)) return '';
             if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) {
-                const emp = (AppState.appData?.employees || []).find((e) => String(e.email || '').toLowerCase() === s.toLowerCase());
-                if (emp && isResigned(emp)) return '';
                 return emp ? String(emp.name || emp.fullName || '').trim() : '';
             }
             return s;
@@ -4835,11 +4838,18 @@ const Training = {
 
         if (!excludeSystemUsers) {
             (AppState.appData.users || []).forEach((user) => {
+                if (user.active === false || user.active === 'false' || user.active === 'FALSE' || user.isActive === false || user.isActive === 'false') return;
                 const role = (user.role || '').toLowerCase();
                 const isSafety = role.includes('safety') || role.includes('hse') || role.includes('سلامة');
                 if (!isSafety) return;
                 const display = this.resolveSafetyTrainerDisplayName(user);
                 if (display) {
+                    const linkedEmp = (AppState.appData?.employees || []).find((e) => 
+                        (user.employeeCode && (e.employeeNumber === user.employeeCode || e.sapId === user.employeeCode)) ||
+                        String(e.email || '').toLowerCase() === String(user.email || '').toLowerCase() ||
+                        String(e.name || e.fullName || '').trim() === display.trim()
+                    );
+                    if (linkedEmp && isResigned(linkedEmp)) return;
                     membersMap.set(display, { id: user.id || user.email || display, name: display });
                 }
             });
@@ -7769,7 +7779,7 @@ const Training = {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
-        const employees = (AppState.appData.employees || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        const employees = ((typeof EmployeeHelper !== 'undefined' ? EmployeeHelper.getEmployees() : AppState.appData.employees) || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         const contractors = (AppState.appData.contractors || [])
             .filter(c => c && c.isActive !== 'inactive' && c.isActive !== false && c.isActive !== 'false' && c.isActive !== 'FALSE')
             .sort((a, b) => (a.name || '').localeCompare(b.name || ''));

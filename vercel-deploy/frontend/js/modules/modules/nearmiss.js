@@ -47,13 +47,25 @@ const NearMiss = {
     
     async fetchLiveNearMisses() {
         try {
-            if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callApi) {
-                const res = await GoogleIntegration.callApi('getAllNearMisses');
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
+                let res = await GoogleIntegration.sendRequest({ action: 'getAllNearMisses', data: {} });
+                if (!res || !res.success || !Array.isArray(res.data) || res.data.length === 0) {
+                    res = await GoogleIntegration.sendRequest({
+                        action: 'readFromSheet',
+                        data: {
+                            sheetName: 'NearMiss',
+                            spreadsheetId: AppState.googleConfig?.sheets?.spreadsheetId
+                        }
+                    });
+                }
                 if (res && res.success && Array.isArray(res.data)) {
                     AppState.appData.nearmiss = res.data.map(item => this.normalizeRecord(item));
                     this.renderKpiStrip();
                     this.renderActiveTabContent();
-                    console.log('✅ Fetched live Near Miss data from قاعدة SQL:', res.data.length);
+                    if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                        try { window.DataManager.save(); } catch (_e) {}
+                    }
+                    console.log('✅ Fetched live Near Miss data from Google Sheets/SQL:', res.data.length);
                 }
             }
         } catch(e) {
@@ -82,60 +94,197 @@ const NearMiss = {
 
     normalizeRecord(record = {}) {
         const defaultType = this.TYPES[0].value;
-        const id = record.id || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('NEARMISS') : ('NRM-' + Math.floor(Math.random()*100000)));
+        const id = record.id || record['المعرف'] || record['كود'] || record['رقم البلاغ'] || record['id'] || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('NEARMISS') : ('NRM-' + Math.floor(Math.random()*100000)));
         let isoDate;
         try {
-            isoDate = record.date ? new Date(record.date).toISOString() : new Date().toISOString();
+            const rawDate = record.date || record['التاريخ'] || record['تاريخ'] || record.createdAt || record['تاريخ البلاغ'];
+            isoDate = rawDate ? new Date(rawDate).toISOString() : new Date().toISOString();
         } catch (error) {
             isoDate = new Date().toISOString();
         }
         
-        // معالجة attachments
+        // معالجة attachments بدقة مع دعم كافة الصيغ (Array, JSON String, Object, Base64, Google Drive, Vercel Blob, Arabic Headers)
         let attachments = [];
-        if (Array.isArray(record.attachments)) {
-            attachments = record.attachments.map(att => this.normalizeAttachment(att)).filter(Boolean);
-        } else if (typeof record.attachments === 'string' && record.attachments.trim().startsWith('[')) {
-            try {
-                const parsed = JSON.parse(record.attachments);
-                if (Array.isArray(parsed)) attachments = parsed.map(att => this.normalizeAttachment(att)).filter(Boolean);
-            } catch(e) {}
+        const rawAtts = record.attachments || record.images || record.photos
+            || record['المرفقات'] || record['مرفقات'] || record['الصور'] || record['الصورة'] || record['صورة']
+            || record['رابط الصورة'] || record['رابط_الصورة'] || record['المرفق'] || record['مرفق'];
+        if (Array.isArray(rawAtts)) {
+            attachments = rawAtts.map(att => this.normalizeAttachment(att)).filter(Boolean);
+        } else if (typeof rawAtts === 'string' && rawAtts.trim()) {
+            const trimmed = rawAtts.trim();
+            if (trimmed.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) attachments = parsed.map(att => this.normalizeAttachment(att)).filter(Boolean);
+                } catch(e) {}
+            } else if (trimmed.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    const norm = this.normalizeAttachment(parsed);
+                    if (norm) attachments.push(norm);
+                } catch(e) {}
+            } else if (trimmed.length > 5 && !trimmed.startsWith('undefined') && !trimmed.startsWith('null')) {
+                const parts = trimmed.split(/[\r\n,]+/).map(p => p.trim()).filter(Boolean);
+                for (const p of parts) {
+                    const norm = this.normalizeAttachment(p);
+                    if (norm) attachments.push(norm);
+                }
+            }
+        } else if (rawAtts && typeof rawAtts === 'object') {
+            const norm = this.normalizeAttachment(rawAtts);
+            if (norm) attachments.push(norm);
         }
 
-        const correctiveProposed = record.correctiveProposed === true || record.correctiveProposed === 'نعم' || Boolean(record.correctiveDescription || record.correctiveAction);
+        // فحص الحقول البديلة المباشرة للصورة (photoBase64, image, photo, photoUrl, fileId, Arabic aliases)
+        const directPhoto = record.photoBase64 || record.image || record.photo || record.photoUrl || record.fileId
+            || record['photoBase64'] || record['image'] || record['photo'] || record['photoUrl']
+            || record['الصورة'] || record['صورة'] || record['الصور'] || record['رابط الصورة'] || record['رابط_الصورة']
+            || record['صورة الحادث'] || record['معرف الملف'];
+        if (directPhoto && typeof directPhoto === 'string' && directPhoto.trim().length > 5 && directPhoto.trim() !== '__stripped__') {
+            const photoStr = directPhoto.trim();
+            const hasExisting = attachments.some(a => a && (a.data === photoStr || a.url === photoStr || a.fileId === photoStr));
+            if (!hasExisting) {
+                const normDirect = this.normalizeAttachment(photoStr);
+                if (normDirect) attachments.push(normDirect);
+            }
+        }
+
+        const rawCorrectiveProposed = record.correctiveProposed ?? record['الإجراء المقترح'] ?? record['مقترح الإجراء'];
+        const correctiveProposed = rawCorrectiveProposed === true || rawCorrectiveProposed === 'نعم' || Boolean(record.correctiveDescription || record.correctiveAction || record['الإجراء الوقائي'] || record['الإجراء التصحيحي']);
 
         return {
             id,
-            isoCode: record.isoCode || record.id || id,
-            type: record.type || defaultType,
-            severity: record.severity || 'متوسط',
+            isoCode: record.isoCode || record['الكود'] || record['الرقم المرجعي'] || record['رقم البلاغ'] || record.id || id,
+            type: record.type || record['نوع الحادث'] || record['النوع'] || record['التصنيف'] || defaultType,
+            severity: record.severity || record['الخطورة'] || record['مستوى الخطورة'] || record['درجة الخطورة'] || 'متوسط',
             date: isoDate,
-            observerName: record.observerName || record.reportedBy || 'فاعل خير (سري)',
-            phone: record.phone || '',
-            location: record.location || record.place || '',
-            department: record.department || record.departmentName || '',
-            description: record.description || record.details || '',
+            observerName: record.observerName || record.reportedBy || record['اسم الراصد'] || record['المبلّغ'] || record['صاحب البلاغ'] || record['الراصد'] || 'فاعل خير (سري)',
+            phone: record.phone || record['الهاتف'] || record['رقم الهاتف'] || record['الجوال'] || '',
+            location: record.location || record.place || record['الموقع'] || record['المصنع'] || record['الموقع / المصنع'] || '',
+            department: record.department || record.departmentName || record['الإدارة'] || record['القسم'] || record['الإدارة المسؤولة'] || '',
+            description: record.description || record.details || record['الوصف'] || record['تفاصيل الحادث'] || record['تفاصيل'] || '',
             correctiveProposed,
-            correctiveDescription: record.correctiveDescription || record.correctiveProposed || record.correctiveAction || '',
+            correctiveDescription: record.correctiveDescription || record.correctiveProposed || record.correctiveAction || record['الإجراء الوقائي'] || record['الإجراء التصحيحي'] || record['الإجراء'] || '',
             attachments,
-            status: record.status || (correctiveProposed ? 'مفتوح' : 'مغلق'),
-            createdAt: record.createdAt || isoDate,
-            updatedAt: record.updatedAt || isoDate
+            status: record.status || record['الحالة'] || (correctiveProposed ? 'مفتوح' : 'مغلق'),
+            createdAt: record.createdAt || record['تاريخ الإنشاء'] || isoDate,
+            updatedAt: record.updatedAt || record['تاريخ التحديث'] || isoDate
         };
+    },
+
+    extractCleanUrl(text) {
+        if (!text || typeof text !== 'string') return '';
+        const trimmed = text.trim();
+        if (trimmed.startsWith('data:image/') || trimmed.startsWith('blob:')) return trimmed;
+        const m = trimmed.match(/https?:\/\/[^\s"',]+/i);
+        return m ? m[0] : '';
+    },
+
+    extractDriveFileId(str) {
+        if (!str || typeof str !== 'string') return '';
+        const s = str.trim();
+        const m = s.match(/[?&]id=([a-zA-Z0-9_-]{20,})/i)
+            || s.match(/\/file\/d\/([a-zA-Z0-9_-]{20,})/i)
+            || s.match(/\/d\/([a-zA-Z0-9_-]{20,})/i)
+            || s.match(/googleusercontent\.com\/d\/([a-zA-Z0-9_-]{20,})/i)
+            || s.match(/\/thumbnail\?id=([a-zA-Z0-9_-]{20,})/i)
+            || s.match(/\/open\?id=([a-zA-Z0-9_-]{20,})/i);
+        if (m && m[1]) return m[1];
+        if (/^[a-zA-Z0-9_-]{25,}$/.test(s) && !s.includes('http') && !s.startsWith('att-') && !s.startsWith('ATT_')) {
+            return s;
+        }
+        if (typeof Utils !== 'undefined' && typeof Utils.extractDriveFileId === 'function') {
+            const uId = Utils.extractDriveFileId(s);
+            if (uId) return uId;
+        }
+        return '';
     },
 
     normalizeAttachment(attachment) {
         if (!attachment) return null;
         if (typeof attachment === 'string') {
-            return { id: 'att-' + Math.random(), name: 'مرفق', url: attachment, data: attachment, type: 'image/jpeg' };
+            const str = attachment.trim();
+            if (!str || str === '[]' || str === '{}' || str === 'null' || str === 'undefined' || str === '__stripped__') return null;
+            if (str.startsWith('{') && str.endsWith('}')) {
+                try {
+                    const parsed = JSON.parse(str);
+                    return this.normalizeAttachment(parsed);
+                } catch(e) {}
+            }
+
+            const cleanUrl = this.extractCleanUrl(str);
+            const fileId = this.extractDriveFileId(cleanUrl || str);
+            let name = 'صورة الحادث الوشيك';
+            const namePrefixMatch = str.match(/^(.+?)\s*-\s*https?:\/\//i);
+            if (namePrefixMatch && namePrefixMatch[1]) {
+                const cleanName = namePrefixMatch[1].trim();
+                if (cleanName && cleanName.length < 100) name = cleanName;
+            }
+
+            const resolvedUrl = cleanUrl || (fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : str);
+            const dataUri = resolvedUrl.startsWith('data:') ? resolvedUrl : '';
+
+            return {
+                id: fileId || ('att-' + Math.random().toString(36).substring(2, 9)),
+                name: name,
+                url: resolvedUrl,
+                data: dataUri,
+                fileId: fileId,
+                type: 'image/jpeg'
+            };
         }
-        return {
-            id: attachment.id || 'att-' + Math.random(),
-            name: attachment.name || 'مرفق',
-            type: attachment.type || 'image/jpeg',
-            url: attachment.url || attachment.data || '',
-            data: attachment.data || attachment.url || '',
-            size: attachment.size || 0
-        };
+        if (typeof attachment === 'object') {
+            if (attachment.__listOnly && !attachment.url && !attachment.data && !attachment.fileId) {
+                return { __listOnly: true, name: 'صورة المرفق' };
+            }
+            const rawSrc = String(attachment.data || attachment.url || attachment.directLink || attachment.shareableLink || attachment.link || '').trim();
+            const cleanUrl = this.extractCleanUrl(rawSrc);
+            const existingFileId = String(attachment.fileId || attachment.driveId || '').trim();
+            const fileId = (existingFileId && !existingFileId.startsWith('att-') && !existingFileId.startsWith('ATT_'))
+                ? existingFileId
+                : this.extractDriveFileId(cleanUrl || rawSrc || attachment.id || '');
+
+            const resolvedUrl = cleanUrl || (fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : rawSrc);
+            const dataUri = attachment.data || (resolvedUrl.startsWith('data:') ? resolvedUrl : '');
+
+            return {
+                id: fileId || attachment.id || ('att-' + Math.random().toString(36).substring(2, 9)),
+                name: attachment.name || attachment.fileName || 'صورة الحادث الوشيك',
+                type: attachment.type || attachment.mimeType || 'image/jpeg',
+                url: resolvedUrl,
+                data: dataUri,
+                fileId: fileId,
+                size: attachment.size || 0,
+                __listOnly: !!attachment.__listOnly
+            };
+        }
+        return null;
+    },
+
+    getNearMissAttachmentSrc(att) {
+        if (!att) return '';
+        if (typeof att === 'string') {
+            const clean = this.extractCleanUrl(att);
+            if (clean) return clean;
+            const fid = this.extractDriveFileId(att);
+            if (fid) return `https://drive.google.com/thumbnail?id=${fid}&sz=w1000`;
+            return att.trim();
+        }
+        const src = String(att.data || att.url || att.directLink || att.shareableLink || att.link || '').trim();
+        const clean = this.extractCleanUrl(src);
+        if (clean) return clean;
+        const fid = att.fileId || this.extractDriveFileId(src);
+        if (fid) return `https://drive.google.com/thumbnail?id=${fid}&sz=w1000`;
+        return src;
+    },
+
+    resolveNearMissDriveFileId(att) {
+        if (!att) return '';
+        if (typeof att === 'object' && att.fileId && !String(att.fileId).startsWith('att-') && !String(att.fileId).startsWith('ATT_')) {
+            return String(att.fileId).trim();
+        }
+        const src = typeof att === 'string' ? att : this.getNearMissAttachmentSrc(att);
+        return this.extractDriveFileId(src);
     },
 
     renderMainLayout(section) {
@@ -961,7 +1110,12 @@ const NearMiss = {
     },
 
     viewNearMiss(id) {
-        const item = (AppState.appData.nearmiss || []).find((record) => record.id === id);
+        const idStr = String(id || '').trim();
+        const item = (AppState.appData.nearmiss || []).find((record) => 
+            String(record.id || '').trim() === idStr || 
+            String(record.isoCode || '').trim() === idStr || 
+            record.id == id
+        );
         if (!item) {
             alert('لم يتم العثور على البلاغ');
             return;
@@ -1057,23 +1211,7 @@ const NearMiss = {
                     </div>
 
                     <!-- قسم المرفقات والصور -->
-                    ${item.attachments && item.attachments.length ? `
-                    <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;">
-                        <div style="font-weight:700; color:#334155; font-size:0.85rem; margin-bottom:10px;">
-                            <i class="fas fa-camera text-indigo-600 ml-1"></i> الصور والمرفقات الميدانية:
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            ${item.attachments.map((att) => {
-                                return `
-                                    <div style="border-radius:10px; overflow:hidden; border:1px solid #cbd5e1; cursor:pointer;" onclick="window.open('${att.data || att.url}', '_blank')">
-                                        <img src="${att.data || att.url}" style="width:100%; height:160px; object-fit:cover;" />
-                                        <div style="padding:6px 10px; background:#f8fafc; font-size:0.75rem; color:#475569;">${Utils.escapeHTML(att.name || 'صورة الحادث الوشيك')}</div>
-                                    </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
+                    ${this._buildAttachmentsSectionHtml(item)}
                 </div>
                 <div class="modal-footer" style="padding: 14px 24px; background: #fff; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size: 0.75rem; color: #94a3b8;"><i class="fas fa-check-circle text-emerald-500 ml-1"></i> تم التحقق والأرشفة في سجلات السلامة</span>
@@ -1083,6 +1221,240 @@ const NearMiss = {
         `;
 
         document.body.appendChild(modal);
+
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal);
+        }
+        this.fetchFullNearMissAndHydrate(id, modal);
+    },
+
+    _buildAttachmentsSectionHtml(record) {
+        let atts = Array.isArray(record?.attachments) ? [...record.attachments] : [];
+
+        // التحقق من الحقول البديلة للصورة (photoBase64, image, photo, photoUrl, fileId, Arabic aliases)
+        const directCandidates = [
+            record?.photoBase64, record?.image, record?.photo, record?.photoUrl, record?.fileId,
+            record?.['photoBase64'], record?.['image'], record?.['photo'], record?.['photoUrl'],
+            record?.['الصورة'], record?.['صورة'], record?.['الصور'], record?.['المرفقات'],
+            record?.['رابط الصورة'], record?.['رابط_الصورة'], record?.['صورة الحادث'], record?.['معرف الملف']
+        ];
+        directCandidates.forEach(cand => {
+            if (cand && typeof cand === 'string' && cand.trim().length > 5 && cand.trim() !== '__stripped__') {
+                const s = cand.trim();
+                const exists = atts.some(a => a && (a.url === s || a.data === s || a.fileId === s));
+                if (!exists) {
+                    const norm = this.normalizeAttachment(s);
+                    if (norm) atts.push(norm);
+                }
+            }
+        });
+
+        const real = atts.map(a => this.normalizeAttachment(a)).filter(a => a && (a.fileId || (a.url && a.url.length > 5) || (a.data && a.data.length > 5)));
+        const isWaiting = atts.some(a => a && a.__listOnly && !a.url && !a.data);
+
+        if (isWaiting && !real.length) {
+            return `
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;" id="nrm-attachments-section">
+                    <div style="font-weight:700; color:#334155; font-size:0.85rem; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+                        <span><i class="fas fa-camera text-indigo-600 ml-1"></i> الصور والمرفقات الميدانية:</span>
+                        <span style="font-size:0.75rem; color:#6366f1;"><i class="fas fa-spinner fa-spin ml-1"></i> جاري استرداد الصور...</span>
+                    </div>
+                    <div style="display:flex; justify-content:center; align-items:center; min-height:140px; background:#f8fafc; border-radius:10px; border:1px dashed #cbd5e1;">
+                        <span style="font-size:0.82rem; color:#64748b;"><i class="fas fa-sync fa-spin ml-2 text-indigo-500"></i> جاري جلب المرفقات من السيرفر...</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (!real.length) {
+            return `
+                <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;" id="nrm-attachments-section">
+                    <div style="font-weight:700; color:#64748b; font-size:0.85rem; display:flex; align-items:center; gap:8px;">
+                        <i class="fas fa-camera text-gray-400"></i>
+                        <span>الصور والمرفقات: لا توجد صور مرفقة بهذا البلاغ</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px;" id="nrm-attachments-section">
+                <div style="font-weight:700; color:#334155; font-size:0.85rem; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-camera text-indigo-600 ml-1"></i>
+                        <span>الصور والمرفقات الميدانية (${real.length}):</span>
+                    </div>
+                    <span style="font-size:0.75rem; color:#64748b;">انقر على الصورة للمعاينة بالحجم الكامل</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${real.map((att, idx) => {
+                        const rawSrc = this.getNearMissAttachmentSrc(att);
+                        const fileId = this.resolveNearMissDriveFileId(att);
+                        const isData = String(rawSrc).startsWith('data:image/') || String(rawSrc).startsWith('blob:');
+
+                        // ✅ عرض فوري عبر Google CDN المباشر بدلاً من فخ الصورة الشفافة (1x1 transparent gif)
+                        let displaySrc = isData ? rawSrc : (fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : rawSrc);
+                        let driveProxyAttr = (!isData && fileId) ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
+                        const name = Utils.escapeHTML(att.name || ('صورة ' + (idx + 1)));
+
+                        // كود السقوط الاحتياطي المتدرج لمنع اختفاء الصورة نهائياً
+                        const fallbackHandler = fileId ? `
+                            if (!this.dataset.retry) {
+                                this.dataset.retry = '1';
+                                this.src = 'https://lh3.googleusercontent.com/d/${fileId}=w1000';
+                            } else if (this.dataset.retry === '1') {
+                                this.dataset.retry = '2';
+                                this.src = 'https://drive.google.com/uc?export=view&id=${fileId}';
+                            } else if (this.dataset.retry === '2' && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
+                                this.dataset.retry = '3';
+                                Utils.fetchDriveImageDataUri('${fileId}', { force: true }).then(uri => {
+                                    if (uri) this.src = uri;
+                                    else this.style.opacity = '0.35';
+                                }).catch(() => { this.style.opacity = '0.35'; });
+                            } else {
+                                this.onerror = null;
+                                this.style.opacity = '0.35';
+                            }
+                        `.replace(/\s+/g, ' ').trim() : `this.onerror=null; this.style.opacity='0.35';`;
+
+                        return `
+                            <div class="nearmiss-attachment-card" style="border-radius:12px; overflow:hidden; border:1.5px solid #e2e8f0; background:#f8fafc; transition:transform 0.2s, box-shadow 0.2s;" class="hover:shadow-md">
+                                <div style="width:100%; height:200px; display:flex; align-items:center; justify-content:center; background:#0f172a; position:relative; overflow:hidden; cursor:pointer;" onclick="NearMiss.viewFullImage(this.querySelector('img')?.currentSrc || '${Utils.escapeHTML(rawSrc || fileId)}')">
+                                    <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr}
+                                         alt="${name}"
+                                         style="max-width:100%; max-height:200px; object-fit:contain; transition:transform 0.3s;"
+                                         onerror="${fallbackHandler}"
+                                         class="hover:scale-105" />
+                                    <div style="position:absolute; bottom:8px; left:8px; background:rgba(0,0,0,0.6); color:#fff; padding:3px 8px; border-radius:6px; font-size:0.7rem; pointer-events:none; display:flex; align-items:center; gap:4px;">
+                                        <i class="fas fa-search-plus"></i> تكبير
+                                    </div>
+                                </div>
+                                <div style="padding:8px 12px; background:#fff; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0;">
+                                    <span style="font-size:0.78rem; font-weight:700; color:#334155; truncate max-w-[200px];"><i class="fas fa-image text-indigo-500 ml-1"></i>${name}</span>
+                                    <button type="button" onclick="NearMiss.viewFullImage(this.closest('.nearmiss-attachment-card')?.querySelector('img')?.currentSrc || '${Utils.escapeHTML(rawSrc || fileId)}')" style="font-size:0.75rem; color:#4f46e5; font-weight:700; background:none; border:none; cursor:pointer; display:flex; align-items:center; gap:3px;">
+                                        <i class="fas fa-expand"></i> عرض بالحجم الكامل
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    },
+
+    async fetchFullNearMissAndHydrate(id, modal) {
+        try {
+            if (!id || !modal) return;
+            const res = await (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function'
+                ? GoogleIntegration.sendRequest({ action: 'getNearMiss', data: { id: id, nearMissId: id } })
+                : null);
+
+            if (res && res.success && res.data) {
+                const fresh = this.normalizeRecord(res.data);
+                const idx = (AppState.appData.nearmiss || []).findIndex(r => String(r.id) === String(id) || String(r.isoCode) === String(id) || r.id == id);
+                if (idx !== -1) {
+                    AppState.appData.nearmiss[idx] = { ...AppState.appData.nearmiss[idx], ...fresh };
+                }
+
+                if (document.body.contains(modal)) {
+                    const sec = modal.querySelector('#nrm-attachments-section');
+                    const newHtml = this._buildAttachmentsSectionHtml(fresh);
+                    if (sec && newHtml) {
+                        const tmp = document.createElement('div');
+                        tmp.innerHTML = newHtml;
+                        const newNode = tmp.firstElementChild;
+                        if (newNode) {
+                            sec.replaceWith(newNode);
+                            if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                                Utils.hydrateDriveProxyImages(modal);
+                            }
+                        }
+                    } else if (!sec && newHtml) {
+                        const body = modal.querySelector('.modal-body');
+                        if (body) {
+                            const tmp = document.createElement('div');
+                            tmp.innerHTML = newHtml;
+                            const newNode = tmp.firstElementChild;
+                            if (newNode) {
+                                body.appendChild(newNode);
+                                if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+                                    Utils.hydrateDriveProxyImages(modal);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            Utils?.safeWarn?.('NearMiss: تعذر جلب تفاصيل المرفقات من السيرفر:', e);
+        }
+    },
+
+    viewFullImage(urlOrId) {
+        if (!urlOrId) return;
+        document.querySelectorAll('.nearmiss-photo-lightbox').forEach((el) => el.remove());
+
+        const isData = String(urlOrId).startsWith('data:image/') || String(urlOrId).startsWith('blob:');
+        const fileId = isData ? '' : this.resolveNearMissDriveFileId(urlOrId);
+        const displaySrc = isData ? urlOrId : (fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1600` : String(urlOrId).trim());
+        const driveProxyAttr = (!isData && fileId) ? ` data-drive-proxy-id="${Utils.escapeHTML(fileId)}"` : '';
+
+        const fallbackHandler = fileId ? `
+            if (!this.dataset.retry) {
+                this.dataset.retry = '1';
+                this.src = 'https://lh3.googleusercontent.com/d/${fileId}=w1600';
+            } else if (this.dataset.retry === '1') {
+                this.dataset.retry = '2';
+                this.src = 'https://drive.google.com/uc?export=view&id=${fileId}';
+            } else if (this.dataset.retry === '2' && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
+                this.dataset.retry = '3';
+                Utils.fetchDriveImageDataUri('${fileId}', { force: true }).then(uri => {
+                    if (uri) this.src = uri;
+                }).catch(() => {});
+            } else {
+                this.onerror = null;
+            }
+        `.replace(/\s+/g, ' ').trim() : `this.onerror=null;`;
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay nearmiss-photo-lightbox';
+        modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:99999; padding:16px; backdrop-filter:blur(6px); direction:rtl;';
+        modal.innerHTML = `
+            <div style="max-width:92vw; max-height:92vh; background:#0f172a; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); border:1px solid #334155;">
+                <div style="padding:12px 18px; background:#1e293b; color:#fff; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155;">
+                    <span style="font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-image text-amber-400"></i> معاينة صورة الحادث الوشيك
+                    </span>
+                    <button type="button" class="modal-close-lightbox" style="background:none; border:none; color:#cbd5e1; font-size:1.3rem; cursor:pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="flex:1; display:flex; align-items:center; justify-content:center; padding:16px; overflow:auto; min-width:320px; min-height:240px; background:#020617;">
+                    <img src="${Utils.escapeHTML(displaySrc)}"${driveProxyAttr}
+                         alt="معاينة الصورة"
+                         onerror="${fallbackHandler}"
+                         style="max-width:88vw; max-height:78vh; object-fit:contain; border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5);" />
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.modal-close-lightbox')?.addEventListener('click', () => modal.remove());
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', onKey);
+            }
+        };
+        document.addEventListener('keydown', onKey);
+
+        if (typeof Utils !== 'undefined' && typeof Utils.hydrateDriveProxyImages === 'function') {
+            Utils.hydrateDriveProxyImages(modal);
+        }
     },
 
     showForm(data = null) {
@@ -1299,6 +1671,38 @@ const NearMiss = {
         const recordId = existingRecord?.id || ('NRM-' + Date.now());
         const isoCode = existingRecord?.isoCode || ('NM-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random()*9000));
 
+        // رفع المرفقات التي بصيغة base64 إلى Drive قبل الحفظ
+        const finalAttachments = [];
+        for (let i = 0; i < this.state.currentAttachments.length; i++) {
+            const att = this.state.currentAttachments[i];
+            if (!att) continue;
+            const rawData = att.data || att.url || '';
+            if (typeof rawData === 'string' && rawData.startsWith('data:')) {
+                try {
+                    const fileName = att.name || ('nearmiss_' + recordId + '_' + (i + 1) + '.jpg');
+                    const mimeType = att.type || 'image/jpeg';
+                    if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.uploadFileToDrive === 'function') {
+                        const upRes = await GoogleIntegration.uploadFileToDrive(rawData, fileName, mimeType, 'NearMiss');
+                        if (upRes && upRes.success && (upRes.fileId || upRes.directLink || upRes.shareableLink)) {
+                            finalAttachments.push({
+                                id: upRes.fileId || att.id || ('att-' + Date.now() + '-' + i),
+                                name: fileName,
+                                type: mimeType,
+                                url: upRes.directLink || upRes.shareableLink || ('https://drive.google.com/uc?export=view&id=' + upRes.fileId),
+                                directLink: upRes.directLink || upRes.shareableLink,
+                                shareableLink: upRes.shareableLink,
+                                fileId: upRes.fileId || ''
+                            });
+                            continue;
+                        }
+                    }
+                } catch (_upErr) {
+                    console.warn('Near miss attachment upload failed, keeping fallback:', _upErr);
+                }
+            }
+            finalAttachments.push(att);
+        }
+
         const record = {
             id: recordId,
             isoCode: isoCode,
@@ -1311,13 +1715,13 @@ const NearMiss = {
             description,
             correctiveProposed: correctiveCheck,
             correctiveDescription: correctiveCheck ? correctiveDescription : '',
-            attachments: this.state.currentAttachments,
+            attachments: finalAttachments,
             status: correctiveCheck ? 'مفتوح' : 'مغلق',
             updatedAt: new Date().toISOString()
         };
 
         if (existingRecord) {
-            const idx = AppState.appData.nearmiss.findIndex(r => r.id === existingRecord.id);
+            const idx = AppState.appData.nearmiss.findIndex(r => String(r.id) === String(existingRecord.id) || String(r.isoCode) === String(existingRecord.id) || r.id == existingRecord.id);
             if (idx !== -1) AppState.appData.nearmiss[idx] = record;
         } else {
             record.createdAt = new Date().toISOString();
@@ -1338,17 +1742,27 @@ const NearMiss = {
     },
 
     editNearMiss(id) {
-        const item = (AppState.appData.nearmiss || []).find((record) => record.id === id);
+        const idStr = String(id || '').trim();
+        const item = (AppState.appData.nearmiss || []).find((record) => 
+            String(record.id || '').trim() === idStr || 
+            String(record.isoCode || '').trim() === idStr || 
+            record.id == id
+        );
         if (item) this.showForm(item);
     },
 
     deleteNearMiss(id) {
         if (!confirm('هل أنت متأكد من حذف هذا البلاغ؟')) return;
 
-        AppState.appData.nearmiss = (AppState.appData.nearmiss || []).filter(r => r.id !== id);
+        const idStr = String(id || '').trim();
+        AppState.appData.nearmiss = (AppState.appData.nearmiss || []).filter(r => 
+            String(r.id || '').trim() !== idStr && 
+            String(r.isoCode || '').trim() !== idStr && 
+            r.id != id
+        );
         try {
             if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.callApi) {
-                GoogleIntegration.callApi('deleteNearMiss', { nearMissId: id });
+                GoogleIntegration.callApi('deleteNearMiss', { nearMissId: id, id: id });
             }
         } catch(e) {}
 

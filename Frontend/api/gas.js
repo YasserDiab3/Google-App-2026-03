@@ -4,11 +4,11 @@
  */
 'use strict';
 
-const GAS_EXEC_URL = process.env.HSE_GAS_EXEC_URL
-    || 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+const ACTIVE_GAS_EXEC_URL = 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+const GAS_EXEC_URL = ACTIVE_GAS_EXEC_URL;
 
-async function proxyToGas(body) {
-    const first = await fetch(GAS_EXEC_URL, {
+async function fetchGasUrl(targetUrl, body) {
+    const first = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(body || {}),
@@ -27,17 +27,29 @@ async function proxyToGas(body) {
         text = await first.text();
     }
 
-    try {
-        return JSON.parse(text);
-    } catch (_e) {
-        const snip = String(text || '').replace(/\s+/g, ' ').slice(0, 180);
-        return {
-            success: false,
-            message: 'استجابة غير صالحة من Apps Script',
-            errorCode: 'GAS_PROXY_PARSE',
-            snippet: snip
-        };
+    return JSON.parse(text);
+}
+
+async function proxyToGas(body) {
+    const urlsToTry = [ACTIVE_GAS_EXEC_URL];
+    if (process.env.HSE_GAS_EXEC_URL && process.env.HSE_GAS_EXEC_URL !== ACTIVE_GAS_EXEC_URL) {
+        urlsToTry.push(process.env.HSE_GAS_EXEC_URL);
     }
+    let lastSnip = '';
+    for (const url of urlsToTry) {
+        try {
+            const parsed = await fetchGasUrl(url, body);
+            if (parsed && typeof parsed === 'object') return parsed;
+        } catch (err) {
+            lastSnip = String(err && err.message || err || '').slice(0, 180);
+        }
+    }
+    return {
+        success: false,
+        message: 'استجابة غير صالحة من Apps Script',
+        errorCode: 'GAS_PROXY_PARSE',
+        snippet: lastSnip
+    };
 }
 
 module.exports = async (req, res) => {

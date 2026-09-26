@@ -2737,11 +2737,6 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             return { success: false, message: 'لا توجد بيانات للإضافة.' };
         }
         
-        // ✅ إبطال الكاش في البداية لضمان أن جميع القراءات اللاحقة دقيقة 100%
-        try {
-            invalidateHseSheetCaches(sheetName);
-        } catch(e) {}
-        
         // فتح الجدول
         let spreadsheet;
         try {
@@ -3023,48 +3018,15 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             return processed;
         };
         
-        // ✅ الحصول على آخر صف - استخدام طريقة موثوقة 100%
-        // ✅ نستخدم getDataRange() للحصول على نطاق البيانات الفعلي
-        let lastRow = 1; // افتراضياً: الرؤوس فقط
-        
+        let lastRow = 1;
         try {
-            // ✅ استخدام getDataRange() للحصول على نطاق البيانات الفعلي
-            const dataRange = sheet.getDataRange();
-            if (dataRange && dataRange.getNumRows() > 0) {
-                // ✅ getDataRange() يعيد نطاق يبدأ من الصف 1 (الرؤوس)
-                // ✅ getNumRows() يعيد عدد الصفوف (بما في ذلك الرؤوس)
-                // ✅ لذلك آخر صف = getNumRows()
-                lastRow = dataRange.getNumRows();
-                
-                // ✅ التحقق: إذا كان lastRow = 1، يعني فقط الرؤوس
-                // ✅ إذا كان lastRow > 1، يعني هناك بيانات بعد الرؤوس
-                if (lastRow < 1) {
-                    lastRow = 1;
-                }
-            } else {
-                // ✅ لا توجد بيانات - فقط الرؤوس
-                lastRow = 1;
-            }
+            lastRow = sheet.getLastRow() || 1;
+            if (lastRow < 1) lastRow = 1;
         } catch (e) {
-            // ✅ في حالة الخطأ، نستخدم getLastRow() كبديل
-            Logger.log('Warning: Could not use getDataRange(), using getLastRow(): ' + e.toString());
-            try {
-                lastRow = sheet.getLastRow();
-                if (lastRow < 1) {
-                    lastRow = 1;
-                }
-            } catch (e2) {
-                Logger.log('Error: Could not get last row: ' + e2.toString());
-                lastRow = 1; // افتراضياً: الرؤوس فقط
-            }
+            lastRow = 1;
         }
         
-        // ✅ حساب startRow: إذا كانت الورقة فارغة (فقط الرؤوس)، نبدأ من الصف 2
-        // ✅ إذا كانت هناك بيانات، نضيف بعد آخر صف
         const startRow = lastRow === 1 ? 2 : lastRow + 1;
-        
-        // ✅ تسجيل للمراقبة
-        Logger.log('appendToSheet: lastRow=' + lastRow + ', startRow=' + startRow + ', sheetName=' + sheetName + ', numRows=' + (sheet.getDataRange() ? sheet.getDataRange().getNumRows() : 'N/A'));
 
         if (Array.isArray(data)) {
             // إذا كانت مصفوفة من الكائنات
@@ -3236,145 +3198,71 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
             if (recordId) {
                 // قراءة البيانات الموجودة للتحقق من التكرار
                 try {
-                    if (sheetName === 'PTW') {
-                        var dupRowAppend = findSheetRowNumberByIdColumn_(sheet, recordId);
-                        if (dupRowAppend) {
-                            Logger.log('⚠️ Duplicate record found in appendToSheet (PTW id scan): id=' + recordId);
-                            Logger.log('⚠️ Updating existing record instead of adding duplicate');
-                            var mergedDup = mergeUpdateExistingSheetRow_(sheet, sheetName, dupRowAppend, processedData);
-                            if (mergedDup) {
-                                return withResolvedPTWRegistry_(sheetName, {
-                                    success: true,
-                                    message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
-                                    isDuplicate: true,
-                                    rowNumber: dupRowAppend
-                                }, resolvedPTWRegistryForAppend);
-                            }
-                            var updateResultPTW = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
-                            if (updateResultPTW && updateResultPTW.success) {
-                                return withResolvedPTWRegistry_(sheetName, {
-                                    success: true,
-                                    message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
-                                    isDuplicate: true,
-                                    rowNumber: updateResultPTW.rowNumber || null
-                                }, resolvedPTWRegistryForAppend);
-                            }
-                            Logger.log('⚠️ Failed to update existing PTW record after fast merge, proceeding with append');
+                    var dupRowAppend = findSheetRowNumberByIdColumn_(sheet, recordId);
+                    if (dupRowAppend) {
+                        Logger.log('⚠️ Duplicate record found in appendToSheet (id scan): id=' + recordId + ', sheetName=' + sheetName);
+                        var mergedDup = mergeUpdateExistingSheetRow_(sheet, sheetName, dupRowAppend, processedData);
+                        if (mergedDup) {
+                            return withResolvedPTWRegistry_(sheetName, {
+                                success: true,
+                                message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
+                                isDuplicate: true,
+                                rowNumber: dupRowAppend
+                            }, resolvedPTWRegistryForAppend);
                         }
-                    } else {
-                        const existingData = readFromSheet(sheetName, spreadsheetId);
-                        if (Array.isArray(existingData) && existingData.length > 0) {
-                            const duplicate = existingData.find(item => {
-                                if (!item || !item.id) return false;
-                                return String(item.id).trim() === recordId;
-                            });
-
-                            if (duplicate) {
-                                Logger.log('⚠️ Duplicate record found in appendToSheet: id=' + recordId + ', sheetName=' + sheetName);
-                                Logger.log('⚠️ Updating existing record instead of adding duplicate');
-
-                                const updateResult = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
-                                if (updateResult && updateResult.success) {
-                                    return withResolvedPTWRegistry_(sheetName, {
-                                        success: true,
-                                        message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
-                                        isDuplicate: true,
-                                        rowNumber: updateResult.rowNumber || null
-                                    }, resolvedPTWRegistryForAppend);
-                                }
-                                Logger.log('⚠️ Failed to update existing record, proceeding with append');
-                            }
+                        var updateResult = updateSingleRowInSheet(sheetName, recordId, processedData, spreadsheetId);
+                        if (updateResult && updateResult.success) {
+                            return withResolvedPTWRegistry_(sheetName, {
+                                success: true,
+                                message: 'تم تحديث السجل الموجود بدلاً من إضافة مكرر',
+                                isDuplicate: true,
+                                rowNumber: updateResult.rowNumber || null
+                            }, resolvedPTWRegistryForAppend);
                         }
                     }
                 } catch (duplicateCheckError) {
                     Logger.log('⚠️ Error checking for duplicates in appendToSheet: ' + duplicateCheckError.toString());
-                    // نتابع الإضافة في حالة فشل التحقق من التكرار
                 }
             }
             
-            // ✅ التأكد من أن الرؤوس في الورقة تطابق headers المحسوبة
-            // ✅ إعادة قراءة الرؤوس الفعلية من الورقة بعد ensureSheetHeaders للتأكد من التحديثات
-            let actualHeaders = [];
-            try {
-                const lastColumn = sheet.getLastColumn();
-                if (lastColumn > 0) {
-                    const headerRange = sheet.getRange(1, 1, 1, lastColumn);
-                    actualHeaders = headerRange.getValues()[0];
-                }
-            } catch (e) {
-                Logger.log('Warning: Could not read actual headers from sheet: ' + e.toString());
-            }
-            
-            // ✅ إعادة قراءة الرؤوس الفعلية من الورقة بعد ensureSheetHeaders للتأكد من التحديثات
-            // ✅ ensureSheetHeaders قد تضيف حقول جديدة، لذلك نقرأ الرؤوس مرة أخرى
+            // ✅ قراءة الرؤوس الفعلية مرة واحدة فقط من الورقة
             let updatedHeaders = [];
             try {
                 const updatedLastColumn = sheet.getLastColumn();
                 if (updatedLastColumn > 0) {
-                    const updatedHeaderRange = sheet.getRange(1, 1, 1, updatedLastColumn);
-                    updatedHeaders = updatedHeaderRange.getValues()[0];
+                    updatedHeaders = sheet.getRange(1, 1, 1, updatedLastColumn).getValues()[0];
                 }
             } catch (e) {
                 Logger.log('Warning: Could not read updated headers from sheet: ' + e.toString());
-                updatedHeaders = headers; // استخدام headers المحسوبة كبديل
+                updatedHeaders = headers;
             }
             
-            // ✅ استخدام رؤوس الورقة الفعلية دائماً عند توفرها (ترتيب الأعمدة المادي)
             const finalHeaders = (updatedHeaders && updatedHeaders.length > 0)
                                  ? updatedHeaders.map(function(h) {
                                      return (h === null || h === undefined) ? '' : String(h).trim();
                                  })
                                  : headers;
             
-            // ✅ إعداد rowValues حسب ترتيب finalHeaders
-            // ✅ Fix: write Dates as real Date objects (not ISO JSON strings)
             const rowValues = finalHeaders.map(h => toSheetCellValue_(h, processedData[h], sheetName));
             
-            // ✅ التحقق من تطابق عدد الأعمدة قبل appendRow()
-            const actualColumnCount = sheet.getLastColumn();
+            const actualColumnCount = updatedHeaders.length || sheet.getLastColumn();
             if (actualColumnCount > 0 && rowValues.length !== actualColumnCount) {
-                Logger.log('⚠️ Warning: rowValues.length (' + rowValues.length + ') != actualColumnCount (' + actualColumnCount + ')');
-                Logger.log('⚠️ Adjusting rowValues to match actual column count');
-                
-                // ✅ تعديل rowValues لتطابق عدد الأعمدة الفعلية
                 if (rowValues.length < actualColumnCount) {
-                    // ✅ إضافة قيم فارغة إذا كان rowValues أقصر
                     while (rowValues.length < actualColumnCount) {
                         rowValues.push('');
                     }
                 } else if (rowValues.length > actualColumnCount) {
-                    // ✅ تقصير rowValues إذا كان أطول
                     rowValues.splice(actualColumnCount);
                 }
-                Logger.log('✅ Adjusted rowValues.length to ' + rowValues.length + ' to match actualColumnCount');
             }
             
             try {
-                // ✅ التحقق من آخر صف قبل الإضافة - استخدام طريقة موثوقة 100%
-                // ✅ قراءة البيانات الفعلية من الورقة للحصول على عدد الصفوف الصحيح
                 let lastRowBefore = 1;
                 try {
-                    // ✅ قراءة البيانات الخام من الشيت لمعرفة آخر صف حقيقي يحتوي على بيانات (تجاهل التنسيقات)
-                    // هذه الطريقة أسرع وأكثر دقة ولا تتأثر بالصفوف الفارغة في المنتصف
-                    const dataRange = sheet.getDataRange();
-                    if (dataRange) {
-                        const rawValues = dataRange.getValues();
-                        let trueLastRow = 1;
-                        // نبحث من الأسفل للأعلى عن أول صف يحتوي على أي بيانات فعلية
-                        for (let i = rawValues.length - 1; i >= 0; i--) {
-                            const row = rawValues[i];
-                            if (row.some(cell => cell !== '' && cell !== null && cell !== undefined)) {
-                                trueLastRow = i + 1; // رقم الصف (1-indexed)
-                                break;
-                            }
-                        }
-                        lastRowBefore = trueLastRow;
-                        Logger.log('✅ Calculated true lastRowBefore directly from raw array scanning: ' + lastRowBefore);
-                    }
-                } catch (readError) {
-                    // ✅ في حالة فشل قراءة البيانات، نستخدم getLastRow()
-                    Logger.log('⚠️ Could not read raw data from sheet, using getLastRow(): ' + readError.toString());
                     lastRowBefore = sheet.getLastRow() || 1;
+                    if (lastRowBefore < 1) lastRowBefore = 1;
+                } catch (readError) {
+                    lastRowBefore = 1;
                 }
                 
                 Logger.log('appendToSheet: Last row before appendRow() = ' + lastRowBefore + ', sheetName=' + sheetName);
@@ -3394,9 +3282,6 @@ function appendToSheet(sheetName, data, spreadsheetId = null) {
                 }
                 
                 sheet.getRange(startRowToWrite, 1, 1, columnsToWrite).setValues([rowValues]);
-                
-                // ✅ حفظ البيانات مباشرة 
-                SpreadsheetApp.flush();
                 
                 // ✅ إبطال الكاش
                 invalidateHseSheetCaches(sheetName);
@@ -3617,7 +3502,7 @@ function syncContractorRequestRowForSheetHeaders_(record, headers, sheetName) {
 /**
  * العثور على رقم صف البيانات (≥2) عبر عمود id فقط — أسرع بكثير من readFromSheet على ورقة PTW الكبيرة.
  */
-function findSheetRowNumberByIdColumn_(sheet, recordId) {
+function findSheetRowNumberByIdColumn_(sheet, recordId, scanFullSheet) {
     var rid = String(recordId || '').trim();
     if (!rid || !sheet) return null;
     try {
@@ -3631,10 +3516,15 @@ function findSheetRowNumberByIdColumn_(sheet, recordId) {
         if (idCol < 0) return null;
         var lastRow = sheet.getLastRow();
         if (lastRow < 2) return null;
-        var colValues = sheet.getRange(2, idCol + 1, lastRow, idCol + 1).getValues();
-        for (var i = 0; i < colValues.length; i++) {
+
+        // للأداء الفائق في الشيتات الضخمة (مثل DailyObservations 8,500+ صف):
+        // فحص أحدث 50 صفاً أولاً من الأسفل للأعلى (حيث تقع 99% من محاولات التكرار)
+        var checkRows = (scanFullSheet === true || lastRow <= 60) ? (lastRow - 1) : 50;
+        var startR = lastRow - checkRows + 1;
+        var colValues = sheet.getRange(startR, idCol + 1, checkRows, 1).getValues();
+        for (var i = colValues.length - 1; i >= 0; i--) {
             if (String(colValues[i][0] || '').trim() === rid) {
-                return i + 2;
+                return startR + i;
             }
         }
     } catch (e) {
@@ -5260,50 +5150,9 @@ function generateNextObservationIdentity(sheetName, spreadsheetId, skipLock) {
         if (!skipLock) {
             try {
                 lock = LockService.getScriptLock();
-                lock.waitLock(30000);
+                lock.waitLock(10000);
             } catch (lockEx) {
                 Logger.log('generateNextObservationIdentity lock failed: ' + lockEx.toString());
-            }
-        }
-        
-        // مسح الكاش وقراءة مباشرة من الورقة (بدون فلتر أمان) كمصدر حقيقة
-        try {
-            invalidateHseSheetCaches(sheetName);
-        } catch (e) {}
-        var existingData = [];
-        try {
-            existingData = readFromSheet(sheetName, targetSpreadsheetId, true);
-        } catch (e) {
-            existingData = [];
-        }
-        
-        var patternDob = /^DOB-(\d+)$/i;
-        var patternObs = /^OBS-\d{6}-(\d+)$/i;
-        var patternTrailingNum = /(\d+)$/;
-        var maxNum = 0;
-        
-        for (var i = 0; i < (existingData || []).length; i++) {
-            var rec = existingData[i];
-            if (!rec) continue;
-            var candidates = [];
-            if (rec.id) candidates.push(String(rec.id).trim());
-            if (rec.isoCode) candidates.push(String(rec.isoCode).trim());
-            for (var c = 0; c < candidates.length; c++) {
-                var val = candidates[c];
-                var num = 0;
-                var mDob = val.match(patternDob);
-                if (mDob) {
-                    num = parseInt(mDob[1], 10);
-                } else {
-                    var mObs = val.match(patternObs);
-                    if (mObs) {
-                        num = parseInt(mObs[1], 10);
-                    } else {
-                        var mTrail = val.match(patternTrailingNum);
-                        if (mTrail) num = parseInt(mTrail[1], 10);
-                    }
-                }
-                if (!isNaN(num) && num > maxNum) maxNum = num;
             }
         }
         
@@ -5315,8 +5164,50 @@ function generateNextObservationIdentity(sheetName, spreadsheetId, skipLock) {
             if (cachedStr) cachedMax = parseInt(cachedStr, 10) || 0;
         }
 
-        if (maxNum < cachedMax) {
-            maxNum = cachedMax;
+        var maxNum = cachedMax;
+        
+        // إذا لم تكن القيمة مخزنة في ScriptProperties، نفحص فقط آخر 10 صفوف من الورقة بدلاً من قراءة 8,500 صف
+        if (maxNum <= 0) {
+            try {
+                var ssFast = SpreadsheetApp.openById(targetSpreadsheetId);
+                var shFast = ssFast ? ssFast.getSheetByName(sheetName) : null;
+                if (shFast && shFast.getLastRow() > 1) {
+                    var lastR = shFast.getLastRow();
+                    var lastC = shFast.getLastColumn();
+                    var checkRows = Math.min(10, lastR - 1);
+                    var startR = lastR - checkRows + 1;
+                    var hdrs = shFast.getRange(1, 1, 1, lastC).getValues()[0].map(function(h) { return String(h || '').trim(); });
+                    var idIdx = hdrs.indexOf('id');
+                    var isoIdx = hdrs.indexOf('isoCode');
+                    var idVals = idIdx >= 0 ? shFast.getRange(startR, idIdx + 1, checkRows, 1).getValues() : [];
+                    var isoVals = isoIdx >= 0 ? shFast.getRange(startR, isoIdx + 1, checkRows, 1).getValues() : [];
+                    var rowCount = Math.max(idVals.length, isoVals.length);
+                    for (var i = 0; i < rowCount; i++) {
+                        var c1 = (idVals[i] && idVals[i][0]) ? String(idVals[i][0]).trim() : '';
+                        var c2 = (isoVals[i] && isoVals[i][0]) ? String(isoVals[i][0]).trim() : '';
+                        var candidates = [c1, c2].filter(Boolean);
+                        for (var c = 0; c < candidates.length; c++) {
+                            var val = candidates[c];
+                            var num = 0;
+                            var mDob = val.match(/^DOB[_-](\d+)$/i);
+                            if (mDob) {
+                                num = parseInt(mDob[1], 10);
+                            } else {
+                                var mObs = val.match(/^OBS-\d{4,6}-(\d+)$/i);
+                                if (mObs) {
+                                    num = parseInt(mObs[1], 10);
+                                } else {
+                                    var mTrail = val.match(/(\d+)$/);
+                                    if (mTrail) num = parseInt(mTrail[1], 10);
+                                }
+                            }
+                            if (!isNaN(num) && num > maxNum) maxNum = num;
+                        }
+                    }
+                }
+            } catch (eFast) {
+                Logger.log('generateNextObservationIdentity fast read error: ' + eFast.toString());
+            }
         }
         
         var nextNum = maxNum + 1;

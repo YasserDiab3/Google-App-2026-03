@@ -126,15 +126,12 @@ const Dashboard = {
             }
         }
 
-        const getArr = (k1, k2) => {
-            if (Array.isArray(AppState?.appData?.[k1]) && AppState.appData[k1].length > 0) return AppState.appData[k1];
-            if (Array.isArray(AppState?.appData?.[k2]) && AppState.appData[k2].length > 0) return AppState.appData[k2];
-            if (Array.isArray(data?.[k1]) && data[k1].length > 0) return data[k1];
-            if (Array.isArray(data?.[k2]) && data[k2].length > 0) return data[k2];
-            return Array.isArray(AppState?.appData?.[k1]) ? AppState.appData[k1] : [];
-        };
-        const list = getArr('ptw', 'PTW');
-        const registryRaw = getArr('ptwRegistry', 'PTWRegistry');
+        const list = Array.isArray(AppState?.appData?.ptw) && AppState.appData.ptw.length > 0
+            ? AppState.appData.ptw
+            : (Array.isArray(data?.ptw) ? data.ptw : []);
+        const registryRaw = Array.isArray(AppState?.appData?.ptwRegistry) && AppState.appData.ptwRegistry.length > 0
+            ? AppState.appData.ptwRegistry
+            : (Array.isArray(data?.ptwRegistry) ? data.ptwRegistry : []);
         const registry = mapRegistryRows(registryRaw);
 
         const mergedMap = new Map();
@@ -544,14 +541,9 @@ const Dashboard = {
             if (this.dashboardCan('ppe')) tuples.push(['PPE', 'ppe']);
             if (this.dashboardCan('behavior-monitoring')) tuples.push(['BehaviorMonitoring', 'behaviorMonitoring']);
             if (this.dashboardCan('clinic')) {
-                tuples.push(['ClinicVisits', 'clinicVisits']);
-                tuples.push(['ClinicContractorVisits', 'clinicContractorVisits']);
                 tuples.push(['SickLeave', 'sickLeave']);
                 tuples.push(['Medications', 'medications']);
                 tuples.push(['ClinicInventory', 'clinicInventory']);
-            }
-            if (this.dashboardCan('daily-observations') || this.dashboardCan('observations')) {
-                tuples.push(['DailyObservations', 'dailyObservations']);
             }
             if (this.dashboardCan('incidents')) {
                 tuples.push(['Incidents', 'incidents']);
@@ -584,7 +576,6 @@ const Dashboard = {
                 const rows = map[sheet];
                 if (Array.isArray(rows)) {
                     AppState.appData[appKey] = rows;
-                    AppState.appData[sheet] = rows;
                 }
             });
 
@@ -593,7 +584,6 @@ const Dashboard = {
 
             // ✅ تحديث الكروت فوراً بعد وصول البيانات من الخادم
             try {
-                this.updateKPIs();
                 this.updateStats();
                 this.updateReportsStatistics();
             } catch (_) { /* تجاهل */ }
@@ -754,13 +744,9 @@ const Dashboard = {
      * - عند التحميل المنفصل من الشيتين: نجمع الطولين دون دمج بالمعرف (تصادم ids بين الشيتين كان يسبب نقصاً في العد).
      */
     getClinicVisitsTotalCount(data) {
-        if (!data || typeof data !== 'object') data = AppState?.appData || {};
-        const main = (Array.isArray(data.clinicVisits) && data.clinicVisits.length > 0)
-            ? data.clinicVisits
-            : (Array.isArray(data.ClinicVisits) ? data.ClinicVisits : (Array.isArray(AppState?.appData?.clinicVisits) ? AppState.appData.clinicVisits : (Array.isArray(AppState?.appData?.ClinicVisits) ? AppState.appData.ClinicVisits : [])));
-        const extra = (Array.isArray(data.clinicContractorVisits) && data.clinicContractorVisits.length > 0)
-            ? data.clinicContractorVisits
-            : (Array.isArray(data.ClinicContractorVisits) ? data.ClinicContractorVisits : (Array.isArray(AppState?.appData?.clinicContractorVisits) ? AppState.appData.clinicContractorVisits : (Array.isArray(AppState?.appData?.ClinicContractorVisits) ? AppState.appData.ClinicContractorVisits : [])));
+        if (!data || typeof data !== 'object') return 0;
+        const main = Array.isArray(data.clinicVisits) ? data.clinicVisits : [];
+        const extra = Array.isArray(data.clinicContractorVisits) ? data.clinicContractorVisits : [];
         const legacy = Array.isArray(data.Clinic) ? data.Clinic : [];
 
         const mergedFromServer =
@@ -3703,22 +3689,25 @@ const Dashboard = {
             ? String(AppState.currentUser.email).trim().toLowerCase()
             : '';
         if (syncUserEmail && currentEmail && syncUserEmail !== currentEmail) {
-            if (AppState.syncMeta) AppState.syncMeta.userEmail = currentEmail;
+            Utils.safeWarn('⚠️ بيانات KPI من جلسة مستخدم سابق — تخطي التحديث');
+            if (typeof Notification !== 'undefined' && typeof Notification.warning === 'function') {
+                Notification.warning('البيانات المحلية لا تطابق المستخدم الحالي — جاري إعادة المزامنة...');
+            }
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.syncData === 'function') {
+                GoogleIntegration.syncData({ silent: true, showLoader: false, notifyOnSuccess: false, notifyOnError: false })
+                    .catch(() => {});
+            }
+            return;
         }
 
         /* لا نزيل kpis-values-ready أبداً؛ الكروت تظهر مرة واحدة وتبقى ثابتة. التحديث بتغيير القيم (textContent) فقط دون إخفاء أو إعادة إنشاء عناصر. */
 
         try {
-            const getArr = (key1, key2) => {
-                if (Array.isArray(data[key1]) && data[key1].length > 0) return data[key1];
-                if (key2 && Array.isArray(data[key2]) && data[key2].length > 0) return data[key2];
-                return Array.isArray(data[key1]) ? data[key1] : (key2 && Array.isArray(data[key2]) ? data[key2] : []);
-            };
-            const incidents = getArr('incidents', 'Incidents');
-            const users = getArr('users', 'Users');
+            const incidents = Array.isArray(data.incidents) ? data.incidents : [];
+            const users = Array.isArray(data.users) ? data.users : [];
             const ptwDataset = this.getUnifiedPTWDataset(data);
-            const nearmiss = getArr('nearmiss', 'NearMiss');
-            const employees = getArr('employees', 'Employees');
+            const nearmiss = Array.isArray(data.nearmiss) ? data.nearmiss : [];
+            const employees = Array.isArray(data.employees) ? data.employees : [];
 
             // حساب كل القيم دون المساس بـ DOM — مصدر موحّد مع قائمة الحوادث في النظام
             const allIncidentRecords = this._getDashboardIncidentsRecords(data);

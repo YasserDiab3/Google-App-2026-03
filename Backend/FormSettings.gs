@@ -1290,3 +1290,50 @@ function isSafetyMemberExists(memberName) {
         return false;
     }
 }
+
+/**
+ * ============================================
+ * إدارة إتاحة واستقبال النماذج العامة (Form Acceptance Status)
+ * ============================================
+ */
+function getPublicFormsStatus() {
+    try {
+        var defaultStatus = {
+            observation: { isOpen: true, message: 'نموذج تسجيل الملاحظات اليومية لا يقبل ردوداً حالياً بقرار من إدارة السلامة والصحة المهنية.' },
+            nearmiss: { isOpen: true, message: 'نموذج الإبلاغ عن الحوادث الوشيكة مغلق حالياً.' },
+            fire: { isOpen: true, message: 'نموذج فحص مهمات الإطفاء مغلق حالياً.' },
+            gate: { isOpen: true, message: 'نموذج تصاريح بوابات الزوار مغلق حالياً.' },
+            patrol: { isOpen: true, message: 'نموذج تفتيش السلامة اليومي مغلق حالياً.' }
+        };
+
+        var raw = PropertiesService.getScriptProperties().getProperty('HSE_PUBLIC_FORMS_STATUS');
+        if (raw) {
+            try {
+                var parsed = JSON.parse(raw);
+                return { success: true, status: Object.assign({}, defaultStatus, parsed) };
+            } catch (_) {}
+        }
+        return { success: true, status: defaultStatus };
+    } catch (err) {
+        return { success: true, status: { observation: { isOpen: true } } };
+    }
+}
+
+function savePublicFormsStatus(payload, actorUserDataOpt) {
+    try {
+        var perm = checkFormSettingsPermission(payload && payload.userData, actorUserDataOpt);
+        if (!perm.hasPermission) {
+            return { success: false, message: perm.message || 'غير مصرح' };
+        }
+
+        var statusObj = (payload && payload.status) || payload;
+        if (statusObj && typeof statusObj === 'object') {
+            PropertiesService.getScriptProperties().setProperty('HSE_PUBLIC_FORMS_STATUS', JSON.stringify(statusObj));
+            return { success: true, message: 'تم حفظ وتحديث حالة استقبال النماذج بنجاح', status: statusObj };
+        }
+        return { success: false, message: 'بيانات الحالة غير صالحة' };
+    } catch (err) {
+        return { success: false, message: 'خطأ أثناء حفظ حالة النماذج: ' + err.toString() };
+    }
+}
+

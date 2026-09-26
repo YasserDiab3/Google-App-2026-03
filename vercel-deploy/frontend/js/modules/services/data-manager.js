@@ -87,6 +87,15 @@ const DataManager = {
 
     _normalizeObservationSites_(sites) {
         if (!Array.isArray(sites) || sites.length === 0) return [];
+        const cleanPlaceName = (raw) => {
+            if (!raw || typeof raw !== 'string') return raw || '';
+            let s = raw.trim();
+            s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP/gi, '_ $2-ICAPP');
+            s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)/gi, '_ $1-ICAPP');
+            s = s.replace(/_?\s*(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP/gi, '_ $1-ICAPP');
+            s = s.replace(/_ICAPP-(\d+)(?![\w-])/gi, '_ $1-ICAPP');
+            return s.trim();
+        };
         return sites.map((site) => {
             const normalizedSite = {
                 id: site.id || site.siteId || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('SITE') : ('SITE_' + Date.now())),
@@ -97,16 +106,17 @@ const DataManager = {
             const placesSource = Array.isArray(site.places) ? site.places : [];
             normalizedSite.places = placesSource.map((place, idx) => {
                 if (typeof place === 'object' && place !== null) {
+                    const rawName = place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`;
                     return {
                         id: place.id || place.placeId || place.value || (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('PLACE') : ('PLACE_' + idx)),
-                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`,
+                        name: cleanPlaceName(rawName),
                         siteId: normalizedSite.id
                     };
                 }
                 if (typeof place === 'string') {
                     return {
                         id: (typeof Utils !== 'undefined' && Utils.generateId ? Utils.generateId('PLACE') : ('PLACE_' + idx)),
-                        name: place,
+                        name: cleanPlaceName(place),
                         siteId: normalizedSite.id
                     };
                 }
@@ -588,12 +598,29 @@ const DataManager = {
                     stripped[field] = '__stripped__';
                 }
             }
-            // تقليص المرفقات إلى أسمائها فقط (بدون محتوى base64)
+            // تقليص المرفقات إلى أسمائها وروابطها فقط (بدون محتوى base64 الثقيل)
             if (Array.isArray(stripped.attachments)) {
                 stripped.attachments = stripped.attachments.map(a => {
                     if (!a || typeof a !== 'object') return a;
-                    const { name, fileName, type, size } = a;
-                    return { name, fileName, type, size, __stripped: true };
+                    const { name, fileName, type, size, id, fileId, url, directLink, shareableLink, link } = a;
+                    const cleanUrl = (url && typeof url === 'string' && !url.startsWith('data:')) ? url : '';
+                    const cleanDirect = (directLink && typeof directLink === 'string' && !directLink.startsWith('data:')) ? directLink : '';
+                    const cleanShareable = (shareableLink && typeof shareableLink === 'string' && !shareableLink.startsWith('data:')) ? shareableLink : '';
+                    const cleanLink = (link && typeof link === 'string' && !link.startsWith('data:')) ? link : '';
+                    const cleanFileId = (fileId && typeof fileId === 'string') ? fileId : '';
+                    return {
+                        id: id || cleanFileId || undefined,
+                        name,
+                        fileName,
+                        type,
+                        size,
+                        fileId: cleanFileId || undefined,
+                        url: cleanUrl || undefined,
+                        directLink: cleanDirect || undefined,
+                        shareableLink: cleanShareable || undefined,
+                        link: cleanLink || undefined,
+                        __stripped: true
+                    };
                 });
             }
             return stripped;
@@ -1118,35 +1145,6 @@ const DataManager = {
                 }
             }
             
-            // إذا كانت البيانات محملة، نضمن طلب جلب مجمع غير حاشر فوراً من خادم SQL
-            setTimeout(() => {
-                if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.batchReadFromSheets === 'function') {
-                    const sheetsToEnsure = ['PTW', 'PTWRegistry', 'ClinicVisits', 'ClinicContractorVisits', 'Training', 'Employees', 'ApprovedContractors', 'Violations', 'DailyObservations'];
-                    GoogleIntegration.batchReadFromSheets(sheetsToEnsure, { timeout: 25000 })
-                        .then(res => {
-                            if (res && res.data) {
-                                Object.keys(res.data).forEach(s => {
-                                    const rows = res.data[s];
-                                    if (Array.isArray(rows) && rows.length > 0) {
-                                        AppState.appData[s] = rows;
-                                        const lowerMap = {
-                                            'PTW': 'ptw', 'PTWRegistry': 'ptwRegistry', 'ClinicVisits': 'clinicVisits',
-                                            'ClinicContractorVisits': 'clinicContractorVisits', 'Training': 'training',
-                                            'Employees': 'employees', 'ApprovedContractors': 'approvedContractors',
-                                            'Violations': 'violations', 'DailyObservations': 'dailyObservations'
-                                        };
-                                        if (lowerMap[s]) AppState.appData[lowerMap[s]] = rows;
-                                    }
-                                });
-                                try {
-                                    window.dispatchEvent(new CustomEvent('syncDataCompleted', { detail: { syncedCount: Object.keys(res.data).length } }));
-                                } catch (e) {}
-                            }
-                        }).catch(() => {});
-                }
-            }, 100);
-
-            try { window.dispatchEvent(new CustomEvent('dataManagerLoaded')); } catch (e) {}
             return true;
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل البيانات المحلية:', error);
@@ -1772,9 +1770,9 @@ const DataManager = {
             try {
                 const sc = AppState.googleConfig && AppState.googleConfig.appsScript;
                 const u = sc && String(sc.scriptUrl || '').trim();
-                if (u && u.includes('trycloudflare.com')) {
+                if (u && (u.includes('trycloudflare.com') || u.includes('safety-icapp.com') || (u.includes('/api/exec') && u.indexOf('script.google.com') === -1))) {
                     const repaired = (typeof window !== 'undefined' && typeof window.__hseEnsureGasConfig === 'function')
-                        ? window.__hseEnsureGasConfig({ ...AppState.googleConfig, appsScript: { ...(sc || {}), scriptUrl: '/api/exec', enabled: true } })
+                        ? window.__hseEnsureGasConfig({ ...AppState.googleConfig, appsScript: { ...(sc || {}), scriptUrl: '', enabled: true } })
                         : AppState.googleConfig;
                     AppState.googleConfig = repaired;
                     localStorage.removeItem('hse_public_api_url');

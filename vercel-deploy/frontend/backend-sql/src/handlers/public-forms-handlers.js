@@ -1,16 +1,11 @@
 /**
- * إرسال وإعدادات النماذج العامة (بوابة النماذج الموحدة) — 100% SQL Backend
+ * إرسال النماذج العامة (بوابة النماذج) — مطابقة GAS
  */
 'use strict';
 
 const crypto = require('crypto');
 const { getDatabase } = require('../db/database');
 const { uploadFileToDrive } = require('./file-handlers');
-const {
-    buildFormattedSites,
-    buildPublicFormSafetyMembers,
-    buildPublicFormDepartments
-} = require('./form-settings-handlers');
 
 function extractPayload(payload, postData) {
     const p = payload && typeof payload === 'object' ? payload : {};
@@ -92,297 +87,30 @@ async function uploadFormPhotos(obsId, photos, moduleName) {
     return attachments;
 }
 
-function getCompanySettingsSummary(db) {
-    try {
-        const rows = db.readSheet('Company_Settings') || [];
-        const first = rows[0] || {};
-        return {
-            companyName: first.companyName || 'ICAPP',
-            companyLogo: first.companyLogo || ''
-        };
-    } catch (_) {
-        return { companyName: 'ICAPP', companyLogo: '' };
-    }
-}
-
 const publicFormsHandlers = {
-    // 1. إعدادات نموذج الملاحظات اليومية
-    getPublicObservationConfig() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            const departments = buildPublicFormDepartments(db);
-            const safetyMembers = buildPublicFormSafetyMembers(db);
-            const { companyName, companyLogo } = getCompanySettingsSummary(db);
-
-            // جلب أحدث الملاحظات المفتوحة لعرض شريط التنبيهات
-            let recentOpenHazards = [];
-            try {
-                const obsRows = db.all(`
-                    SELECT id, isoCode, siteName, locationName, observationType, riskLevel, date, details 
-                    FROM "DailyObservations" 
-                    WHERE "status" = 'مفتوح' OR "status" = 'قيد المتابعة' 
-                    ORDER BY "date" DESC LIMIT 5
-                `, []);
-                recentOpenHazards = obsRows || [];
-            } catch (_) {}
-
-            return {
-                success: true,
-                sites,
-                departments,
-                safetyMembers,
-                companyLogo,
-                companyName,
-                recentOpenHazards
-            };
-        } catch (e) {
-            return { success: false, message: e.message, sites: [] };
-        }
-    },
-
-    // 2. إعدادات نموذج المرور اليومي (Daily Safety Checklist)
-    getPublicDailySafetyConfig() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            const safetyMembers = buildPublicFormSafetyMembers(db);
-            const { companyName, companyLogo } = getCompanySettingsSummary(db);
-
-            return {
-                success: true,
-                sites,
-                safetyMembers,
-                companyLogo,
-                companyName
-            };
-        } catch (e) {
-            return { success: false, message: e.message, sites: [] };
-        }
-    },
-
-    // 3. إعدادات نموذج فحص أجهزة ومعدات الإطفاء
-    getPublicFireInspectionConfig() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            const safetyMembers = buildPublicFormSafetyMembers(db);
-            const { companyName, companyLogo } = getCompanySettingsSummary(db);
-
-            let devices = [];
-            try {
-                devices = db.all(`SELECT id, type, location, siteId, factory, status, barcode FROM "FireEquipmentAssets" ORDER BY id ASC`, []) || [];
-            } catch (_) {}
-
-            return {
-                success: true,
-                sites,
-                safetyMembers,
-                devices,
-                companyLogo,
-                companyName
-            };
-        } catch (e) {
-            return { success: false, message: e.message, sites: [] };
-        }
-    },
-
-    // 4. إعدادات نموذج بلاغات الحوادث الوشيكة (Near Miss)
-    getPublicNearMissConfig() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            const departments = buildPublicFormDepartments(db);
-            const { companyName, companyLogo } = getCompanySettingsSummary(db);
-
-            return {
-                success: true,
-                sites,
-                departments,
-                companyLogo,
-                companyName
-            };
-        } catch (e) {
-            return { success: false, message: e.message, sites: [] };
-        }
-    },
-
-    // 5. إعدادات بوابة النماذج الموحدة (Forms Hub)
-    getFormsHubConfig() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            const departments = buildPublicFormDepartments(db);
-            const safetyMembers = buildPublicFormSafetyMembers(db);
-            const { companyName, companyLogo } = getCompanySettingsSummary(db);
-
-            return {
-                success: true,
-                sites,
-                departments,
-                safetyMembers,
-                companyLogo,
-                companyName
-            };
-        } catch (e) {
-            return { success: false, message: e.message };
-        }
-    },
-
-    // 6. إرجاع المواقع والأماكن العامة
-    getSitesAndPlaces() {
-        try {
-            const db = getDatabase();
-            const sites = buildFormattedSites(db);
-            return { success: true, sites, data: sites };
-        } catch (e) {
-            return { success: false, message: e.message, sites: [], data: [] };
-        }
-    },
-
-    getObservationSites() {
-        return publicFormsHandlers.getSitesAndPlaces();
-    },
-
-    // 7. رسائل البث الإخباري والتنبيهات للسلامة
-    getHseBroadcastMessages() {
-        try {
-            const db = getDatabase();
-            const row = db.get(`SELECT "Setting_Value" FROM "HSE_Settings" WHERE "Setting_Key" = 'BROADCAST_MESSAGES'`, []);
-            let messages = [];
-            if (row && row.Setting_Value) {
-                try { messages = JSON.parse(row.Setting_Value); } catch (_) {}
-            }
-            return { success: true, data: messages, messages };
-        } catch (e) {
-            return { success: true, data: [], messages: [] };
-        }
-    },
-
-    saveHseBroadcastMessages(payload) {
-        try {
-            const db = getDatabase();
-            const messages = payload?.messages || payload?.data || payload || [];
-            const jsonVal = JSON.stringify(messages);
-            db.exec(`
-                INSERT INTO "HSE_Settings" ("Setting_Key", "Setting_Value", "Description", "Last_Updated")
-                VALUES ('BROADCAST_MESSAGES', '${jsonVal.replace(/'/g, "''")}', 'HSE Broadcast Alerts', datetime('now'))
-                ON CONFLICT("Setting_Key") DO UPDATE SET "Setting_Value" = excluded."Setting_Value", "Last_Updated" = datetime('now');
-            `);
-            return { success: true, message: 'تم حفظ رسائل البث بنجاح' };
-        } catch (e) {
-            return { success: false, message: e.message };
-        }
-    },
-
-    // 8. أرقام وخطوط الطوارئ الميدانية
-    getHseEmergencyContacts() {
-        try {
-            const db = getDatabase();
-            const row = db.get(`SELECT "Setting_Value" FROM "HSE_Settings" WHERE "Setting_Key" = 'EMERGENCY_CONTACTS'`, []);
-            let contacts = {};
-            if (row && row.Setting_Value) {
-                try { contacts = JSON.parse(row.Setting_Value); } catch (_) {}
-            }
-            return { success: true, data: contacts, contacts };
-        } catch (e) {
-            return { success: true, data: {}, contacts: {} };
-        }
-    },
-
-    saveHseEmergencyContacts(payload) {
-        try {
-            const db = getDatabase();
-            const contacts = payload?.contacts || payload?.data || payload || {};
-            const jsonVal = JSON.stringify(contacts);
-            db.exec(`
-                INSERT INTO "HSE_Settings" ("Setting_Key", "Setting_Value", "Description", "Last_Updated")
-                VALUES ('EMERGENCY_CONTACTS', '${jsonVal.replace(/'/g, "''")}', 'HSE Emergency Contacts', datetime('now'))
-                ON CONFLICT("Setting_Key") DO UPDATE SET "Setting_Value" = excluded."Setting_Value", "Last_Updated" = datetime('now');
-            `);
-            return { success: true, message: 'تم حفظ أرقام الطوارئ بنجاح' };
-        } catch (e) {
-            return { success: false, message: e.message };
-        }
-    },
-
-    // 9. إحصائيات عامة للملاحظات (بدون إفشاء بيانات حساسة)
-    getPublicObservationsAnalytics() {
-        try {
-            const db = getDatabase();
-            const totalRow = db.get(`SELECT COUNT(*) as total FROM "DailyObservations"`, []);
-            const openRow = db.get(`SELECT COUNT(*) as openCount FROM "DailyObservations" WHERE "status" = 'مفتوح' OR "status" = 'قيد المتابعة'`, []);
-            const closedRow = db.get(`SELECT COUNT(*) as closedCount FROM "DailyObservations" WHERE "status" = 'مغلق' OR "status" = 'Closed'`, []);
-            const highRiskRow = db.get(`SELECT COUNT(*) as highCount FROM "DailyObservations" WHERE "riskLevel" = 'عالي' OR "riskLevel" = 'High'`, []);
-
-            return {
-                success: true,
-                data: {
-                    totalObservations: totalRow ? totalRow.total : 0,
-                    openObservations: openRow ? openRow.openCount : 0,
-                    closedObservations: closedRow ? closedRow.closedCount : 0,
-                    highRiskCount: highRiskRow ? highRiskRow.highCount : 0
-                }
-            };
-        } catch (e) {
-            return { success: false, message: e.message, data: {} };
-        }
-    },
-
-    // 10. ملخص حي لتصاريح العمل النشطة للوحة العامة
-    getPublicLivePTWSummary() {
-        try {
-            const db = getDatabase();
-            const activePermits = db.all(`
-                SELECT id, workType, siteName, location, sublocationName, startDate, endDate, status 
-                FROM "PTW" 
-                WHERE "status" = 'Approved' OR "status" = 'موافق عليه' OR "status" = 'معتمد' OR "status" = 'Active' 
-                ORDER BY "startDate" DESC LIMIT 15
-            `, []) || [];
-
-            return {
-                success: true,
-                activeCount: activePermits.length,
-                permits: activePermits
-            };
-        } catch (e) {
-            return { success: false, message: e.message, activeCount: 0, permits: [] };
-        }
-    },
-
-    // 11. تتبع حالة بلاغ أو ملاحظة بالكود المرجعي
-    trackObservation(payload) {
-        try {
-            const db = getDatabase();
-            const code = String(payload?.refCode || payload?.code || payload?.id || '').trim();
-            if (!code) return { success: false, message: 'كود الملاحظة مطلوب للبحث' };
-
-            const row = db.get(`
-                SELECT id, isoCode, siteName, locationName, observationType, status, workflowStage, date, expectedCompletionDate, details, submittedAt
-                FROM "DailyObservations" 
-                WHERE "id" = ? OR "isoCode" = ?
-            `, [code, code]);
-
-            if (!row) {
-                return { success: false, message: `لم يتم العثور على ملاحظة مسجلة بالكود: ${code}` };
-            }
-
-            return {
-                success: true,
-                data: row,
-                message: `تم العثور على الملاحظة (${row.isoCode || row.id})`
-            };
-        } catch (e) {
-            return { success: false, message: e.message };
-        }
-    },
-
-    // 12. إرسال الملاحظات اليومية
     async submitPublicObservation(payload, postData) {
         const data = extractPayload(payload, postData);
         if (isHoneypot(data)) {
             return { success: true, message: 'تم إرسال الملاحظة بنجاح' };
         }
+
+        const db = getDatabase();
+
+        // 🛑 فحص حالة إتاحة واستقبال النموذج
+        try {
+            const rows = db.readSheet('CompanySettings') || [];
+            const row = rows.find(r => r.setting_key === 'HSE_PUBLIC_FORMS_STATUS' || r.key === 'HSE_PUBLIC_FORMS_STATUS');
+            if (row && (row.setting_value || row.value)) {
+                const parsed = JSON.parse(row.setting_value || row.value);
+                if (parsed.observation && parsed.observation.isOpen === false) {
+                    return {
+                        success: false,
+                        isClosed: true,
+                        message: parsed.observation.message || 'نموذج تسجيل الملاحظات اليومية مغلق حالياً بقرار من إدارة السلامة.'
+                    };
+                }
+            }
+        } catch (_) {}
 
         const siteName = String(data.siteName || data.site || data.factory || data.factoryName || '').trim();
         const locationName = String(data.locationName || data.place || data.subLocation || data.subLocationName || '').trim();
@@ -396,8 +124,31 @@ const publicFormsHandlers = {
             };
         }
 
-        const db = getDatabase();
         const { id, isoCode } = generateObservationCodes(db, data.instantRefCode);
+
+        // ✅ منع التكرار الجذري (Content Idempotency & Debounce Guard)
+        // التحقق مما إذا كانت نفس الملاحظة (نفس المراقب + نفس الموقع والمكان + نفس التفاصيل + نفس التاريخ) مسجلة بالفعل
+        const existingRows = db.readSheet('DailyObservations') || [];
+        const norm = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+        const normDate = (d) => String(d || '').trim().replace('T', ' ').slice(0, 10);
+        
+        const targetObs = norm(data.observerName || data.reporterName);
+        const targetSite = norm(siteName);
+        const targetLoc = norm(locationName);
+        const targetDetails = norm(details);
+        const targetDate = normDate(data.date || new Date());
+
+        const duplicate = existingRows.find(r => {
+            if (r.id === id || r.isoCode === id || (isoCode && (r.id === isoCode || r.isoCode === isoCode))) return true;
+            if (targetObs && norm(r.observerName) === targetObs &&
+                norm(r.siteName || r.siteId) === targetSite &&
+                norm(r.locationName || r.placeId) === targetLoc &&
+                norm(r.details) === targetDetails &&
+                normDate(r.date || r.createdAt) === targetDate) {
+                return true;
+            }
+            return false;
+        });
 
         let photosToUpload = [];
         if (Array.isArray(data.photos) && data.photos.length) {
@@ -405,6 +156,34 @@ const publicFormsHandlers = {
         } else if (data.photoBase64 && String(data.photoBase64).length > 50) {
             photosToUpload = [data.photoBase64];
         }
+
+        if (duplicate) {
+            // الملاحظة موجودة مسبقاً — لا نكرر الصف، بل ندمج المرفقات إن وُجدت
+            if (photosToUpload.length > 0) {
+                try {
+                    const extraAttachments = await uploadFormPhotos(duplicate.id || id, photosToUpload, 'DailyObservations');
+                    if (extraAttachments && extraAttachments.length > 0) {
+                        let currentAtts = [];
+                        try { currentAtts = JSON.parse(duplicate.attachments || '[]'); } catch(_) {}
+                        if (!Array.isArray(currentAtts)) currentAtts = [];
+                        const mergedAtts = [...currentAtts, ...extraAttachments];
+                        db.updateRow('DailyObservations', 'id', duplicate.id, {
+                            attachments: JSON.stringify(mergedAtts),
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                } catch (attErr) {
+                    console.warn('[public-forms] Error merging duplicate attachments:', attErr.message);
+                }
+            }
+            return {
+                success: true,
+                id: duplicate.isoCode || duplicate.id || isoCode || id,
+                message: 'تم استلام وتحديث الملاحظة اليومية بنجاح.',
+                isDuplicatePrevented: true
+            };
+        }
+
         const attachments = await uploadFormPhotos(id, photosToUpload, 'DailyObservations');
 
         const subCategory = String(data.subCategory || '').trim();
@@ -463,15 +242,11 @@ const publicFormsHandlers = {
 
         return {
             success: true,
-            id: id,
-            isoCode: isoCode,
-            refCode: isoCode || id,
-            data: { id, isoCode, refCode: isoCode || id },
+            id: isoCode || id,
             message: 'تم تسجيل الملاحظة اليومية بنجاح، شكراً لمشاركتكم في حماية بيئة العمل.'
         };
     },
 
-    // 13. إرسال بلاغ حادث وشيك
     async submitPublicNearMiss(payload, postData) {
         const data = extractPayload(payload, postData);
         if (isHoneypot(data)) {
@@ -521,7 +296,6 @@ const publicFormsHandlers = {
         return { success: true, id, isoCode, message: 'تم تسجيل الحادث الوشيك بنجاح' };
     },
 
-    // 14. إرسال فحص طفايات الحريق
     async submitPublicFireInspection(payload, postData) {
         const data = extractPayload(payload, postData);
         if (isHoneypot(data)) {
@@ -575,11 +349,6 @@ const publicFormsHandlers = {
         return { success: true, id: inspectionId, message: 'تم حفظ سجل الفحص بنجاح' };
     },
 
-    submitFireInspection(payload, postData) {
-        return publicFormsHandlers.submitPublicFireInspection(payload, postData);
-    },
-
-    // 15. إرسال تقرير المرور اليومي
     async submitPublicDailySafetyChecklist(payload, postData) {
         const data = extractPayload(payload, postData);
         if (isHoneypot(data)) {

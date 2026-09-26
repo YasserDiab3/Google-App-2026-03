@@ -2784,6 +2784,50 @@ function deleteClinicVisit(visitId) {
     }
 }
 
+/**
+ * حذف سجل إصابة من أوراق العمل (Injuries / ClinicContractorInjuries)
+ */
+function deleteClinicInjury(injuryId) {
+    try {
+        if (!injuryId) {
+            return { success: false, message: 'معرف الإصابة غير محدد' };
+        }
+        const injuryIdStr = String(injuryId).trim();
+        const spreadsheetId = getSpreadsheetId();
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        const sheetCandidates = ['Injuries', 'ClinicContractorInjuries'];
+
+        for (var s = 0; s < sheetCandidates.length; s++) {
+            const sheetName = sheetCandidates[s];
+            const items = readFromSheet(sheetName, spreadsheetId) || [];
+            let rowIndex = -1;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i] && String(items[i].id || '').trim() === injuryIdStr) {
+                    rowIndex = i + 2; // +2: صف 1 هيدر، المصفوفة من 0
+                    break;
+                }
+            }
+
+            if (rowIndex === -1) continue;
+
+            var sheet = ss.getSheetByName(sheetName);
+            if (!sheet) {
+                return { success: false, message: 'ورقة الإصابات غير موجودة: ' + sheetName };
+            }
+            sheet.deleteRow(rowIndex);
+
+            Logger.log('تم حذف الإصابة ' + injuryIdStr + ' من ' + sheetName + ' الصف ' + rowIndex);
+            return { success: true, message: 'تم حذف سجل الإصابة بنجاح', sheetName: sheetName };
+        }
+
+        return { success: false, message: 'سجل الإصابة غير موجود' };
+    } catch (error) {
+        Logger.log('Error deleting clinic injury: ' + error.toString());
+        return { success: false, message: 'حدث خطأ أثناء حذف سجل الإصابة: ' + error.toString() };
+    }
+}
+
 function rejectClinicVisitDeletion(requestId, rejectorData, reason) {
     try {
         return updateClinicVisitDeletionRequest(requestId, {

@@ -1246,6 +1246,14 @@ const Users = {
                                         >
                                             <i class="fas fa-key"></i>
                                         </button>
+                                        <button 
+                                            onclick="Users.resetFieldPortalPin('${user.employeeNumber || user.employeeCode || user.sapId || user.id}', '${user.name || user.fullName || user.email}')" 
+                                            class="btn-icon" 
+                                            style="color: #d97706; background: #fffbeb; border-color: #fde68a;"
+                                            title="إعادة تعيين رمز PIN لبوابة النماذج الميدانية"
+                                        >
+                                            <i class="fas fa-id-badge"></i>
+                                        </button>
                                         ${(typeof Auth !== 'undefined' && Auth._isMfaEnabledForUser && Auth._isMfaEnabledForUser(user)) ? `
                                         <button 
                                             onclick="Users.disableUserMfa('${user.id}', '${user.email}')" 
@@ -2691,6 +2699,46 @@ const Users = {
             Loading.hide();
             Notification.error('حدث خطأ: ' + error.message);
             Utils.safeError('خطأ في إعادة تعيين كلمة المرور:', error);
+        }
+    },
+
+    async resetFieldPortalPin(employeeCode, employeeName) {
+        if (!employeeCode || employeeCode === 'null' || employeeCode === 'undefined') {
+            Notification.warning('لا يوجد كود وظيفي مسجل لهذا المستخدم');
+            return;
+        }
+
+        const decodedName = decodeURIComponent(employeeName || '') || employeeCode;
+        const confirmed = (typeof Modal !== 'undefined' && typeof Modal.confirm === 'function')
+            ? await Modal.confirm(`هل تريد بالتأكيد إعادة تعيين رمز PIN لبوابة النماذج الميدانية للمستخدم: [${decodedName}] (كود: ${employeeCode})؟\n\nسيتم تصفير الرمز وأي قفل مؤقت، وسيُطلب منه تعيين رمز جديد عند دخوله القادم للبوابة.`, 'تأكيد إعادة تعيين رمز بوابة النماذج')
+            : confirm(`هل تريد بالتأكيد إعادة تعيين رمز PIN للمستخدم [${decodedName}]؟`);
+
+        if (!confirmed) return;
+
+        try {
+            Loading.show();
+            let result = null;
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration._executeRequest === 'function') {
+                result = await GoogleIntegration._executeRequest('fieldPortalResetPin', { employeeCode });
+            } else {
+                const res = await fetch('/api/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'fieldPortalResetPin', employeeCode })
+                });
+                result = await res.json();
+            }
+            Loading.hide();
+
+            if (result && result.success) {
+                Notification.success(result.message || 'تمت إعادة تعيين رمز PIN بنجاح');
+            } else {
+                Notification.error(result?.message || 'تعذر إعادة تعيين رمز PIN');
+            }
+        } catch (err) {
+            Loading.hide();
+            Utils.safeError('Reset Field Portal PIN error:', err);
+            Notification.error('حدث خطأ أثناء الاتصال بالخادم لإعادة تعيين الرمز');
         }
     },
 

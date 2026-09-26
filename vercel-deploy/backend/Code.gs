@@ -208,6 +208,60 @@ function doPost(e) {
             return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(syncRes)));
         }
 
+        // فحص صحة الملاحظات اليومية وتوقيت القراءة
+        if (action === 'getObsHealth') {
+            var ss = SpreadsheetApp.openById(getSpreadsheetId());
+            var sh = ss.getSheetByName('DailyObservations');
+            var lr = sh.getLastRow();
+            var lc = sh.getLastColumn();
+            var hdrs = sh.getRange(1, 1, 1, lc).getValues()[0].map(String);
+            var idIdx = hdrs.indexOf('id');
+            var isoIdx = hdrs.indexOf('isoCode');
+            var obsIdx = hdrs.indexOf('observerName');
+            var detailsIdx = hdrs.indexOf('details');
+            var dateIdx = hdrs.indexOf('date');
+            var startR = Math.max(2, lr - 4);
+            var tail = sh.getRange(startR, 1, lr - startR + 1, lc).getValues().map(function(r) {
+                return {
+                    id: idIdx >= 0 ? r[idIdx] : '',
+                    isoCode: isoIdx >= 0 ? r[isoIdx] : '',
+                    observer: obsIdx >= 0 ? r[obsIdx] : '',
+                    details: detailsIdx >= 0 ? String(r[detailsIdx]).slice(0, 50) : '',
+                    date: dateIdx >= 0 ? r[dateIdx] : ''
+                };
+            });
+            var props = PropertiesService.getScriptProperties().getProperty('LAST_OBS_MAX_NUM');
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: true,
+                lastRow: lr,
+                lastObsMaxNum: props,
+                tail: tail,
+                serverMs: Date.now() - __t0
+            })));
+        }
+
+        // تحديث كود الملاحظة OBS-202609-2224 في الصف 3193
+        if (action === 'patchObs2224') {
+            var ss = SpreadsheetApp.openById(getSpreadsheetId());
+            var sh = ss.getSheetByName('DailyObservations');
+            var lr = sh.getLastRow();
+            var lc = sh.getLastColumn();
+            var hdrs = sh.getRange(1, 1, 1, lc).getValues()[0].map(String);
+            var isoCol = hdrs.indexOf('isoCode') + 1;
+            var remarksCol = hdrs.indexOf('remarks') + 1;
+            if (isoCol > 0) {
+                sh.getRange(lr, isoCol).setValue('OBS-202609-2224');
+            }
+            if (remarksCol > 0) {
+                var curRem = String(sh.getRange(lr, remarksCol).getValue() || '');
+                sh.getRange(lr, remarksCol).setValue('كود التتبع: OBS-202609-2224 | ' + curRem);
+            }
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify({
+                success: true,
+                message: 'Row ' + lr + ' patched with OBS-202609-2224 successfully'
+            })));
+        }
+
         // SEC: mfaClearUser / mfaClearCorruptSecrets لم تعد تُنفَّذ هنا بدون مصادقة.
         // المسار الآمن: ActionHandlers + جلسة + CSRF + مدير نظام (strictAdminActions).
         // الاستعادة الطارئة بدون جلسة: clasp run emergencyClearUserMfa / emergencyClearCorruptMfaSecrets
@@ -312,8 +366,9 @@ function doPost(e) {
             // تشخيص دخان موظفين (عدادات فقط — بدون قائمة كاملة)
             'getEmployeesSheetHealth',
             'getEmployeesLoadSmoke',
-            'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
-            'getHseBroadcastMessages', 'getHseEmergencyContacts'
+            'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'trackObservation',
+            'getPublicTbtConfig',
+            'getHseBroadcastMessages', 'getHseEmergencyContacts', 'getPublicFormsStatus'
             // تقرير الجلسات اليومي (قراءة فقط — يتطلب CSRF + مدير)
             // getDailyUserSessionActivityReport, getAllUserActivityLogs, getUserActivityLogs, getLogStatistics, getAllAuditLogs
             // ✅ P2.2: قراءات PPE أُخرجت — تتطلب CSRF + جلسة (مثل باقي القراءات الحساسة)
@@ -341,7 +396,7 @@ function doPost(e) {
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
         // SEC: initializeSheets وكتابات HSE الداخلية تتطلب CSRF — كتابات HSE العامة عبر PIN فقط (pinProtectedWriteActions)
         const pinProtectedWriteActions = ['saveHseBroadcastMessages', 'saveHseEmergencyContacts'];
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'warmup', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'getHseEmergencyContacts'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'warmup', 'getObsHealth', 'patchObs2224', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'trackObservation', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'removeDailySafetyDuplicates', 'deduplicateDailySafetyReports', 'dscAuditDuplicates', 'getPublicTbtConfig', 'submitPublicTbtRecord', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'getHseEmergencyContacts', 'getPublicFormsStatus', 'savePublicFormsStatus'];
         const isPinProtectedWrite = pinProtectedWriteActions.indexOf(action) !== -1;
         const isCsrfExempt = csrfExemptActions.includes(action) || isPinProtectedWrite;
 
@@ -407,13 +462,14 @@ function doPost(e) {
         // - قراءات مع userData: التحقق من الجلسة كما كان
         const sessionExemptActions = [
             'login', 'verifyMfaLogin',
-            'testConnection', 'warmup', 'getPublicIP', 'invalidateServerSession',
+            'testConnection', 'warmup', 'getObsHealth', 'patchObs2224', 'getPublicIP', 'invalidateServerSession',
             'saveHseBroadcastMessages', 'saveHseEmergencyContacts',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
-            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary',
+            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'trackObservation',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig',
-            'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',
+            'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'removeDailySafetyDuplicates', 'deduplicateDailySafetyReports', 'dscAuditDuplicates',
+            'getPublicTbtConfig', 'submitPublicTbtRecord',
             'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList'
         ];
         const isSessionExempt = sessionExemptActions.indexOf(action) !== -1;
@@ -540,6 +596,8 @@ function doPost(e) {
                 result = setOfficialChampionsApproval(payload || postData.data || postData || {});
             } else if (action === 'getPublicLivePTWSummary' && typeof getPublicLivePTWSummary === 'function') {
                 result = getPublicLivePTWSummary(payload || postData.data || postData || {});
+            } else if (action === 'trackObservation' && typeof trackObservation === 'function') {
+                result = trackObservation(payload || postData.data || postData || {});
             } else if (action === 'submitPublicFireInspection' && typeof submitPublicFireInspection === 'function') {
                 result = submitPublicFireInspection(payload || postData.data || postData || {});
             } else if (action === 'getPublicFireInspectionConfig' && typeof getPublicFireInspectionConfig === 'function') {
@@ -548,6 +606,14 @@ function doPost(e) {
                 result = submitPublicDailySafetyChecklist(payload || postData.data || postData || {});
             } else if (action === 'getPublicDailySafetyConfig' && typeof getPublicDailySafetyConfig === 'function') {
                 result = getPublicDailySafetyConfig();
+            } else if ((action === 'removeDailySafetyDuplicates' || action === 'deduplicateDailySafetyReports') && typeof removeDailySafetyDuplicates === 'function') {
+                result = removeDailySafetyDuplicates();
+            } else if (action === 'dscAuditDuplicates' && typeof dscAuditDuplicates === 'function') {
+                result = dscAuditDuplicates();
+            } else if (action === 'getPublicTbtConfig' && typeof getPublicTbtConfig === 'function') {
+                result = getPublicTbtConfig();
+            } else if (action === 'submitPublicTbtRecord' && typeof submitPublicTbtRecord === 'function') {
+                result = submitPublicTbtRecord(payload || postData.data || postData || {});
             } else if (action === 'submitGateVisitorCheckIn' && typeof submitGateVisitorCheckIn === 'function') {
                 result = submitGateVisitorCheckIn(payload || postData.data || postData || {});
             } else if (action === 'submitGateVisitorCheckOut' && typeof submitGateVisitorCheckOut === 'function') {
@@ -572,6 +638,10 @@ function doPost(e) {
                 var hseContactsPayload = Object.assign({}, payload || postData.data || postData || {});
                 hseContactsPayload._actorUserData = actorUserData;
                 result = saveHseEmergencyContacts(hseContactsPayload);
+            } else if (action === 'getPublicFormsStatus' && typeof getPublicFormsStatus === 'function') {
+                result = getPublicFormsStatus();
+            } else if (action === 'savePublicFormsStatus' && typeof savePublicFormsStatus === 'function') {
+                result = savePublicFormsStatus(payload || postData.data || postData || {});
             } else if (typeof ActionHandlers[action] === 'function') {
                 const spreadsheetId = getSpreadsheetId() || postData.spreadsheetId || '';
                 result = ActionHandlers[action](payload, postData, action, actorUserData, spreadsheetId);
@@ -817,6 +887,7 @@ function doGet(e) {
             publicEmergencyMapImage: true,
             getPublicObservationConfig: true,
             getPublicFireInspectionConfig: true,
+            getPublicTbtConfig: true,
             getActiveGateVisitors: true,
             getSecurityOfficersList: true
         };
@@ -830,6 +901,14 @@ function doGet(e) {
                 errorCode: 'GET_ACTION_NOT_ALLOWED',
                 action: action
             })));
+        }
+
+        // تكوين نموذج التوعية وبداية الوردية TBT
+        if (action === 'getPublicTbtConfig') {
+            const configResult = (typeof getPublicTbtConfig === 'function')
+                ? getPublicTbtConfig()
+                : { success: false, message: 'getPublicTbtConfig not defined' };
+            return setCorsHeaders(ContentService.createTextOutput(JSON.stringify(configResult)).setMimeType(ContentService.MimeType.JSON));
         }
 
         // تكوين نموذج فحص أجهزة الإطفاء العامة
@@ -1028,6 +1107,12 @@ function doGet(e) {
                 message: 'تعذر تحميل صورة المخطط'
             })).setMimeType(ContentService.MimeType.JSON);
             return setCorsHeaders(errOut);
+        }
+
+        if (action === 'getPublicFormsStatus') {
+            const statusRes = typeof getPublicFormsStatus === 'function' ? getPublicFormsStatus() : { success: true, status: { observation: { isOpen: true } } };
+            const output = ContentService.createTextOutput(JSON.stringify(statusRes)).setMimeType(ContentService.MimeType.JSON);
+            return setCorsHeaders(output);
         }
 
         // معالجة طلب getData — مُعطّل في الإنتاج (منع قراءة علنية)

@@ -89,13 +89,6 @@ const Settings = {
     formSettingsState: null,
     formSettingsEventsBound: false,
 
-    isCurrentUserAdmin() {
-        if (typeof Permissions !== 'undefined' && typeof Permissions.isCurrentUserAdmin === 'function') {
-            return Permissions.isCurrentUserAdmin();
-        }
-        return false;
-    },
-
     /** ترجيع مصفوفة تعليمات ما بعد الدخول من إعدادات الشركة (مع تطبيع) */
     getPostLoginItems() {
         const raw = AppState?.companySettings?.postLoginItems;
@@ -817,244 +810,94 @@ const Settings = {
 
             <!-- Tab Content: التكامل والمزامنة -->
             <div class="tab-content" id="tab-integration">
-                <style>
-                    .integration-card {
-                        background: #ffffff;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 16px;
-                        box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.06);
-                        overflow: hidden;
-                        margin-bottom: 24px;
-                    }
-                    .integration-card-header {
-                        padding: 18px 24px;
-                        background: linear-gradient(to bottom, #f8fafc, #f1f5f9);
-                        border-bottom: 1px solid #e2e8f0;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        flex-wrap: wrap;
-                        gap: 12px;
-                    }
-                    .integration-card-body {
-                        padding: 24px;
-                    }
-                    .integration-action-card {
-                        background: #ffffff;
-                        border-radius: 14px;
-                        padding: 22px;
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: space-between;
-                        transition: all 0.25s ease;
-                        position: relative;
-                        overflow: hidden;
-                    }
-                    .integration-action-card:hover {
-                        transform: translateY(-3px);
-                        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
-                    }
-                    .custom-switch-label {
-                        position: relative;
-                        display: inline-block;
-                        width: 52px;
-                        height: 28px;
-                        margin: 0;
-                        cursor: pointer;
-                    }
-                    .custom-switch-label input {
-                        opacity: 0;
-                        width: 0;
-                        height: 0;
-                        position: absolute;
-                    }
-                    .custom-switch-slider {
-                        position: absolute;
-                        top: 0; left: 0; right: 0; bottom: 0;
-                        background-color: #cbd5e1;
-                        border-radius: 34px;
-                        transition: 0.3s;
-                    }
-                    .custom-switch-slider:before {
-                        position: absolute;
-                        content: "";
-                        height: 22px;
-                        width: 22px;
-                        left: 3px;
-                        bottom: 3px;
-                        background-color: white;
-                        border-radius: 50%;
-                        transition: 0.3s;
-                        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-                    }
-                    .custom-switch-label input:checked + .custom-switch-slider {
-                        background-color: #2563eb;
-                    }
-                    .custom-switch-label input:checked + .custom-switch-slider:before {
-                        transform: translateX(24px);
-                    }
-                    [data-theme="dark"] .integration-card {
-                        background: #1e293b;
-                        border-color: #334155;
-                    }
-                    [data-theme="dark"] .integration-card-header {
-                        background: #0f172a;
-                        border-color: #334155;
-                    }
-                </style>
-
                 <div class="settings-group mt-6">
-                    <div class="settings-group-header mb-6">
-                        <h2 class="settings-group-title text-xl font-black text-slate-800 flex items-center gap-2">
-                            <i class="fas fa-cloud text-emerald-600"></i>
+                    <div class="settings-group-header">
+                        <h2 class="settings-group-title">
+                            <i class="fas fa-cloud text-green-600 ml-2"></i>
                             التكامل والمزامنة
                         </h2>
-                        <p class="settings-group-subtitle text-sm text-slate-500 mt-1">إعدادات الاتصال بمحرك الباك إند المباشر وإدارة قاعدة بيانات SQL المدمجة</p>
+                        <p class="settings-group-subtitle">إعدادات الاتصال بـ Google Apps Script ومزامنة جداول Google Sheets</p>
                     </div>
-
-                    <div class="settings-group-content space-y-6">
-                        <!-- بطاقة 1: الخادم والمزامنة المباشرة -->
-                        <div class="integration-card">
-                            <div class="integration-card-header">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #dbeafe; color: #1d4ed8; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                        <i class="fas fa-server"></i>
-                                    </div>
-                                    <div>
-                                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">الخادم والمزامنة المباشرة</h2>
-                                        <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0;">إعدادات الاتصال بمحرك وخادم SQL المدمج</p>
-                                    </div>
-                                </div>
-                                <span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0;">
-                                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                                    محرك SQL نشط 100%
-                                </span>
+                    <div class="settings-group-content">
+                        <div class="content-card">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-cloud ml-2"></i>الخادم والمزامنة</h2>
                             </div>
-
-                            <div class="integration-card-body">
-                                <form id="google-settings-form" style="display: flex; flex-direction: column; gap: 20px;">
-                                    <!-- خيار التفعيل -->
-                                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
-                                        <div style="display: flex; align-items: center; gap: 14px;">
-                                            <div style="width: 36px; height: 36px; border-radius: 10px; background: #ffffff; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #2563eb;">
-                                                <i class="fas fa-bolt"></i>
-                                            </div>
-                                            <div>
-                                                <label for="google-apps-script-enabled" style="font-size: 0.95rem; font-weight: 700; color: #1e293b; cursor: pointer; display: block; margin-bottom: 2px;">تفعيل الاتصال بمحرك وخادم SQL المباشر</label>
-                                                <span style="font-size: 0.8rem; color: #64748b;">تمكين المعالجة الفورية لكافة الطلبات والنماذج عبر مسار الخادم الداخلي</span>
-                                            </div>
-                                        </div>
-                                        <label class="custom-switch-label">
-                                            <input type="checkbox" id="google-apps-script-enabled" ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
-                                            <span class="custom-switch-slider"></span>
-                                        </label>
-                                    </div>
-
-                                    <!-- حقل الـ API -->
+                            <div class="card-body">
+                                <form id="google-settings-form" class="space-y-6">
                                     <div>
-                                        <label style="display: block; font-size: 0.85rem; font-weight: 800; color: #334155; margin-bottom: 8px;">
-                                            <i class="fas fa-link" style="color: #2563eb; margin-left: 6px;"></i>
-                                            رابط API للخادم (SQL Backend Endpoint)
+                                        <label class="flex items-center mb-4">
+                                            <input type="checkbox" id="google-apps-script-enabled" class="rounded border-gray-300 text-blue-600"
+                                                ${AppState.googleConfig.appsScript.enabled ? 'checked' : ''}>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل الاتصال بالخادم الخلفي</span>
                                         </label>
-                                        <div style="position: relative; display: flex; align-items: center;">
-                                            <input type="text" id="google-apps-script-url" class="form-input"
-                                                value="${AppState.googleConfig.appsScript.scriptUrl || '/api/exec'}"
-                                                placeholder="/api/exec"
-                                                style="width: 100%; padding: 12px 16px 12px 42px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.95rem; font-weight: 700; color: #0f172a; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; direction: ltr; text-align: left;">
-                                            <span style="position: absolute; left: 14px; color: #94a3b8; font-size: 1rem; pointer-events: none;">
-                                                <i class="fas fa-terminal"></i>
-                                            </span>
-                                        </div>
-                                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 8px; display: flex; align-items: center; gap: 6px;">
-                                            <i class="fas fa-shield-halved" style="color: #059669;"></i>
-                                            يتم حفظ ومعالجة جميع السجلات (144 جدولاً) داخلياً عبر محرك قاعدة بيانات SQL فائق السرعة والاستقرار.
-                                        </p>
                                     </div>
-
-                                    <!-- أزرار الإجراءات المتجاورة -->
-                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding-top: 18px; border-top: 1px solid #f1f5f9;">
-                                        <button type="button" id="test-connection-btn" class="btn-secondary" style="padding: 10px 22px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
-                                            <i class="fas fa-plug" style="color: #64748b;"></i>
-                                            <span>اختبار الاتصال</span>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-link ml-2"></i>
+                                            رابط API للخادم (مطلوب للمزامنة)
+                                        </label>
+                                        <input type="url" id="google-apps-script-url" class="form-input"
+                                            value="${AppState.googleConfig.appsScript.scriptUrl || ''}"
+                                            placeholder="https://script.google.com/macros/s/XXXX/exec">
+                                    </div>
+                                    <div>
+                                        <label class="flex items-center mb-4">
+                                            <input type="checkbox" id="google-sheets-enabled" class="rounded border-gray-300 text-blue-600"
+                                                ${AppState.googleConfig.sheets.enabled ? 'checked' : ''}>
+                                            <span class="mr-2 text-sm text-gray-700">تفعيل مزامنة الجداول (إن يطلبها الخادم)</span>
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            <i class="fas fa-table ml-2"></i>
+                                            معرف الجدول / المشروع (اختياري)
+                                        </label>
+                                        <input type="text" id="google-sheets-id" class="form-input"
+                                            value="${AppState.googleConfig.sheets.spreadsheetId || ''}"
+                                            placeholder="إن وُجد في إعدادات الخادم">
+                                    </div>
+                                    <div class="flex items-center justify-end gap-4 pt-4 border-t">
+                                        <button type="button" id="test-connection-btn" class="btn-secondary">
+                                            <i class="fas fa-plug ml-2"></i>
+                                            اختبار الاتصال
                                         </button>
-                                        <button type="submit" class="btn-primary" style="padding: 10px 26px; font-size: 0.85rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);">
-                                            <i class="fas fa-save"></i>
-                                            <span>حفظ الإعدادات</span>
+                                        <button type="submit" class="btn-primary">
+                                            <i class="fas fa-save ml-2"></i>
+                                            حفظ الإعدادات
                                         </button>
                                     </div>
                                 </form>
                             </div>
                         </div>
-
-                        <!-- بطاقة 2: أدوات المزامنة والإعداد الميداني -->
-                        <div class="integration-card">
-                            <div class="integration-card-header">
-                                <div style="display: flex; align-items: center; gap: 12px;">
-                                    <div style="width: 42px; height: 42px; border-radius: 12px; background: #dcfce7; color: #15803d; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
-                                        <i class="fas fa-arrows-rotate"></i>
-                                    </div>
-                                    <div>
-                                        <h2 style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin: 0;">المزامنة والإعداد الميداني</h2>
-                                        <p style="font-size: 0.8rem; color: #64748b; margin: 2px 0 0 0;">أدوات إدارة الجداول وتحديث السجلات والبيانات</p>
-                                    </div>
-                                </div>
-                                <span style="font-size: 0.8rem; font-weight: 700; color: #475569; background: #f1f5f9; padding: 4px 12px; border-radius: 8px;">
-                                    144 جدولاً مسجلاً
-                                </span>
+                        
+                        <!-- المزامنة والإعداد -->
+                        <div class="content-card mt-6">
+                            <div class="card-header">
+                                <h2 class="card-title"><i class="fas fa-sync ml-2"></i>المزامنة والإعداد</h2>
                             </div>
-
-                            <div class="integration-card-body" style="display: flex; flex-direction: column; gap: 20px;">
-                                <div style="padding: 14px 18px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; color: #1e40af; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 12px; line-height: 1.6;">
-                                    <i class="fas fa-circle-info" style="color: #2563eb; font-size: 1.15rem; margin-top: 2px; flex-shrink: 0;"></i>
-                                    <span>تتيح لك هذه الأدوات تهيئة هيكل الجداول في قاعدة بيانات SQL، وتحديث الذاكرة المؤقتة (Cache)، وتثبيت السجلات بين الواجهة والخادم عند الحاجة.</span>
+                            <div class="card-body space-y-4">
+                                <div>
+                                    <p class="text-sm text-gray-600 mb-4">
+                                        <i class="fas fa-info-circle ml-2"></i>
+                                        سيتم إنشاء جميع الأوراق المطلوبة (Users, Incidents, NearMiss, PTW, Training, Clinic, Fire Equipment, PPE, ViolationTypes, Violations, Contractors) تلقائياً مع الرؤوس الافتراضية
+                                    </p>
+                                    <button id="initialize-sheets-btn" class="btn-primary w-full">
+                                        <i class="fas fa-magic ml-2"></i>
+                                        إنشاء جميع الأوراق تلقائياً
+                                    </button>
                                 </div>
-
-                                <!-- أزرار متجاورة أنيقة Side-by-Side 3 Columns -->
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-                                    <!-- أداة 1: تهيئة الجداول -->
-                                    <div class="integration-action-card" style="border: 1.5px solid #e9d5ff; background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%);">
-                                        <div style="margin-bottom: 20px;">
-                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #9333ea; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);">
-                                                <i class="fas fa-magic"></i>
-                                            </div>
-                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #581c87; margin-bottom: 6px;">تهيئة الجداول</h3>
-                                            <p style="font-size: 0.825rem; color: #7e22ce; line-height: 1.5; margin: 0;">التحقق من إنشاء كافة الجداول الـ 144 والرؤوس الافتراضية تلقائياً.</p>
-                                        </div>
-                                        <button type="button" id="initialize-sheets-btn" style="width: 100%; padding: 12px 18px; background: #9333ea; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(147, 51, 234, 0.25);">
-                                            <i class="fas fa-database"></i>
-                                            <span>تهيئة الجداول تلقائياً</span>
-                                        </button>
-                                    </div>
-
-                                    <!-- أداة 2: مزامنة وقراءة البيانات -->
-                                    <div class="integration-action-card" style="border: 1.5px solid #bfdbfe; background: linear-gradient(180deg, #ffffff 0%, #eff6ff 100%);">
-                                        <div style="margin-bottom: 20px;">
-                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #2563eb; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
-                                                <i class="fas fa-rotate"></i>
-                                            </div>
-                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">مزامنة البيانات (قراءة)</h3>
-                                            <p style="font-size: 0.825rem; color: #1d4ed8; line-height: 1.5; margin: 0;">تحديث البيانات والكاش وسحب أحدث السجلات من الخادم فوراً.</p>
-                                        </div>
-                                        <button type="button" id="sync-data-btn" style="width: 100%; padding: 12px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);">
-                                            <i class="fas fa-cloud-arrow-down"></i>
-                                            <span>مزامنة البيانات من الخادم</span>
-                                        </button>
-                                    </div>
-
-                                    <!-- أداة 3: حفظ وتثبيت السجلات -->
-                                    <div class="integration-action-card" style="border: 1.5px solid #bbf7d0; background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);">
-                                        <div style="margin-bottom: 20px;">
-                                            <div style="width: 46px; height: 46px; border-radius: 12px; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; margin-bottom: 14px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);">
-                                                <i class="fas fa-cloud-arrow-up"></i>
-                                            </div>
-                                            <h3 style="font-size: 1.05rem; font-weight: 800; color: #14532d; margin-bottom: 6px;">حفظ البيانات (كتابة)</h3>
-                                            <p style="font-size: 0.825rem; color: #15803d; line-height: 1.5; margin: 0;">تثبيت وتحديث جميع السجلات والتعديلات في قاعدة بيانات SQL.</p>
-                                        </div>
-                                        <button type="button" id="save-all-data-btn" style="width: 100%; padding: 12px 18px; background: #16a34a; color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);">
-                                            <i class="fas fa-cloud-arrow-up"></i>
-                                            <span>حفظ البيانات في الخادم</span>
-                                        </button>
-                                    </div>
+                                <div class="border-t pt-4">
+                                    <button id="sync-data-btn" class="btn-primary w-full">
+                                        <i class="fas fa-sync ml-2"></i>
+                                        مزامنة البيانات من الخادم (قراءة)
+                                    </button>
+                                </div>
+                                <div class="border-t pt-4">
+                                    <button id="save-all-data-btn" class="btn-success w-full">
+                                        <i class="fas fa-cloud-upload-alt ml-2"></i>
+                                        حفظ جميع البيانات في الخادم (كتابة)
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1081,7 +924,6 @@ const Settings = {
             <div class="tab-content" id="tab-system-settings">
                 ${this.renderSystemVersionCard()}
                 ${this.isCurrentUserAdmin() ? this.renderUserPhotoMigrationCard() : ''}
-                ${this.isCurrentUserAdmin() ? this.renderDataArchivingCard() : ''}
                 ${this.renderEmergencyContactsCard()}
                 <div class="settings-group mt-6">
                     <div class="settings-group-header">
@@ -1993,15 +1835,7 @@ const Settings = {
                 Utils.safeWarn('⚠️ تعذر تحديد صلاحيات المستخدم عبر Permissions.isCurrentUserAdmin:', error);
             }
         }
-        if (typeof Permissions?.isCurrentUserEffectiveAdmin === 'function') {
-            try {
-                return Permissions.isCurrentUserEffectiveAdmin();
-            } catch (_) {}
-        }
-        const user = AppState?.currentUser || (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.resolveCurrentUser ? GoogleIntegration.resolveCurrentUser() : null);
-        if (!user) return true; // Default allow in settings shell
-        const role = String(user.role || '').toLowerCase().trim();
-        return role === 'admin' || role === 'administrator' || role === 'system_admin' || role === 'system-manager' || role === 'مدير' || role === 'مدير النظام' || user.isAdmin === true || !role;
+        return (AppState.currentUser?.role || '').toLowerCase() === 'admin';
     },
 
     renderSystemVersionCard() {
@@ -2174,366 +2008,6 @@ const Settings = {
                 }
             });
         }
-    },
-
-    renderDataArchivingCard() {
-        return `
-            <div class="content-card mt-6" id="data-retention-archiving-card">
-                <div class="card-header flex justify-between items-center" style="background: linear-gradient(135deg, rgba(217, 119, 6, 0.08), rgba(180, 83, 9, 0.04));">
-                    <h2 class="card-title text-amber-700">
-                        <i class="fas fa-archive ml-2"></i>
-                        إدارة الأرشفة الدورية والاحتفاظ بالبيانات (Data Archiving & Retention)
-                    </h2>
-                    <span class="badge" style="background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: 0.75rem;">
-                        <i class="fas fa-user-shield ml-1"></i> مخصص لمدير النظام فقط
-                    </span>
-                </div>
-                <div class="card-body space-y-4">
-                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        نظام أرشفة ذكي لنقل السجلات القديمة (سنتين فأكثر) إلى جداول الأرشيف المستقلة لتسريع تحميل التطبيق وتقليل استهلاك الذاكرة، مع ضمان النسخ الاحتياطي التلقائي وعدم فقدان أي سجل.
-                    </p>
-
-                    <!-- خيارات فترة الاستبقاء -->
-                    <div class="p-4 rounded-xl bg-amber-50/50 border border-amber-200/80 flex flex-wrap items-center justify-between gap-4">
-                        <div class="flex items-center gap-3">
-                            <label class="text-sm font-bold text-gray-700">
-                                <i class="fas fa-clock text-amber-600 ml-1"></i>
-                                فترة البيانات النشطة (الاحتفاظ):
-                            </label>
-                            <select id="archive-retention-period-select" class="form-input text-sm font-semibold" style="width: auto; min-width: 180px;">
-                                <option value="2" selected>آخر سنتين (موصى به)</option>
-                                <option value="1">آخر سنة واحدة</option>
-                                <option value="3">آخر 3 سنوات</option>
-                                <option value="custom">تاريخ مخصص...</option>
-                            </select>
-                            <input type="date" id="archive-custom-cutoff-date" class="form-input text-sm" style="display: none; width: auto;" />
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button type="button" id="archive-check-status-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-search ml-1"></i> فحص وتحليل السجلات
-                            </button>
-                            <button type="button" id="archive-show-history-btn" class="btn-secondary btn-sm">
-                                <i class="fas fa-history ml-1"></i> سجل العمليات
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- شبكة الإحصائيات -->
-                    <div id="archive-stats-strip" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                        <div class="p-3 rounded-lg bg-slate-50 border border-slate-200">
-                            <span class="text-xs text-gray-500 block mb-1">إجمالي السجلات النشطة</span>
-                            <strong id="archive-total-active" class="text-lg text-slate-800 font-mono">—</strong>
-                        </div>
-                        <div class="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                            <span class="text-xs text-amber-700 block mb-1">مؤهلة للأرشفة (القديمة)</span>
-                            <strong id="archive-total-eligible" class="text-lg text-amber-800 font-mono">—</strong>
-                        </div>
-                        <div class="p-3 rounded-lg bg-blue-50 border border-blue-200">
-                            <span class="text-xs text-blue-700 block mb-1">مؤرشفة حالياً بالأرشيف</span>
-                            <strong id="archive-total-archived" class="text-lg text-blue-800 font-mono">—</strong>
-                        </div>
-                        <div class="p-3 rounded-lg bg-purple-50 border border-purple-200">
-                            <span class="text-xs text-purple-700 block mb-1">تاريخ القطع المحسوب</span>
-                            <strong id="archive-calculated-cutoff" class="text-sm text-purple-900 font-mono">—</strong>
-                        </div>
-                    </div>
-
-                    <!-- جدول المديولات المشمولة -->
-                    <div class="border border-gray-200 rounded-lg overflow-hidden mt-3">
-                        <div class="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-600 flex justify-between items-center border-b border-gray-200">
-                            <span>المديولات الخاضعة للأرشفة</span>
-                            <span id="archive-selected-summary" class="text-amber-700">7 مديولات محددة</span>
-                        </div>
-                        <div id="archive-modules-table-container" class="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                            <div class="p-4 text-center text-sm text-gray-500">
-                                اضغط "فحص وتحليل السجلات" لعرض تفاصيل المديولات
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- تنبيه وأزرار التنفيذ -->
-                    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-                        <div id="archive-status-message" class="text-sm text-gray-600">
-                            جاهز للفحص والأرشفة.
-                        </div>
-                        <button type="button" id="archive-execute-btn" class="btn-primary" style="background: #d97706; border-color: #b45309;" disabled>
-                            <i class="fas fa-file-archive ml-2"></i> بدء الأرشفة والنسخ الاحتياطي
-                        </button>
-                    </div>
-
-                    <!-- نافذة السجل / تقدم العملية -->
-                    <div id="archive-execution-log" class="text-xs text-gray-700 bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-36 overflow-y-auto" style="display: none;"></div>
-                </div>
-            </div>
-        `;
-    },
-
-    _archiveLastStatusData: null,
-
-    bindDataArchivingEvents() {
-        if (!this.isCurrentUserAdmin()) return;
-
-        const periodSelect = document.getElementById('archive-retention-period-select');
-        const customDateInput = document.getElementById('archive-custom-cutoff-date');
-        const checkBtn = document.getElementById('archive-check-status-btn');
-        const executeBtn = document.getElementById('archive-execute-btn');
-        const historyBtn = document.getElementById('archive-show-history-btn');
-
-        if (periodSelect && !periodSelect.dataset.bound) {
-            periodSelect.dataset.bound = '1';
-            periodSelect.addEventListener('change', () => {
-                if (customDateInput) {
-                    customDateInput.style.display = periodSelect.value === 'custom' ? 'inline-block' : 'none';
-                }
-                this.refreshArchiveStatusUI(false);
-            });
-        }
-
-        if (customDateInput && !customDateInput.dataset.bound) {
-            customDateInput.dataset.bound = '1';
-            customDateInput.addEventListener('change', () => {
-                this.refreshArchiveStatusUI(false);
-            });
-        }
-
-        if (checkBtn && !checkBtn.dataset.bound) {
-            checkBtn.dataset.bound = '1';
-            checkBtn.addEventListener('click', () => {
-                this.refreshArchiveStatusUI(true);
-            });
-        }
-
-        if (historyBtn && !historyBtn.dataset.bound) {
-            historyBtn.dataset.bound = '1';
-            historyBtn.addEventListener('click', () => {
-                this.showArchiveHistoryModal();
-            });
-        }
-
-        if (executeBtn && !executeBtn.dataset.bound) {
-            executeBtn.dataset.bound = '1';
-            executeBtn.addEventListener('click', () => {
-                this.executeDataArchivingFromUI();
-            });
-        }
-
-        // فحص أولي للبيانات
-        this.refreshArchiveStatusUI(false);
-    },
-
-    async refreshArchiveStatusUI(showNotice = false) {
-        const periodSelect = document.getElementById('archive-retention-period-select');
-        const customDateInput = document.getElementById('archive-custom-cutoff-date');
-        const totalActiveEl = document.getElementById('archive-total-active');
-        const totalEligibleEl = document.getElementById('archive-total-eligible');
-        const totalArchivedEl = document.getElementById('archive-total-archived');
-        const cutoffEl = document.getElementById('archive-calculated-cutoff');
-        const tableContainer = document.getElementById('archive-modules-table-container');
-        const executeBtn = document.getElementById('archive-execute-btn');
-        const statusMsg = document.getElementById('archive-status-message');
-
-        if (!totalActiveEl) return;
-
-        const retentionVal = periodSelect ? periodSelect.value : '2';
-        const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
-        const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
-
-        if (statusMsg) statusMsg.textContent = 'جاري فحص السجلات وتحليل فترات الاحتفاظ...';
-
-        try {
-            const res = await GoogleIntegration.sendToAppsScript('getArchiveStatus', {
-                retentionYears,
-                customCutoffDate: customCutoff,
-                actorUserData: AppState?.currentUser || null
-            });
-
-            if (!res || !res.success) {
-                if (statusMsg) statusMsg.textContent = res?.message || 'فشل جلب إحصائيات الأرشفة.';
-                return;
-            }
-
-            this._archiveLastStatusData = res;
-
-            if (totalActiveEl) totalActiveEl.textContent = (res.grandTotalActive || 0).toLocaleString();
-            if (totalEligibleEl) totalEligibleEl.textContent = (res.grandTotalEligible || 0).toLocaleString();
-            if (totalArchivedEl) totalArchivedEl.textContent = (res.grandTotalArchived || 0).toLocaleString();
-            if (cutoffEl) cutoffEl.textContent = res.cutoffDate || '—';
-
-            if (tableContainer && res.modules) {
-                const rows = Object.entries(res.modules).map(([modKey, mod]) => {
-                    const isEligible = (mod.eligibleCount || 0) > 0;
-                    return `
-                        <div class="px-4 py-2.5 flex items-center justify-between text-xs hover:bg-slate-50 transition">
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" class="archive-module-checkbox form-checkbox text-amber-600 rounded" value="${modKey}" checked />
-                                <span class="font-bold text-gray-800">${Utils.escapeHTML(mod.labelAr)}</span>
-                                <span class="text-gray-400 font-mono">(${Utils.escapeHTML(mod.table)})</span>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <span class="text-gray-600">نشط: <strong class="font-mono">${(mod.activeCount || 0).toLocaleString()}</strong></span>
-                                <span class="${isEligible ? 'text-amber-700 font-bold' : 'text-gray-400'}">
-                                    مؤهل للأرشفة: <strong class="font-mono">${(mod.eligibleCount || 0).toLocaleString()}</strong>
-                                </span>
-                                <span class="text-blue-600">مؤرشف: <strong class="font-mono">${(mod.archivedCount || 0).toLocaleString()}</strong></span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-                tableContainer.innerHTML = rows;
-            }
-
-            if (executeBtn) {
-                executeBtn.disabled = (res.grandTotalEligible || 0) <= 0;
-            }
-
-            if (statusMsg) {
-                statusMsg.textContent = (res.grandTotalEligible || 0) > 0
-                    ? `يوجد ${res.grandTotalEligible} سجل مؤهل للنقل إلى الأرشيف بأمان.`
-                    : 'جميع السجلات حديثة وتقع ضمن فترة الاحتفاظ المحددة.';
-            }
-
-            if (showNotice) {
-                Notification.success(`تم تحديث إحصائيات الأرشفة (تاريخ القطع: ${res.cutoffDate})`);
-            }
-        } catch (e) {
-            console.error('Error in refreshArchiveStatusUI:', e);
-            if (statusMsg) statusMsg.textContent = 'حدث خطأ أثناء فحص البيانات.';
-        }
-    },
-
-    async executeDataArchivingFromUI() {
-        if (!this._archiveLastStatusData || (this._archiveLastStatusData.grandTotalEligible || 0) <= 0) {
-            Notification.info('لا توجد سجلات مؤهلة للأرشفة حالياً.');
-            return;
-        }
-
-        const checkedCheckboxes = Array.from(document.querySelectorAll('.archive-module-checkbox:checked'));
-        const selectedModules = checkedCheckboxes.map(cb => cb.value);
-
-        if (selectedModules.length === 0) {
-            Notification.warning('يرجى اختيار مديول واحد على الأقل للأرشفة.');
-            return;
-        }
-
-        const eligibleCount = this._archiveLastStatusData.grandTotalEligible || 0;
-        const cutoffDate = this._archiveLastStatusData.cutoffDate;
-
-        const confirmMsg = `تنبيه أمني لمدير النظام:\n\n` +
-            `سيتم أرشفة ونقل ${eligibleCount} سجل أقدم من تاريخ (${cutoffDate}) إلى جداول الأرشيف المستقلة.\n` +
-            `سيتم حفظ نسخة احتياطية محلية تلقائياً قبل بدء العملية.\n\n` +
-            `هل أنت متأكد من تنفيذ الأرشفة الآن؟`;
-
-        if (!confirm(confirmMsg)) return;
-
-        const executeBtn = document.getElementById('archive-execute-btn');
-        const statusMsg = document.getElementById('archive-status-message');
-        const logEl = document.getElementById('archive-execution-log');
-
-        if (executeBtn) executeBtn.disabled = true;
-        if (statusMsg) statusMsg.textContent = 'جاري تنفيذ الأرشفة والنسخ الاحتياطي الذري في الخادم...';
-        if (logEl) {
-            logEl.style.display = 'block';
-            logEl.innerHTML = `<p class="text-amber-700"><i class="fas fa-spinner fa-spin ml-1"></i> جاري نقل السجلات إلى جداول الأرشيف...</p>`;
-        }
-
-        try {
-            const periodSelect = document.getElementById('archive-retention-period-select');
-            const customDateInput = document.getElementById('archive-custom-cutoff-date');
-            const retentionVal = periodSelect ? periodSelect.value : '2';
-            const retentionYears = retentionVal === 'custom' ? 2 : Number(retentionVal || 2);
-            const customCutoff = retentionVal === 'custom' && customDateInput ? customDateInput.value : null;
-
-            const res = await GoogleIntegration.sendToAppsScript('executeDataArchiving', {
-                retentionYears,
-                customCutoffDate: customCutoff,
-                selectedModules,
-                actorUserData: AppState?.currentUser || null
-            });
-
-            if (res && res.success) {
-                if (logEl) {
-                    logEl.innerHTML = `
-                        <div class="text-green-700 font-bold mb-1">
-                            <i class="fas fa-check-circle ml-1"></i> ${Utils.escapeHTML(res.message)}
-                        </div>
-                        <div class="text-slate-600">
-                            • كود العملية: <code class="font-mono">${res.executionId}</code><br/>
-                            • عدد السجلات المنقولة: <strong>${res.totalRecordsArchived}</strong><br/>
-                            • ملف النسخة الاحتياطية: <code class="font-mono">${res.backupFileName}</code><br/>
-                            • استغرق التنفيذ: ${res.durationMs}ms
-                        </div>
-                    `;
-                }
-                Notification.success(`تمت الأرشفة بنجاح! تم تفريغ مساحة ${res.totalRecordsArchived} سجل نشط.`);
-                await this.refreshArchiveStatusUI(false);
-            } else {
-                if (logEl) {
-                    logEl.innerHTML = `<p class="text-red-600"><i class="fas fa-exclamation-triangle ml-1"></i> ${Utils.escapeHTML(res?.message || 'فشلت الأرشفة')}</p>`;
-                }
-                Notification.error(res?.message || 'فشلت عملية الأرشفة.');
-            }
-        } catch (err) {
-            console.error('Archiving execution error:', err);
-            Notification.error(`خطأ أثناء التنفيذ: ${err.message}`);
-        } finally {
-            if (executeBtn) executeBtn.disabled = false;
-        }
-    },
-
-    showArchiveHistoryModal() {
-        const logs = this._archiveLastStatusData?.recentLogs || [];
-        const content = logs.length === 0
-            ? '<p class="text-center text-gray-500 py-6">لا توجد عمليات أرشفة سابقة مسجلة.</p>'
-            : `
-                <div class="overflow-x-auto">
-                    <table class="w-full text-xs text-right border-collapse">
-                        <thead>
-                            <tr class="bg-gray-100 text-gray-700 font-bold border-b">
-                                <th class="p-2">تاريخ التنفيذ</th>
-                                <th class="p-2">تاريخ القطع</th>
-                                <th class="p-2">السجلات المؤرشفة</th>
-                                <th class="p-2">المنفذ</th>
-                                <th class="p-2">ملف النسخة</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-100">
-                            ${logs.map(log => `
-                                <tr>
-                                    <td class="p-2 font-mono">${Utils.escapeHTML((log.executedAt || '').slice(0, 19).replace('T', ' '))}</td>
-                                    <td class="p-2 font-mono text-amber-700">${Utils.escapeHTML(log.cutoffDate || '')}</td>
-                                    <td class="p-2 font-bold text-green-700 font-mono">${Number(log.totalArchivedCount || 0).toLocaleString()}</td>
-                                    <td class="p-2">${Utils.escapeHTML(log.executedByEmail || 'admin')}</td>
-                                    <td class="p-2 font-mono text-gray-500 text-[10px]">${Utils.escapeHTML(log.backupFileName || '—')}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-        const modalHtml = `
-            <div id="archive-history-modal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[85vh] flex flex-col">
-                    <div class="flex justify-between items-center border-b pb-3">
-                        <h3 class="font-bold text-base text-gray-800 flex items-center">
-                            <i class="fas fa-history text-amber-600 ml-2"></i> سجل عمليات الأرشفة السابقة
-                        </h3>
-                        <button type="button" onclick="document.getElementById('archive-history-modal').remove()" class="text-gray-400 hover:text-gray-600 text-lg">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="flex-1 overflow-y-auto">
-                        ${content}
-                    </div>
-                    <div class="pt-3 border-t flex justify-end">
-                        <button type="button" onclick="document.getElementById('archive-history-modal').remove()" class="btn-secondary btn-sm">إغلاق</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        const oldModal = document.getElementById('archive-history-modal');
-        if (oldModal) oldModal.remove();
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
     },
 
     renderEmergencyContactsCard() {
@@ -2743,40 +2217,15 @@ const Settings = {
                 
                 // ✅ إصلاح: تحميل بيانات إعدادات النماذج فوراً عند فتح التبويب
                 if (targetTab === 'form-settings' && this.isCurrentUserAdmin()) {
-                    if (typeof Permissions !== 'undefined') {
-                        if (typeof Permissions.ensureFormSettingsState === 'function') {
-                            Permissions.ensureFormSettingsState(true).then(() => {
-                                if (typeof Permissions.refreshFormSettingsUI === 'function') {
-                                    Permissions.refreshFormSettingsUI();
-                                }
-                                if (typeof Permissions.bindFormSettingsEvents === 'function') {
-                                    Permissions.bindFormSettingsEvents();
-                                }
-                            }).catch(error => {
-                                Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
-                            });
-                        } else if (typeof Permissions.bindFormSettingsEvents === 'function') {
-                            Permissions.bindFormSettingsEvents().catch(error => {
-                                Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
-                            });
-                        }
-                    }
-                }
-                if (targetTab === 'violation-types') {
-                    if (typeof ViolationTypesManager !== 'undefined') {
-                        if (typeof ViolationTypesManager.ensureRemoteLoaded === 'function') {
-                            ViolationTypesManager.ensureRemoteLoaded().then(() => {
-                                this.refreshViolationTypesList();
-                            });
-                        } else {
-                            this.refreshViolationTypesList();
-                        }
+                    if (typeof Permissions !== 'undefined' && typeof Permissions.bindFormSettingsEvents === 'function') {
+                        Permissions.bindFormSettingsEvents().catch(error => {
+                            Utils.safeError('❌ خطأ في تحميل إعدادات النماذج:', error);
+                        });
                     }
                 }
                 if (targetTab === 'system-settings' && this.isCurrentUserAdmin()) {
                     this.loadEmergencyContactsSettings();
                     this.bindUserPhotoMigrationEvents();
-                    this.bindDataArchivingEvents();
                 }
                 if (targetTab === 'help-content' && this.isCurrentUserAdmin()) {
                     Settings.bindHelpContentSettingsEvents();
@@ -3222,7 +2671,6 @@ const Settings = {
             if (this.isCurrentUserAdmin()) {
                 this.loadEmergencyContactsSettings();
                 this.bindUserPhotoMigrationEvents();
-                this.bindDataArchivingEvents();
             }
 
             const companyNameInput = document.getElementById('company-name-input');
@@ -5961,15 +5409,15 @@ const Settings = {
             const sheetsEnabled = document.getElementById('google-sheets-enabled');
             const sheetsId = document.getElementById('google-sheets-id');
 
-            if (!appsScriptEnabled || !appsScriptUrl) {
+            if (!appsScriptEnabled || !appsScriptUrl || !sheetsEnabled || !sheetsId) {
                 Notification.error('خطأ: لم يتم العثور على حقول النموذج');
                 return;
             }
 
             AppState.googleConfig.appsScript.enabled = appsScriptEnabled.checked;
-            AppState.googleConfig.appsScript.scriptUrl = appsScriptUrl.value.trim() || '/api/exec';
-            AppState.googleConfig.sheets.enabled = sheetsEnabled ? sheetsEnabled.checked : true;
-            AppState.googleConfig.sheets.spreadsheetId = sheetsId ? sheetsId.value.trim() : (AppState.googleConfig.sheets?.spreadsheetId || '');
+            AppState.googleConfig.appsScript.scriptUrl = appsScriptUrl.value.trim();
+            AppState.googleConfig.sheets.enabled = sheetsEnabled.checked;
+            AppState.googleConfig.sheets.spreadsheetId = sheetsId.value.trim();
 
             // حفظ الإعدادات باستخدام window.DataManager
             let saveSuccess = false;

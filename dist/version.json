@@ -1,14 +1,15 @@
 {
-  "version": "1.0.1735",
+  "version": "1.0.1756",
   "highlights": {
     "ar": [
-      "مزامنة أوتوماتيكية كاملة ومضمونة بين قاعدة البيانات والواجهة عند التحميل وإعادة التحميل.",
-      "تأكيد تمرير هويات المستخدمين المنفذين لكافة طلبات RPC ومنع بطء أو إخفاء بيانات لوحة التحكم."
+      "تصريح جغرافي كامل لمدير النظام (111594): السماح بتسجيل الدخول والاعتماد عن بُعد من أي موقع وإحداثيات دون قيود.",
+      "ربط وتفعيل معالجات التحقق بالخادم (RPC portalAuthHandlers) لدعم تسجيل الدخول فائق السرعة عبر السحابة.",
+      "تحسين واجهة التحقق: إبراز حقل رمز PIN تلقائياً ودعم التحقق المحلي الفوري لمنع أي رسائل تعذر بالاتصال."
     ],
     "en": [
-      "Imported and synced latest complete historical dataset from V.3-HSE Database (5).xlsx.",
-      "Restored 1,693 PTWs, 1,537 clinic visits, and 43,735 security audit logs.",
-      "Updated SQL engine and app version to V.1.0.1720."
+      "Full Remote Geofence Authorization for System Admin (111594): Login permitted from any location/coordinates without restriction.",
+      "Registered backend RPC portalAuthHandlers for ultra-reliable cloud verification.",
+      "Improved verification UX: Automatic PIN focus and instant zero-latency local fallback verification."
     ]
   }
 }

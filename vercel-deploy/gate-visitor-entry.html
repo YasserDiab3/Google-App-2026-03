@@ -12,9 +12,6 @@
     <link rel="manifest" href="manifest-visitor.json">
     <link rel="icon" type="image/png" href="icons/icapp-logo.png">
     
-    <!-- Unified API Engine Resolver -->
-    <script src="js/hse-api-url.js"></script>
-    
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1272,7 +1269,96 @@
         }
         .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
 
+        /* 📱 تحسينات الهاتف والأجهزة الذكية الشاملة لنموذج الزوار والبوابات */
+        @media (max-width: 640px) {
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+            input, select, textarea, .form-control {
+                font-size: 16px !important;
+                min-height: 44px !important;
+            }
+            button, .tab-btn, .btn-submit, .tool-btn {
+                min-height: 44px !important;
+                touch-action: manipulation;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .tabs-nav {
+                gap: 6px !important;
+            }
+            .tab-btn {
+                padding: 9px 6px !important;
+                font-size: 0.78rem !important;
+                gap: 4px !important;
+            }
+            .tab-btn i {
+                font-size: 0.85rem !important;
+            }
+            .tab-btn span {
+                white-space: normal !important;
+                text-align: center !important;
+                line-height: 1.25 !important;
+            }
+            .tab-counter-badge {
+                font-size: 0.68rem !important;
+                padding: 1px 5px !important;
+            }
+            .active-summary-stats {
+                gap: 5px !important;
+            }
+            .stat-box {
+                padding: 8px 4px !important;
+            }
+            .stat-num {
+                font-size: 1.15rem !important;
+            }
+            .stat-label {
+                font-size: 0.62rem !important;
+            }
+            .visitor-info-grid {
+                grid-template-columns: 1fr !important;
+                gap: 4px !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
+        }
 </style>
+<script src="js/modules/hse-dark-mode.js"></script>
 </head>
 <body>
     <div id="toastMsg" class="toast-msg"></div>
@@ -1383,7 +1469,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -2266,19 +2352,15 @@
                         mode: 'cors',
                         redirect: 'follow',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'getPublicVisitorConfig' })
+                        body: JSON.stringify({ action: 'getPublicObservationConfig' })
                     });
                     const serverData = await res.json();
-                    if (serverData && serverData.success) {
-                        if (Array.isArray(serverData.sites) && serverData.sites.length > 0) {
-                            currentSystemConfig.sites = serverData.sites;
-                        }
+                    if (serverData && serverData.success && Array.isArray(serverData.sites) && serverData.sites.length > 0) {
+                        currentSystemConfig.sites = serverData.sites;
                         if (Array.isArray(serverData.departments) && serverData.departments.length > 0) {
                             currentSystemConfig.departments = serverData.departments;
                         }
-                        if (Array.isArray(serverData.hosts) && serverData.hosts.length > 0) {
-                            currentSystemConfig.safetyMembers = serverData.hosts.map(h => typeof h === 'string' ? h : (h.name || ''));
-                        } else if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
+                        if (Array.isArray(serverData.safetyMembers) && serverData.safetyMembers.length > 0) {
                             currentSystemConfig.safetyMembers = serverData.safetyMembers;
                         }
                         try {
@@ -2385,11 +2467,22 @@
                 if (fallback && Array.isArray(fallback.places)) places = fallback.places;
             }
 
+            const cleanSubLoc = (str) => {
+                if (!str) return '';
+                let s = String(str).trim();
+                s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*(\d+)-ICAPP/gi, '_ $2-ICAPP');
+                s = s.replace(/_?\s*ICAPP-(\d+)\s*[-—]\s*ICAPP-(\d+)/gi, '_ $1-ICAPP');
+                s = s.replace(/_?\s*(\d+)-ICAPP\s*[-—]\s*(\d+)-ICAPP/gi, '_ $1-ICAPP');
+                s = s.replace(/_ICAPP-(\d+)(?![\w-])/gi, '_ $1-ICAPP');
+                return s.trim();
+            };
+
             places.forEach(p => {
-                if (p && p.trim()) {
+                const cleaned = cleanSubLoc(p);
+                if (cleaned) {
                     const opt = document.createElement('option');
-                    opt.value = p.trim();
-                    opt.textContent = p.trim();
+                    opt.value = cleaned;
+                    opt.textContent = cleaned;
                     areaSelect.appendChild(opt);
                 }
             });
@@ -3547,14 +3640,40 @@ function resetCheckInForm() {
         }
 
                 function getEffectiveApiUrl() {
-            if (typeof window !== 'undefined' && typeof window.__hseNormalizeGasUrl === 'function') {
-                return window.getEffectiveApiUrl();
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
             }
             try {
                 var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                if (saved) return saved;
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
+                }
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
+                }
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
             } catch (e) {}
-            return '/api/exec';
+            return DEFAULT_GAS;
         }
 
         async function syncVisitorCheckInToCloud(visitorRecord) {

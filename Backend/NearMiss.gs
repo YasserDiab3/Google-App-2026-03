@@ -110,7 +110,13 @@ function getNearMiss(nearMissId) {
         
         const sheetName = 'NearMiss';
         const data = readFromSheet(sheetName, getSpreadsheetId());
-        const nearMiss = data.find(nm => nm.id === nearMissId);
+        const idStr = String(nearMissId).trim();
+        const nearMiss = data.find(nm => 
+            String(nm.id || '').trim() === idStr || 
+            String(nm.isoCode || '').trim() === idStr || 
+            String(nm['المعرف'] || '').trim() === idStr || 
+            String(nm['كود'] || '').trim() === idStr
+        );
         
         if (!nearMiss) {
             return { success: false, message: 'الحادث الوشيك غير موجود' };
@@ -311,15 +317,19 @@ function submitPublicNearMiss(payload) {
         // رفع الصورة المرفقة إن وُجدت
         if (photoData && String(photoData).startsWith('data:image/')) {
             try {
-                var folderName = 'HSE_NearMiss_Attachments';
-                var uploadRes = uploadFileToDrive(photoData, 'image-1', folderName, 'image/jpeg', 'NearMiss', id);
-                if (uploadRes && uploadRes.success) {
-                    var directLink = 'https://drive.google.com/uc?export=view&id=' + uploadRes.fileId;
+                var fileName = 'nearmiss_' + id + '_' + Date.now() + '.jpg';
+                var uploadRes = uploadFileToDrive(photoData, fileName, 'image/jpeg', 'NearMiss');
+                if (uploadRes && uploadRes.success && (uploadRes.fileId || uploadRes.directLink || uploadRes.shareableLink)) {
+                    var fileId = uploadRes.fileId || '';
+                    var directLink = uploadRes.directLink || uploadRes.shareableLink || ('https://drive.google.com/uc?export=view&id=' + fileId);
                     record.attachments = JSON.stringify([{
-                        name: 'image-1',
+                        name: fileName,
                         url: directLink,
+                        directLink: directLink,
+                        shareableLink: uploadRes.shareableLink || directLink,
                         type: 'image/jpeg',
-                        id: uploadRes.fileId
+                        id: fileId || ('att-' + Date.now()),
+                        fileId: fileId
                     }]);
                 }
             } catch (uErr) {

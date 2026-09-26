@@ -12,6 +12,7 @@ const {
     buildPublicFormSafetyMembers,
     buildPublicFormDepartments
 } = require('./form-settings-handlers');
+const portalAuthHandlers = require('./portal-auth-handlers');
 
 function generateId(prefix = 'REC') {
     return `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
@@ -429,6 +430,26 @@ const moduleHandlers = {
         };
     },
 
+    'getNearMiss': function(payload, postData, action, actorUserData) {
+        const gate = checkAuthenticatedActor(actorUserData, action);
+        if (!gate.ok) return gate;
+
+        const nearMissId = payload?.nearMissId || payload?.id
+            || postData?.data?.nearMissId || postData?.data?.id
+            || postData?.nearMissId || postData?.id;
+        if (!nearMissId) {
+            return { success: false, message: 'معرف الحادث الوشيك مطلوب' };
+        }
+
+        const db = getDatabase();
+        const row = db.findRow('NearMiss', { id: String(nearMissId) })
+            || db.findRow('NearMiss', { isoCode: String(nearMissId) });
+        if (!row) {
+            return { success: false, message: 'الحادث الوشيك غير موجود' };
+        }
+        return { success: true, data: row };
+    },
+
     // ==========================================
     // 4. Daily Observations
     // ==========================================
@@ -442,6 +463,19 @@ const moduleHandlers = {
         data.updatedAt = new Date().toISOString();
 
         const db = getDatabase();
+        const existing = (data.id ? db.findRow('DailyObservations', { id: data.id }) : null)
+            || (data.isoCode ? db.findRow('DailyObservations', { isoCode: data.isoCode }) : null);
+
+        if (existing) {
+            db.updateRow('DailyObservations', 'id', existing.id, data);
+            return {
+                success: true,
+                message: 'تم تحديث الملاحظة اليومية بنجاح',
+                id: existing.id,
+                data: data
+            };
+        }
+
         db.insertRow('DailyObservations', data);
 
         return {
@@ -1236,6 +1270,138 @@ const moduleHandlers = {
             safetyMembers: buildPublicFormSafetyMembers(db),
             departments: buildPublicFormDepartments(db),
             timestamp: new Date().toISOString()
+        };
+    },
+
+    'getPublicTbtConfig': function(payload, postData, action) {
+        const db = getDatabase();
+        const sites = buildFormattedSites(db);
+        const safetyMembers = buildPublicFormSafetyMembers(db);
+        const rawContractors = db.readSheet('ApprovedContractors') || [];
+        const rawEmps = db.readSheet('Employees') || [];
+
+        const BLOCKED_TBT_NAMES = new Set([
+            'اسلام السيد علي الزغبي',
+            'حسانين حسن محمد حسانين على',
+            'طارق مصطفى السيد مدين الجوهرى',
+            '112425',
+            '112411',
+            '100780'
+        ]);
+
+        const isEmpResigned = (e) => {
+            if (!e || typeof e !== 'object') return true;
+            const code = String(e.employeeNumber || e.id || e.sapId || '').trim();
+            if (code && BLOCKED_TBT_NAMES.has(code)) return true;
+            const name = String(e.name || e.employeeName || e.fullName || '').trim();
+            for (const b of BLOCKED_TBT_NAMES) {
+                if (b.length > 3 && name.includes(b)) return true;
+            }
+            if (e.active === false || e.active === 'false' || e.isActive === false || e.isActive === 'false') return true;
+            if (e.resignationDate || e.terminationDate || e.endDate) return true;
+            const s = [
+                e.status, e.employeeStatus, e.workStatus, e.employmentStatus, e.state, e.activeStatus, e.jobStatus
+            ].map(v => String(v || '').toLowerCase().trim()).filter(Boolean).join(' | ');
+            if (!s) return false;
+            return s.includes('مستقيل') || s.includes('استقال') || s.includes('إنهاء') || s.includes('انهاء') ||
+                   s.includes('مفصول') || s.includes('ترك') || s.includes('غير نشط') || s.includes('معاش') ||
+                   s.includes('وفاة') || s.includes('resign') || s.includes('terminated') || s.includes('inactive') ||
+                   s.includes('left');
+        };
+
+        const contractorNames = new Set();
+        const contractors = [];
+        const addCtr = (c) => {
+            const name = c && (c.companyName || c.name);
+            if (name && !contractorNames.has(name)) {
+                contractorNames.add(name);
+                contractors.push({
+                    id: c.id || c.code || name,
+                    name: name,
+                    companyName: name,
+                    code: c.code || '',
+                    serviceType: c.serviceType || 'مقاول معتمد',
+                    supervisor: c.supervisor || c.representative || c.contactPerson || ''
+                });
+            }
+        };
+
+        rawContractors.filter(c => c && c.isActive !== false && c.isActive !== 'false').forEach(addCtr);
+
+        const empKeys = new Set();
+        const employees = [];
+        const addEmp = (e) => {
+            if (isEmpResigned(e)) return;
+            const name = e && (e.name || e.employeeName);
+            const id = e && (e.id || e.employeeNumber || e.sapId || '');
+            const key = (id || '') + '__' + (name || '');
+            if (name && !empKeys.has(key)) {
+                empKeys.add(key);
+                employees.push({
+                    id: id,
+                    employeeNumber: e.employeeNumber || id,
+                    sapId: e.sapId || '',
+                    nationalId: e.nationalId || '',
+                    name: name,
+                    department: e.department || 'الإنتاج',
+                    position: e.position || e.job || 'فني'
+                });
+            }
+        };
+
+        rawEmps.filter(e => !isEmpResigned(e)).forEach(addEmp);
+
+        return {
+            success: true,
+            sites: sites,
+            safetyTeam: safetyMembers,
+            contractors: contractors,
+            employees: employees,
+            departments: buildPublicFormDepartments(db),
+            timestamp: new Date().toISOString()
+        };
+    },
+
+    'submitPublicTbtRecord': function(payload, postData, action) {
+        const db = getDatabase();
+        const data = payload || (postData && postData.data) || {};
+        const contractorPayload = data.contractorPayload;
+        const employeePayload = data.employeePayload;
+        const recordRef = data.recordRef || ('TBT-' + Date.now());
+
+        let contractorSaved = false;
+        let employeeSaved = false;
+
+        if (contractorPayload) {
+            if (!contractorPayload.id) contractorPayload.id = 'CTR-' + Date.now();
+            contractorPayload.createdAt = contractorPayload.createdAt || new Date().toISOString();
+            contractorPayload.updatedAt = new Date().toISOString();
+            try {
+                db.insert('ContractorTrainings', contractorPayload);
+                contractorSaved = true;
+            } catch (e) {
+                console.warn('SQLite insert ContractorTrainings warning:', e);
+            }
+        }
+
+        if (employeePayload) {
+            if (!employeePayload.id) employeePayload.id = 'TRN-' + Date.now();
+            employeePayload.createdAt = employeePayload.createdAt || new Date().toISOString();
+            employeePayload.updatedAt = new Date().toISOString();
+            try {
+                db.insert('Training', employeePayload);
+                employeeSaved = true;
+            } catch (e) {
+                console.warn('SQLite insert Training warning:', e);
+            }
+        }
+
+        return {
+            success: true,
+            message: 'تم تسجيل محضر الـ TBT بنجاح',
+            recordRef: recordRef,
+            contractorSaved: contractorSaved,
+            employeeSaved: employeeSaved
         };
     },
 
@@ -2183,4 +2349,7 @@ const moduleHandlers = {
     }
 };
 
-module.exports = moduleHandlers;
+module.exports = {
+    ...moduleHandlers,
+    ...portalAuthHandlers
+};

@@ -2010,6 +2010,26 @@ var ActionHandlers = {
         })();
         return result;
     },
+    'deleteClinicInjury': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+            result = deleteClinicInjury(payload.injuryId || payload.id);
+            return;
+        })();
+        return result;
+    },
+    'deleteInjury': function(payload, postData, action, actorUserData, spreadsheetId) {
+        var result = { success: false, message: '' };
+        (function() {
+            var adminFail = actionRequireAdmin_(actorUserData, action);
+            if (adminFail) { result = adminFail; return; }
+            result = deleteClinicInjury(payload.injuryId || payload.id);
+            return;
+        })();
+        return result;
+    },
     'getAllClinicStaff': function(payload, postData, action, actorUserData, spreadsheetId) {
         var result = { success: false, message: '' };
         (function() {

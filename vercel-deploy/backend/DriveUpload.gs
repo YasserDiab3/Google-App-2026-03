@@ -14,19 +14,33 @@
  * @param {string} folderName - اسم المجلد (افتراضي: "HSE_Attachments")
  * @returns {Folder} مجلد Google Drive
  */
-function getOrCreateAttachmentsFolder(folderName = 'HSE_Attachments') {
+function getOrCreateAttachmentsFolder(folderName) {
+    if (!folderName) folderName = 'HSE_Attachments';
     try {
-        // البحث عن المجلد في Google Drive
-        const folders = DriveApp.getFoldersByName(folderName);
-        
-        if (folders.hasNext()) {
-            return folders.next();
+        var props = null;
+        try { props = PropertiesService.getScriptProperties(); } catch (_) {}
+        var cachedId = props ? props.getProperty('HSE_DRIVE_FOLDER_' + folderName) : null;
+        if (cachedId) {
+            try {
+                return DriveApp.getFolderById(cachedId);
+            } catch (eCache) {
+                Logger.log('Cached folder ID invalid: ' + eCache.toString());
+            }
         }
         
-        // إنشاء مجلد جديد إذا لم يكن موجوداً
-        const newFolder = DriveApp.createFolder(folderName);
-        Logger.log('تم إنشاء مجلد جديد للمرفقات: ' + folderName);
-        return newFolder;
+        // البحث عن المجلد في Google Drive
+        const folders = DriveApp.getFoldersByName(folderName);
+        var folder = null;
+        if (folders.hasNext()) {
+            folder = folders.next();
+        } else {
+            folder = DriveApp.createFolder(folderName);
+            Logger.log('تم إنشاء مجلد جديد للمرفقات: ' + folderName);
+        }
+        if (folder && props) {
+            try { props.setProperty('HSE_DRIVE_FOLDER_' + folderName, folder.getId()); } catch (_) {}
+        }
+        return folder;
     } catch (error) {
         Logger.log('خطأ في الحصول على مجلد المرفقات: ' + error.toString());
         throw error;
@@ -40,20 +54,33 @@ function getOrCreateAttachmentsFolder(folderName = 'HSE_Attachments') {
  */
 function getOrCreateModuleFolder(moduleName) {
     try {
-        const mainFolder = getOrCreateAttachmentsFolder();
-        const moduleFolders = mainFolder.getFoldersByName(moduleName);
-        
-        if (moduleFolders.hasNext()) {
-            return moduleFolders.next();
+        if (!moduleName) moduleName = 'General';
+        var props = null;
+        try { props = PropertiesService.getScriptProperties(); } catch (_) {}
+        var cachedId = props ? props.getProperty('HSE_DRIVE_SUBFOLDER_' + moduleName) : null;
+        if (cachedId) {
+            try {
+                return DriveApp.getFolderById(cachedId);
+            } catch (eCache) {
+                Logger.log('Cached subfolder ID invalid: ' + eCache.toString());
+            }
         }
         
-        // إنشاء مجلد فرعي للموديول
-        const moduleFolder = mainFolder.createFolder(moduleName);
-        Logger.log('تم إنشاء مجلد جديد للموديول: ' + moduleName);
-        return moduleFolder;
+        const mainFolder = getOrCreateAttachmentsFolder();
+        const moduleFolders = mainFolder.getFoldersByName(moduleName);
+        var subFolder = null;
+        if (moduleFolders.hasNext()) {
+            subFolder = moduleFolders.next();
+        } else {
+            subFolder = mainFolder.createFolder(moduleName);
+            Logger.log('تم إنشاء مجلد جديد للموديول: ' + moduleName);
+        }
+        if (subFolder && props) {
+            try { props.setProperty('HSE_DRIVE_SUBFOLDER_' + moduleName, subFolder.getId()); } catch (_) {}
+        }
+        return subFolder;
     } catch (error) {
         Logger.log('خطأ في الحصول على مجلد الموديول: ' + error.toString());
-        // في حالة الخطأ، نرجع المجلد الرئيسي
         return getOrCreateAttachmentsFolder();
     }
 }

@@ -87,6 +87,18 @@ const Employees = {
             .trim();
     },
 
+    /** تطبيع النصوص العربية ومقارنة الحروف الشبيهة (أ/إ/آ -> ا ، ى -> ي ، ة -> ه) */
+    normalizeArabic(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/[\u064B-\u065F\u0670]/g, '')
+            .replace(/[أإآ]/g, 'ا')
+            .replace(/ى/g, 'ي')
+            .replace(/ة/g, 'ه')
+            .toLowerCase()
+            .trim();
+    },
+
     _countNamedEmployees_(list) {
         const arr = Array.isArray(list) ? list : [];
         let n = 0;
@@ -3952,6 +3964,9 @@ const Employees = {
                     <button onclick="Employees.editEmployee('${safeId}')" class="btn-icon btn-icon-primary" title="${this.t('module.common.edit', 'تعديل')}">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <button onclick="Employees.resetFieldPortalPin('${safeId}', '${encodeURIComponent(employee.name || employee.fullName || '')}')" class="btn-icon" style="color: #d97706; background: #fffbeb; border-color: #fde68a;" title="إعادة تعيين رمز PIN لبوابة النماذج الميدانية">
+                        <i class="fas fa-key"></i>
+                    </button>
                     <button onclick="Employees.deactivateEmployee('${safeId}')" class="btn-icon btn-icon-danger" title="${this.t('module.employees.deactivate', 'إلغاء تفعيل')}">
                         <i class="fas fa-user-slash"></i>
                     </button>
@@ -4461,7 +4476,6 @@ const Employees = {
             // ✅ حقل البحث في header - إضافة debounce
             const searchInput = document.getElementById('employees-search');
             if (searchInput) {
-                // إزالة أي مستمعات سابقة لتجنب التكرار
                 const newSearchInput = searchInput.cloneNode(true);
                 searchInput.parentNode.replaceChild(newSearchInput, searchInput);
                 
@@ -4470,7 +4484,7 @@ const Employees = {
                     try {
                         // مزامنة مع حقل البحث في الفلتر
                         const filterSearchInput = document.getElementById('employees-search-filter');
-                        if (filterSearchInput) {
+                        if (filterSearchInput && filterSearchInput.value !== newSearchInput.value) {
                             filterSearchInput.value = newSearchInput.value;
                         }
                         await this.applyFilters();
@@ -4481,36 +4495,23 @@ const Employees = {
                     }
                 };
                 
-                newSearchInput.addEventListener('input', (e) => {
-                    // إلغاء البحث السابق إذا كان موجوداً
-                    if (searchTimeout) {
-                        clearTimeout(searchTimeout);
-                    }
-                    
-                    // البحث بعد 300ms من توقف المستخدم عن الكتابة
-                    searchTimeout = setTimeout(applySearch, 300);
+                newSearchInput.addEventListener('input', () => {
+                    if (searchTimeout) clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(applySearch, 250);
                 });
                 
-                // ✅ إضافة event listener للبحث الفوري عند الضغط على Enter
                 newSearchInput.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (searchTimeout) {
-                            clearTimeout(searchTimeout);
-                        }
+                        if (searchTimeout) clearTimeout(searchTimeout);
                         await applySearch();
                     }
                 });
-            } else {
-                if (AppState.debugMode) {
-                    Utils.safeWarn('⚠️ حقل البحث في header غير موجود!');
-                }
             }
             
             // ✅ حقل البحث في الفلتر
             const filterSearchInput = document.getElementById('employees-search-filter');
             if (filterSearchInput) {
-                // إزالة أي مستمعات سابقة لتجنب التكرار
                 const newFilterSearchInput = filterSearchInput.cloneNode(true);
                 filterSearchInput.parentNode.replaceChild(newFilterSearchInput, filterSearchInput);
                 
@@ -4518,8 +4519,9 @@ const Employees = {
                 const applyFilterSearch = async () => {
                     try {
                         // مزامنة مع حقل البحث في header
-                        if (searchInput) {
-                            searchInput.value = newFilterSearchInput.value;
+                        const hInput = document.getElementById('employees-search');
+                        if (hInput && hInput.value !== newFilterSearchInput.value) {
+                            hInput.value = newFilterSearchInput.value;
                         }
                         await this.applyFilters();
                     } catch (error) {
@@ -4529,24 +4531,15 @@ const Employees = {
                     }
                 };
                 
-                // ✅ إضافة debounce للبحث لتحسين الأداء
-                newFilterSearchInput.addEventListener('input', (e) => {
-                    // إلغاء البحث السابق إذا كان موجوداً
-                    if (filterSearchTimeout) {
-                        clearTimeout(filterSearchTimeout);
-                    }
-                    
-                    // البحث بعد 300ms من توقف المستخدم عن الكتابة
-                    filterSearchTimeout = setTimeout(applyFilterSearch, 300);
+                newFilterSearchInput.addEventListener('input', () => {
+                    if (filterSearchTimeout) clearTimeout(filterSearchTimeout);
+                    filterSearchTimeout = setTimeout(applyFilterSearch, 250);
                 });
                 
-                // ✅ إضافة event listener للبحث الفوري عند الضغط على Enter
                 newFilterSearchInput.addEventListener('keydown', async (e) => {
                     if (e.key === 'Enter') {
                         e.preventDefault();
-                        if (filterSearchTimeout) {
-                            clearTimeout(filterSearchTimeout);
-                        }
+                        if (filterSearchTimeout) clearTimeout(filterSearchTimeout);
                         await applyFilterSearch();
                     }
                 });
@@ -6208,6 +6201,50 @@ const Employees = {
         if (employee) await this.showForm(employee);
     },
 
+    async resetFieldPortalPin(id, empName) {
+        const decodedName = decodeURIComponent(empName || '') || id;
+        const confirmed = (typeof Modal !== 'undefined' && typeof Modal.confirm === 'function')
+            ? await Modal.confirm(`هل تريد بالتأكيد إعادة تعيين رمز PIN لبوابة النماذج الميدانية للموظف: [${decodedName}] (كود: ${id})؟\n\nسيتم تصفير الرمز وأي قفل مؤقت، وسيُطلب من الموظف تعيين رمز جديد عند أول دخول له.`, 'تأكيد إعادة تعيين رمز بوابة النماذج')
+            : confirm(`هل تريد بالتأكيد إعادة تعيين رمز PIN لبوابة النماذج للموظف [${decodedName}]؟`);
+
+        if (!confirmed) return;
+
+        try {
+            if (typeof Loading !== 'undefined' && Loading.show) Loading.show();
+            let result = null;
+            if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration._executeRequest === 'function') {
+                result = await GoogleIntegration._executeRequest('fieldPortalResetPin', { employeeCode: id });
+            } else {
+                const res = await fetch('/api/exec', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'fieldPortalResetPin', employeeCode: id })
+                });
+                result = await res.json();
+            }
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+
+            if (result && result.success) {
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success(result.message || 'تمت إعادة تعيين رمز PIN بنجاح');
+                } else {
+                    alert(result.message || 'تمت إعادة تعيين رمز PIN بنجاح');
+                }
+            } else {
+                const msg = (result && result.message) || 'تعذر إعادة تعيين رمز PIN';
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error(msg);
+                } else {
+                    alert(msg);
+                }
+            }
+        } catch (err) {
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+            console.error('Reset Field Portal PIN error:', err);
+            alert('حدث خطأ أثناء الاتصال بالخادم لإعادة تعيين الرمز');
+        }
+    },
+
     async printEmployee(id) {
         const employee = this._findEmployeeById_(id);
         if (!employee) {
@@ -6834,8 +6871,12 @@ const Employees = {
      * جمع قيم الفلاتر من الواجهة
      */
     getFilterValues() {
+        const fInput = document.getElementById('employees-search-filter');
+        const hInput = document.getElementById('employees-search');
+        const fVal = fInput ? fInput.value.trim() : '';
+        const hVal = hInput ? hInput.value.trim() : '';
         return {
-            search: document.getElementById('employees-search-filter')?.value || document.getElementById('employees-search')?.value || '',
+            search: fVal || hVal || '',
             department: document.getElementById('employee-filter-department')?.value || '',
             branch: document.getElementById('employee-filter-branch')?.value || '',
             location: document.getElementById('employee-filter-location')?.value || '',
@@ -6905,25 +6946,40 @@ const Employees = {
         let filtered = employees;
         const canEditOrDelete = this.canEditOrDelete();
 
-        // ✅ تطبيق البحث مع trim لإزالة المسافات الزائدة - البحث في جميع البيانات
-        if (searchTerm && searchTerm.trim()) {
-            const term = searchTerm.trim().toLowerCase();
-            filtered = filtered.filter(employee =>
-                // ✅ البحث في جميع الحقول: الاسم، الكود، الرقم، الوظيفة، الإدارة، الفرع، الموقع، إلخ
-                (employee.name && employee.name.toLowerCase().includes(term)) ||
-                (employee.employeeNumber && String(employee.employeeNumber).toLowerCase().includes(term)) ||
-                (employee.sapId && String(employee.sapId).toLowerCase().includes(term)) ||
-                (employee.department && employee.department.toLowerCase().includes(term)) ||
-                (employee.position && employee.position.toLowerCase().includes(term)) ||
-                (employee.job && employee.job.toLowerCase().includes(term)) ||
-                (employee.branch && employee.branch.toLowerCase().includes(term)) ||
-                (employee.location && employee.location.toLowerCase().includes(term)) ||
-                (employee.nationalId && employee.nationalId.toLowerCase().includes(term)) ||
-                (employee.phone && employee.phone.toLowerCase().includes(term)) ||
-                (employee.insuranceNumber && employee.insuranceNumber.toLowerCase().includes(term)) ||
-                (employee.email && employee.email.toLowerCase().includes(term)) ||
-                (employee.gender && employee.gender.toLowerCase().includes(term))
-            );
+        // ✅ تطبيق البحث الشامل مع التطبيع العربي لضمان مطابقة جميع الحقول والأسماء بكل الصور
+        if (searchTerm && String(searchTerm).trim()) {
+            const rawTerm = String(searchTerm).trim().toLowerCase();
+            const normTerm = this.normalizeArabic(searchTerm);
+            filtered = filtered.filter(employee => {
+                const displayName = this._employeeDisplayName_(employee);
+                const values = [
+                    displayName,
+                    employee.name,
+                    employee.employeeName,
+                    employee.fullName,
+                    employee.employeeNumber,
+                    employee.sapId,
+                    employee.id,
+                    employee.department,
+                    employee.position,
+                    employee.job,
+                    employee.branch,
+                    employee.location,
+                    employee.nationalId,
+                    employee.phone,
+                    employee.insuranceNumber,
+                    employee.email,
+                    employee.gender
+                ];
+
+                return values.some(val => {
+                    if (val === null || val === undefined || val === '') return false;
+                    const strVal = String(val);
+                    if (strVal.toLowerCase().includes(rawTerm)) return true;
+                    if (normTerm && this.normalizeArabic(strVal).includes(normTerm)) return true;
+                    return false;
+                });
+            });
         }
         
         // ✅ تطبيق الفلاتر الإضافية

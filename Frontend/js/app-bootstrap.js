@@ -340,10 +340,6 @@
 
                     const hasSession = !!sessionEmail;
                     if (hasSession) {
-                        // 🔒 استعادة جلسة المستخدم في AppState قبل بدء جلب البيانات المحلية والشبكية
-                        if (typeof window.Auth !== 'undefined' && typeof window.Auth.checkRememberedUser === 'function') {
-                            try { window.Auth.checkRememberedUser(); } catch (_) {}
-                        }
                         // 🔒 قبل التحميل: امسح كاش مستخدم آخر وانتظر IDB
                         if (typeof window.DataManager.purgeIfUserChanged === 'function') {
                             window.DataManager.purgeIfUserChanged(sessionEmail);
@@ -407,7 +403,9 @@
                     // ✅ PERF: لا await جلب الشبكة هنا — كان يحجب استعادة الجلسة وعرض الواجهة (تهنيج boot).
                     // البيانات المحلية جاهزة من DataManager.load؛ الجلب من الخادم بالخلفية بعد _tryFastSessionRestore.
                     // إعادة التحميل: لا تجلب الشبكة هنا — المحلي ظاهر والموديول الظاهر يحدّث تبويبه فقط
-                    if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
+                    if (AppState.isPageRefresh) {
+                        log('⚡ إعادة تحميل — تخطي جلب الشبكة الأولي (بيانات محلية جاهزة)');
+                    } else if (typeof Permissions !== 'undefined' && typeof Permissions.getCurrentUserPermissions === 'function') {
                         try {
                             const userPermissions = Permissions.getCurrentUserPermissions();
                             void this.loadDataBasedOnPermissions(userPermissions).catch((error) => {
@@ -998,9 +996,20 @@
                     return this.loadSharedDataFallback();
                 }
 
-                // مع خادم SQL السريع، نجلب دائماً البيانات الحديثة من الخادم لضمان مطابقة قاعدة البيانات
-                const staleTypes = requiredDataTypes;
-                log(`🎯 جلب ${staleTypes.length} نوع بيانات من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
+                // ✅ تصفية: فصل البيانات الحديثة (لا تحتاج جلب) عن البيانات القديمة (تحتاج جلب)
+                const staleTypes = requiredDataTypes.filter(dt => !this._isBootstrapDataFresh(dt));
+                const freshTypes = requiredDataTypes.filter(dt =>  this._isBootstrapDataFresh(dt));
+
+                if (freshTypes.length > 0) {
+                    log(`⚡ ${freshTypes.length} نوع بيانات حديثة (من cache) — تخطي الخادم: [${freshTypes.join(', ')}]`);
+                }
+
+                if (staleTypes.length === 0) {
+                    log('✅ جميع البيانات المحلية حديثة — لا حاجة لأي طلب من الخادم');
+                    return;
+                }
+
+                log(`🎯 جلب ${staleTypes.length} نوع بيانات قديمة من الخادم باستخدام Batch Read: [${staleTypes.join(', ')}]`);
 
                 let fetchedCount = 0;
                 const fetchedKeys = [];
@@ -1108,12 +1117,6 @@
                     if (fetchedKeys.length > 0 && window.DataManager && window.DataManager.recordServerFetch) {
                         try { window.DataManager.recordServerFetch(fetchedKeys); } catch (e) {}
                     }
-                    // إطلاق حدث اكتمال المزامنة لتحديث الواجهة فوراً بالبيانات الجديدة
-                    try {
-                        window.dispatchEvent(new CustomEvent('syncDataCompleted', {
-                            detail: { syncedCount: fetchedCount, sheets: fetchedKeys }
-                        }));
-                    } catch (e) {}
                     // حفظ البيانات محلياً بعد تأخير بسيط
                     if (window.DataManager && window.DataManager.save) {
                         setTimeout(() => {
@@ -1144,13 +1147,21 @@
                 return requiredData;
             }
 
+            // ✅ عقد StableLoader: الأوراق المملوكة الثقيلة تُجلب من موديولها عند فتح تبويبه — لا من Bootstrap.
+            //   منعها هنا يوقف عاصفة الجلب عند إعادة التحميل (F5) التي تزاحم طابور 3 عمّال.
+            const OWNED_HEAVY_KEYS = new Set([
+                'clinicVisits', 'clinicContractorVisits', 'training',
+                'employees', 'ptw', 'ptwRegistry', 'dailyObservations'
+            ]);
+            const stripOwnedHeavy = (list) => [...new Set(list)].filter((k) => !OWNED_HEAVY_KEYS.has(k));
+
             if (permissions?.__isAdmin || permissions?.canViewAll || Permissions.isCurrentUserEffectiveAdmin(user)) {
                 requiredData.push(
                     'users', 'employees', 'approvedContractors', 'contractors',
                     'incidents', 'nearmiss', 'ptw', 'ptwRegistry', 'training',
                     'clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries', 'dailyObservations'
                 );
-                return [...new Set(requiredData)];
+                return stripOwnedHeavy(requiredData);
             }
 
             if (typeof Permissions.hasAccess === 'function' && Permissions.hasAccess('users')) {
@@ -1173,7 +1184,7 @@
                 requiredData.push('clinicVisits', 'clinicContractorVisits', 'injuries', 'clinicContractorInjuries');
             }
 
-            return [...new Set(requiredData)];
+            return stripOwnedHeavy(requiredData);
         },
 
         /**

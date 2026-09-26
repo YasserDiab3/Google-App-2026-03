@@ -37,17 +37,15 @@ function rmrf(p) {
     } catch (_) {}
 }
 
-function cpDir(src, dest, excludeExt = []) {
+function cpDir(src, dest) {
     fs.mkdirSync(dest, { recursive: true });
     for (const ent of fs.readdirSync(src, { withFileTypes: true })) {
         const s = path.join(src, ent.name);
         const d = path.join(dest, ent.name);
         if (ent.isDirectory()) {
             if (ent.name === 'node_modules' || ent.name === 'dist' || ent.name === 'api' || ent.name === 'backend-sql') continue;
-            cpDir(s, d, excludeExt);
+            cpDir(s, d);
         } else if (ent.name === 'vercel.json') {
-            continue;
-        } else if (excludeExt.some(ext => ent.name.endsWith(ext))) {
             continue;
         } else {
             fs.copyFileSync(s, d);
@@ -135,18 +133,18 @@ syncObservationAndFormsMirrors();
 syncVercelServerlessBundle();
 
 rmrf(distRoot);
-cpDir(frontendRoot, distRoot, ['.js']);
+cpDir(frontendRoot, distRoot);
 
-const entryPoints = walkJsFiles(frontendRoot);
+const entryPoints = walkJsFiles(distRoot);
 if (!entryPoints.length) {
-    console.warn('No JS files found under Frontend.');
+    console.warn('No JS files found under dist.');
     process.exit(0);
 }
 
 await esbuild.build({
     entryPoints,
     outdir: distRoot,
-    outbase: frontendRoot,
+    outbase: distRoot,
     allowOverwrite: true,
     minify: true,
     target: 'es2020',

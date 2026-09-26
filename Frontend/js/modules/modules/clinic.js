@@ -2179,10 +2179,13 @@ const Clinic = {
                         ${record.createdAt ? `<span class="ml-2">بتاريخ ${this.formatDate(record.createdAt, true)}</span>` : ''}
                     </div>
                 </div>
-                <div class="modal-footer form-actions-centered" style="background: #f8fafc;">
+                <div class="modal-footer form-actions-centered" style="background: #f8fafc; gap: 8px;">
                     <button type="button" class="btn-secondary modal-close-btn">إغلاق</button>
                     <button type="button" class="btn-primary modal-edit-btn">
                         <i class="fas fa-edit ml-2"></i>تعديل
+                    </button>
+                    <button type="button" class="btn-danger modal-delete-btn" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600;">
+                        <i class="fas fa-trash-alt ml-2"></i>حذف
                     </button>
                 </div>
             </div>
@@ -2195,6 +2198,10 @@ const Clinic = {
         modal.querySelector('.modal-edit-btn')?.addEventListener('click', () => {
             closeModal();
             this.showInjuryForm(record);
+        });
+        modal.querySelector('.modal-delete-btn')?.addEventListener('click', () => {
+            closeModal();
+            this.deleteInjury(record.id);
         });
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
@@ -2211,6 +2218,60 @@ const Clinic = {
             return;
         }
         this.showInjuryForm(record);
+    },
+
+    async deleteInjury(id) {
+        if (!id) {
+            Notification?.error?.('معرف الإصابة غير صحيح');
+            return;
+        }
+
+        const record = this.getInjuries().find((item) => item.id === id);
+        if (!record) {
+            Notification?.error?.('تعذر العثور على سجل الإصابة');
+            return;
+        }
+
+        const injuredName = record.employeeName || record.personName || record.contractorName || 'غير محدد';
+        const injuryDate = record.injuryDate ? this.formatDate(record.injuryDate, true) : 'غير محدد';
+
+        const confirmed = await Utils.confirmDialog(
+            'حذف سجل الإصابة',
+            `هل أنت متأكد من حذف سجل إصابة "${injuredName}" بتاريخ ${injuryDate}؟\n\nهذا الإجراء لا يمكن التراجع عنه.`,
+            'حذف',
+            'إلغاء'
+        );
+
+        if (!confirmed) return;
+
+        Loading.show('جاري حذف سجل الإصابة...');
+
+        try {
+            if (AppState.googleConfig?.appsScript?.enabled) {
+                await GoogleIntegration.sendRequest({
+                    action: 'deleteClinicInjury',
+                    data: { injuryId: id }
+                }).catch(async () => {
+                    await GoogleIntegration.sendRequest({
+                        action: 'deleteInjury',
+                        data: { id: id }
+                    }).catch(() => null);
+                });
+            }
+
+            AppState.appData.injuries = (AppState.appData.injuries || []).filter((item) => item.id !== id);
+            if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
+                window.DataManager.save();
+            }
+
+            Loading.hide();
+            Notification?.success?.('تم حذف سجل الإصابة بنجاح');
+            this.renderInjuriesTab();
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في حذف سجل الإصابة:', error);
+            Notification?.error?.('حدث خطأ أثناء حذف سجل الإصابة: ' + (error?.message || 'خطأ غير معروف'));
+        }
     },
 
     exportInjuriesToExcel() {
@@ -2511,7 +2572,15 @@ const Clinic = {
     },
 
     getInjuries() {
-        return Array.isArray(AppState.appData?.injuries) ? AppState.appData.injuries : [];
+        if (!Array.isArray(AppState.appData?.injuries)) return [];
+        const seen = new Set();
+        AppState.appData.injuries = AppState.appData.injuries.filter(inj => {
+            if (!inj || !inj.id) return true;
+            if (seen.has(inj.id)) return false;
+            seen.add(inj.id);
+            return true;
+        });
+        return AppState.appData.injuries;
     },
 
     // الحصول على قائمة المواقع (المصانع) من الإعدادات
@@ -2649,7 +2718,7 @@ const Clinic = {
             const sites = this.getSiteOptions();
             const esc = (typeof Utils !== 'undefined' && Utils.escapeHTML) ? Utils.escapeHTML : (s) => String(s == null ? '' : s);
             const opts = (empty) => '<option value="">' + (empty || 'اختر المصنع') + '</option>' + (sites || []).map(s => '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>').join('');
-            ['visits-filter-factory', 'visit-factory', 'visit-contractor-factory', 'enhanced-visit-factory', 'injury-factory'].forEach(id => {
+            ['visits-filter-factory', 'visit-factory', 'visit-contractor-factory', 'enhanced-visit-factory'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.tagName === 'SELECT') { const v = el.value; el.innerHTML = opts('اختر المصنع'); if (v) el.value = v; }
             });
@@ -2657,7 +2726,6 @@ const Clinic = {
                 this.setupClinicWorkplaceDatalist('visit-factory', 'visit-employee-location', 'visit-employee-location-datalist');
                 this.setupClinicWorkplaceDatalist('visit-contractor-factory', 'visit-work-area', 'visit-work-area-datalist');
                 this.setupClinicWorkplaceDatalist('enhanced-visit-factory', 'enhanced-visit-employee-location', 'enhanced-visit-employee-location-datalist');
-                this.setupClinicWorkplaceDatalist('injury-factory', 'injury-sub-location', 'injury-sub-location-datalist');
             }
         } catch (e) { if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('⚠️ Clinic.refreshSiteDropdowns:', e); }
     },
@@ -5922,13 +5990,13 @@ const Clinic = {
                     <td class="text-center">${attachmentsCount}</td>
                     <td class="text-center">
                         <div class="flex items-center justify-center gap-2">
-                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض تفاصيل الإصابة">
+                            <button type="button" class="btn-icon btn-icon-primary" data-action="view-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="عرض">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل الإصابة">
+                            <button type="button" class="btn-icon btn-icon-warning" data-action="edit-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="تعديل">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button type="button" class="btn-icon btn-icon-danger" data-action="delete-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف الإصابة">
+                            <button type="button" class="btn-icon btn-icon-danger" data-action="delete-injury" data-id="${Utils.escapeHTML(item.id || '')}" title="حذف">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -6188,38 +6256,6 @@ const Clinic = {
         panel.querySelectorAll('[data-action="delete-injury"]').forEach((btn) => {
             btn.addEventListener('click', () => this.deleteInjury(btn.getAttribute('data-id')));
         });
-    },
-
-    async deleteInjury(id) {
-        if (!id) return;
-        const record = (AppState.appData.injuries || []).find((item) => String(item.id) === String(id));
-        const name = record ? (record.employeeName || record.personName || record.contractorName || '') : '';
-        const displayName = name ? `المصاب (${name})` : 'هذا السجل';
-        const ok = confirm(`هل أنت متأكد من حذف سجل الإصابة لـ ${displayName}؟\n\nتنبيه: هذا الإجراء لا يمكن التراجع عنه.`);
-        if (!ok) return;
-
-        try {
-            Notification?.info?.('جاري حذف سجل الإصابة...');
-            const targetSheet = (record && record.personType === 'contractor') ? 'ClinicContractorInjuries' : 'Injuries';
-            const res = await GoogleIntegration.sendRequest({
-                action: 'deleteInjury',
-                data: { injuryId: id, id: id, sheetName: targetSheet }
-            });
-
-            if (res && (res.success || res.ok || res.deleted)) {
-                AppState.appData.injuries = (AppState.appData.injuries || []).filter((item) => String(item.id) !== String(id));
-                if (AppState.appData.clinicContractorInjuries) {
-                    AppState.appData.clinicContractorInjuries = AppState.appData.clinicContractorInjuries.filter((item) => String(item.id) !== String(id));
-                }
-                Notification?.success?.('تم حذف سجل الإصابة بنجاح');
-                this.renderInjuriesTab();
-            } else {
-                Notification?.error?.('تعذر حذف سجل الإصابة: ' + (res?.message || 'خطأ غير معروف'));
-            }
-        } catch (error) {
-            Utils.safeError('❌ خطأ في حذف سجل الإصابة:', error);
-            Notification?.error?.('حدث خطأ أثناء حذف سجل الإصابة: ' + error.message);
-        }
     },
 
     // ===== قسم تحليل بيانات المترددين على العيادة =====
@@ -10508,6 +10544,15 @@ const Clinic = {
 
         if (!Array.isArray(data.sickLeave)) data.sickLeave = [];
         if (!Array.isArray(data.injuries)) data.injuries = [];
+        else {
+            const seenInjuries = new Set();
+            data.injuries = data.injuries.filter(inj => {
+                if (!inj || !inj.id) return true;
+                if (seenInjuries.has(inj.id)) return false;
+                seenInjuries.add(inj.id);
+                return true;
+            });
+        }
         if (!Array.isArray(data.clinicSupplyRequests)) data.clinicSupplyRequests = [];
         if (!Array.isArray(data.clinicStaff)) data.clinicStaff = [];
         if (!Array.isArray(data.clinicStaffAttendance)) data.clinicStaffAttendance = [];
