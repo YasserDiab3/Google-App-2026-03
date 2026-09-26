@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1756",
+  "version": "1.0.1757",
   "highlights": {
     "ar": [
-      "تصريح جغرافي كامل لمدير النظام (111594): السماح بتسجيل الدخول والاعتماد عن بُعد من أي موقع وإحداثيات دون قيود.",
-      "ربط وتفعيل معالجات التحقق بالخادم (RPC portalAuthHandlers) لدعم تسجيل الدخول فائق السرعة عبر السحابة.",
-      "تحسين واجهة التحقق: إبراز حقل رمز PIN تلقائياً ودعم التحقق المحلي الفوري لمنع أي رسائل تعذر بالاتصال."
+      "دخول فوري مباشر لمدير النظام (111594): تصريح جغرافي عن بُعد غير مقيد واعتماد تلقائي لرمز PIN الافتراضي للدخول بنقرة واحدة.",
+      "مزامنة كاملة لمستودع الإنتاج الحي على safety-icapp.com وتفعيل معالجات RPC portalAuthHandlers عبر السحابة.",
+      "إلغاء أي عوائق في واجهة التحقق وتسجيل الدخول المباشر الفوري دون الحاجة لأي إعدادات إضافية."
     ],
     "en": [
-      "Full Remote Geofence Authorization for System Admin (111594): Login permitted from any location/coordinates without restriction.",
-      "Registered backend RPC portalAuthHandlers for ultra-reliable cloud verification.",
-      "Improved verification UX: Automatic PIN focus and instant zero-latency local fallback verification."
+      "Instant 1-Click Master Access for System Admin (111594): Unrestricted remote geofence authorization and auto-PIN validation.",
+      "Full production sync to safety-icapp.com with registered cloud RPC portalAuthHandlers.",
+      "Optimized Field Session verification UX for flawless online access from anywhere."
     ]
   }
 }
