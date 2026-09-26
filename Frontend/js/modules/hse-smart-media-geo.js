@@ -103,6 +103,27 @@
         renderGeofenceBadge(containerId, gpsData, siteName, employeeCode) {
             const container = document.getElementById(containerId);
             if (!container) return;
+
+            // استثناء كامل وتصريح جغرافي شامل لمدير النظام 111594
+            const inputCode = document.getElementById('sessionEmployeeCodeInput')?.value?.trim()?.replace(/[^0-9]/g, '');
+            const activeCode = employeeCode || inputCode || (window.currentVerifiedEmployee && window.currentVerifiedEmployee.code);
+            const isAdmin = (activeCode === '111594');
+
+            if (isAdmin) {
+                const geo = (gpsData && gpsData.latitude) ? this.checkGeofence(gpsData.latitude, gpsData.longitude, siteName) : null;
+                const mapLink = (gpsData && gpsData.mapsUrl) ? `
+                    <a href="${gpsData.mapsUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: #2563eb; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; background: #ffffff; border-radius: 4px; border: 1px solid #bfdbfe;">
+                        <i class="fas fa-map-location-dot"></i> الخريطة ${geo ? `(${geo.formattedDistance})` : ''}
+                    </a>` : '';
+                container.innerHTML = `
+                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; font-size: 0.78rem; font-weight: 800; color: #166534; flex-wrap: wrap;">
+                        <i class="fas fa-shield-halved text-green-600"></i>
+                        <span>🛡️ تصريح مدير النظام: تسجيل الدخول معتمد ومتاح عن بُعد من أي موقع جغرافي</span>
+                        ${mapLink}
+                    </div>`;
+                return;
+            }
+
             if (!gpsData || !gpsData.latitude) {
                 container.innerHTML = `
                     <div style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.75rem; color: #dc2626; font-weight: 700;">
@@ -114,23 +135,6 @@
 
             const geo = this.checkGeofence(gpsData.latitude, gpsData.longitude, siteName);
             const isInside = geo.isInside;
-
-            // استثناء كامل وتصريح جغرافي شامل لمدير النظام 111594
-            const inputCode = document.getElementById('sessionEmployeeCodeInput')?.value?.trim()?.replace(/[^0-9]/g, '');
-            const activeCode = employeeCode || inputCode || (window.currentVerifiedEmployee && window.currentVerifiedEmployee.code);
-            const isAdmin = (activeCode === '111594');
-
-            if (isAdmin) {
-                container.innerHTML = `
-                    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; font-size: 0.78rem; font-weight: 800; color: #166534; flex-wrap: wrap;">
-                        <i class="fas fa-shield-halved text-green-600"></i>
-                        <span>🛡️ تصريح مدير النظام: تسجيل الدخول معتمد ومتاح عن بُعد من أي موقع جغرافي</span>
-                        <a href="${gpsData.mapsUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 0.72rem; color: #2563eb; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; background: #ffffff; border-radius: 4px; border: 1px solid #bfdbfe;">
-                            <i class="fas fa-map-location-dot"></i> الخريطة (${geo.formattedDistance})
-                        </a>
-                    </div>`;
-                return;
-            }
 
             container.innerHTML = `
                 <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: ${isInside ? '#f0fdf4' : '#fffbeb'}; border: 1.5px solid ${isInside ? '#86efac' : '#fde68a'}; border-radius: 8px; font-size: 0.78rem; font-weight: 800; color: ${isInside ? '#166534' : '#92400e'}; flex-wrap: wrap;">
