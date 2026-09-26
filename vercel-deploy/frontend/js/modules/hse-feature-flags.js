@@ -50,10 +50,10 @@ const HseFeatureFlags = (() => {
             badge: 'NEW',
             badgeColor: '#0ea5e9',
             category: 'ux_performance',
-            labelAr: 'المساعد التفاعلي ومعجم المصطلحات (Glossary Tooltips)',
-            labelEn: 'Interactive HSE Glossary Overlay',
-            descAr: 'عرض شروح فورية وبطاقات توضيحية وأمثلة عند الضغط على المصطلحات الفنية (LOTO, Near Miss, OSHA, إلخ).',
-            descEn: 'Displays instant popover explanation cards for technical safety terms and standards.'
+            labelAr: 'الدليل الفني لمراقبي وفنيي السلامة (Technical Standards Guide)',
+            labelEn: 'HSE Field Technical Standards Guide',
+            descAr: 'مرجع فني ميداني سريع لمطابقة المعايير (OSHA/ISO) وحسم مستويات الخطورة واشتراطات تصاريح العمل واللوتو.',
+            descEn: 'Instant field compliance reference for risk scoring, inspection criteria, LOTO, and PTW standards.'
         },
         multilingual_ur: {
             id: 'multilingual_ur',
