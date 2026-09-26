@@ -61,6 +61,8 @@
     <script src="js/modules/hse-push-notifications.js"></script>
     <script src="js/modules/hse-feature-flags.js"></script>
     <script src="js/modules/hse-glossary.js"></script>
+    <script src="js/modules/hse-action-closure.js"></script>
+    <script src="js/modules/hse-shift-handover.js"></script>
 
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3754,7 +3756,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1760</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1761</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -3824,6 +3826,12 @@
                 <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
                     <i class="fas fa-magnifying-glass"></i>
                     <span id="txtTrackBtn">تتبع ملاحظة</span>
+                </button>
+
+                <!-- زر تسليم الوردية الرقمي -->
+                <button type="button" class="obs-tool-card-btn" id="btnShiftHandoverTool" onclick="HseShiftHandover && HseShiftHandover.open()" title="محضر تسليم واستلام الوردية الرقمي / Shift Safety Handover" style="border-color: #3b82f6;">
+                    <i class="fas fa-clipboard-user" style="color: #2563eb;"></i>
+                    <span id="txtHandoverBtn">تسليم الوردية 📋</span>
                 </button>
             </div>
         </div>
@@ -4126,12 +4134,9 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1760</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1761</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
-                </button>
-                <button type="button" onclick="HseFeatureFlags && HseFeatureFlags.openSettingsModal()" title="إدارة الميزات التجريبية (Feature Flags)" class="footer-refresh-btn" style="border-color: #cbd5e1;">
-                    <i class="fas fa-sliders" style="color: #6366f1;"></i> <span id="lblHubFlagsBtn">الميزات</span>
                 </button>
             </div>
         </footer>
@@ -9438,7 +9443,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1760-20260926')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1761-20260926')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -12141,6 +12146,19 @@
                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
                     <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
                 </div>` : ''}
+
+                ${!isClosed ? `
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; text-align: center;">
+                    <button type="button" onclick="HseActionClosure && HseActionClosure.open('${code}', ${JSON.stringify(obs).replace(/"/g, '&quot;')})"
+                            style="width: 100%; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);">
+                        <i class="fas fa-camera"></i>
+                        <span>توثيق الإصلاح وإغلاق الملاحظة 🔒</span>
+                    </button>
+                </div>` : `
+                <div style="margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.76rem; color: #166534; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-circle-check text-green-600"></i>
+                    <span>تم التحقق من إغلاق ومعالجة هذه الملاحظة ميدانياً طبقاً لمعايير السلامة.</span>
+                </div>`}
             </div>
         `;
     }

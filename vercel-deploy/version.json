@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1760",
+  "version": "1.0.1761",
   "highlights": {
     "ar": [
-      "حل جذري ونهائي لجمود نافذة تسجيل الدخول وإصلاح متغيرات بيئة التشغيل المعطلة لتسجيل الدخول والتحقق.",
-      "دخول فوري مباشر لمدير النظام (111594) بدون أي عوائق جغرافية أو تأخير شبكة مع الحفاظ التام على خصوصية الواجهة.",
-      "اعتماد وتوثيق بطاقة الموظف ورمز PIN تلقائياً بنقرة واحدة وفتح البوابة الميدانية بالكامل."
+      "إخفاء إعدادات الميزات التجريبية عن شاشات المستخدمين والعمال لتفادي أي ارتباك تشغيلي واقتصارها على المشرفين.",
+      "توثيق إغلاق ومعالجة الملاحظات الميدانية وإرفاق صور المطابقة «قبل وبعد» طبقاً لمعايير السلامة ISO 45001.",
+      "محضر تسليم واستلام الوردية الرقمي لفرق السلامة مع حساب المؤشرات ومشاركتها عبر واتساب والطباعة المعتمدة."
     ],
     "en": [
-      "Definitive fix for modal freeze: resolved all runtime initialization and translation scope issues.",
-      "Instant zero-friction access for Admin (111594) with remote geofence clearance and full privacy preserved.",
-      "Seamless 1-click verification and login with instant portal unlocking."
+      "Secured experimental settings interface for worker simplicity and supervisory access only.",
+      "ISO 45001 observation action closure verification workflow with before-and-after photographic proof.",
+      "Digital safety shift handover summary with automated KPIs, WhatsApp export, and printable handover minutes."
     ]
   }
 }

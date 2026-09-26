@@ -123,6 +123,11 @@ function syncObservationAndFormsMirrors() {
             } catch (_) {}
         }
     }
+    const modulesSrc = path.join(frontendRoot, 'js', 'modules');
+    const vercelModulesDest = path.join(repoRoot, 'vercel-deploy', 'frontend', 'js', 'modules');
+    if (fs.existsSync(modulesSrc)) {
+        cpDir(modulesSrc, vercelModulesDest);
+    }
 }
 
 console.log('HSE Frontend production build');
@@ -169,5 +174,10 @@ fs.writeFileSync(path.join(distRoot, 'BUILD_INFO.txt'), info, 'utf8');
 rmrf(rootDist);
 cpDir(distRoot, rootDist);
 fs.writeFileSync(path.join(rootDist, 'BUILD_INFO.txt'), info, 'utf8');
+
+const vercelFrontendDist = path.join(repoRoot, 'vercel-deploy', 'frontend', 'dist');
+if (fs.existsSync(path.dirname(vercelFrontendDist))) {
+    cpDir(distRoot, vercelFrontendDist);
+}
 
 console.log(`Done. Minified ${entryPoints.length} JS files → ${distRoot} and ${rootDist}`);

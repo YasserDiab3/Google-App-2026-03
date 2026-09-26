@@ -416,6 +416,15 @@
                 searchInput.oninput = () => {
                     const q = searchInput.value.trim().toLowerCase();
                     if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
+                    if (q && activeCategory !== 'all') {
+                        activeCategory = 'all';
+                        if (tabsList) {
+                            tabsList.querySelectorAll('.hse-tg-tab-btn').forEach(b => {
+                                if (b.getAttribute('data-cat') === 'all') b.classList.add('is-active');
+                                else b.classList.remove('is-active');
+                            });
+                        }
+                    }
                     renderStandardsCards(q, activeCategory);
                 };
             }

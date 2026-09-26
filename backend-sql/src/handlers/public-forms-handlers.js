@@ -386,6 +386,42 @@ const publicFormsHandlers = {
 
         db.insertRow('DailySafetyCheckList', record);
         return { success: true, id, reportNumber, message: 'تم إرسال تقرير المرور اليومي بنجاح' };
+    },
+
+    async submitObservationClosure(payload, postData) {
+        const data = extractPayload(payload, postData);
+        const obsId = String(data.id || data.isoCode || data.refCode || '').trim();
+        if (!obsId) return { success: false, message: 'كود الملاحظة مطلوب' };
+
+        const db = getDatabase();
+        const rows = db.readSheet('DailyObservations') || [];
+        const index = rows.findIndex(r => String(r.id || '').trim().toLowerCase() === obsId.toLowerCase() || String(r.isoCode || '').trim().toLowerCase() === obsId.toLowerCase());
+
+        let afterImageUrls = [];
+        if (data.afterPhoto || (Array.isArray(data.afterPhotos) && data.afterPhotos.length > 0)) {
+            const photos = data.afterPhotos || [data.afterPhoto];
+            afterImageUrls = await uploadFormPhotos(obsId, photos, 'ObsClosure');
+        }
+
+        const nowIso = new Date().toISOString();
+        const updateData = {
+            status: 'Closed',
+            actionClosureNotes: data.closureNotes || data.notes || '',
+            closedBy: data.closedBy || data.inspectorName || 'مشرف السلامة',
+            closedAt: nowIso,
+            afterExecutionImages: afterImageUrls,
+            updatedAt: nowIso
+        };
+
+        if (index !== -1) {
+            db.updateRow('DailyObservations', index, updateData);
+        }
+
+        return {
+            success: true,
+            id: obsId,
+            message: 'تم توثيق معالجة وإغلاق الملاحظة بنجاح'
+        };
     }
 };
 

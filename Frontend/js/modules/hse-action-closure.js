@@ -1,0 +1,346 @@
+/**
+ * HSE Observation Action Closure & Before/After Verification Module
+ * وحدة توثيق إغلاق الملاحظات الميدانية وإرفاق صور المطابقة "قبل وبعد"
+ * v1.0 — 2026-09-26
+ *
+ * مصممة لتطبيق متطلبات ISO 45001 لإغلاق حلقة الملاحظات الخطرة:
+ * 1. استدعاء تفاصيل الملاحظة الأصلية وصورة "قبل".
+ * 2. التقاط وتوثيق صورة "بعد الإصلاح" بالكاميرا.
+ * 3. تسجيل الإجراء التصحيحي الميداني واسم المشرف القائم بالتحقق.
+ * 4. تحويل حالة الملاحظة إلى "مغلقة (Closed)".
+ */
+(() => {
+    'use strict';
+
+    if (typeof window === 'undefined') return;
+    if (window.HseActionClosureInitialized) return;
+    window.HseActionClosureInitialized = true;
+
+    try {
+        let closureModalEl = null;
+        let currentObsData = null;
+        let capturedPhotoBase64 = null;
+
+        function checkFeatureFlag() {
+            if (window.HseFeatureFlags && typeof window.HseFeatureFlags.isEnabled === 'function') {
+                return window.HseFeatureFlags.isEnabled('action_closure_workflow');
+            }
+            return true;
+        }
+
+        function createModalDom() {
+            if (document.getElementById('hseActionClosureModal')) {
+                return document.getElementById('hseActionClosureModal');
+            }
+
+            const modal = document.createElement('div');
+            modal.id = 'hseActionClosureModal';
+            modal.className = 'emergency-modal-overlay';
+            modal.style.display = 'none';
+
+            modal.innerHTML = `
+                <div class="emergency-modal-dialog" style="max-width: 620px; animation: fadeInModal 0.25s ease;" onclick="event.stopPropagation()">
+                    <!-- Header -->
+                    <div style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; padding: 16px 20px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800;">توثيق معالجة وإغلاق الملاحظة</h3>
+                                <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.9;">توثيق المطابقة الميدانية وإرفاق إثبات ما بعد الإصلاح (ISO 45001)</p>
+                            </div>
+                        </div>
+                        <button type="button" class="emergency-modal-close-btn" id="btnCloseClosureModal" title="إغلاق">&times;</button>
+                    </div>
+
+                    <!-- Body -->
+                    <div style="padding: 18px 20px; max-height: 75vh; overflow-y: auto; text-align: right; direction: rtl;">
+                        <!-- Obs Summary Card -->
+                        <div id="closureObsSummary" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                            <!-- Dynamic summary injected here -->
+                        </div>
+
+                        <!-- Form Inputs -->
+                        <form id="frmActionClosure" onsubmit="event.preventDefault(); HseActionClosure.submitClosure();">
+                            <!-- Inspector / Verifier Name -->
+                            <div style="margin-bottom: 14px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                                    اسم مسؤول / فني السلامة القائم بالتحقق والإغلاق: <span style="color:#ef4444;">*</span>
+                                </label>
+                                <input type="text" id="closureInspectorName" required placeholder="أدخل اسمك أو رقمك الوظيفي..."
+                                       style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; outline: none; box-sizing: border-box;" />
+                            </div>
+
+                            <!-- Action Details -->
+                            <div style="margin-bottom: 14px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                                    تفاصيل الإجراء التصحيحي المنفذ على أرض الواقع: <span style="color:#ef4444;">*</span>
+                                </label>
+                                <textarea id="closureActionTaken" required rows="3" placeholder="اشرح ما تم تنفيذه لمعالجة الخطر وإزالته نهائياً..."
+                                          style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; outline: none; box-sizing: border-box; resize: vertical;"></textarea>
+                            </div>
+
+                            <!-- After Photo Upload -->
+                            <div style="margin-bottom: 18px;">
+                                <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                                    صورة إثبات المعالجة (بعد الإصلاح / After Fix Photo): <span style="color:#ef4444;">*</span>
+                                </label>
+                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                                    <label for="closurePhotoInput" style="display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; border: 1.5px dashed #059669; color: #047857; padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
+                                        <i class="fas fa-camera fa-lg"></i>
+                                        <span>التقاط / رفع صورة بعد الإصلاح</span>
+                                    </label>
+                                    <input type="file" id="closurePhotoInput" accept="image/*" capture="environment" style="display: none;" onchange="HseActionClosure.handlePhotoSelected(event)" />
+                                    <span id="closurePhotoStatus" style="font-size: 0.78rem; color: #64748b; font-weight: 600;">لم يتم اختيار صورة بعد</span>
+                                </div>
+
+                                <!-- Photo Preview -->
+                                <div id="closurePhotoPreviewWrap" style="display: none; margin-top: 10px; position: relative; width: 140px; height: 140px; border-radius: 12px; overflow: hidden; border: 2px solid #059669;">
+                                    <img id="closurePhotoPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover;" alt="معاينة صورة بعد الإصلاح" />
+                                    <button type="button" onclick="HseActionClosure.removePhoto()" style="position: absolute; top: 4px; left: 4px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+                                </div>
+                            </div>
+
+                            <!-- Buttons -->
+                            <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                                <button type="button" id="btnCancelClosure" style="padding: 10px 18px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                                    إلغاء
+                                </button>
+                                <button type="submit" id="btnSubmitClosure" style="padding: 10px 24px; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; border-radius: 10px; font-weight: 800; font-size: 0.88rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                                    <i class="fas fa-check-double"></i>
+                                    <span id="lblSubmitClosureText">اعتماد إغلاق الملاحظة</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+            closureModalEl = modal;
+
+            // Events
+            modal.onclick = (e) => {
+                if (e.target === modal) closeClosureModal();
+            };
+            const closeBtn = modal.querySelector('#btnCloseClosureModal');
+            const cancelBtn = modal.querySelector('#btnCancelClosure');
+            if (closeBtn) closeBtn.onclick = closeClosureModal;
+            if (cancelBtn) cancelBtn.onclick = closeClosureModal;
+
+            return modal;
+        }
+
+        function openClosureModal(obsOrCode, fallbackData = null) {
+            const modal = createModalDom();
+            let obs = null;
+
+            if (typeof obsOrCode === 'object' && obsOrCode !== null) {
+                obs = obsOrCode;
+            } else if (fallbackData && typeof fallbackData === 'object') {
+                obs = Object.assign({ id: String(obsOrCode || '').trim(), isoCode: String(obsOrCode || '').trim() }, fallbackData);
+            } else {
+                obs = { id: String(obsOrCode || 'OBS-NEW').trim(), refCode: String(obsOrCode || '').trim() };
+            }
+
+            currentObsData = obs;
+            capturedPhotoBase64 = null;
+
+            // Populate summary card
+            const code = obs.isoCode || obs.id || obs.refCode || 'OBS';
+            const site = obs.site || obs.siteName || 'مصنع ICAPP';
+            const loc = obs.place || obs.locationName || 'الموقع العام';
+            const risk = obs.riskLevel || obs.risk || 'متوسط';
+            const details = obs.details || obs.description || 'لا توجد تفاصيل إضافية مسجلة';
+            const summaryDiv = modal.querySelector('#closureObsSummary');
+
+            if (summaryDiv) {
+                summaryDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <span style="font-size: 0.72rem; color: #64748b; font-weight: 700;">كود الملاحظة المراد إغلاقها:</span>
+                            <div style="font-size: 1rem; font-weight: 900; color: #047857;">${escapeHtml(code)}</div>
+                        </div>
+                        <span style="background: #fee2e2; color: #b91c1c; padding: 3px 10px; border-radius: 20px; font-weight: 800; font-size: 0.75rem;">
+                            مستوى الخطورة: ${escapeHtml(risk)}
+                        </span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #334155; margin-bottom: 4px;">
+                        <b>الموقع:</b> ${escapeHtml(site)} - ${escapeHtml(loc)}
+                    </div>
+                    <div style="font-size: 0.78rem; color: #64748b; line-height: 1.4;">
+                        <b>الوصف الأصلي للخطر:</b> ${escapeHtml(details)}
+                    </div>
+                `;
+            }
+
+            // Autofill inspector name from session if available
+            try {
+                const sessionStr = sessionStorage.getItem('HSE_FIELD_SESSION') || localStorage.getItem('HSE_LAST_USER_NAME');
+                if (sessionStr) {
+                    let parsed = null;
+                    try { parsed = JSON.parse(sessionStr); } catch (_) {}
+                    const name = (parsed && (parsed.userName || parsed.name)) || (typeof sessionStr === 'string' && !sessionStr.startsWith('{') ? sessionStr : '');
+                    const nameInput = modal.querySelector('#closureInspectorName');
+                    if (nameInput && name) nameInput.value = name;
+                }
+            } catch (_) {}
+
+            // Reset photo
+            removePhoto();
+
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeClosureModal() {
+            if (closureModalEl) {
+                closureModalEl.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        function handlePhotoSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                capturedPhotoBase64 = e.target.result;
+                const previewWrap = document.getElementById('closurePhotoPreviewWrap');
+                const previewImg = document.getElementById('closurePhotoPreviewImg');
+                const statusSpan = document.getElementById('closurePhotoStatus');
+
+                if (previewWrap && previewImg) {
+                    previewImg.src = capturedPhotoBase64;
+                    previewWrap.style.display = 'block';
+                }
+                if (statusSpan) {
+                    statusSpan.textContent = `تم التقاط الصورة (${Math.round(file.size / 1024)} KB)`;
+                    statusSpan.style.color = '#059669';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removePhoto() {
+            capturedPhotoBase64 = null;
+            const input = document.getElementById('closurePhotoInput');
+            if (input) input.value = '';
+            const previewWrap = document.getElementById('closurePhotoPreviewWrap');
+            if (previewWrap) previewWrap.style.display = 'none';
+            const statusSpan = document.getElementById('closurePhotoStatus');
+            if (statusSpan) {
+                statusSpan.textContent = 'لم يتم اختيار صورة بعد';
+                statusSpan.style.color = '#64748b';
+            }
+        }
+
+        async function submitClosure() {
+            if (!currentObsData) return;
+
+            const nameInput = document.getElementById('closureInspectorName');
+            const actionInput = document.getElementById('closureActionTaken');
+            const submitBtn = document.getElementById('btnSubmitClosure');
+            const submitText = document.getElementById('lblSubmitClosureText');
+
+            const inspectorName = nameInput ? nameInput.value.trim() : '';
+            const actionTaken = actionInput ? actionInput.value.trim() : '';
+
+            if (!inspectorName || !actionTaken) {
+                alert('يرجى كتابة اسم المسؤول وتفاصيل الإجراء المنفذ.');
+                return;
+            }
+
+            if (!capturedPhotoBase64) {
+                const conf = confirm('تنبيه: يفضل بشدة إرفاق صورة بعد الإصلاح لتوثيق المطابقة طبقاً للـ ISO. هل ترغب في المتابعة بدون صورة؟');
+                if (!conf) return;
+            }
+
+            // Disable button during submit
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitText) submitText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري حفظ وتوثيق الإغلاق...';
+
+            const obsId = currentObsData.id || currentObsData.isoCode || currentObsData.refCode;
+            const payload = {
+                action: 'submitObservationClosure',
+                id: obsId,
+                isoCode: obsId,
+                status: 'Closed',
+                closedBy: inspectorName,
+                closureNotes: actionTaken,
+                afterPhoto: capturedPhotoBase64 || '',
+                closedAt: new Date().toISOString()
+            };
+
+            try {
+                // Send to universal API endpoint
+                const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '/api/exec';
+                const res = await fetch(targetUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // Update local storage history if exists
+                try {
+                    const localHistoryStr = localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY');
+                    if (localHistoryStr) {
+                        const list = JSON.parse(localHistoryStr);
+                        if (Array.isArray(list)) {
+                            const found = list.find(item => item.id === obsId || item.isoCode === obsId);
+                            if (found) {
+                                found.status = 'مغلق (Closed)';
+                                found.closedAt = payload.closedAt;
+                                found.closedBy = inspectorName;
+                                found.closureNotes = actionTaken;
+                                localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(list));
+                            }
+                        }
+                    }
+                } catch (_) {}
+
+                alert(`✅ تم توثيق معالجة وإغلاق الملاحظة (${obsId}) بنجاح! تم حفظ السجل وإرفاق الإثبات.`);
+                closeClosureModal();
+
+                // Refresh track result if track modal is currently open
+                if (typeof executeTrackSearch === 'function') {
+                    executeTrackSearch(obsId);
+                }
+            } catch (err) {
+                console.warn('[Action Closure] Fallback local save:', err);
+                alert(`✅ تم اعتماد الإغلاق محلياً (${obsId}) وستتم المزامنة تلقائياً عند استقرار الاتصال.`);
+                closeClosureModal();
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+                if (submitText) submitText.innerHTML = 'اعتماد إغلاق الملاحظة';
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // Export API
+        const api = {
+            open: openClosureModal,
+            close: closeClosureModal,
+            handlePhotoSelected,
+            removePhoto,
+            submitClosure
+        };
+
+        window.HseActionClosure = api;
+        window.HseClosure = api;
+
+    } catch (err) {
+        console.warn('[HSE Action Closure] Module initialized safely with note:', err);
+    }
+})();

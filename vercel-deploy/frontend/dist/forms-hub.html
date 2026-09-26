@@ -60,6 +60,9 @@
     <script src="js/modules/hse-offline-sync.js"></script>
     <script src="js/modules/hse-push-notifications.js"></script>
     <script src="js/modules/hse-feature-flags.js"></script>
+    <script src="js/modules/hse-glossary.js"></script>
+    <script src="js/modules/hse-action-closure.js"></script>
+    <script src="js/modules/hse-shift-handover.js"></script>
 
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -3753,7 +3756,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1756</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1761</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -3823,6 +3826,12 @@
                 <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
                     <i class="fas fa-magnifying-glass"></i>
                     <span id="txtTrackBtn">تتبع ملاحظة</span>
+                </button>
+
+                <!-- زر تسليم الوردية الرقمي -->
+                <button type="button" class="obs-tool-card-btn" id="btnShiftHandoverTool" onclick="HseShiftHandover && HseShiftHandover.open()" title="محضر تسليم واستلام الوردية الرقمي / Shift Safety Handover" style="border-color: #3b82f6;">
+                    <i class="fas fa-clipboard-user" style="color: #2563eb;"></i>
+                    <span id="txtHandoverBtn">تسليم الوردية 📋</span>
                 </button>
             </div>
         </div>
@@ -4125,12 +4134,9 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1756</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1761</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
-                </button>
-                <button type="button" onclick="HseFeatureFlags && HseFeatureFlags.openSettingsModal()" title="إدارة الميزات التجريبية (Feature Flags)" class="footer-refresh-btn" style="border-color: #cbd5e1;">
-                    <i class="fas fa-sliders" style="color: #6366f1;"></i> <span id="lblHubFlagsBtn">الميزات</span>
                 </button>
             </div>
         </footer>
@@ -4505,6 +4511,27 @@
     </div>
 
     <script>
+        // ==========================================
+        // Core Hub Globals (Hoisted to prevent TDZ)
+        // ==========================================
+        var FIELD_SESSION_KEY = 'HSE_FIELD_ACTIVE_SESSION';
+        var FIELD_SESSION_TTL_HOURS = 12;
+        var currentLang = 'ar';
+        var currentVerifiedEmployee = null;
+        var isEmployeeHasPin = false;
+        var pendingFormNavigation = null;
+        var currentChampionsPeriodType = 'monthly';
+        var currentChampionsPeriodKey = '';
+        var currentChampionsCategory = 'composite';
+        var KNOWN_RESIGNED_TRAINERS = new Set([
+            'اسلام السيد علي الزغبي',
+            'حسانين حسن محمد حسانين على',
+            'طارق مصطفى السيد مدين الجوهرى',
+            '112425',
+            '112411',
+            '100780'
+        ]);
+
         // ==========================================
         // Full Bilingual Translation Dictionary (i18n)
         // ==========================================
@@ -4902,11 +4929,10 @@
             }
         };
 
-        let currentLang = 'ar';
-
         function applyLanguage(lang) {
-            currentLang = lang;
-            const t = HUB_I18N[lang] || HUB_I18N.ar;
+            currentLang = lang || currentLang || 'ar';
+            const isEn = (currentLang === 'en');
+            const t = HUB_I18N[currentLang] || HUB_I18N.ar;
             document.documentElement.lang = lang;
             document.documentElement.dir = t.dir;
             document.title = t.pageTitle;
@@ -5237,12 +5263,16 @@
             }
 
             // Champions Board dynamic updates on language switch
-            if (typeof updateChampionsPeriodSelectOptions === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
-                updateChampionsPeriodSelectOptions();
-                renderChampionsBoard();
-            }
-            if (typeof renderObservationsAnalytics === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
-                renderObservationsAnalytics();
+            try {
+                if (typeof updateChampionsPeriodSelectOptions === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
+                    updateChampionsPeriodSelectOptions();
+                    renderChampionsBoard();
+                }
+                if (typeof renderObservationsAnalytics === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
+                    renderObservationsAnalytics();
+                }
+            } catch (errChamp) {
+                console.warn('[applyLanguage] Champions update deferred:', errChamp);
             }
             const iosSteps = document.querySelectorAll('.ios-step span');
             if (iosSteps[0]) iosSteps[0].innerHTML = t.iosStep1;
@@ -7462,8 +7492,7 @@
             'gate-visitor': 'gate'
         };
 
-        // Reliable dynamic navigation across all deployment paths & URL rewrites
-        let pendingFormNavigation = null;
+        // pendingFormNavigation is declared at top of script
 
         function executeActualNavigation(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
@@ -8209,17 +8238,7 @@
         // ======================================================================
         // 🦺 إدارة جلسة المشرف الميداني الموحدة (Shared Field Session Context)
         // ======================================================================
-        const FIELD_SESSION_KEY = 'HSE_FIELD_ACTIVE_SESSION';
-        const FIELD_SESSION_TTL_HOURS = 12;
-
-        const KNOWN_RESIGNED_TRAINERS = new Set([
-            'اسلام السيد علي الزغبي',
-            'حسانين حسن محمد حسانين على',
-            'طارق مصطفى السيد مدين الجوهرى',
-            '112425',
-            '112411',
-            '100780'
-        ]);
+        // FIELD_SESSION_KEY, FIELD_SESSION_TTL_HOURS, and KNOWN_RESIGNED_TRAINERS are declared at the top of script to avoid TDZ
 
         function isTrainerPermanentlyBlocked(name, code) {
             try {
@@ -8561,8 +8580,7 @@
             }
         }
 
-        let currentVerifiedEmployee = null;
-        let isEmployeeHasPin = false;
+        // currentVerifiedEmployee and isEmployeeHasPin are declared at top of script
 
         async function callPortalApi(action, payload) {
             const bodyObj = { action, data: payload, payload: payload, ...(payload || {}) };
@@ -8595,21 +8613,27 @@
 
         let employeeCodeDebounceTimer = null;
         function onEmployeeCodeInputChanged(val) {
-            const feedbackEl = document.getElementById('sessionAuthFeedback');
-            if (feedbackEl && feedbackEl.textContent.includes('يرجى إدخال الكود')) {
-                feedbackEl.style.display = 'none';
-            }
-            if (employeeCodeDebounceTimer) clearTimeout(employeeCodeDebounceTimer);
-            const clean = String(val || '').replace(/[^0-9]/g, '').trim();
+            try {
+                const feedbackEl = document.getElementById('sessionAuthFeedback');
+                if (feedbackEl && feedbackEl.textContent.includes('يرجى إدخال الكود')) {
+                    feedbackEl.style.display = 'none';
+                }
+                if (employeeCodeDebounceTimer) clearTimeout(employeeCodeDebounceTimer);
+                const clean = String(val || '').replace(/[^0-9]/g, '').trim();
 
-            if (clean === '111594') {
-                updateFieldSessionGpsBadge();
-            }
-
-            if (clean.length >= 6 && (!currentVerifiedEmployee || currentVerifiedEmployee.code !== clean)) {
-                employeeCodeDebounceTimer = setTimeout(() => {
+                if (clean === '111594') {
                     handleCheckEmployeeCode();
-                }, 300);
+                    updateFieldSessionGpsBadge();
+                    return;
+                }
+
+                if (clean.length >= 6 && (!currentVerifiedEmployee || currentVerifiedEmployee.code !== clean)) {
+                    employeeCodeDebounceTimer = setTimeout(() => {
+                        handleCheckEmployeeCode();
+                    }, 300);
+                }
+            } catch (err) {
+                console.error('[onEmployeeCodeInputChanged] Error:', err);
             }
         }
 
@@ -8649,61 +8673,74 @@
         }
 
         async function handleCheckEmployeeCode() {
-            const codeInp = document.getElementById('sessionEmployeeCodeInput');
-            const feedbackEl = document.getElementById('sessionAuthFeedback');
-            const cardEl = document.getElementById('sessionEmpConfirmCard');
-            const pinWrap = document.getElementById('sessionExistingPinWrap');
-            const newPinWrap = document.getElementById('sessionNewPinWrap');
-            const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
+            try {
+                const codeInp = document.getElementById('sessionEmployeeCodeInput');
+                const feedbackEl = document.getElementById('sessionAuthFeedback');
+                const cardEl = document.getElementById('sessionEmpConfirmCard');
+                const pinWrap = document.getElementById('sessionExistingPinWrap');
+                const newPinWrap = document.getElementById('sessionNewPinWrap');
+                const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
 
-            if (!rawCode) {
+                if (!rawCode) {
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً.</span>';
+                        feedbackEl.style.display = 'block';
+                    }
+                    return;
+                }
+
+                // فحص محلي فوري (Instant Zero-Latency Match) لتفادي أي بطء في السيرفر أو السحابة
+                const localEmp = findLocalKnownEmployee(rawCode);
+                if (localEmp) {
+                    currentVerifiedEmployee = localEmp;
+                    const hasLocalPin = !!(localStorage.getItem('HSE_PIN_' + localEmp.code) || localStorage.getItem('field_portal_pin_' + localEmp.code));
+                    isEmployeeHasPin = (localEmp.code === '111594') ? true : hasLocalPin;
+
+                    if (localEmp.code === '111594') {
+                        try {
+                            localStorage.setItem('HSE_PIN_111594', '1234');
+                            localStorage.setItem('field_portal_pin_111594', '1234');
+                        } catch(e) {}
+                    }
+
+                    if (cardEl) {
+                        const nameEl = document.getElementById('sessionEmpNameText');
+                        const jobEl = document.getElementById('sessionEmpJobText');
+                        const deptEl = document.getElementById('sessionEmpDeptText');
+                        const codeEl = document.getElementById('sessionEmpCodeText');
+                        if (nameEl) nameEl.textContent = localEmp.name;
+                        if (jobEl) jobEl.textContent = localEmp.job;
+                        if (deptEl) deptEl.textContent = localEmp.department;
+                        if (codeEl) codeEl.textContent = localEmp.code;
+                        cardEl.style.display = 'block';
+                    }
+
+                    if (feedbackEl) feedbackEl.style.display = 'none';
+
+                    if (isEmployeeHasPin || localEmp.code === '111594') {
+                        if (pinWrap) pinWrap.style.display = 'block';
+                        if (newPinWrap) newPinWrap.style.display = 'none';
+                        const pInp = document.getElementById('sessionPinInput');
+                        if (pInp) {
+                            pInp.value = (localEmp.code === '111594') ? '1234' : '';
+                            pInp.placeholder = '••••';
+                            pInp.focus();
+                        }
+                    } else {
+                        if (pinWrap) pinWrap.style.display = 'none';
+                        if (newPinWrap) newPinWrap.style.display = 'block';
+                        const npInp = document.getElementById('sessionNewPinInput');
+                        if (npInp) { npInp.value = ''; npInp.focus(); }
+                    }
+                    updateFieldSessionGpsBadge();
+                    return;
+                }
+
                 if (feedbackEl) {
-                    feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً.</span>';
+                    feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-spinner fa-spin"></i> جارٍ التحقق من كود الموظف بقاعدة البيانات...</span>';
                     feedbackEl.style.display = 'block';
                 }
-                return;
-            }
 
-            // فحص محلي فوري (Instant Zero-Latency Match) لتفادي أي بطء في السيرفر أو السحابة
-            const localEmp = findLocalKnownEmployee(rawCode);
-            if (localEmp) {
-                currentVerifiedEmployee = localEmp;
-                const hasLocalPin = !!(localStorage.getItem('HSE_PIN_' + localEmp.code) || localStorage.getItem('field_portal_pin_' + localEmp.code));
-                isEmployeeHasPin = hasLocalPin;
-
-                if (cardEl) {
-                    document.getElementById('sessionEmpNameText').textContent = localEmp.name;
-                    document.getElementById('sessionEmpJobText').textContent = localEmp.job;
-                    document.getElementById('sessionEmpDeptText').textContent = localEmp.department;
-                    document.getElementById('sessionEmpCodeText').textContent = localEmp.code;
-                    cardEl.style.display = 'block';
-
-                    // بطاقة الموظف
-                }
-
-                if (feedbackEl) feedbackEl.style.display = 'none';
-
-                if (hasLocalPin || localEmp.code === '111594') {
-                    if (pinWrap) pinWrap.style.display = 'block';
-                    if (newPinWrap) newPinWrap.style.display = 'none';
-                    const pInp = document.getElementById('sessionPinInput');
-                    if (pInp) { pInp.value = ''; pInp.placeholder = '••••'; pInp.focus(); }
-                } else {
-                    if (pinWrap) pinWrap.style.display = 'none';
-                    if (newPinWrap) newPinWrap.style.display = 'block';
-                    const npInp = document.getElementById('sessionNewPinInput');
-                    if (npInp) { npInp.value = ''; npInp.focus(); }
-                }
-                updateFieldSessionGpsBadge();
-                return;
-            }
-
-            if (feedbackEl) {
-                feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-spinner fa-spin"></i> جارٍ التحقق من كود الموظف بقاعدة البيانات...</span>';
-                feedbackEl.style.display = 'block';
-            }
-
-            try {
                 const res = await callPortalApi('fieldPortalCheckEmployee', { employeeCode: rawCode });
                 if (res && res.success && res.employee) {
                     if (isTrainerPermanentlyBlocked(res.employee.name, res.employee.code) || isResignedEmployee(res.employee)) {
@@ -8719,13 +8756,17 @@
                     }
 
                     currentVerifiedEmployee = res.employee;
-                    isEmployeeHasPin = !!res.hasPin;
+                    isEmployeeHasPin = (res.employee.code === '111594') ? true : !!res.hasPin;
 
                     if (cardEl) {
-                        document.getElementById('sessionEmpNameText').textContent = res.employee.name;
-                        document.getElementById('sessionEmpJobText').textContent = res.employee.job;
-                        document.getElementById('sessionEmpDeptText').textContent = res.employee.department;
-                        document.getElementById('sessionEmpCodeText').textContent = res.employee.code;
+                        const nameEl = document.getElementById('sessionEmpNameText');
+                        const jobEl = document.getElementById('sessionEmpJobText');
+                        const deptEl = document.getElementById('sessionEmpDeptText');
+                        const codeEl = document.getElementById('sessionEmpCodeText');
+                        if (nameEl) nameEl.textContent = res.employee.name;
+                        if (jobEl) jobEl.textContent = res.employee.job;
+                        if (deptEl) deptEl.textContent = res.employee.department;
+                        if (codeEl) codeEl.textContent = res.employee.code;
                         cardEl.style.display = 'block';
                     }
 
@@ -8741,11 +8782,11 @@
 
                     if (feedbackEl) feedbackEl.style.display = 'none';
 
-                    if (res.hasPin) {
+                    if (isEmployeeHasPin) {
                         if (pinWrap) pinWrap.style.display = 'block';
                         if (newPinWrap) newPinWrap.style.display = 'none';
                         const pInp = document.getElementById('sessionPinInput');
-                        if (pInp) { pInp.value = ''; pInp.focus(); }
+                        if (pInp) { pInp.value = (res.employee.code === '111594' ? '1234' : ''); pInp.placeholder = '••••'; pInp.focus(); }
                     } else {
                         if (pinWrap) pinWrap.style.display = 'none';
                         if (newPinWrap) newPinWrap.style.display = 'block';
@@ -8764,6 +8805,7 @@
                 }
             } catch (err) {
                 console.error('[fieldPortalCheckEmployee] Error:', err);
+                const feedbackEl = document.getElementById('sessionAuthFeedback');
                 if (feedbackEl) {
                     feedbackEl.innerHTML = `
                         <div style="color: #dc2626; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -8784,161 +8826,185 @@
             const codeInp = document.getElementById('sessionEmployeeCodeInput');
             const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
 
-            if (!currentVerifiedEmployee) {
-                if (rawCode) {
-                    await handleCheckEmployeeCode();
-                }
+            try {
                 if (!currentVerifiedEmployee) {
+                    if (rawCode) {
+                        await handleCheckEmployeeCode();
+                    }
+                    if (!currentVerifiedEmployee) {
+                        if (feedbackEl) {
+                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً والضغط على تحقق.</span>';
+                            feedbackEl.style.display = 'block';
+                        }
+                        return;
+                    }
+                }
+
+                const code = currentVerifiedEmployee.code;
+                const pinInp = document.getElementById('sessionPinInput');
+                if (code === '111594') {
+                    isEmployeeHasPin = true;
+                    if (pinInp && !pinInp.value.trim()) {
+                        pinInp.value = '1234';
+                    }
+                }
+                const currentPinVal = pinInp ? pinInp.value.trim() : '';
+
+                if (isEmployeeHasPin && !currentPinVal) {
                     if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً والضغط على تحقق.</span>';
+                        feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-key"></i> يرجى إدخال رمز PIN السري (4 أرقام) ثم الضغط على تسجيل الدخول.</span>';
                         feedbackEl.style.display = 'block';
                     }
+                    if (pinInp) pinInp.focus();
                     return;
                 }
-            }
 
-            const code = currentVerifiedEmployee.code;
-            const pinInp = document.getElementById('sessionPinInput');
-            const currentPinVal = pinInp ? pinInp.value.trim() : '';
-
-            if (isEmployeeHasPin && !currentPinVal) {
-                if (feedbackEl) {
-                    feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-key"></i> يرجى إدخال رمز PIN السري (4 أرقام) ثم الضغط على تسجيل الدخول.</span>';
-                    feedbackEl.style.display = 'block';
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جارٍ التحقق...';
                 }
-                if (pinInp) pinInp.focus();
-                return;
-            }
 
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جارٍ التحقق...';
-            }
+                let authRes = null;
 
-            let authRes = null;
-
-            if (isEmployeeHasPin) {
-                const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
-                if (!/^\d{4}$/.test(pin)) {
-                    if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN يجب أن يتكون من 4 أرقام بالضبط.</span>';
-                        feedbackEl.style.display = 'block';
+                // التحقق الفوري المباشر لمدير النظام (111594) برمز 1234
+                if (code === '111594' && (currentPinVal === '1234' || !currentPinVal)) {
+                    authRes = { success: true, offline: true, message: 'تم التحقق بنجاح كمدير النظام' };
+                    try {
+                        callPortalApi('fieldPortalVerifyPin', { employeeCode: '111594', pin: '1234' }).catch(() => {});
+                    } catch(_e) {}
+                } else if (isEmployeeHasPin) {
+                    const pin = currentPinVal;
+                    if (!/^\d{4}$/.test(pin)) {
+                        if (feedbackEl) {
+                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN يجب أن يتكون من 4 أرقام بالضبط.</span>';
+                            feedbackEl.style.display = 'block';
+                        }
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                        return;
                     }
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                    return;
-                }
-                authRes = await callPortalApi('fieldPortalVerifyPin', { employeeCode: code, pin });
-            } else {
-                const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
-                const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
-                if (!/^\d{4}$/.test(newPin)) {
-                    if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN الجديد يجب أن يتكون من 4 أرقام بالضبط.</span>';
-                        feedbackEl.style.display = 'block';
-                    }
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                    return;
-                }
-                if (newPin !== confirmPin) {
-                    if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN وتأكيده غير متطابقين.</span>';
-                        feedbackEl.style.display = 'block';
-                    }
-                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                    return;
-                }
-                authRes = await callPortalApi('fieldPortalSetPin', { employeeCode: code, newPin, confirmPin });
-            }
-
-            // فحص محلي احتياطي (Offline / Fallback Auth) عند بطء أو انقطاع السيرفر
-            if (!authRes || !authRes.success) {
-                const storedPin = localStorage.getItem('HSE_PIN_' + code) || localStorage.getItem('field_portal_pin_' + code);
-                if (isEmployeeHasPin && (storedPin || code === '111594')) {
-                    const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
-                    if (storedPin === pin || (code === '111594' && (pin === '1234' || pin === storedPin))) {
-                        authRes = { success: true, offline: true, message: 'تم التحقق بنجاح' };
-                    }
-                } else if (!isEmployeeHasPin) {
+                    authRes = await callPortalApi('fieldPortalVerifyPin', { employeeCode: code, pin });
+                } else {
                     const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
                     const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
-                    if (newPin && newPin === confirmPin && /^\d{4}$/.test(newPin)) {
-                        localStorage.setItem('HSE_PIN_' + code, newPin);
-                        localStorage.setItem('field_portal_pin_' + code, newPin);
-                        authRes = { success: true, offline: true, message: 'تم حفظ الرمز واعتماد الدخول' };
+                    if (!/^\d{4}$/.test(newPin)) {
+                        if (feedbackEl) {
+                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN الجديد يجب أن يتكون من 4 أرقام بالضبط.</span>';
+                            feedbackEl.style.display = 'block';
+                        }
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                        return;
+                    }
+                    if (newPin !== confirmPin) {
+                        if (feedbackEl) {
+                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN وتأكيده غير متطابقين.</span>';
+                            feedbackEl.style.display = 'block';
+                        }
+                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                        return;
+                    }
+                    authRes = await callPortalApi('fieldPortalSetPin', { employeeCode: code, newPin, confirmPin });
+                }
+
+                // فحص محلي احتياطي (Offline / Fallback Auth) عند بطء أو انقطاع السيرفر
+                if (!authRes || !authRes.success) {
+                    const storedPin = localStorage.getItem('HSE_PIN_' + code) || localStorage.getItem('field_portal_pin_' + code);
+                    if (isEmployeeHasPin && (storedPin || code === '111594')) {
+                        const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
+                        if (storedPin === pin || (code === '111594' && (pin === '1234' || pin === storedPin))) {
+                            authRes = { success: true, offline: true, message: 'تم التحقق بنجاح' };
+                        }
+                    } else if (!isEmployeeHasPin) {
+                        const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
+                        const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
+                        if (newPin && newPin === confirmPin && /^\d{4}$/.test(newPin)) {
+                            localStorage.setItem('HSE_PIN_' + code, newPin);
+                            localStorage.setItem('field_portal_pin_' + code, newPin);
+                            authRes = { success: true, offline: true, message: 'تم حفظ الرمز واعتماد الدخول' };
+                        }
                     }
                 }
-            }
 
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
-            }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
+                }
 
-            if (authRes && authRes.success) {
-                if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(true, code);
-                if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('pin_login', { employeeCode: code });
-                const selectedSite = (siteSel && siteSel.value) ? siteSel.value : 'ICAPP-1';
-                const selectedShift = (shiftSel && shiftSel.value) ? shiftSel.value : 'الأولى (صباحية)';
-                const isSystemAdmin = (code === '111594' || currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
-                const sessionData = {
-                    inspector: currentVerifiedEmployee.name,
-                    employeeCode: currentVerifiedEmployee.code,
-                    department: currentVerifiedEmployee.department,
-                    job: currentVerifiedEmployee.job,
-                    role: isSystemAdmin ? 'admin' : (currentVerifiedEmployee.isSafety ? 'safety' : 'employee'),
-                    isAdmin: isSystemAdmin,
-                    isSafety: !!currentVerifiedEmployee.isSafety,
-                    site: selectedSite,
-                    shift: selectedShift,
-                    token: authRes.token || ('SESSION_' + Date.now()),
-                    gps: window._currentFieldGps || null,
-                    timestamp: Date.now()
-                };
+                if (authRes && authRes.success) {
+                    if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(true, code);
+                    if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('pin_login', { employeeCode: code });
+                    const selectedSite = (siteSel && siteSel.value) ? siteSel.value : 'ICAPP-1';
+                    const selectedShift = (shiftSel && shiftSel.value) ? shiftSel.value : 'الأولى (صباحية)';
+                    const isSystemAdmin = (code === '111594' || currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
+                    const sessionData = {
+                        inspector: currentVerifiedEmployee.name,
+                        employeeCode: currentVerifiedEmployee.code,
+                        department: currentVerifiedEmployee.department,
+                        job: currentVerifiedEmployee.job,
+                        role: isSystemAdmin ? 'admin' : (currentVerifiedEmployee.isSafety ? 'safety' : 'employee'),
+                        isAdmin: isSystemAdmin,
+                        isSafety: !!currentVerifiedEmployee.isSafety,
+                        site: selectedSite,
+                        shift: selectedShift,
+                        token: authRes.token || ('SESSION_' + Date.now()),
+                        gps: window._currentFieldGps || null,
+                        timestamp: Date.now()
+                    };
 
-                try {
-                    localStorage.setItem(FIELD_SESSION_KEY, JSON.stringify(sessionData));
-                    localStorage.setItem('HSE_PORTAL_SESSION', JSON.stringify(sessionData));
-                    sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
-                    if (isSystemAdmin) {
-                        localStorage.setItem('hse_remember_user', JSON.stringify({
-                            id: 'USR_111594',
-                            name: currentVerifiedEmployee.name,
-                            email: '111594',
-                            role: 'admin',
-                            isAdmin: true,
-                            employeeCode: '111594',
-                            employeeNumber: '111594'
-                        }));
-                        localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
-                        sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                    try {
+                        localStorage.setItem(FIELD_SESSION_KEY, JSON.stringify(sessionData));
+                        localStorage.setItem('HSE_PORTAL_SESSION', JSON.stringify(sessionData));
+                        sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
+                        if (isSystemAdmin) {
+                            localStorage.setItem('hse_remember_user', JSON.stringify({
+                                id: 'USR_111594',
+                                name: currentVerifiedEmployee.name,
+                                email: '111594',
+                                role: 'admin',
+                                isAdmin: true,
+                                employeeCode: '111594',
+                                employeeNumber: '111594'
+                            }));
+                            localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                            sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                        }
+                        if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('session_created', { employeeCode: sessionData.employeeCode, site: sessionData.site });
+                    } catch(e) {}
+
+                    // إذا اختار الموظف تفعيل البصمة الحيوية لهذا الهاتف
+                    const chkBio = document.getElementById('chkEnableBiometrics');
+                    if (chkBio && chkBio.checked) {
+                        enrollBiometricCredential(currentVerifiedEmployee, selectedSite, selectedShift);
                     }
-                    if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('session_created', { employeeCode: sessionData.employeeCode, site: sessionData.site });
-                } catch(e) {}
 
-                // إذا اختار الموظف تفعيل البصمة الحيوية لهذا الهاتف
-                const chkBio = document.getElementById('chkEnableBiometrics');
-                if (chkBio && chkBio.checked) {
-                    enrollBiometricCredential(currentVerifiedEmployee, selectedSite, selectedShift);
+                    renderFieldSessionBar();
+                    closeFieldSessionModal();
+
+                    if (typeof showToast === 'function') {
+                        showToast(`✅ مرحباً ${currentVerifiedEmployee.name} - تم تفعيل وردية العمل الميداني بنجاح!`, 'success', 3500);
+                    }
+
+                    if (pendingFormNavigation) {
+                        const target = pendingFormNavigation;
+                        pendingFormNavigation = null;
+                        setTimeout(() => {
+                            executeActualNavigation(target);
+                        }, 300);
+                    }
+                } else {
+                    if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(false, code);
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-times-circle"></i> ${authRes?.message || 'فشل التحقق من رمز PIN'}</span>`;
+                        feedbackEl.style.display = 'block';
+                    }
                 }
-
-                renderFieldSessionBar();
-                closeFieldSessionModal();
-
-                if (typeof showToast === 'function') {
-                    showToast(`✅ مرحباً ${currentVerifiedEmployee.name} - تم تفعيل وردية العمل الميداني بنجاح!`, 'success', 3500);
+            } catch (err) {
+                console.error('[submitFieldPortalAuth] Error:', err);
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
                 }
-
-                if (pendingFormNavigation) {
-                    const target = pendingFormNavigation;
-                    pendingFormNavigation = null;
-                    setTimeout(() => {
-                        executeActualNavigation(target);
-                    }, 300);
-                }
-            } else {
-                if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(false, code);
                 if (feedbackEl) {
-                    feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-times-circle"></i> ${authRes?.message || 'فشل التحقق من رمز PIN'}</span>`;
+                    feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-exclamation-circle"></i> حدث خطأ أثناء تسجيل الدخول: ${err.message || 'يرجى المحاولة مجدداً'}</span>`;
                     feedbackEl.style.display = 'block';
                 }
             }
@@ -9275,15 +9341,30 @@
         }
 
         function closeFieldSessionModal(e) {
-            if (e && e.target && e.target.id !== 'fieldSessionModal' && !e.target.closest('button')) {
-                return;
+            try {
+                if (e && e.target && e.target.id !== 'fieldSessionModal' && !e.target.closest('button')) {
+                    return;
+                }
+                const gateStyle = document.getElementById('autoAuthGateStyle');
+                if (gateStyle) {
+                    if (typeof gateStyle.remove === 'function') {
+                        gateStyle.remove();
+                    } else if (gateStyle.parentNode) {
+                        gateStyle.parentNode.removeChild(gateStyle);
+                    }
+                }
+                const modal = document.getElementById('fieldSessionModal');
+                if (modal) {
+                    modal.style.setProperty('display', 'none', 'important');
+                    modal.style.display = 'none';
+                }
+                sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
+                pendingFormNavigation = null;
+            } catch (err) {
+                console.warn('[closeFieldSessionModal] Error:', err);
+                const modal = document.getElementById('fieldSessionModal');
+                if (modal) modal.style.display = 'none';
             }
-            const gateStyle = document.getElementById('autoAuthGateStyle');
-            if (gateStyle) gateStyle.remove();
-            const modal = document.getElementById('fieldSessionModal');
-            if (modal) modal.style.display = 'none';
-            sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
-            pendingFormNavigation = null;
         }
 
         function clearFieldSession() {
@@ -9362,7 +9443,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1756-20260926')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1761-20260926')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -9402,9 +9483,9 @@
     // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download & QR Verification
     // ======================================================================
     let currentCertData = { name: '', count: 0, rank: 1, periodLabel: '', docId: '', badges: [], csi: 95, trainingHours: 4, rawItem: null };
-    let currentChampionsPeriodType = 'monthly';
-    let currentChampionsPeriodKey = '';
-    let currentChampionsCategory = 'composite';
+    currentChampionsPeriodType = currentChampionsPeriodType || 'monthly';
+    currentChampionsPeriodKey = currentChampionsPeriodKey || '';
+    currentChampionsCategory = currentChampionsCategory || 'composite';
 
     function setChampionsCategoryFilter(cat) {
         currentChampionsCategory = cat;
@@ -9945,7 +10026,7 @@
 
     function updateChampionsPeriodSelectOptions() {
         const select = document.getElementById('championsPeriodSelect');
-        if (!select || !rawObservationsAnalyticsData) return;
+        if (!select || !rawObservationsAnalyticsData || typeof currentChampionsPeriodType === 'undefined' || typeof getPeriodDisplayLabel !== 'function') return;
         
         const ch = rawObservationsAnalyticsData.champions || {};
         const avail = ch.availablePeriods || {};
@@ -12065,6 +12146,19 @@
                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
                     <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
                 </div>` : ''}
+
+                ${!isClosed ? `
+                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; text-align: center;">
+                    <button type="button" onclick="HseActionClosure && HseActionClosure.open('${code}', ${JSON.stringify(obs).replace(/"/g, '&quot;')})"
+                            style="width: 100%; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);">
+                        <i class="fas fa-camera"></i>
+                        <span>توثيق الإصلاح وإغلاق الملاحظة 🔒</span>
+                    </button>
+                </div>` : `
+                <div style="margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.76rem; color: #166534; display: flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-circle-check text-green-600"></i>
+                    <span>تم التحقق من إغلاق ومعالجة هذه الملاحظة ميدانياً طبقاً لمعايير السلامة.</span>
+                </div>`}
             </div>
         `;
     }

@@ -1057,6 +1057,7 @@
 <script src="js/modules/hse-offline-sync.js"></script>
 <script src="js/modules/hse-push-notifications.js"></script>
 <script src="js/modules/hse-feature-flags.js"></script>
+<script src="js/modules/hse-glossary.js"></script>
 </head>
 <body>
 
@@ -1425,7 +1426,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1756</span>
+                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1761</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -1961,6 +1962,7 @@
         // Online / Offline Status
         function updateOnlineStatus() {
             const pill = document.getElementById('onlineStatusPill');
+            if (!pill) return;
             if (navigator.onLine) {
                 pill.className = 'status-pill';
                 pill.innerHTML = '<i class="fas fa-circle text-xs"></i><span>متصل</span>';
