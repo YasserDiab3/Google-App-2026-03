@@ -30,11 +30,19 @@ async function verifyLiveProduction() {
     const count = await page.locator('.hse-tg-card').count();
     console.log('Risk matrix cards count:', count);
 
-    // Search for LOTO
-    await page.fill('#hseTgSearchInput', 'LOTO');
+    // Filter by LOTO
+    await page.click('.hse-tg-tab-btn[data-cat="loto"]');
     await page.waitForTimeout(300);
     const lotoCards = await page.locator('.hse-tg-card').count();
-    console.log('Search LOTO cards count:', lotoCards);
+    console.log('LOTO cards count:', lotoCards);
+
+    // Switch to All and search
+    await page.click('.hse-tg-tab-btn[data-cat="all"]');
+    await page.waitForTimeout(300);
+    await page.fill('#hseTgSearchInput', 'لحام');
+    await page.waitForTimeout(300);
+    const weldingCards = await page.locator('.hse-tg-card').count();
+    console.log('Search "لحام" cards count:', weldingCards);
 
     // Test Copy Standard button
     await page.click('.hse-tg-copy-btn');
