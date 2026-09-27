@@ -1543,14 +1543,9 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                 return;
             }
 
-            // فتح النافذة فوراً عند نقرة المستخدم لتجنب منع المتصفح للنوافذ المنبثقة (قبل أي await)
-            printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                Notification.error(t('msg.allowPopups'));
-                return;
+            if (typeof Loading !== 'undefined' && Loading.show) {
+                Loading.show(t('msg.generating') || 'جاري تجهيز التقرير...');
             }
-            printWindow.document.write('<html dir="rtl"><body style="font-family: Arial; padding: 20px; text-align: center;"><p>جاري تحضير التقرير...</p></body></html>');
-            printWindow.document.close();
 
             if (type === 'full' || type === 'period') {
                 await this.ensureTrainingDataForReport();
@@ -1567,8 +1562,8 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                     title = t('report.incidents');
                     const incidentsData = data.incidents || [];
                     if (!Array.isArray(incidentsData)) {
+                        if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
                         Notification.error(t('msg.incidentsInvalid'));
-                        if (printWindow) printWindow.close();
                         return;
                     }
                     content = this.generateIncidentsReport(incidentsData);
@@ -1577,8 +1572,8 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                     title = t('report.training');
                     const trainingData = data.training || [];
                     if (!Array.isArray(trainingData)) {
+                        if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
                         Notification.error(t('msg.trainingInvalid'));
-                        if (printWindow) printWindow.close();
                         return;
                     }
                     content = this.generateTrainingReport(trainingData);
@@ -1586,7 +1581,7 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                 case 'period': {
                     const period = options.period || await this._askForPeriod();
                     if (!period) {
-                        if (printWindow) printWindow.close();
+                        if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
                         return;
                     }
                     title = `${t('report.periodSummary')} - ${period.label}`;
@@ -1598,7 +1593,7 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                     content = this.generateFullReport(data);
                     break;
                 default:
-                    if (printWindow) printWindow.close();
+                    if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
                     throw new Error(t('msg.unknownReport'));
             }
 
@@ -1606,19 +1601,24 @@ html,body,.report-wrapper,.report-wrapper *,.msr-report,.msr-report *{font-famil
                 ? FormHeader.generatePDFHTML(formCode, title, content, false, true, pdfMeta, new Date().toISOString(), new Date().toISOString())
                 : `<html><body>${content}</body></html>`;
 
-            printWindow.document.open();
-            printWindow.document.write(htmlContent);
-            printWindow.document.close();
+            const fileName = `${title.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title })
+                : false);
 
-            setTimeout(() => {
-                try {
-                    printWindow.print();
-                } catch (e) {
-                    if (typeof Utils !== 'undefined' && Utils.safeWarn) Utils.safeWarn('طباعة التقرير:', e);
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
+
+            if (downloaded) {
+                if (typeof Notification !== 'undefined' && Notification.success) {
+                    Notification.success(t('msg.reportDownloaded') || 'تم تحميل التقرير بصيغة PDF بنجاح');
                 }
-            }, 300);
+            } else {
+                if (typeof Notification !== 'undefined' && Notification.error) {
+                    Notification.error(t('msg.exportFailed') || 'تعذر تصدير التقرير بصيغة PDF');
+                }
+            }
         } catch (err) {
-            if (printWindow && typeof printWindow.close === 'function') printWindow.close();
+            if (typeof Loading !== 'undefined' && Loading.hide) Loading.hide();
             const msg = (typeof Notification !== 'undefined' && Notification.error)
                 ? (err && err.message) || 'حدث خطأ عند استخراج التقرير'
                 : (err && err.message) || 'حدث خطأ عند استخراج التقرير';

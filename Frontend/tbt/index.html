@@ -2425,7 +2425,7 @@
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
                 <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <div class="iso-col-title">
@@ -2848,7 +2848,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblTbtVersion">v1.0.1769</span>
+                <span class="footer-version-pill" id="lblTbtVersion">v1.0.1770</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -3013,7 +3013,7 @@
                             <div class="iso-box-brand" style="padding: 6px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1.5px solid #0f172a; background: #f8fafc; gap: 2px;">
                                 <img src="icons/icapp-logo.png" alt="ICAPP" class="print-logo-img" style="max-height: 40px; max-width: 95px; object-fit: contain;" onerror="this.src='/icons/icapp-logo.png'">
                                 <div style="font-size: 8.5px; font-weight: 900; color: #0f172a; text-align: center; line-height: 1.15; margin-top: 2px;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                                <div style="font-size: 8px; font-weight: 800; color: #1e3a8a; text-align: center;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
+                                <div style="font-size: 8px; font-weight: 800; color: #1e3a8a; text-align: center;">إدارة السلامة والصحة المهنية والبيئة</div>
                             </div>
                             <div class="iso-box-title" style="padding: 6px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
                                 <h2 class="print-main-title" style="margin: 0; font-size: 13px; font-weight: 900; color: #0f172a;">
@@ -3237,8 +3237,8 @@
 
             const dept = document.getElementById('isoDeptName');
             if (dept) dept.textContent = currentLang === 'ar' 
-                ? 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة' 
-                : 'General Administration of Occupational Safety, Health & Environmental Protection';
+                ? 'إدارة السلامة والصحة المهنية والبيئة' 
+                : 'Occupational Safety, Health & Environment Department';
 
             const docTitle = document.getElementById('isoDocTitle');
             if (docTitle) docTitle.textContent = currentLang === 'ar'
@@ -6087,7 +6087,7 @@ ${audienceLines}
                     signatures: [
                         { title: 'إعداد / المحاضر القائم بالتدريب', name: trainerVal, line: 'التوقيع والتاريخ' },
                         { title: 'مراجعة وتدقيق أخصائي السلامة', name: 'أخصائي السلامة والصحة المهنية', line: 'التوقيع والتاريخ' },
-                        { title: 'اعتماد الإدارة العامة للسلامة والصحة المهنية', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
+                        { title: 'اعتماد إدارة السلامة والصحة المهنية والبيئة', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
                     ]
                 });
             } else {

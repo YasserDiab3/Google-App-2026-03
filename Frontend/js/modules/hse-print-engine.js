@@ -4,7 +4,7 @@
  * 
  * Standards:
  * - Company: الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)
- * - Dept: الإدارة العامة للسلامة والصحة المهنية وحماية البيئة
+ * - Dept: إدارة السلامة والصحة المهنية والبيئة
  * - ISO Standard: ISO 45001:2018 & OSHA 1910
  */
 
@@ -21,8 +21,8 @@
 
     const COMPANY_NAME_AR = 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)';
     const COMPANY_NAME_EN = 'International Company for Agricultural Production & Processing (ICAPP)';
-    const DEPT_NAME_AR = 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة';
-    const DEPT_NAME_EN = 'General Administration of Occupational Safety, Health & Environmental Protection';
+    const DEPT_NAME_AR = 'إدارة السلامة والصحة المهنية والبيئة';
+    const DEPT_NAME_EN = 'Occupational Safety, Health & Environment Department';
 
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -647,16 +647,12 @@
 </html>`;
     }
 
-    function printDocument(config = {}) {
-        const fullHtml = buildDocumentHtml({ ...config, autoPrint: true });
-        const win = window.open('', '_blank');
-        if (!win) {
-            alert('يرجى السماح بالنوافذ المنبثقة (Pop-ups) لإتمام طباعة التقرير');
-            return null;
+    async function downloadDocumentAsPdf(config = {}, fileName = 'document.pdf') {
+        const fullHtml = buildDocumentHtml({ ...config, autoPrint: false });
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            return await Utils.downloadHtmlAsPdf(fullHtml, fileName);
         }
-        win.document.write(fullHtml);
-        win.document.close();
-        return win;
+        return false;
     }
 
     return {
@@ -672,6 +668,7 @@
         getMetaGridHtml,
         getKpisHtml,
         buildDocumentHtml,
-        printDocument
+        printDocument,
+        downloadDocumentAsPdf
     };
 }));

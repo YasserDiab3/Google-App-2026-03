@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1769",
+  "version": "1.0.1771",
   "highlights": {
     "ar": [
-      "توحيد التصميم والواجهات التفاعلية لجميع النماذج الميدانية داخل النظام كاملة لكل المديولات طبقاً للهوية المؤسسية والترويسة المعتمدة (ISO).",
-      "اعتماد الاسم الرسمي للشركة (الشركة العالمية للإنتاج والتصنيع الزراعي - ICAPP) والإدارة العامة للسلامة والصحة المهنية وحماية البيئة في واجهات النماذج وترجمتها المزدوجة.",
-      "تطبيق الترويسة ثلاثية الأعمدة وشريط ضبط الوثائق الرسمي والفوتر الموحد على نماذج: الملاحظات، الحوادث الوشيكة، فحص الحريق، المرور اليومي، تسجيل الزائرين، ومحاضر الـ TBT وبوابة النماذج.",
-      "مزامنة كاملة وشاملة لكافة النماذج الميدانية في خط إنتاج التطبيق والتوزيع السحابي والذاكرة المؤقتة."
+      "توحيد نظام التصدير والتحميل المباشر لجميع ملفات PDF في كامل النظام دون فتح شاشة الطباعة (window.print) أو النوافذ المنبثقة.",
+      "التحميل التلقائي المباشر لتقرير تدريبات المقاولين فور اختياره واختيار الفترة المحددة كملف PDF إلى جهاز المستخدم.",
+      "تطبيق التصدير والتحميل المباشر في تصاريح العمل (PTW) وسجل حصر التصاريح ونماذج التصاريح.",
+      "تحديث محرك التصدير المركزي Utils.downloadHtmlAsPdf لدعم تقارير الحوادث، الإجراءات التصحيحية، المواد الكيميائية، وتقييم المقاولين."
     ],
     "en": [
-      "Unified interactive form interfaces across all system modules with standardized corporate ISO layout, header tables, and metadata strips.",
-      "Enforced official corporate name 'International Company for Agricultural Production & Processing (ICAPP)' and 'General Administration of Occupational Safety, Health & Environmental Protection' in all forms.",
-      "Applied official 3-column ISO header, document control strip, and unified portal footer across Observation, Near-Miss, Fire Inspection, Daily Patrol, Visitor Gate, TBT Briefing, and Forms Hub.",
-      "Full synchronization of all 7 in-app forms across build pipelines, subdirectories, and Vercel cloud deployment."
+      "Unified direct export and download system for all PDF files across the entire platform without opening print preview dialogs or popup windows.",
+      "Direct automatic download of Contractor Training Reports to user device immediately upon selection and filter criteria.",
+      "Direct PDF download implemented for Work Permits (PTW), PTW registry logs, and permit issuance forms.",
+      "Centralized Utils.downloadHtmlAsPdf engine powering instant downloads for Incidents, Action Tracking, Chemical Safety SDS, and Contractor evaluations."
     ]
   }
 }

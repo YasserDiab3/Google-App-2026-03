@@ -3320,23 +3320,16 @@ const ChemicalSafety = {
                 )
                 : `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const pdfFileName = `${formTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: formTitle })
+                : false);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل صحيفة بيانات سلامة المادة بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذر تصدير صحيفة بيانات السلامة بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();
@@ -3701,23 +3694,16 @@ const ChemicalSafety = {
                 )
                 : `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const pdfFileName = `${formTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: formTitle })
+                : false);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل سجل المواد الكيميائية بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذر تصدير سجل المواد الكيميائية بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();

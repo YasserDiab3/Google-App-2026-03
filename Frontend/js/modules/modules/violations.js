@@ -6902,7 +6902,15 @@ ${inner}
 </body></html>`;
     },
 
-    async _completeViolationReportPrint(htmlContent) {
+    async _completeViolationReportPrint(htmlContent, fileName = 'تقرير_المخالفة.pdf') {
+        const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+            ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'تقرير المخالفة' })
+            : false);
+        if (ok) {
+            Notification.success('تم تحميل تقرير المخالفة بصيغة PDF بنجاح');
+            return true;
+        }
+
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const printWindow = window.open(url, '_blank');
@@ -8734,28 +8742,21 @@ ${inner}
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const pdfFileName = `${title.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title })
+                : false);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل التقرير بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذر تصدير التقرير بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في طباعة التفاصيل:', error);
-            Notification.error('فشل في الطباعة: ' + error.message);
+            Utils.safeError('خطأ في تصدير التفاصيل:', error);
+            Notification.error('فشل في تصدير PDF: ' + error.message);
         }
     },
 

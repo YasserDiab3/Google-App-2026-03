@@ -4490,7 +4490,7 @@ const Contractors = {
         }
     },
 
-    exportApprovedEntitiesPDF(id = null) {
+    async exportApprovedEntitiesPDF(id = null) {
         this.ensureApprovedSetup();
         const records = id
             ? (AppState.appData.approvedContractors || []).filter((item) => item.id === id)
@@ -4562,25 +4562,18 @@ const Contractors = {
                 )
                 : content;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const title = id ? 'نموذج جهة معتمدة' : 'سجل الجهات المعتمدة';
+            const pdfFileName = `${title.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        // Clean up blob URL after print
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 1000);
-                        Loading.hide();
-                    }, 500);
-                };
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title })
+                : false);
+
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل الملف بصيغة PDF بنجاح');
             } else {
-                URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
+                Notification.error('تعذر تصدير الملف بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();
@@ -6790,7 +6783,7 @@ const Contractors = {
         });
     },
 
-    exportEvaluationPDF(evaluationId) {
+    async exportEvaluationPDF(evaluationId) {
         const evaluation = this.getEvaluationWithItems(evaluationId);
         if (!evaluation) {
             Notification.error('السجل المطلوب غير موجود');
@@ -6906,25 +6899,17 @@ const Contractors = {
                 )
                 : content;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const contractorName = (evaluation.contractorName || 'مقاول').replace(/[\\/:*?"<>|]/g, '_');
+            const pdfFileName = `تقييم_${contractorName}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: `تقييم ${contractorName}` })
+                : false);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        // Clean up blob URL after print
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 1000);
-                        Loading.hide();
-                    }, 500);
-                };
+            Loading.hide();
+            if (downloaded) {
+                Notification.success('تم تحميل تقييم المقاول بصيغة PDF بنجاح');
             } else {
-                URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                Notification.error('تعذر تصدير التقييم بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();
@@ -13275,22 +13260,16 @@ const Contractors = {
             </div>`;
     },
 
-    _ctrOpenAnalyticsPrintReport(htmlContent) {
+    async _ctrOpenAnalyticsPrintReport(htmlContent) {
         try {
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    }, 450);
-                };
-                Notification?.success?.('جاري تحضير تقرير PDF للطباعة...');
+            const fileName = `تحليل_المقاولين_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'تحليل المقاولين' })
+                : false);
+            if (ok) {
+                Notification?.success?.('تم تحميل تقرير تحليل المقاولين بصيغة PDF بنجاح');
                 return true;
             }
-            Notification?.error?.('يرجى السماح للنوافذ المنبثقة لتصدير PDF');
             return false;
         } catch (error) {
             Utils.safeError('فشل فتح تقرير التحليل:', error);

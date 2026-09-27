@@ -4450,7 +4450,7 @@ const DEFAULT_COMPANY_NAME = 'الشركة العالمية للإنتاج وا�
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1769',
+    appVersion: '1.0.1770',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4799,6 +4799,20 @@ const Utils = {
             Utils.safeError('Utils.printHtmlContent error:', error);
             return false;
         }
+    },
+
+    /**
+     * تحميل مباشر لمحتوى HTML كملف PDF بدون فتح نافذة طباعة أو تبويب جديد
+     * @param {string} htmlContent - محتوى HTML
+     * @param {string} fileName - اسم الملف الناتج (.pdf)
+     * @param {object} options - خيارات إضافية (marginMm, landscape, scale, etc.)
+     * @returns {Promise<boolean>}
+     */
+    async downloadHtmlAsPdf(htmlContent, fileName = 'report.pdf', options = {}) {
+        if (this.PdfExport && typeof this.PdfExport.downloadHtmlAsPdf === 'function') {
+            return await this.PdfExport.downloadHtmlAsPdf(htmlContent, fileName, options);
+        }
+        return false;
     },
 
     /**
@@ -6885,6 +6899,205 @@ const Utils = {
             }
             pdf.save(safeName);
             return { ok: true, bytes, oversized: bytes > target };
+        },
+
+        async ensurePdfLibraries() {
+            const loadScript = (src, check) => new Promise((resolve) => {
+                if (check()) return resolve(true);
+                const existing = Array.from(document.querySelectorAll('script[src]'))
+                    .find(s => String(s.src || '').includes(src));
+                if (existing) {
+                    const done = () => resolve(!!check());
+                    existing.addEventListener('load', done, { once: true });
+                    setTimeout(done, 4000);
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => resolve(!!check());
+                script.onerror = () => resolve(false);
+                document.head.appendChild(script);
+            });
+
+            const hasJsPdf = () => !!(window.jspdf?.jsPDF || window.jsPDF?.jsPDF || typeof window.jsPDF === 'function');
+            const hasHtml2Canvas = () => typeof window.html2canvas === 'function';
+
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', hasHtml2Canvas);
+            await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', hasJsPdf);
+
+            return hasJsPdf() && hasHtml2Canvas();
+        },
+
+        async downloadHtmlAsPdf(htmlContent, fileName = 'report.pdf', options = {}) {
+            if (!htmlContent) return false;
+            try {
+                const libsReady = await this.ensurePdfLibraries();
+                if (!libsReady) {
+                    if (typeof Notification !== 'undefined') {
+                        Notification.error('تعذّر تحميل مكتبات تصدير PDF — يرجى التحقق من اتصال الإنترنت');
+                    }
+                    return false;
+                }
+
+                const cleanFileName = String(fileName || 'report.pdf')
+                    .replace(/[\\/:*?"<>|]/g, '_')
+                    .trim();
+                const safeName = cleanFileName.toLowerCase().endsWith('.pdf') ? cleanFileName : `${cleanFileName}.pdf`;
+
+                const cairoFontLink = '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">';
+                const printStyles = `
+                    <style id="unified-pdf-export-styles">
+                        @page { size: A4 portrait; margin: 0; }
+                        html, body {
+                            background: #ffffff !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            direction: rtl !important;
+                            font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
+                            -webkit-print-color-adjust: exact !important;
+                            print-color-adjust: exact !important;
+                        }
+                        * {
+                            font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
+                            letter-spacing: 0 !important;
+                            word-spacing: normal !important;
+                            box-sizing: border-box !important;
+                        }
+                        .no-print, .no-print-bar, .modal-close, button.btn-close, .modal-footer, .action-buttons {
+                            display: none !important;
+                        }
+                        table {
+                            direction: rtl !important;
+                            border-collapse: collapse !important;
+                        }
+                    </style>
+                `;
+
+                let cleaned = String(htmlContent).replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                let preparedHtml = '';
+                if (cleaned.includes('</head>')) {
+                    preparedHtml = cleaned.replace('</head>', `${cairoFontLink}${printStyles}</head>`);
+                } else if (cleaned.includes('<html')) {
+                    preparedHtml = cleaned.replace('<html', `<html dir="rtl"`);
+                    preparedHtml = preparedHtml.replace('>', `>${cairoFontLink}${printStyles}`);
+                } else {
+                    preparedHtml = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8">${cairoFontLink}${printStyles}</head><body>${cleaned}</body></html>`;
+                }
+
+                const a4WidthPx = options.windowWidth || (options.landscape ? 1123 : 794);
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('aria-hidden', 'true');
+                iframe.style.cssText = `position:fixed;left:-100000px;top:0;width:${a4WidthPx}px;height:1123px;border:0;visibility:hidden;z-index:-9999;`;
+                document.body.appendChild(iframe);
+
+                try {
+                    iframe.srcdoc = preparedHtml;
+                    await new Promise((resolve) => {
+                        iframe.onload = resolve;
+                        iframe.onerror = resolve;
+                        setTimeout(resolve, 8000);
+                    });
+
+                    const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
+                    const iWin = iframe.contentWindow;
+                    if (!iDoc || !iWin) return false;
+
+                    if (iDoc.fonts && typeof iDoc.fonts.load === 'function') {
+                        try {
+                            await Promise.all([
+                                iDoc.fonts.load('400 14px Cairo'),
+                                iDoc.fonts.load('600 14px Cairo'),
+                                iDoc.fonts.load('700 18px Cairo'),
+                                iDoc.fonts.load('800 20px Cairo')
+                            ]);
+                            await iDoc.fonts.ready;
+                        } catch (_fe) {}
+                    }
+
+                    const images = Array.from(iDoc.images || []);
+                    await Promise.all(images.map((img) => new Promise((resolve) => {
+                        if (img.complete) return resolve();
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                        setTimeout(resolve, 3000);
+                    })));
+
+                    await new Promise((r) => setTimeout(r, 200));
+
+                    const pageEls = iDoc.querySelectorAll('.ptw-a4-page, .report-page, .pdf-page');
+                    const orientation = options.landscape ? 'landscape' : 'portrait';
+                    const pdf = this.createPdf({ orientation, unit: 'mm', format: 'a4' });
+                    if (!pdf) return false;
+
+                    const h2c = (typeof iWin.html2canvas === 'function') ? iWin.html2canvas : html2canvas;
+                    const marginMm = options.marginMm ?? 4;
+
+                    if (pageEls.length > 0) {
+                        for (let p = 0; p < pageEls.length; p++) {
+                            if (p > 0) pdf.addPage();
+                            const pageEl = pageEls[p];
+                            pageEl.style.width = `${a4WidthPx}px`;
+                            pageEl.style.maxWidth = `${a4WidthPx}px`;
+                            pageEl.style.boxSizing = 'border-box';
+                            const canvas = await h2c(pageEl, {
+                                scale: options.scale || 2,
+                                backgroundColor: '#ffffff',
+                                useCORS: true,
+                                allowTaint: true,
+                                logging: false
+                            });
+                            if (canvas) {
+                                const { dataUrl, format } = this.compressCanvasToJpegDataUrl(canvas, this.TARGET_MAX_BYTES);
+                                const contentW = pdf.internal.pageSize.getWidth() - marginMm * 2;
+                                const contentH = pdf.internal.pageSize.getHeight() - marginMm * 2;
+                                const drawH = (canvas.height / canvas.width) * contentW;
+                                pdf.addImage(dataUrl, format, marginMm, marginMm, contentW, Math.min(drawH, contentH));
+                            }
+                        }
+                    } else {
+                        const root = iDoc.getElementById('ptw-permit-print-root')
+                            || iDoc.querySelector('.ptw-manual-print')
+                            || iDoc.querySelector('.report-wrapper')
+                            || iDoc.querySelector('.report-page-container')
+                            || iDoc.querySelector('.form-container')
+                            || iDoc.body;
+
+                        if (!root) return false;
+                        root.style.width = `${a4WidthPx}px`;
+                        root.style.maxWidth = `${a4WidthPx}px`;
+                        root.style.boxSizing = 'border-box';
+                        root.style.background = '#ffffff';
+
+                        const scrollH = Math.max(root.scrollHeight, root.offsetHeight, 1);
+                        const canvas = await h2c(root, {
+                            scale: options.scale || 2,
+                            backgroundColor: '#ffffff',
+                            useCORS: true,
+                            allowTaint: true,
+                            logging: false,
+                            width: a4WidthPx,
+                            windowWidth: a4WidthPx,
+                            windowHeight: scrollH,
+                            scrollX: 0,
+                            scrollY: 0
+                        });
+
+                        if (!canvas) return false;
+                        this.appendCanvasAsPdfPages(pdf, canvas, { marginMm });
+                    }
+
+                    this.savePdf(pdf, safeName, options);
+                    return true;
+                } finally {
+                    iframe.remove();
+                }
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('downloadHtmlAsPdf error:', err);
+                }
+                return false;
+            }
         }
     },
 
@@ -8283,7 +8496,7 @@ const PDFTemplates = {
         const formCodeDisplay = escape(formCode || '-');
         const msrHseDept = documentLang === 'en'
             ? escape(meta?.hseDeptEn || 'Occupational Safety, Health & Environmental Affairs General Directorate (ICAPP)')
-            : escape(meta?.hseDeptAr || 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة');
+            : escape(meta?.hseDeptAr || 'إدارة السلامة والصحة المهنية والبيئة');
         // تسمية كود التقرير - يمكن تخصيصها من إعدادات الشركة
         const formCodeLabel = formCode ? 'كود التقرير' : '';
         return `<!DOCTYPE html>
@@ -9306,7 +9519,7 @@ const PDFTemplates = {
                     </div>
                     <div class="footer-bottom-text">
                         <span>${companyName}</span>
-                        ${companySecondaryNameTrimmed ? `<span>${companySecondaryName}</span>` : '<span>الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</span>'}
+                        ${companySecondaryNameTrimmed ? `<span>${companySecondaryName}</span>` : '<span>إدارة السلامة والصحة المهنية والبيئة</span>'}
                     </div>
                 </div>
             </div>
@@ -9374,22 +9587,16 @@ FormHeader.generatePDFHTML = function (
 FormHeader.generatePDF = async function (htmlContent, filename = 'document.pdf') {
     try {
         htmlContent = htmlContent.replace(/\s*min-height\s*:\s*100vh\s*/gi, '');
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            return false;
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            return await Utils.downloadHtmlAsPdf(htmlContent, filename);
         }
-        printWindow.document.open();
-        printWindow.document.write(htmlContent);
-        printWindow.document.close();
-        await new Promise(function (resolve) {
-            printWindow.onload = resolve;
-            setTimeout(resolve, 8000);
-        });
-        try { await printWindow.document.fonts.ready; } catch (e) {}
-        await new Promise(function (resolve) { setTimeout(resolve, 500); });
-        printWindow.focus();
-        printWindow.print();
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = String(filename).endsWith('.html') ? filename : `${filename}.html`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
         return true;
     } catch (error) {
         Utils.safeError('FormHeader.generatePDF error:', error);

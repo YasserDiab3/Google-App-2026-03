@@ -6599,26 +6599,19 @@ const Training = {
                 ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorTraining', contractorId, contractorName: selectedContractorName }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title><style>body { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { padding: 10px; border: 1px solid #E5E7EB; text-align: center; } thead th { background: #1E3A8A; color: #FFFFFF; }</style></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const reportWindow = window.open(url, '_blank');
-            if (reportWindow) {
-                reportWindow.onload = () => {
-                    try {
-                        reportWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    } catch (error) {
-                        Utils.safeWarn('تعذر الطباعة التلقائية لتقرير المقاولين:', error);
-                    }
-                };
-            } else {
-                Notification.info('تم إنشاء التقرير. يرجى السماح بالنوافذ المنبثقة لعرضه.');
-            }
+            const pdfFileName = `${reportTitle.replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: reportTitle })
+                : false);
 
             Loading.hide();
-            Notification.success(selectedContractorName 
-                ? `تم إنشاء تقرير تدريبات المقاول: ${selectedContractorName}`
-                : 'تم إنشاء تقرير تدريبات المقاولين');
+            if (downloaded) {
+                Notification.success(selectedContractorName 
+                    ? `تم تحميل تقرير تدريبات المقاول: ${selectedContractorName} بنجاح`
+                    : 'تم تحميل تقرير تدريبات المقاولين بنجاح');
+            } else {
+                Notification.error('تعذر تصدير تقرير تدريبات المقاولين بصيغة PDF');
+            }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير تدريبات المقاولين:', error);
@@ -7996,25 +7989,17 @@ const Training = {
                 ? FormHeader.generatePDFHTML(formCode, 'تقرير التدريب', content, false, true, { filters }, filters.startDate || '', filters.endDate || '')
                 : `<html><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const reportWindow = window.open(url, '_blank');
-
-            if (reportWindow) {
-                reportWindow.onload = () => {
-                    try {
-                        reportWindow.print();
-                        setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    } catch (error) {
-                        Utils.safeError('تعذر طباعة التقرير تلقائياً:', error);
-                    }
-                };
-            } else {
-                Notification.info('تم إنشاء التقرير. يرجى السماح للنوافذ المنبثقة لعرضه.');
-            }
+            const pdfFileName = `تقرير_التدريب_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: 'تقرير التدريب' })
+                : false);
 
             Loading.hide();
-            Notification.success('تم إنشاء تقرير التدريب بنجاح');
+            if (downloaded) {
+                Notification.success('تم تحميل تقرير التدريب بنجاح');
+            } else {
+                Notification.error('تعذر تصدير تقرير التدريب بصيغة PDF');
+            }
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير التدريب:', error);
@@ -9811,14 +9796,15 @@ const Training = {
     /**
      * طباعة/حفظ PDF مع هيدر وفوتر النظام (FormHeader / PDFTemplates).
      */
-    _openTrainingAttendancePrint(innerHtml, options = {}) {
+    async _openTrainingAttendancePrint(innerHtml, options = {}) {
         const {
             formCode = 'TRN-ATT',
             docTitle = 'نموذج حضور تدريب',
             createdAt = new Date().toISOString(),
             updatedAt = null,
             meta = {},
-            successMessage = 'تم تجهيز نموذج الحضور للطباعة'
+            successMessage = 'تم تجهيز نموذج الحضور بنجاح',
+            downloadDirect = true
         } = options;
 
         const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
@@ -9833,6 +9819,16 @@ const Training = {
                 updatedAt || createdAt
             )
             : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(docTitle)}</title></head><body>${innerHtml}</body></html>`;
+
+        if (downloadDirect !== false && typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `${docTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: docTitle });
+            Loading.hide();
+            if (ok) {
+                Notification.success(`تم تحميل ${docTitle} بصيغة PDF بنجاح`);
+                return true;
+            }
+        }
 
         const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -13706,24 +13702,16 @@ const Training = {
                 </html>
             `;
             
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success(`تم تجهيز ${registry.length} سجل للطباعة`);
-                        }, 1000);
-                    }, 500);
-                };
+            const pdfFileName = `سجل_تدريب_الموظفين_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: 'سجل التدريب للموظفين' })
+                : false);
+
+            Loading.hide();
+            if (downloaded) {
+                Notification.success(`تم تحميل سجل تدريب الموظفين (${registry.length} سجل) بنجاح`);
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Notification.error('تعذر تصدير سجل التدريب بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();

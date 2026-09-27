@@ -2651,23 +2651,15 @@ const ActionTrackingRegister = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>تفاصيل الإجراء</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة');
-                        }, 1000);
-                    }, 500);
-                };
+            const fileName = `إجراء_${(action.id || 'action').substring(0, 8)}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'تفاصيل الإجراء' })
+                : false);
+            Loading.hide();
+            if (ok) {
+                Notification.success('تم تحميل تفاصيل الإجراء بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض التقرير.');
+                Notification.error('تعذر تصدير تفاصيل الإجراء بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();
@@ -2766,23 +2758,15 @@ const ActionTrackingRegister = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>@page { size: A4 portrait; margin: 1cm; } @media print { @page { size: A4 portrait; margin: 1cm; } body { padding: 0; } }</style><title>سجل متابعة الإجراءات</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success('تم تجهيز التقرير للطباعة');
-                        }, 1000);
-                    }, 500);
-                };
+            const fileName = `سجل_متابعة_الإجراءات_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'سجل متابعة الإجراءات' })
+                : false);
+            Loading.hide();
+            if (ok) {
+                Notification.success('تم تحميل سجل الإجراءات بصيغة PDF بنجاح');
             } else {
-                Loading.hide();
-                Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض التقرير.');
+                Notification.error('تعذر تصدير سجل الإجراءات بصيغة PDF');
             }
         } catch (error) {
             Loading.hide();

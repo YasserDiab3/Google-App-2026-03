@@ -7115,7 +7115,7 @@ const PTW = {
     /**
      * طباعة نموذج التصريح الحالي (قبل الحفظ)
      */
-    printPermitForm() {
+    async printPermitForm() {
         const form = document.getElementById('ptw-form');
         if (!form) {
             Notification.warning(this._t('module.ptw.notify.formNotFound', 'النموذج غير موجود'));
@@ -7151,25 +7151,19 @@ const PTW = {
                 )
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>طباعة تصريح العمل</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const fileName = `تصريح_عمل_${permitId.substring(0, 8)}.pdf`;
+            const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: `تصريح عمل #${permitId.substring(0, 8)}` })
+                : this._downloadPermitHtmlAsPdf(htmlContent, fileName));
             
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                        }, 800);
-                    }, 500);
-                };
+            if (ok) {
+                Notification.success('تم تحميل تصريح العمل بصيغة PDF بنجاح');
             } else {
-                Notification.error(this._t('module.ptw.notify.popupsPrint', 'يرجى السماح بالنوافذ المنبثقة للطباعة'));
+                Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء تحميل PDF'));
             }
         } catch (error) {
-            Utils.safeError('خطأ في طباعة النموذج:', error);
-            Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء الطباعة: ') + error.message);
+            Utils.safeError('خطأ في تصدير النموذج:', error);
+            Notification.error(this._t('module.ptw.notify.printErr', 'حدث خطأ أثناء تصدير PDF: ') + error.message);
         }
     },
 
@@ -9619,14 +9613,19 @@ const PTW = {
      */
     async printPermit(permitId) {
         Loading.show();
-        const payload = await this.buildPermitExportPayload(permitId, { forPdf: false });
+        const payload = await this.buildPermitExportPayload(permitId, { forPdf: true });
         Loading.hide();
         if (!payload) {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
-        const html = payload.isManualEntry && payload.printHtml ? payload.printHtml : payload.html;
-        this.openPermitPrintWindow(html);
+        const ok = await this._downloadPermitHtmlAsPdf(payload.html, payload.fileName);
+        if (ok) {
+            Notification.success(this._t('module.ptw.notify.pdfDownloadOk', 'تم تحميل التصريح PDF بنجاح'));
+        } else {
+            const html = payload.isManualEntry && payload.printHtml ? payload.printHtml : payload.html;
+            this.openPermitPrintWindow(html);
+        }
     },
 
     /**
@@ -14054,24 +14053,16 @@ const PTW = {
                 ? FormHeader.generatePDFHTML(formCode, formTitle, content, false, true, { source: 'PTWRegistry' }, new Date().toISOString(), new Date().toISOString())
                 : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitle}</title></head><body>${content}</body></html>`;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                            Notification.success(this._t('module.ptw.notify.registryPrintReady', 'تم تحضير السجل للطباعة/الحفظ كـ PDF'));
-                        }, 800);
-                    }, 500);
-                };
+            const fileName = `سجل_حصر_تصاريح_الأعمال_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+                ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: formTitle })
+                : this._downloadPermitHtmlAsPdf(htmlContent, fileName));
+            
+            Loading.hide();
+            if (ok) {
+                Notification.success(this._t('module.ptw.notify.registryPdfOk', 'تم تحميل سجل تصاريح الأعمال بصيغة PDF بنجاح'));
             } else {
-                Loading.hide();
-                Notification.error(this._t('module.ptw.notify.popupsPdf', 'يرجى السماح بالنوافذ المنبثقة لتصدير PDF'));
+                Notification.error(this._t('module.ptw.notify.pdfErr', 'فشل تصدير PDF'));
             }
         } catch (error) {
             Loading.hide();

@@ -1278,7 +1278,7 @@
             <div class="iso-box-brand">
                 <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
                 <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                <div class="iso-dept-title">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
+                <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <div class="iso-box-title">
@@ -1582,7 +1582,7 @@
             const text = 
 `📋 *محضر تسليم واستلام وردية السلامة — ICAPP HSE*
 🏢 *الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*
-الإدارة العامة للسلامة والصحة المهنية وحماية البيئة
+إدارة السلامة والصحة المهنية والبيئة
 ────────────────────────
 📅 *التاريخ:* ${date}
 ⏰ *الوردية:* ${shift}
