@@ -52,6 +52,25 @@ async function checkLiveUrl(url) {
         }
     }
 
+    // 4. Verify Phase 4: My Active Tasks Module
+    const hasMyTasks = await page.evaluate(() => typeof window.HseMyTasks === 'object');
+    console.log('[Phase 4] window.HseMyTasks defined:', hasMyTasks, '(Expected: true)');
+
+    const myTasksBtn = page.locator('#btnMyTasksTool');
+    const isMyTasksVisible = await myTasksBtn.isVisible();
+    console.log('[Phase 4] #btnMyTasksTool visible in tools grid:', isMyTasksVisible, '(Expected: true)');
+
+    if (isMyTasksVisible) {
+        await myTasksBtn.click();
+        await page.waitForTimeout(500);
+        const myTasksModalOpen = await page.locator('#hseMyTasksModal').isVisible();
+        console.log('[Phase 4] My Tasks modal opens on click:', myTasksModalOpen, '(Expected: true)');
+        if (myTasksModalOpen) {
+            await page.locator('#btnCloseMyTasksModal').click();
+            await page.waitForTimeout(300);
+        }
+    }
+
     // Version check
     const versionText = await page.locator('#lblAppVersionBadge').innerText().catch(() => 'N/A');
     console.log('Live App Version badge:', versionText);
