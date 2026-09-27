@@ -308,10 +308,16 @@
                 if (typeof executeTrackSearch === 'function') {
                     executeTrackSearch(obsId);
                 }
+                if (window.HseMyTasks && typeof window.HseMyTasks.refresh === 'function') {
+                    window.HseMyTasks.refresh();
+                }
             } catch (err) {
                 console.warn('[Action Closure] Fallback local save:', err);
                 alert(`✅ تم اعتماد الإغلاق محلياً (${obsId}) وستتم المزامنة تلقائياً عند استقرار الاتصال.`);
                 closeClosureModal();
+                if (window.HseMyTasks && typeof window.HseMyTasks.refresh === 'function') {
+                    window.HseMyTasks.refresh();
+                }
             } finally {
                 if (submitBtn) submitBtn.disabled = false;
                 if (submitText) submitText.innerHTML = 'اعتماد إغلاق الملاحظة';

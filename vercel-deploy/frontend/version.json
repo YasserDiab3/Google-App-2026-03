@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1761",
+  "version": "1.0.1762",
   "highlights": {
     "ar": [
-      "إخفاء إعدادات الميزات التجريبية عن شاشات المستخدمين والعمال لتفادي أي ارتباك تشغيلي واقتصارها على المشرفين.",
-      "توثيق إغلاق ومعالجة الملاحظات الميدانية وإرفاق صور المطابقة «قبل وبعد» طبقاً لمعايير السلامة ISO 45001.",
-      "محضر تسليم واستلام الوردية الرقمي لفرق السلامة مع حساب المؤشرات ومشاركتها عبر واتساب والطباعة المعتمدة."
+      "لوحة «مهامي وملاحظاتي المفتوحة اليوم» لفنيي ومراقبي السلامة لمتابعة ما رصدوه وإغلاقه فوراً قبل انتهاء الوردية.",
+      "شارة رقمية ذكية توضح عدد الملاحظات المفتوحة المتبقية مع إمكانية التصفية والبحث السريع بالموقع والعنبر.",
+      "تكامل فوري ومباشر مع نافذة توثيق الإصلاح وإرفاق صور المطابقة «قبل وبعد» المعتمدة لـ ISO 45001."
     ],
     "en": [
-      "Secured experimental settings interface for worker simplicity and supervisory access only.",
-      "ISO 45001 observation action closure verification workflow with before-and-after photographic proof.",
-      "Digital safety shift handover summary with automated KPIs, WhatsApp export, and printable handover minutes."
+      "Field 'My Active Tasks' dashboard for safety technicians to track and close open observations before shift ends.",
+      "Smart badge indicator showing pending open actions with quick filtering and location search.",
+      "Seamless 1-click transition to before-and-after photographic verification and action closure."
     ]
   }
 }

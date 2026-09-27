@@ -124,9 +124,80 @@ async function testLocalPhases() {
     const kpiObsTotal = await page.locator('#hoKpiObsTotal').innerText();
     console.log('KPI Obs Total displayed:', kpiObsTotal);
 
-    // Test close
+    // Close handover modal
     await page.locator('#btnCloseHandoverModal').click();
     await page.waitForTimeout(300);
+
+    console.log('--- Phase 4: My Active Tasks Module ---');
+    const hasMyTasksModule = await page.evaluate(() => typeof window.HseMyTasks === 'object');
+    console.log('Is HseMyTasks loaded on window?', hasMyTasksModule);
+    if (!hasMyTasksModule) {
+        throw new Error('FAILED: HseMyTasks is not defined!');
+    }
+
+    const myTasksBtn = page.locator('#btnMyTasksTool');
+    const isMyTasksBtnVisible = await myTasksBtn.isVisible();
+    console.log('Is #btnMyTasksTool visible on forms hub tool grid?', isMyTasksBtnVisible);
+    if (!isMyTasksBtnVisible) {
+        throw new Error('FAILED: #btnMyTasksTool is not visible!');
+    }
+
+    // Inject a mock open observation into localStorage
+    await page.evaluate(() => {
+        const mockObs = [{
+            refCode: 'OBS-MYTASK-999',
+            timestamp: Date.now(),
+            status: 'Open',
+            data: {
+                site: 'مصنع ICAPP 1',
+                place: 'عنبر الفرز',
+                riskLevel: 'عالي',
+                details: 'تسريب مياه على أرضية ممر المشاة',
+                observerName: 'م. ياسر دياب'
+            }
+        }];
+        localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(mockObs));
+        window.HseMyTasks.refresh();
+    });
+    await page.waitForTimeout(400);
+
+    const badgeText = await page.locator('#badgeMyTasksCount').innerText();
+    const isBadgeVisible = await page.locator('#badgeMyTasksCount').isVisible();
+    console.log('Badge count displayed:', badgeText, '| Is visible:', isBadgeVisible);
+
+    // Open My Tasks modal
+    await myTasksBtn.click();
+    await page.waitForTimeout(500);
+
+    const myTasksModal = page.locator('#hseMyTasksModal');
+    const isMyTasksModalOpen = await myTasksModal.isVisible();
+    console.log('Is My Tasks modal open?', isMyTasksModalOpen);
+    if (!isMyTasksModalOpen) {
+        throw new Error('FAILED: My Tasks modal did not open!');
+    }
+
+    // Check if card contains the mock observation code
+    const listContent = await page.locator('#myTasksListContainer').innerText();
+    console.log('Tasks list contains mock code:', listContent.includes('OBS-MYTASK-999'));
+
+    // Test transition from My Tasks to Action Closure
+    const closeActionBtn = page.locator('#myTasksListContainer button').first();
+    if (await closeActionBtn.isVisible()) {
+        await closeActionBtn.click();
+        await page.waitForTimeout(500);
+        const closureFromTasksOpen = await page.locator('#hseActionClosureModal').isVisible();
+        console.log('Action Closure modal opened from My Tasks card:', closureFromTasksOpen);
+        if (closureFromTasksOpen) {
+            await page.locator('#btnCloseClosureModal').click();
+            await page.waitForTimeout(300);
+        }
+    }
+
+    // Close My Tasks modal if still open
+    if (await myTasksModal.isVisible()) {
+        await page.locator('#btnCloseMyTasksModal').click();
+        await page.waitForTimeout(300);
+    }
 
     console.log('Console errors encountered:', errors.length);
     if (errors.length > 0) {
@@ -134,7 +205,7 @@ async function testLocalPhases() {
     }
 
     await browser.close();
-    console.log('✅ ALL LOCAL TESTS PASSED WITH ZERO REGRESSIONS!');
+    console.log('✅ ALL LOCAL TESTS (INCLUDING MY ACTIVE TASKS) PASSED WITH ZERO REGRESSIONS!');
 }
 
 testLocalPhases().catch(err => {

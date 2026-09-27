@@ -59,6 +59,7 @@
     <script src="js/modules/hse-feature-flags.js"></script>
     <script src="js/modules/hse-glossary.js"></script>
     <script src="js/modules/hse-action-closure.js"></script>
+    <script src="js/modules/hse-my-tasks.js"></script>
     
     <style>
         :root {
@@ -3245,6 +3246,13 @@
                         <i class="fas fa-magnifying-glass"></i>
                         <span id="txtTrackBtn">تتبع ملاحظة</span>
                     </button>
+
+                    <!-- زر مهامي وملاحظاتي المفتوحة اليوم -->
+                    <button type="button" class="obs-tool-card-btn" id="btnMyTasksTool" onclick="HseMyTasks && HseMyTasks.open()" title="مهامي وملاحظاتي المفتوحة اليوم / My Active Observations" style="border-color: #f59e0b; position: relative;">
+                        <i class="fas fa-list-check" style="color: #d97706;"></i>
+                        <span id="txtMyTasksBtn">مهامي المفتوحة ⏳</span>
+                        <span id="badgeMyTasksCount" class="badge-my-tasks" style="display: none; position: absolute; top: -6px; right: -6px; background: #ef4444; color: #ffffff; font-size: 0.68rem; font-weight: 900; padding: 1px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">0</span>
+                    </button>
                 </div>
             </div>
 
@@ -3757,7 +3765,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1761</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1762</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
