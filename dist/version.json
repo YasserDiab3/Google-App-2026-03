@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1765",
+  "version": "1.0.1766",
   "highlights": {
     "ar": [
-      "فحص ومزامنة البيانات العالقة أوفلاين قبل تسليم الوردية (Pre-Handover Offline Sync Check) لضمان سلامة كافة السجلات.",
-      "الربط التلقائي بموضوع جلسة التوعية اليومية (TBT Linkage) مع إمكانية إدراج ملخص التوعية في توجيهات الوردية.",
-      "أرشيف وسجل استعراض الورديات السابقة (Shift Handover History) مع إمكانية استيراد التوجيهات وإعادة الطباعة والمشاركة."
+      "قائمة اختيار منسدلة لمسؤولي السلامة عند توثيق إغلاق الملاحظات مع التحديد التلقائي للمستخدم الحالي وزر تحديث منمق.",
+      "إتاحة رفع صور إثبات المعالجة عبر خيارين: الالتقاط المباشر بالكاميرا أو الاختيار من معرض الصور (الاستوديو).",
+      "زر تحديث منمق في رأس لوحة متابعة المهامي الميدانية لتحديث الملاحظات فورياً بحركة تفاعلية."
     ],
     "en": [
-      "Pre-Handover Offline Sync Check alerts field officers of unsynced records before closing their shift.",
-      "Automated TBT Linkage detects the shift's safety briefing topic with 1-click insertion into instructions.",
-      "Digital Shift Handover History & Archive with fast instructions reuse, reprint, and WhatsApp sharing."
+      "Safety team dropdown selector for action verification & closure with automatic user pre-selection and refresh button.",
+      "Flexible closure photo proof uploading: direct camera capture or photo gallery/studio selection.",
+      "Polished animated refresh button in My Active Tasks header for instant field sync."
     ]
   }
 }

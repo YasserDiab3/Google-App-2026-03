@@ -1,13 +1,13 @@
 /**
  * HSE Observation Action Closure & Before/After Verification Module
  * وحدة توثيق إغلاق الملاحظات الميدانية وإرفاق صور المطابقة "قبل وبعد"
- * v1.0 — 2026-09-26
+ * v1.2 — 2026-09-27
  *
  * مصممة لتطبيق متطلبات ISO 45001 لإغلاق حلقة الملاحظات الخطرة:
  * 1. استدعاء تفاصيل الملاحظة الأصلية وصورة "قبل".
- * 2. التقاط وتوثيق صورة "بعد الإصلاح" بالكاميرا.
- * 3. تسجيل الإجراء التصحيحي الميداني واسم المشرف القائم بالتحقق.
- * 4. تحويل حالة الملاحظة إلى "مغلقة (Closed)".
+ * 2. التقاط وتوثيق صورة "بعد الإصلاح" بالكاميرا أو رفعها من المعرض/الاستوديو.
+ * 3. قائمة منسدلة معتمدة لأسماء مسؤولي السلامة مع التحديد التلقائي للمستخدم الحالي وزر تحديث منمق.
+ * 4. تسجيل الإجراء التصحيحي الميداني وتحويل حالة الملاحظة إلى "مغلقة (Closed)".
  */
 (() => {
     'use strict';
@@ -26,6 +26,118 @@
                 return window.HseFeatureFlags.isEnabled('action_closure_workflow');
             }
             return true;
+        }
+
+        function getSafetyTeamList() {
+            const names = new Set();
+
+            if (typeof window.getSystemSafetyTeamMembers === 'function') {
+                try {
+                    const list = window.getSystemSafetyTeamMembers();
+                    if (Array.isArray(list)) list.forEach(n => n && names.add(n.trim()));
+                } catch (_) {}
+            }
+
+            try {
+                const obsCfg = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_CONFIG') || '{}');
+                if (Array.isArray(obsCfg.safetyMembers)) {
+                    obsCfg.safetyMembers.forEach(m => {
+                        const n = typeof m === 'string' ? m.trim() : (m && m.name ? m.name.trim() : '');
+                        if (n) names.add(n);
+                    });
+                }
+            } catch (_) {}
+
+            try {
+                const dMembers = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_MEMBERS') || '[]');
+                if (Array.isArray(dMembers)) {
+                    dMembers.forEach(m => {
+                        const n = typeof m === 'string' ? m.trim() : (m && m.name ? m.name.trim() : '');
+                        if (n) names.add(n);
+                    });
+                }
+            } catch (_) {}
+
+            if (names.size === 0) {
+                ['م/ محمد سعيد', 'م/ حسام السيد', 'أ/ أحمد فؤاد', 'م/ عماد طارق', 'م/ محمود علي', 'أ/ طارق مصطفى'].forEach(n => names.add(n));
+            }
+
+            return Array.from(names).sort((a, b) => a.localeCompare(b, 'ar'));
+        }
+
+        function populateOfficersDropdown() {
+            const selectEl = document.getElementById('closureInspectorName');
+            if (!selectEl) return;
+
+            const team = getSafetyTeamList();
+
+            // Detect current logged-in user
+            let currentUser = '';
+            try {
+                const sessionStr = sessionStorage.getItem('HSE_FIELD_SESSION') || localStorage.getItem('HSE_LAST_USER_NAME');
+                if (sessionStr) {
+                    let parsed = null;
+                    try { parsed = JSON.parse(sessionStr); } catch (_) {}
+                    currentUser = (parsed && (parsed.userName || parsed.name || parsed.inspector)) || 
+                                  (typeof sessionStr === 'string' && !sessionStr.startsWith('{') ? sessionStr : '');
+                    if (currentUser) currentUser = currentUser.trim();
+                }
+            } catch (_) {}
+
+            const prevVal = selectEl.value;
+            selectEl.innerHTML = '<option value="">— اختر مسؤول / فني السلامة —</option>';
+
+            let foundCurrentUserInList = false;
+            team.forEach(name => {
+                if (currentUser && (name.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(name.toLowerCase()))) {
+                    foundCurrentUserInList = true;
+                }
+            });
+
+            if (currentUser && !foundCurrentUserInList) {
+                const curOpt = document.createElement('option');
+                curOpt.value = currentUser;
+                curOpt.textContent = `👤 ${currentUser} (المستخدم الحالي)`;
+                selectEl.appendChild(curOpt);
+            }
+
+            team.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = `👤 ${name}`;
+                selectEl.appendChild(opt);
+            });
+
+            if (prevVal) {
+                selectEl.value = prevVal;
+            } else if (currentUser) {
+                for (let i = 0; i < selectEl.options.length; i++) {
+                    const optVal = selectEl.options[i].value;
+                    if (optVal && (optVal.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(optVal.toLowerCase()))) {
+                        selectEl.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            selectEl.onchange = () => {
+                const badge = document.getElementById('closureInspectorBadge');
+                if (!badge) return;
+                if (currentUser && selectEl.value && (selectEl.value.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(selectEl.value.toLowerCase()))) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = 'محدد تلقائياً';
+                    badge.style.background = '#e0f2fe';
+                    badge.style.color = '#0284c7';
+                } else if (selectEl.value) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = 'اختيار يدوي';
+                    badge.style.background = '#f1f5f9';
+                    badge.style.color = '#475569';
+                } else {
+                    badge.style.display = 'none';
+                }
+            };
+            selectEl.onchange();
         }
 
         function createModalDom() {
@@ -67,11 +179,21 @@
                         <form id="frmActionClosure" onsubmit="event.preventDefault(); HseActionClosure.submitClosure();">
                             <!-- Inspector / Verifier Name -->
                             <div style="margin-bottom: 14px;">
-                                <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
-                                    اسم مسؤول / فني السلامة القائم بالتحقق والإغلاق: <span style="color:#ef4444;">*</span>
-                                </label>
-                                <input type="text" id="closureInspectorName" required placeholder="أدخل اسمك أو رقمك الوظيفي..."
-                                       style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; outline: none; box-sizing: border-box;" />
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <label style="font-size: 0.82rem; font-weight: 800; color: #1e293b; margin: 0;">
+                                        اسم مسؤول / فني السلامة القائم بالتحقق والإغلاق: <span style="color:#ef4444;">*</span>
+                                    </label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span id="closureInspectorBadge" style="font-size: 0.68rem; color: #0284c7; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; display: none;">محدد تلقائياً</span>
+                                        <button type="button" onclick="HseActionClosure.populateOfficersDropdown()" title="تحديث قائمة المشرفين" style="background: none; border: none; color: #0284c7; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                            <i class="fas fa-rotate"></i>
+                                            <span>تحديث</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <select id="closureInspectorName" required style="width: 100%; padding: 10px 14px; border: 1.5px solid #cbd5e1; border-radius: 10px; font-size: 0.88rem; outline: none; box-sizing: border-box; background: #ffffff; font-weight: 700; color: #1e293b;">
+                                    <option value="">— اختر مسؤول / فني السلامة —</option>
+                                </select>
                             </div>
 
                             <!-- Action Details -->
@@ -88,19 +210,28 @@
                                 <label style="display: block; font-size: 0.82rem; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
                                     صورة إثبات المعالجة (بعد الإصلاح / After Fix Photo): <span style="color:#ef4444;">*</span>
                                 </label>
-                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                    <label for="closurePhotoInput" style="display: inline-flex; align-items: center; gap: 8px; background: #ecfdf5; border: 1.5px dashed #059669; color: #047857; padding: 10px 18px; border-radius: 10px; font-weight: 800; font-size: 0.82rem; cursor: pointer;">
+                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                    <!-- Camera Button -->
+                                    <label for="closureCameraInput" style="display: inline-flex; align-items: center; gap: 7px; background: #ecfdf5; border: 1.5px solid #059669; color: #047857; padding: 9px 14px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s ease;">
                                         <i class="fas fa-camera fa-lg"></i>
-                                        <span>التقاط / رفع صورة بعد الإصلاح</span>
+                                        <span>التقاط بالكاميرا</span>
                                     </label>
-                                    <input type="file" id="closurePhotoInput" accept="image/*" capture="environment" style="display: none;" onchange="HseActionClosure.handlePhotoSelected(event)" />
-                                    <span id="closurePhotoStatus" style="font-size: 0.78rem; color: #64748b; font-weight: 600;">لم يتم اختيار صورة بعد</span>
+                                    <input type="file" id="closureCameraInput" accept="image/*" capture="environment" style="display: none;" onchange="HseActionClosure.handlePhotoSelected(event)" />
+
+                                    <!-- Gallery / Studio Button -->
+                                    <label for="closureGalleryInput" style="display: inline-flex; align-items: center; gap: 7px; background: #eff6ff; border: 1.5px solid #3b82f6; color: #1d4ed8; padding: 9px 14px; border-radius: 10px; font-weight: 800; font-size: 0.8rem; cursor: pointer; transition: all 0.2s ease;">
+                                        <i class="fas fa-images fa-lg"></i>
+                                        <span>رفع من الاستوديو</span>
+                                    </label>
+                                    <input type="file" id="closureGalleryInput" accept="image/*" style="display: none;" onchange="HseActionClosure.handlePhotoSelected(event)" />
+
+                                    <span id="closurePhotoStatus" style="font-size: 0.78rem; color: #64748b; font-weight: 600; margin-right: 4px;">لم يتم اختيار صورة بعد</span>
                                 </div>
 
                                 <!-- Photo Preview -->
-                                <div id="closurePhotoPreviewWrap" style="display: none; margin-top: 10px; position: relative; width: 140px; height: 140px; border-radius: 12px; overflow: hidden; border: 2px solid #059669;">
+                                <div id="closurePhotoPreviewWrap" style="display: none; margin-top: 10px; position: relative; width: 140px; height: 140px; border-radius: 12px; overflow: hidden; border: 2px solid #059669; box-shadow: 0 2px 8px rgba(5,150,105,0.2);">
                                     <img id="closurePhotoPreviewImg" src="" style="width: 100%; height: 100%; object-fit: cover;" alt="معاينة صورة بعد الإصلاح" />
-                                    <button type="button" onclick="HseActionClosure.removePhoto()" style="position: absolute; top: 4px; left: 4px; background: rgba(239, 68, 68, 0.9); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+                                    <button type="button" onclick="HseActionClosure.removePhoto()" style="position: absolute; top: 5px; left: 5px; background: rgba(239, 68, 68, 0.95); color: #fff; border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">&times;</button>
                                 </div>
                             </div>
 
@@ -177,17 +308,8 @@
                 `;
             }
 
-            // Autofill inspector name from session if available
-            try {
-                const sessionStr = sessionStorage.getItem('HSE_FIELD_SESSION') || localStorage.getItem('HSE_LAST_USER_NAME');
-                if (sessionStr) {
-                    let parsed = null;
-                    try { parsed = JSON.parse(sessionStr); } catch (_) {}
-                    const name = (parsed && (parsed.userName || parsed.name)) || (typeof sessionStr === 'string' && !sessionStr.startsWith('{') ? sessionStr : '');
-                    const nameInput = modal.querySelector('#closureInspectorName');
-                    if (nameInput && name) nameInput.value = name;
-                }
-            } catch (_) {}
+            // Populate officers dropdown
+            populateOfficersDropdown();
 
             // Reset photo
             removePhoto();
@@ -219,7 +341,7 @@
                     previewWrap.style.display = 'block';
                 }
                 if (statusSpan) {
-                    statusSpan.textContent = `تم التقاط الصورة (${Math.round(file.size / 1024)} KB)`;
+                    statusSpan.textContent = `تم اختيار الصورة (${Math.round(file.size / 1024)} KB) ✅`;
                     statusSpan.style.color = '#059669';
                 }
             };
@@ -228,8 +350,11 @@
 
         function removePhoto() {
             capturedPhotoBase64 = null;
-            const input = document.getElementById('closurePhotoInput');
-            if (input) input.value = '';
+            const camInput = document.getElementById('closureCameraInput');
+            if (camInput) camInput.value = '';
+            const galInput = document.getElementById('closureGalleryInput');
+            if (galInput) galInput.value = '';
+
             const previewWrap = document.getElementById('closurePhotoPreviewWrap');
             if (previewWrap) previewWrap.style.display = 'none';
             const statusSpan = document.getElementById('closurePhotoStatus');
@@ -251,12 +376,12 @@
             const actionTaken = actionInput ? actionInput.value.trim() : '';
 
             if (!inspectorName || !actionTaken) {
-                alert('يرجى كتابة اسم المسؤول وتفاصيل الإجراء المنفذ.');
+                alert('يرجى اختيار اسم مسؤول السلامة وتفاصيل الإجراء المنفذ.');
                 return;
             }
 
             if (!capturedPhotoBase64) {
-                const conf = confirm('تنبيه: يفضل بشدة إرفاق صورة بعد الإصلاح لتوثيق المطابقة طبقاً للـ ISO. هل ترغب في المتابعة بدون صورة؟');
+                const conf = confirm('تنبيه: يفضل بشدة إرفاق صورة بعد الإصلاح (من الكاميرا أو الاستوديو) لتوثيق المطابقة طبقاً للـ ISO. هل ترغب في المتابعة بدون صورة؟');
                 if (!conf) return;
             }
 
@@ -340,6 +465,7 @@
         const api = {
             open: openClosureModal,
             close: closeClosureModal,
+            populateOfficersDropdown,
             handlePhotoSelected,
             removePhoto,
             submitClosure

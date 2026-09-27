@@ -164,9 +164,15 @@
                                 <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.9;">متابعة ومعالجة الملاحظات المفتوحة وإغلاقها بصور الإثبات (ISO 45001)</p>
                             </div>
                         </div>
-                        <button type="button" class="emergency-modal-close-btn" id="btnCloseMyTasksModal" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; padding: 0; outline: none; transition: background 0.2s ease;" title="إغلاق">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" id="btnRefreshMyTasks" onclick="HseMyTasks.refresh()" style="height: 36px; padding: 0 12px; color: #ffffff; border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.18); border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 800; outline: none; transition: all 0.2s ease;" title="تحديث قائمة الملاحظات">
+                                <i class="fas fa-rotate"></i>
+                                <span>تحديث</span>
+                            </button>
+                            <button type="button" class="emergency-modal-close-btn" id="btnCloseMyTasksModal" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; padding: 0; outline: none; transition: background 0.2s ease;" title="إغلاق">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Body -->
@@ -427,6 +433,12 @@
             setFilter,
             handleSearch,
             refresh: () => {
+                const btn = document.getElementById('btnRefreshMyTasks');
+                if (btn) {
+                    const icon = btn.querySelector('i');
+                    if (icon) icon.classList.add('fa-spin');
+                    setTimeout(() => { if (icon) icon.classList.remove('fa-spin'); }, 600);
+                }
                 updateBadgeCount();
                 if (tasksModalEl && tasksModalEl.style.display === 'flex') {
                     renderTasksList();
