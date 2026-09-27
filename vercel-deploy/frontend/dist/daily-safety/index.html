@@ -22,6 +22,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="js/modules/hse-print-engine.js"></script>
 
     <style>
         /* Light Theme (Default) */
@@ -148,13 +149,81 @@
             object-fit: contain;
         }
 
+        .iso-company-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
             line-height: 1.2;
+            margin-top: 1px;
+            white-space: normal;
+        }
+
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل النموذج */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.05);
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .iso-footer-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .iso-footer-meta-key {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-meta-val {
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-family: monospace, system-ui;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-val.val-doc {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .iso-footer-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+
+        .iso-footer-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
         .iso-col-title {
@@ -214,6 +283,7 @@
             padding: 0 4px;
             border-radius: 4px;
             font-size: 0.66rem;
+            white-space: nowrap;
         }
 
         @media (max-width: 768px) {
@@ -236,10 +306,32 @@
                 max-height: 32px;
                 max-width: 60px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
                 white-space: normal;
                 line-height: 1.1;
+            }
+            .iso-footer-meta-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
+            }
+            .iso-footer-meta-item {
+                font-size: 0.58rem;
+                gap: 3px;
+            }
+            .iso-footer-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
             .iso-col-title {
                 padding: 6px 4px;
@@ -1057,6 +1149,7 @@
 <script src="js/modules/hse-offline-sync.js"></script>
 <script src="js/modules/hse-push-notifications.js"></script>
 <script src="js/modules/hse-feature-flags.js"></script>
+<script src="js/modules/hse-glossary.js"></script>
 </head>
 <body>
 
@@ -1251,12 +1344,14 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
             </div>
 
             <div class="iso-col-title">
                 <h1 class="iso-doc-title" id="isoDocTitle">نموذج المرور اليومي للسلامة</h1>
                 <div class="iso-doc-subtitle" id="isoDocSubtitle">Daily Safety Inspection Checklist</div>
+                <span class="iso-platform-tag" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800;"><i class="fas fa-certificate text-amber-500"></i> معتمد طبقاً للمواصفة ISO 45001:2018 (Clause 9.1) & OSHA 1926</span>
             </div>
 
             <div class="iso-col-meta">
@@ -1418,14 +1513,30 @@
 
         </form>
 
+        <!-- شريط بيانات ضبط وتوثيق الوثيقة المعتمدة (Document Control) -->
+        <div class="iso-footer-meta-strip" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">كود الوثيقة:</span>
+                <span class="iso-footer-meta-val val-doc">DOC-HSE-DSR-01</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">رقم الإصدار:</span>
+                <span class="iso-footer-meta-val val-rev">Rev. 02</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">تاريخ الاعتماد:</span>
+                <span class="iso-footer-meta-val val-date">2026-09</span>
+            </div>
+        </div>
+
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer" style="max-width: 720px; margin-left: auto; margin-right: auto;">
-            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
             <p class="footer-subtitle">نموذج كشف التفتيش والمرور اليومي لمسؤولي السلامة PWA • معتمد طبقاً لمعايير ISO 45001: 9.1 & OSHA 1926</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1756</span>
+                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1769</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -1457,6 +1568,9 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button type="button" id="waShareBtn" class="wa-share-btn" onclick="shareDailySafetyWhatsApp()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important; color: #ffffff !important; padding: 12px 18px !important; border-radius: 12px !important; font-size: 14px !important; font-weight: 800 !important; border: none !important; cursor: pointer !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4) !important; width: 100% !important;">
                     <i class="fab fa-whatsapp" style="font-size: 1.3rem;"></i> <span id="waShareBtnText">مشاركة التقرير عبر واتساب</span>
+                </button>
+                <button type="button" id="dscPrintReportBtn" onclick="printDailySafetyReport()" class="submit-btn" style="padding: 11px; width: 100%; background: #1e40af; border: none; font-weight: 800; font-size: 14px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; color: #fff; box-shadow: 0 4px 12px rgba(30,64,175,0.3);">
+                    <i class="fas fa-print"></i> <span>طباعة التقرير المعتمد (ISO 45001)</span>
                 </button>
                 <button type="button" id="newReportBtn" onclick="resetAndNewForm()" class="submit-btn" style="padding: 10px; width: 100%;">
                     <i class="fas fa-plus ml-1"></i> تسجيل جولة مرور جديدة
@@ -1607,6 +1721,8 @@
                 dir: 'rtl',
                 langBtn: 'EN',
                 pageTitle: 'نموذج المرور اليومي لمسئولي السلامة | ICAPP',
+                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+                deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
                 headerTitle: 'نموذج المرور اليومي للسلامة',
                 headerSubtitle: 'Daily Safety Inspection Checklist',
                 hubBtn: 'بوابة النماذج',
@@ -1662,6 +1778,8 @@
                 dir: 'ltr',
                 langBtn: 'AR',
                 pageTitle: 'Safety Officer Daily Patrol Checklist | ICAPP',
+                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+                deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
                 headerTitle: 'Daily Safety Inspection Checklist',
                 headerSubtitle: 'Daily Safety Inspection Checklist',
                 hubBtn: 'Forms Hub',
@@ -1755,12 +1873,14 @@
             if (langBtnText) langBtnText.textContent = t.langBtn;
 
             // Brand & ISO Header
+            const isoCompName = document.getElementById('isoCompanyName') || document.querySelector('.iso-company-name');
+            if (isoCompName && t.companyName) isoCompName.textContent = t.companyName;
+            const isoDeptName = document.getElementById('isoDeptName') || document.querySelector('.iso-dept-name');
+            if (isoDeptName && t.deptName) isoDeptName.textContent = t.deptName;
             const isoDocTitle = document.getElementById('isoDocTitle');
             if (isoDocTitle) isoDocTitle.textContent = t.headerTitle;
             const isoDocSubtitle = document.getElementById('isoDocSubtitle');
             if (isoDocSubtitle) isoDocSubtitle.textContent = t.headerSubtitle;
-            const isoDeptName = document.getElementById('isoDeptName');
-            if (isoDeptName) isoDeptName.textContent = lang === 'en' ? 'HSE Department' : 'إدارة السلامة والصحة المهنية';
 
             const brandH1 = document.querySelector('.brand-text h1');
             if (brandH1) brandH1.textContent = t.headerTitle;
@@ -1961,6 +2081,7 @@
         // Online / Offline Status
         function updateOnlineStatus() {
             const pill = document.getElementById('onlineStatusPill');
+            if (!pill) return;
             if (navigator.onLine) {
                 pill.className = 'status-pill';
                 pill.innerHTML = '<i class="fas fa-circle text-xs"></i><span>متصل</span>';
@@ -2461,6 +2582,131 @@
         }
         window.shareDailySafetyWhatsApp = shareDailySafetyWhatsApp;
         window.buildDailySafetyWhatsAppText = buildDailySafetyWhatsAppText;
+
+        function printDailySafetyReport() {
+            const p = lastSubmittedPayload || {};
+            const refCode = lastSubmittedRef || ('DSC-' + new Date().toISOString().slice(0, 10));
+            const now = new Date();
+            const dateStr = p.date || now.toLocaleDateString('ar-EG');
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+            let compliantCount = 0;
+            let nonCompliantCount = 0;
+            let naCount = 0;
+
+            const rowsHtml = CHECKLIST_QUESTIONS.map((q, idx) => {
+                const status = _dscQuestionStatus(q, p);
+                let badgeHtml = '';
+                if (q.isReading) {
+                    badgeHtml = `<span style="font-weight: 800; color: #1e40af; font-family: monospace;">${status || '-'}</span>`;
+                } else if (status === 'مطابق') {
+                    compliantCount++;
+                    badgeHtml = `<span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 12px; font-weight: 800; font-size: 0.78rem;">مطابق ✅</span>`;
+                } else if (status === 'غير مطابق') {
+                    nonCompliantCount++;
+                    badgeHtml = `<span style="background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 800; font-size: 0.78rem;">غير مطابق ❌</span>`;
+                } else {
+                    naCount++;
+                    badgeHtml = `<span style="background: #f1f5f9; color: #475569; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.78rem;">لا ينطبق ⚪</span>`;
+                }
+
+                return `
+                    <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.82rem;">
+                        <td style="text-align: center; padding: 6px 4px; font-weight: 800; color: #64748b;">${idx + 1}</td>
+                        <td style="padding: 6px 10px; font-weight: 700; color: #0f172a;">${q.text_ar || ''}</td>
+                        <td style="text-align: center; padding: 6px 8px;">${badgeHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const bodyHtml = `
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 20%;">المصنع / الموقع:</td>
+                                <td style="padding: 6px 8px; font-weight: 900; color: #0f172a; width: 30%;">${p.siteName || '-'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 20%;">الوردية:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a; width: 30%;">${p.shift || '-'}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">مسؤول ومفتش السلامة:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${p.inspectorName || '-'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">تاريخ وتوقيت المرور:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${dateStr}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">قراءة ضغط طلمبة الحريق:</td>
+                                <td style="padding: 6px 8px; font-weight: 900; color: #1e40af;">${p.q15Reading || '-'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">حالة الاعتماد الإلكتروني:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #059669;">موثق وموقع رقمياً ✅</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
+                        <thead>
+                            <tr style="background: #0f172a; color: #ffffff; font-size: 0.82rem; text-align: right;">
+                                <th style="width: 5%; text-align: center; padding: 8px 4px;">#</th>
+                                <th style="width: 75%; padding: 8px 10px;">بند ومعيار التفتيش الميداني</th>
+                                <th style="width: 20%; text-align: center; padding: 8px;">حالة المطابقة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+
+                ${p.notes ? `
+                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.84rem;">
+                    <strong style="color: #92400e;">📝 ملاحظات وتوجيهات مفتش السلامة:</strong>
+                    <div style="color: #78350f; margin-top: 4px; font-weight: 600;">${p.notes}</div>
+                </div>` : ''}
+            `;
+
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: 'تقرير المرور اليومي للسلامة والصحة المهنية - ' + refCode,
+                    docTitle: 'نموذج وسجل المرور اليومي للسلامة والصحة المهنية',
+                    docSubtitle: 'Daily Safety & Health Field Patrol Inspection Record',
+                    docCode: 'DOC-HSE-DSR-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: dateStr,
+                    confidentiality: 'عام داخلي',
+                    standardRef: 'ISO 45001:2018 (Clause 9.1) & OSHA 1926',
+                    metaItems: [
+                        { label: 'رقم التقرير', value: refCode },
+                        { label: 'المصنع', value: p.siteName || '-' },
+                        { label: 'الوردية', value: p.shift || '-' },
+                        { label: 'المفتش', value: p.inspectorName || '-' },
+                        { label: 'تاريخ المرور', value: dateStr },
+                        { label: 'وقت الطباعة', value: timeStr }
+                    ],
+                    kpis: {
+                        total: CHECKLIST_QUESTIONS.length,
+                        totalLabel: 'إجمالي بنود التفتيش',
+                        high: nonCompliantCount,
+                        highLabel: 'بنود غير مطابقة ⚠️',
+                        closed: compliantCount,
+                        closedLabel: 'بنود مطابقة بالكامل ✅',
+                        pending: naCount,
+                        pendingLabel: 'بنود لا تنطبق ⚪'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'مسؤول ومفتش السلامة', name: p.inspectorName || 'أخصائي السلامة والصحة المهنية', line: 'التوقيع والتاريخ' },
+                        { title: 'مشرف الموقع والعمليات', name: 'مشرف قطاع الإنتاج والتشغيل', line: 'التوقيع والتاريخ' },
+                        { title: 'الإدارة العامة للسلامة والصحة المهنية', name: 'مدير إدارة السلامة وحماية البيئة', line: 'الختم والاعتماد' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
+        }
+        window.printDailySafetyReport = printDailySafetyReport;
 
         async function syncDailySafetyToCloud(payload, refCode, opts) {
             const options = opts || {};

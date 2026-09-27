@@ -93,6 +93,10 @@
             transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
 
+        html, body {
+            overflow-x: hidden;
+        }
+
         body {
             background-color: var(--bg-base);
             background-image: var(--bg-base-gradient);
@@ -200,16 +204,28 @@
             object-fit: contain;
         }
 
-        .iso-dept-name {
-            font-size: 0.68rem;
-            font-weight: 800;
-            color: #b45309;
+        .iso-company-name {
+            font-size: 0.62rem;
+            font-weight: 900;
+            color: #1e3a8a;
             text-align: center;
-            line-height: 1.2;
-            white-space: nowrap;
+            line-height: 1.15;
+            white-space: normal;
+        }
+        [data-theme="dark"] .iso-company-name {
+            color: #93c5fd;
+        }
+
+        .iso-dept-name {
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.15;
+            white-space: normal;
         }
         [data-theme="dark"] .iso-dept-name {
-            color: #fbbf24;
+            color: #94a3b8;
         }
 
         .iso-col-title {
@@ -285,11 +301,47 @@
             padding: 0 4px;
             border-radius: 4px;
             font-size: 0.66rem;
+            white-space: nowrap;
         }
         [data-theme="dark"] .iso-meta-val {
             background: #1e293b;
             border-color: #334155;
             color: #f8fafc;
+        }
+
+        /* ISO Official Document Control Strip */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 8px 14px;
+            margin: 16px auto 10px auto;
+            max-width: 760px;
+            background: linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(241, 245, 249, 0.95));
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #475569;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+            flex-wrap: wrap;
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: rgba(15, 23, 42, 0.85);
+            border-color: #334155;
+            color: #94a3b8;
+        }
+        .iso-footer-meta-strip span {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .iso-footer-meta-strip .meta-sep {
+            color: #cbd5e1;
+        }
+        [data-theme="dark"] .iso-footer-meta-strip .meta-sep {
+            color: #475569;
         }
 
         @media (max-width: 768px) {
@@ -301,13 +353,15 @@
             .iso-col-brand { padding: 6px 4px; gap: 3px; }
             .iso-logo-wrap { max-width: 65px; min-height: 32px; max-height: 36px; padding: 2px 4px; }
             .iso-logo-img { max-height: 30px; max-width: 60px; }
-            .iso-dept-name { font-size: 0.52rem; white-space: normal; line-height: 1.1; }
+            .iso-company-name { font-size: 0.50rem; line-height: 1.1; }
+            .iso-dept-name { font-size: 0.46rem; line-height: 1.1; }
             .iso-col-title { padding: 6px 4px; }
             .iso-doc-title { font-size: 0.85rem; white-space: normal; line-height: 1.2; }
             .iso-doc-subtitle { font-size: 0.58rem; }
             .iso-col-meta { padding: 6px 4px; gap: 2px; }
             .iso-meta-key { font-size: 0.54rem; }
-            .iso-meta-val { font-size: 0.56rem; padding: 0 2px; }
+            .iso-meta-val { font-size: 0.56rem; padding: 0 2px; white-space: nowrap; }
+            .iso-footer-meta-strip { font-size: 0.65rem; gap: 8px; padding: 6px 10px; }
         }
 
         @media (max-width: 375px) {
@@ -316,6 +370,8 @@
             }
             .iso-col-brand { min-width: 70px !important; max-width: 70px !important; padding: 2px !important; }
             .iso-logo-wrap { width: 44px !important; height: 28px !important; }
+            .iso-company-name { font-size: 0.46rem !important; }
+            .iso-dept-name { font-size: 0.42rem !important; }
             .iso-doc-title { font-size: 0.75rem !important; }
             .iso-col-meta { min-width: 92px !important; max-width: 92px !important; padding: 2px !important; }
         }
@@ -2368,7 +2424,8 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name" id="isoDeptName" style="font-size: 0.62rem; font-weight: 800; color: #1e3a8a; line-height: 1.2; text-align: center;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)<br><span style="color: #64748b; font-size: 0.58rem;">الإدارة العامة للسلامة والصحة المهنية</span></div>
+                <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
             </div>
 
             <div class="iso-col-title">
@@ -2775,14 +2832,23 @@
 
         </form>
 
+        <!-- ISO Document Control Strip -->
+        <div class="iso-footer-meta-strip">
+            <span><i class="fas fa-barcode"></i> DOC-HSE-TBT-01</span>
+            <span class="meta-sep">•</span>
+            <span><i class="fas fa-code-branch"></i> Rev. 02</span>
+            <span class="meta-sep">•</span>
+            <span><i class="fas fa-calendar-check"></i> 2026-08</span>
+        </div>
+
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer">
-            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • السلامة والصحة المهنية</p>
             <p class="footer-subtitle">نموذج توعية بداية الوردية الميداني (Toolbox Talk) PWA • معتمد طبقاً لمعايير ISO 45001: 7.3 & OSHA 1926.21</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblTbtVersion">v1.0.1768</span>
+                <span class="footer-version-pill" id="lblTbtVersion">v1.0.1769</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -3163,6 +3229,22 @@
             document.documentElement.setAttribute('lang', currentLang);
             const btn = document.getElementById('langBtnText');
             if (btn) btn.textContent = currentLang === 'ar' ? 'EN' : 'عربي';
+
+            const comp = document.getElementById('isoCompanyName');
+            if (comp) comp.textContent = currentLang === 'ar' 
+                ? 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)' 
+                : 'International Company for Agricultural Production & Processing (ICAPP)';
+
+            const dept = document.getElementById('isoDeptName');
+            if (dept) dept.textContent = currentLang === 'ar' 
+                ? 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة' 
+                : 'General Administration of Occupational Safety, Health & Environmental Protection';
+
+            const docTitle = document.getElementById('isoDocTitle');
+            if (docTitle) docTitle.textContent = currentLang === 'ar'
+                ? 'محضر جلسة وتوعية بداية الوردية (TBT)'
+                : 'Toolbox Talk (TBT) Safety Briefing Record';
+
             showToast(currentLang === 'ar' ? 'تم التحويل إلى اللغة العربية' : 'Switched to English');
         }
 

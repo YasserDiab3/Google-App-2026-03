@@ -226,13 +226,23 @@
             object-fit: contain;
         }
 
+        .iso-company-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
             line-height: 1.2;
-            white-space: nowrap;
+            margin-top: 1px;
+            white-space: normal;
         }
 
         .iso-col-title {
@@ -407,8 +417,13 @@
                 max-height: 32px;
                 max-width: 60px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
                 white-space: normal;
                 line-height: 1.1;
             }
@@ -3124,7 +3139,7 @@
                     <div class="iso-logo-wrap">
                         <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                     </div>
-                    <div style="font-size: 0.65rem; font-weight: 900; color: #0f172a; text-align: center; line-height: 1.15; margin-top: 2px;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
                     <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                 </div>
 
@@ -3791,12 +3806,12 @@
 
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer">
-            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
             <p class="footer-subtitle">نموذج رصد ملاحظات السلامة والمخاطر الميدانية PWA • معتمد طبقاً لمعايير ISO 45001: 8.1 & OSHA 1910</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1768</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1769</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -3821,8 +3836,8 @@
                 dir: 'rtl',
                 langBtn: 'EN',
                 pageTitle: 'SafetyHub | نموذج تسجيل الملاحظات اليومية',
-                companyName: 'الشركة العالمية للانتاج والتصنيع الزراعي',
-                deptName: 'إدارة السلامة والصحة المهنية',
+                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+                deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
                 docTitle: 'نموذج تسجيل الملاحظات اليومية',
                 docSubtitle: 'Daily Observation Report',
                 hubBtn: 'بوابة النماذج',
@@ -3830,7 +3845,7 @@
                 docRevKey: 'رقم الإصدار:',
                 docDateKey: 'تاريخ الاعتماد:',
                 allRights: 'جميع الحقوق محفوظة',
-                companyFooter: 'الشركة العالمية للانتاج والتصنيع الزراعي',
+                companyFooter: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
                 
                 // Offline
                 offlineQueueText: 'ملاحظة محفوظة محلياً قيد المزامنة',
@@ -3961,8 +3976,8 @@
                 dir: 'ltr',
                 langBtn: 'AR',
                 pageTitle: 'SafetyHub | Daily Safety Observation Form',
-                companyName: 'International Company for Agricultural Production & Processing',
-                deptName: 'HSE Department',
+                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+                deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
                 docTitle: 'Daily Safety Observation Form',
                 docSubtitle: 'Daily Observation Report',
                 hubBtn: 'Forms Hub',

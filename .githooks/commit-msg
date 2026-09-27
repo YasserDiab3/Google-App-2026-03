@@ -1,0 +1,27 @@
+#!/bin/sh
+# يضع رقم الإصدار في أول سطر من رسالة الـ commit حتى يظهر في قائمة نشر Vercel.
+# مثال: 1.0.1607 — إغلاق الملاحظات من السجل
+cd "$(git rev-parse --show-toplevel)" || exit 0
+
+MSG_FILE=$1
+[ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ] && exit 0
+
+VERSION=$(node -e "try{const fs=require('fs');const t=fs.readFileSync('Frontend/version.json','utf8').replace(/^\uFEFF/,'');process.stdout.write(String(JSON.parse(t).version||''));}catch(e){}" 2>/dev/null)
+[ -z "$VERSION" ] && exit 0
+
+FIRST=$(sed -n '1p' "$MSG_FILE" | tr -d '\r')
+[ -z "$FIRST" ] && exit 0
+
+case "$FIRST" in
+  Merge\ *|Revert\ *|fixup!*|squash!*) exit 0 ;;
+esac
+
+echo "$FIRST" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([ ]|[:]| —| -)' && exit 0
+
+TMP=${MSG_FILE}.verprefix
+{
+  printf '%s — %s\n' "$VERSION" "$FIRST"
+  sed -n '2,$p' "$MSG_FILE"
+} > "$TMP" && mv "$TMP" "$MSG_FILE"
+
+exit 0

@@ -149,13 +149,81 @@
             object-fit: contain;
         }
 
+        .iso-company-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
             line-height: 1.2;
+            margin-top: 1px;
+            white-space: normal;
+        }
+
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل النموذج */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.05);
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .iso-footer-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .iso-footer-meta-key {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-meta-val {
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-family: monospace, system-ui;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-val.val-doc {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .iso-footer-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+
+        .iso-footer-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
         .iso-col-title {
@@ -215,6 +283,7 @@
             padding: 0 4px;
             border-radius: 4px;
             font-size: 0.66rem;
+            white-space: nowrap;
         }
 
         @media (max-width: 768px) {
@@ -237,10 +306,32 @@
                 max-height: 32px;
                 max-width: 60px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
                 white-space: normal;
                 line-height: 1.1;
+            }
+            .iso-footer-meta-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
+            }
+            .iso-footer-meta-item {
+                font-size: 0.58rem;
+                gap: 3px;
+            }
+            .iso-footer-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
             .iso-col-title {
                 padding: 6px 4px;
@@ -1253,7 +1344,8 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name" id="isoDeptName" style="font-size: 0.62rem; font-weight: 800; color: #1e3a8a; line-height: 1.2; text-align: center;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)<br><span style="color: #64748b; font-size: 0.58rem;">الإدارة العامة للسلامة والصحة المهنية</span></div>
+                <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
             </div>
 
             <div class="iso-col-title">
@@ -1421,14 +1513,30 @@
 
         </form>
 
+        <!-- شريط بيانات ضبط وتوثيق الوثيقة المعتمدة (Document Control) -->
+        <div class="iso-footer-meta-strip" style="max-width: 720px; margin-left: auto; margin-right: auto;">
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">كود الوثيقة:</span>
+                <span class="iso-footer-meta-val val-doc">DOC-HSE-DSR-01</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">رقم الإصدار:</span>
+                <span class="iso-footer-meta-val val-rev">Rev. 02</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">تاريخ الاعتماد:</span>
+                <span class="iso-footer-meta-val val-date">2026-09</span>
+            </div>
+        </div>
+
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer" style="max-width: 720px; margin-left: auto; margin-right: auto;">
-            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
             <p class="footer-subtitle">نموذج كشف التفتيش والمرور اليومي لمسؤولي السلامة PWA • معتمد طبقاً لمعايير ISO 45001: 9.1 & OSHA 1926</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1768</span>
+                <span class="footer-version-pill" id="lblDailySafetyVersion">v1.0.1769</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -1613,6 +1721,8 @@
                 dir: 'rtl',
                 langBtn: 'EN',
                 pageTitle: 'نموذج المرور اليومي لمسئولي السلامة | ICAPP',
+                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+                deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
                 headerTitle: 'نموذج المرور اليومي للسلامة',
                 headerSubtitle: 'Daily Safety Inspection Checklist',
                 hubBtn: 'بوابة النماذج',
@@ -1668,6 +1778,8 @@
                 dir: 'ltr',
                 langBtn: 'AR',
                 pageTitle: 'Safety Officer Daily Patrol Checklist | ICAPP',
+                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+                deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
                 headerTitle: 'Daily Safety Inspection Checklist',
                 headerSubtitle: 'Daily Safety Inspection Checklist',
                 hubBtn: 'Forms Hub',
@@ -1761,12 +1873,14 @@
             if (langBtnText) langBtnText.textContent = t.langBtn;
 
             // Brand & ISO Header
+            const isoCompName = document.getElementById('isoCompanyName') || document.querySelector('.iso-company-name');
+            if (isoCompName && t.companyName) isoCompName.textContent = t.companyName;
+            const isoDeptName = document.getElementById('isoDeptName') || document.querySelector('.iso-dept-name');
+            if (isoDeptName && t.deptName) isoDeptName.textContent = t.deptName;
             const isoDocTitle = document.getElementById('isoDocTitle');
             if (isoDocTitle) isoDocTitle.textContent = t.headerTitle;
             const isoDocSubtitle = document.getElementById('isoDocSubtitle');
             if (isoDocSubtitle) isoDocSubtitle.textContent = t.headerSubtitle;
-            const isoDeptName = document.getElementById('isoDeptName');
-            if (isoDeptName) isoDeptName.textContent = lang === 'en' ? 'HSE Department' : 'إدارة السلامة والصحة المهنية';
 
             const brandH1 = document.querySelector('.brand-text h1');
             if (brandH1) brandH1.textContent = t.headerTitle;

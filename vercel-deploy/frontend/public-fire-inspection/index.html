@@ -44,6 +44,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="js/modules/hse-print-engine.js"></script>
     
     <style>
         :root {
@@ -151,13 +152,81 @@
             object-fit: contain;
         }
 
-        .iso-dept-name {
+        .iso-company-name {
             font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
+        .iso-dept-name {
+            font-size: 0.60rem;
             font-weight: 800;
             color: #b91c1c;
             line-height: 1.2;
             text-align: center;
+            margin-top: 1px;
+            white-space: normal;
+        }
+
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل النموذج */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1.5px solid #fecaca;
+            border-radius: 12px;
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(185, 28, 28, 0.05);
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .iso-footer-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .iso-footer-meta-key {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-meta-val {
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-family: monospace, system-ui;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-val.val-doc {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .iso-footer-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+
+        .iso-footer-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
         .iso-col-title {
@@ -272,11 +341,33 @@
                 max-height: 32px;
                 max-width: 55px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.52rem;
+                font-size: 0.48rem;
                 text-align: center;
                 white-space: normal;
-                line-height: 1.2;
+                line-height: 1.1;
+            }
+            .iso-footer-meta-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
+            }
+            .iso-footer-meta-item {
+                font-size: 0.58rem;
+                gap: 3px;
+            }
+            .iso-footer-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
             .iso-col-title {
                 padding: 6px 6px;
@@ -326,6 +417,16 @@
                 border-radius: 3px;
                 white-space: nowrap;
             }
+        }
+
+        @media (max-width: 375px) {
+            .iso-header-table {
+                grid-template-columns: 70px 1fr 92px !important;
+            }
+            .iso-col-brand { min-width: 70px !important; max-width: 70px !important; padding: 2px !important; }
+            .iso-logo-wrap { width: 44px !important; height: 28px !important; }
+            .iso-doc-title { font-size: 0.75rem !important; }
+            .iso-col-meta { min-width: 92px !important; max-width: 92px !important; padding: 2px !important; }
         }
 
         /* حالة التحميل */
@@ -818,13 +919,77 @@
         .toast-msg.error { background: #dc2626; }
         .toast-msg.success { background: #16a34a; }
 
-        /* التذييل */
-        .footer-card {
+        /* Unified Portal Footer */
+        .portal-unified-footer {
+            margin-top: 28px;
             text-align: center;
-            margin-top: 24px;
-            font-size: 0.72rem;
+            padding: 18px 14px;
+            border-top: 1px solid rgba(226, 232, 240, 0.85);
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.2) 0%, rgba(241, 245, 249, 0.65) 100%);
+            border-radius: 0 0 16px 16px;
+            font-size: 0.78rem;
             color: #64748b;
-            line-height: 1.6;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .portal-unified-footer .footer-title {
+            font-weight: 800;
+            color: #1e293b;
+            font-size: 0.84rem;
+            margin: 0 0 4px 0;
+        }
+        .portal-unified-footer .footer-subtitle {
+            margin: 0 0 10px 0;
+            font-size: 0.76rem;
+            color: #64748b;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+        .portal-unified-footer .footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 0.75rem;
+            color: #475569;
+        }
+        .portal-unified-footer .footer-version-pill {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 800;
+            color: #1e293b;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 0.72rem;
+        }
+        .portal-unified-footer .footer-refresh-btn {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+        }
+        .portal-unified-footer .footer-refresh-btn:hover {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        .portal-unified-footer .footer-hub-link {
+            color: #0284c7;
+            font-weight: 700;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        .portal-unified-footer .footer-hub-link:hover {
+            color: #0369a1;
+            text-decoration: underline;
         }
     
         /* زر مسح QR المدمج داخل النموذج */
@@ -1092,6 +1257,77 @@
                 min-height: 48px !important;
                 padding: 10px 8px !important;
             }
+
+            /* 7. نوافذ الطوارئ والماسح الضوئي QR كـ Bottom Sheet على الهواتف */
+            .emergency-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+            .emergency-modal-dialog {
+                max-width: 100% !important;
+                width: 100% !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                border-radius: 22px 22px 0 0 !important;
+                margin: auto 0 0 0 !important;
+                box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.45) !important;
+                border-bottom: none !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .emergency-modal-dialog > div:nth-child(2) {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                overscroll-behavior: contain !important;
+                padding-left: 14px !important;
+                padding-right: 14px !important;
+                padding-bottom: calc(20px + env(safe-area-inset-bottom, 16px)) !important;
+            }
+
+            .qr-modal-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+                height: 100dvh !important;
+                height: -webkit-fill-available;
+            }
+            .qr-modal-box {
+                border-radius: 22px 22px 0 0 !important;
+                max-width: 100vw !important;
+                width: 100vw !important;
+                max-height: calc(92dvh - env(safe-area-inset-top, 0px)) !important;
+                margin: auto 0 0 0 !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .status-options-grid {
+                gap: 5px !important;
+            }
+            .status-option-btn {
+                padding: 8px 4px !important;
+                min-height: 60px !important;
+            }
+            .status-option-icon {
+                font-size: 1rem !important;
+            }
+            .status-option-text {
+                font-size: 0.72rem !important;
+                line-height: 1.25 !important;
+            }
+            .heat-metrics-grid {
+                gap: 5px !important;
+            }
+            .heat-metrics-grid > div {
+                padding: 6px 3px !important;
+            }
+            .heat-metrics-grid .heat-index-pill {
+                font-size: 0.7rem !important;
+                padding: 2px 5px !important;
+                white-space: nowrap !important;
+            }
         }
 
         /* 🌡️ Live Weather & Heat Stress Badge */
@@ -1217,6 +1453,13 @@
         .emergency-call-btn:hover { background: #059669; transform: scale(1.03); }
 
 </style>
+<script src="js/modules/hse-smart-media-geo.js"></script>
+<script src="js/modules/hse-dark-mode.js"></script>
+<script src="js/modules/hse-device-audit.js"></script>
+<script src="js/modules/hse-security-alerts.js"></script>
+<script src="js/modules/hse-offline-sync.js"></script>
+<script src="js/modules/hse-push-notifications.js"></script>
+<script src="js/modules/hse-feature-flags.js"></script>
 </head>
 <body>
 
@@ -1326,7 +1569,7 @@
             </div>
 
             <div style="padding: 16px;">
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
+                <div class="heat-metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; text-align: center;">
                     <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px;">
                         <span style="font-size: 0.72rem; color: #64748b; font-weight: 700; display: block;">حرارة المصانع</span>
                         <span id="heatModalTemp" style="font-size: 1.3rem; font-weight: 900; color: #b45309;">32°C</span>
@@ -1386,7 +1629,7 @@
                     </button>
 
                     <!-- زر العودة لبوابة النماذج -->
-                    <a href="forms-hub.html" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <a href="/forms-hub" title="العودة لبوابة النماذج الرئيسية" style="text-decoration: none; padding: 4px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #4338ca; font-weight: 800; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                         <i class="fas fa-th-large"></i>
                         <span id="txtBackToHub">البوابة</span>
                     </a>
@@ -1405,14 +1648,16 @@
             <div class="iso-header-table">
                 <div class="iso-col-brand">
                     <div class="iso-logo-wrap">
-                        <img id="companyLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                        <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                     </div>
-                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                    <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                 </div>
 
                 <div class="iso-col-title">
                     <h1 class="iso-doc-title" id="isoDocTitle">نموذج الفحص الشهري لمعدات الإطفاء</h1>
                     <div class="iso-doc-subtitle" id="isoDocSubtitle">Monthly Fire Equipment Inspection Form</div>
+                    <span class="iso-platform-tag" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800;"><i class="fas fa-certificate text-amber-500"></i> معتمد طبقاً للمواصفة ISO 45001:2018 & NFPA 10 / 25</span>
                 </div>
 
                 <div class="iso-col-meta">
@@ -1422,15 +1667,15 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val">VER-02</span>
+                        <span class="iso-meta-val">Rev. 02</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">تاريخ الاعتماد:</span>
-                        <span class="iso-meta-val">2026-08</span>
+                        <span class="iso-meta-val">2026-09</span>
                     </div>
                     <div class="iso-meta-row">
-                        <span class="iso-meta-key">المعيار:</span>
-                        <span class="iso-meta-val">ISO 45001 / NFPA 10</span>
+                        <span class="iso-meta-key">درجة السرية:</span>
+                        <span class="iso-meta-val" style="color: #047857;">عام داخلي</span>
                     </div>
                 </div>
             </div>
@@ -1701,20 +1946,46 @@
                 <button type="button" class="btn-primary-action" onclick="resetFormForNextDevice()">
                     <i class="fas fa-plus"></i> فحص طفاية / جهاز آخر
                 </button>
-                <button type="button" class="btn-outline" onclick="window.print()">
-                    <i class="fas fa-print"></i> طباعة إيصال الفحص
+                <button type="button" class="btn-outline" onclick="printFireInspectionReceipt()">
+                    <i class="fas fa-print"></i> طباعة كشف وإيصال الفحص
                 </button>
-                <a href="forms-hub.html" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
+                <a href="/forms-hub" class="btn-outline" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">
                     <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع لبوابة النماذج</span>
                 </a>
             </div>
         </div>
 
-        <!-- التذييل -->
-        <div class="footer-card">
-            <div style="font-weight: 700; color: #334155; margin-bottom: 4px;">منظومة إدارة السلامة والصحة المهنية والبيئة (HSE 360 Platform) © 2026</div>
-            <div>نموذج معتمد طبقا لمعايير الأيزو والسلامة المهنية (ISO 45001 / NFPA 10) — جميع الحقوق محفوظة</div>
+        <!-- شريط بيانات ضبط وتوثيق الوثيقة المعتمدة (Document Control) -->
+        <div class="iso-footer-meta-strip">
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">كود الوثيقة:</span>
+                <span class="iso-footer-meta-val val-doc">DOC-HSE-FEI-01</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">رقم الإصدار:</span>
+                <span class="iso-footer-meta-val val-rev">Rev. 02</span>
+            </div>
+            <div class="iso-footer-meta-item">
+                <span class="iso-footer-meta-key">تاريخ الاعتماد:</span>
+                <span class="iso-footer-meta-val val-date">2026-09</span>
+            </div>
         </div>
+
+        <!-- Unified Portal Footer -->
+        <footer class="portal-unified-footer">
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
+            <p class="footer-subtitle">نموذج الفحص الدوري لأنظمة ومعدات الإطفاء PWA • معتمد طبقاً لمعايير ISO 45001 & NFPA 10 / 25</p>
+            <div class="footer-meta-strip">
+                <i class="fas fa-code-branch text-amber-600"></i>
+                <span>إصدار النموذج:</span>
+                <span class="footer-version-pill" id="lblFireInspectionVersion">v1.0.1769</span>
+                <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
+                    <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
+                </button>
+                <span>•</span>
+                <a href="forms-hub.html" class="footer-hub-link">بوابة النماذج الرقمية</a>
+            </div>
+        </footer>
     </div>
 
     <!-- Toast Notification -->
@@ -1729,7 +2000,8 @@
                 dir: 'rtl',
                 langBtn: 'EN',
                 pageTitle: 'SafetyHub | نموذج الفحص الشهري لمعدات الإطفاء',
-                deptName: 'إدارة السلامة والصحة المهنية والبيئة',
+                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+                deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
                 docTitle: 'نموذج الفحص الشهري لمعدات الإطفاء',
                 docSubtitle: 'Monthly Fire Equipment Inspection Form',
                 platformTag: 'بوابة الفحص الميداني',
@@ -1794,7 +2066,8 @@
                 dir: 'ltr',
                 langBtn: 'AR',
                 pageTitle: 'SafetyHub | Monthly Fire Equipment Inspection Form',
-                deptName: 'HSE & Environmental Department',
+                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+                deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
                 docTitle: 'Monthly Fire Equipment Inspection Form',
                 docSubtitle: 'Monthly Fire Equipment Inspection Form',
                 platformTag: 'Field Inspection Portal',
@@ -1870,8 +2143,10 @@
             if (langBtnText) langBtnText.textContent = t.langBtn;
 
             // ISO Header
-            const deptName = document.getElementById('isoDeptName');
-            if (deptName) deptName.textContent = t.deptName;
+            const compName = document.getElementById('isoCompanyName') || document.querySelector('.iso-company-name');
+            if (compName && t.companyName) compName.textContent = t.companyName;
+            const deptName = document.getElementById('isoDeptName') || document.querySelector('.iso-dept-name');
+            if (deptName && t.deptName) deptName.textContent = t.deptName;
             const docTitle = document.getElementById('isoDocTitle');
             if (docTitle) docTitle.textContent = t.docTitle;
             const docSubtitle = document.querySelector('#isoDocSubtitle');
@@ -2010,47 +2285,44 @@
             applyLanguage(next);
         }
 
-        const LIVE_BACKEND_URL = (typeof getEffectiveApiUrl === 'function' ? getEffectiveApiUrl() : '') || '';
-        const DEFAULT_API_URL = LIVE_BACKEND_URL;
         let allAssets = [];
         let currentPhotoBase64 = '';
 
-        function getEffectiveApiUrl() {
+                function getEffectiveApiUrl() {
+            var DEFAULT_GAS = (typeof window !== 'undefined' && window.HSE_DEFAULT_GAS_URL)
+                ? String(window.HSE_DEFAULT_GAS_URL)
+                : 'https://script.google.com/macros/s/AKfycbw6ycjx5XAyHKCqW6kzMwWjOxuv7fdm-rBbKN9f1nhp7300R87hTNsQmZfSa49qeGlQ/exec';
+            function isForeignBackend(u) {
+                var s = String(u || '').toLowerCase();
+                if (!s) return true;
+                if (s.indexOf('trycloudflare.com') !== -1) return true;
+                if (s.indexOf('safety-icapp.com') !== -1) return true;
+                if (s.indexOf('safetyicapp-ecru') !== -1) return true;
+                if (s.indexOf('/api/exec') !== -1) return true;
+                if (s.indexOf('127.0.0.1:3001') !== -1 || s.indexOf('localhost:3001') !== -1) return true;
+                return s.indexOf('script.google.com/macros/s/') === -1;
+            }
             try {
-                const host = (window.location.hostname || '').toLowerCase();
-                {
-                    var __gas = '';
-                    try {
-                        var __c = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
-                        if (__c && __c.indexOf('script.google.com') !== -1) __gas = __c.replace(/\/dev(\?|#|$)/, '/exec$1');
-                        if (!__gas) {
-                            var __raw = localStorage.getItem('hse_google_config');
-                            if (__raw) {
-                                var __p = JSON.parse(__raw);
-                                var __u = __p && __p.appsScript && __p.appsScript.scriptUrl;
-                                if (__u && String(__u).indexOf('script.google.com') !== -1) __gas = String(__u).replace(/\/dev(\?|#|$)/, '/exec$1');
-                            }
-                        }
-                    } catch (__e) {}
-                    if (__gas) return __gas;
+                var saved = localStorage.getItem('hse_public_api_url') || localStorage.getItem('HSE_API_URL') || '';
+                if (saved && isForeignBackend(saved)) {
+                    localStorage.removeItem('hse_public_api_url');
+                    localStorage.removeItem('HSE_API_URL');
+                    saved = '';
                 }
-            } catch (_h) {}
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const p = urlParams.get('apiUrl') || urlParams.get('api');
-                if (p) return p;
-                const s1 = localStorage.getItem('HSE_SETTINGS_CACHE');
-                if (s1) {
-                    const parsed = JSON.parse(s1);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                if (saved && !isForeignBackend(saved)) {
+                    return saved.replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-                const s2 = localStorage.getItem('hse_app_settings');
-                if (s2) {
-                    const parsed = JSON.parse(s2);
-                    if (parsed && parsed.scriptUrl) return parsed.scriptUrl;
+                var raw = localStorage.getItem('hse_google_config');
+                if (raw) {
+                    var parsed = JSON.parse(raw);
+                    var u = parsed && parsed.appsScript && parsed.appsScript.scriptUrl;
+                    if (u && !isForeignBackend(u)) return String(u).replace(/\/dev(\?|#|$)/, '/exec$1');
                 }
-            } catch(e) {}
-            return DEFAULT_API_URL;
+                var urlParams = new URLSearchParams(window.location.search);
+                var p = urlParams.get('apiUrl') || urlParams.get('api') || '';
+                if (p && !isForeignBackend(p)) return p.replace(/\/dev(\?|#|$)/, '/exec$1');
+            } catch (e) {}
+            return DEFAULT_GAS;
         }
 
         
@@ -2498,61 +2770,70 @@
             document.getElementById('statusVal').value = status;
         }
 
-        // معالجة الصور وضغطها بكفاءة
+        // معالجة الصور الذكية وضغطها بكفاءة عبر HseSmartMedia
         ['photoInput', 'photoInputCamera', 'photoInputGallery'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                el.addEventListener('change', function(e) {
+                el.addEventListener('change', async function(e) {
                     const file = e.target.files[0];
                     if (!file) return;
-
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        const img = new Image();
-                        img.onload = function() {
-                            const canvas = document.createElement('canvas');
-                            const maxDim = 1100;
-                            let w = img.width;
-                            let h = img.height;
-                            if (w > maxDim || h > maxDim) {
-                                if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
-                                else { w = Math.round((w * maxDim) / h); h = maxDim; }
-                            }
-                            canvas.width = w;
-                            canvas.height = h;
-                            const ctx = canvas.getContext('2d');
-                            ctx.drawImage(img, 0, 0, w, h);
-
-                            // Stamp official inspection watermark
-                            const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
-                            const bannerHeight = Math.max(36, Math.round(h * 0.08));
-                            ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
-                            ctx.fillRect(0, h - bannerHeight, w, bannerHeight);
-                            ctx.fillStyle = '#dc2626';
-                            ctx.fillRect(0, h - bannerHeight, w, 3);
-                            
-                            ctx.fillStyle = '#ffffff';
-                            ctx.font = `bold ${Math.max(11, Math.round(bannerHeight * 0.32))}px 'Cairo', sans-serif`;
-                            ctx.textAlign = 'right';
-                            const now = new Date();
-                            const dateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG');
-                            ctx.fillText(`🧯 ICAPP HSE | فحص معدات الإطفاء (${devId})`, w - 12, h - bannerHeight + (bannerHeight * 0.42));
-                            ctx.fillStyle = '#cbd5e1';
-                            ctx.font = `${Math.max(10, Math.round(bannerHeight * 0.28))}px 'Cairo', sans-serif`;
-                            ctx.fillText(`📅 ${dateStr} | تم الفحص والتوثيق الميداني المعتمد`, w - 12, h - (bannerHeight * 0.22));
-
-                            currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
-                            
-                            document.getElementById('photoPreview').src = currentPhotoBase64;
-                            document.getElementById('photoPreviewWrap').style.display = 'inline-block';
-                            document.getElementById('photoArea').style.display = 'none';
+                    try {
+                        const session = JSON.parse(localStorage.getItem('FIELD_SESSION_KEY') || '{}');
+                        const devId = document.getElementById('deviceSelect')?.value || 'طفاية حريق';
+                        const result = await HseSmartMedia.compressAndWatermarkPhoto(file, {
+                            formType: 'fire-inspection',
+                            formLabel: `🧯 فحص معدات الإطفاء (${devId})`,
+                            employeeName: session.employeeName || '',
+                            employeeCode: session.employeeCode || '',
+                            siteName: session.site || '',
+                            gps: window._currentFieldGps || null
+                        });
+                        currentPhotoBase64 = result.base64;
+                        document.getElementById('photoPreview').src = currentPhotoBase64;
+                        document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                        document.getElementById('photoArea').style.display = 'none';
+                        console.log(`[HSE-Media] Fire inspection photo: ${Math.round(result.originalSize/1024)}KB → ${Math.round(result.compressedSize/1024)}KB`);
+                    } catch (err) {
+                        console.error('[HSE-Media] Compression failed, using fallback:', err);
+                        const reader = new FileReader();
+                        reader.onload = function(evt) {
+                            const img = new Image();
+                            img.onload = function() {
+                                const canvas = document.createElement('canvas');
+                                const maxDim = 1100;
+                                let w = img.width, h = img.height;
+                                if (w > maxDim || h > maxDim) {
+                                    if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+                                    else { w = Math.round((w * maxDim) / h); h = maxDim; }
+                                }
+                                canvas.width = w; canvas.height = h;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, w, h);
+                                currentPhotoBase64 = canvas.toDataURL('image/jpeg', 0.72);
+                                document.getElementById('photoPreview').src = currentPhotoBase64;
+                                document.getElementById('photoPreviewWrap').style.display = 'inline-block';
+                                document.getElementById('photoArea').style.display = 'none';
+                            };
+                            img.src = evt.target.result;
                         };
-                        img.src = evt.target.result;
-                    };
-                    reader.readAsDataURL(file);
+                        reader.readAsDataURL(file);
+                    }
                 });
             }
         });
+
+        // تهيئة GPS للتوثيق الجغرافي
+        (async function initFireInspectionGps() {
+            try {
+                if (typeof HseSmartGeo !== 'undefined' && navigator.geolocation) {
+                    const gps = await HseSmartGeo.getCurrentGps();
+                    window._currentFieldGps = gps;
+                    console.log('[HSE-Geo] Fire inspection GPS acquired:', gps.lat, gps.lng);
+                }
+            } catch (err) {
+                console.log('[HSE-Geo] GPS not available for fire inspection');
+            }
+        })();
 
         function removePhoto() {
             currentPhotoBase64 = '';
@@ -2602,6 +2883,10 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>جاري حفظ وتوثيق الفحص بالسجلات...</span>';
             showToast('جاري إرسال وتوثيق الفحص في قاعدة البيانات...', 'info', 0);
+
+            let session = {}; try { session = JSON.parse(localStorage.getItem('FIELD_SESSION_KEY') || '{}'); } catch(e) {}
+            if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('form_submit', { formType: 'fire-inspection', employeeCode: session?.employeeCode || '' });
+            if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onFormSubmission('fire-inspection', session?.employeeCode || '');
 
             const payload = {
                 action: 'submitPublicFireInspection',
@@ -2658,10 +2943,23 @@
 
             if (success && resultData) {
                 showSuccessScreen(resultData.id || 'FEI-0000', payload);
+                if (typeof HsePushNotify !== 'undefined' && payload.assetId) {
+                    try {
+                        // تذكير بالفحص الدوري القادم بعد 30 يوماً
+                        HsePushNotify.scheduleReminder(
+                            '🧯 موعد الفحص الدوري القادم',
+                            `حان موعد الفحص الشهري لمعدة الإطفاء (${payload.assetId})`,
+                            30 * 24 * 60 * 60 * 1000
+                        );
+                    } catch(e) {}
+                }
             } else {
                 // حفظ أوفلاين إذا تعذر الاتصال
                 const offlineRef = 'FEI-OFFLINE-' + Math.floor(1000 + Math.random()*9000);
                 saveFireInspectionOffline(payload, offlineRef);
+                if (typeof HseOfflineSync !== 'undefined') {
+                    try { HseOfflineSync.saveSubmission('fire-inspection', payload, targetApiUrl); } catch(e) {}
+                }
                 showSuccessScreen(offlineRef + ' (محلي)', payload);
                 showToast('تم حفظ الفحص محلياً بنجاح وسيتم مزامنته تلقائياً عند توفر الإنترنت!', 'info', 5000);
             }
@@ -2747,8 +3045,125 @@
                 </div>` : ''}
             `;
 
+            lastSubmittedFireInspection = {
+                refId: refId,
+                payload: payload,
+                asset: selectedAsset,
+                timestamp: new Date()
+            };
+
             document.getElementById('successScreen').style.display = 'block';
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        var lastSubmittedFireInspection = null;
+
+        function printFireInspectionReceipt() {
+            const data = lastSubmittedFireInspection || {};
+            const payload = data.payload || {};
+            const asset = data.asset || {};
+            const refCode = data.refId || 'FEI-' + new Date().toISOString().slice(0, 10);
+            const now = new Date();
+            const dateStr = payload.checkDate || now.toLocaleDateString('ar-EG');
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            const statusColor = (payload.status === 'صالح') ? '#059669' : '#dc2626';
+
+            const bodyHtml = `
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
+                        <div>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">رقم وتوثيق الفحص:</span>
+                            <span style="font-size: 1.1rem; font-weight: 900; color: #1e40af; margin-right: 6px;">${refCode}</span>
+                        </div>
+                        <div style="background: ${statusColor}; color: #ffffff; padding: 5px 16px; border-radius: 20px; font-weight: 900; font-size: 0.95rem;">
+                            حالة الجهاز: ${payload.status || 'صالح للخدمة'}
+                        </div>
+                    </div>
+
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 22%;">كود الجهاز / الطفاية:</td>
+                                <td style="padding: 6px 8px; font-weight: 900; color: #0f172a; width: 28%;">${payload.assetId || '-'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 22%;">النوع والسعة:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a; width: 28%;">${asset.type || 'طفاية حريق'} ${asset.capacity ? `(${asset.capacity})` : ''}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">الموقع والمكان:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${asset.location || '-'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">المصنع / القطاع:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${asset.site || 'مصانع ICAPP'}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">تاريخ الفحص الميداني:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${dateStr}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">مسؤول السلامة الفاحص:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${payload.inspector || '-'}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">صمام وتيلة الأمان:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${payload.sealIntact || 'سليمة ومغلقة'}</td>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">حالة مؤشر الضغط:</td>
+                                <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${payload.pressureStatus || 'في النطاق الأخضر (سليم)'}</td>
+                            </tr>
+                            ${payload.actions ? `
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">الإجراء الفوري المتخذ:</td>
+                                <td colspan="3" style="padding: 6px 8px; font-weight: 800; color: #b91c1c;">${payload.actions}</td>
+                            </tr>` : ''}
+                            ${payload.notes ? `
+                            <tr>
+                                <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">ملاحظات الفاحص:</td>
+                                <td colspan="3" style="padding: 6px 8px; font-weight: 700; color: #334155;">${payload.notes}</td>
+                            </tr>` : ''}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.8rem; color: #1e40af; line-height: 1.5;">
+                    <strong>🛡️ اشتراطات المعيار المعتمد (NFPA 10 & ISO 45001):</strong>
+                    <div>يجب أن تكون معدات الإطفاء خالية من العوائق، ظاهرة للعيان، مزودة بتعليمات التشغيل وشهادة الفحص الدوري سارية المفعول، وضغط الطفاية ضمن النطاق التشغيلي الآمن.</div>
+                </div>
+            `;
+
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: 'إيصال وسجل الفحص الدوري لمعدات وأنظمة الإطفاء - ' + (payload.assetId || ''),
+                    docTitle: 'نموذج وسجل الفحص الدوري لمعدات وأنظمة الإطفاء',
+                    docSubtitle: 'Fire Fighting Equipment & Systems Inspection Certificate',
+                    docCode: 'DOC-HSE-FEI-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: dateStr,
+                    confidentiality: 'عام داخلي',
+                    standardRef: 'ISO 45001:2018 & NFPA 10 / 25',
+                    metaItems: [
+                        { label: 'كود الجهاز', value: payload.assetId || '-' },
+                        { label: 'موقع الجهاز', value: asset.location || '-' },
+                        { label: 'تاريخ الفحص', value: dateStr },
+                        { label: 'وقت التوثيق', value: timeStr },
+                        { label: 'الفاحص', value: payload.inspector || '-' },
+                        { label: 'النتيجة الفنية', value: payload.status || 'صالح' }
+                    ],
+                    kpis: {
+                        total: '1',
+                        totalLabel: 'عدد الأجهزة المفحوصة',
+                        high: payload.status === 'صالح' ? '0' : '1',
+                        highLabel: 'أجهزة تتطلب الصيانة ⚠️',
+                        closed: payload.status === 'صالح' ? '1' : '0',
+                        closedLabel: 'أجهزة صالحة وجاهزة ✅',
+                        pending: '0',
+                        pendingLabel: 'قيد الفحص ⏳'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'مسؤول السلامة الفاحص', name: payload.inspector || 'مفتش السلامة ومكافحة الحريق', line: 'التوقيع والتاريخ' },
+                        { title: 'مشرف الموقع / المنطقة', name: 'مشرف العمليات المعتمد', line: 'التوقيع والتاريخ' },
+                        { title: 'الإدارة العامة للسلامة والصحة المهنية', name: 'مدير السلامة وحماية البيئة', line: 'الختم والاعتماد' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
         }
 
         function resetFormForNextDevice() {
@@ -2843,7 +3258,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+                navigator.serviceWorker.register('./service-worker.js').catch(() => {});
             });
         }
 
@@ -3063,6 +3478,23 @@
             }
         }
 
+        async function forceAppRefresh(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const spin = document.getElementById('refreshIconSpin');
+            if (spin) spin.classList.add('fa-spin');
+            try {
+                if ('serviceWorker' in navigator) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    for (let reg of regs) { await reg.unregister(); }
+                }
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    for (let key of keys) { await caches.delete(key); }
+                }
+            } catch (e) {}
+            window.location.reload(true);
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             measureCloudPing();
             fetchPlantWeatherData();
@@ -3071,7 +3503,7 @@
     </script>
 
     <!-- زر الرجوع العائم للبوابة أثناء التمرير في الجوال -->
-    <a href="forms-hub.html" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
+    <a href="/forms-hub" class="floating-hub-btn" title="الرجوع لبوابة النماذج">
         <i class="fas fa-layer-group"></i>
         <span>بوابة النماذج</span>
     </a>

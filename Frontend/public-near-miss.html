@@ -167,13 +167,81 @@
             object-fit: contain;
         }
 
+        .iso-company-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
             line-height: 1.2;
+            margin-top: 1px;
+            white-space: normal;
+        }
+
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل النموذج */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.05);
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .iso-footer-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .iso-footer-meta-key {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-meta-val {
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-family: monospace, system-ui;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-val.val-doc {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .iso-footer-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+
+        .iso-footer-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
         .iso-col-title {
@@ -257,9 +325,32 @@
                 max-height: 30px;
                 max-width: 55px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.5rem;
+                font-size: 0.48rem;
                 white-space: normal;
+                line-height: 1.1;
+            }
+            .iso-footer-meta-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
+            }
+            .iso-footer-meta-item {
+                font-size: 0.58rem;
+                gap: 3px;
+            }
+            .iso-footer-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
             .iso-col-title {
                 padding: 6px 4px;
@@ -990,7 +1081,8 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name" style="font-size: 0.62rem; font-weight: 800; color: #1e3a8a; line-height: 1.2; text-align: center;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)<br><span style="color: #64748b; font-size: 0.58rem;">الإدارة العامة للسلامة والصحة المهنية</span></div>
+                <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
             </div>
 
             <div class="iso-col-title">
@@ -1183,14 +1275,30 @@
         </button>
     </form>
 
+    <!-- شريط بيانات ضبط وتوثيق الوثيقة المعتمدة (Document Control) -->
+    <div class="iso-footer-meta-strip">
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">كود الوثيقة:</span>
+            <span class="iso-footer-meta-val val-doc">DOC-HSE-NRM-01</span>
+        </div>
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">رقم الإصدار:</span>
+            <span class="iso-footer-meta-val val-rev">Rev. 02</span>
+        </div>
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">تاريخ الاعتماد:</span>
+            <span class="iso-footer-meta-val val-date">2026-08</span>
+        </div>
+    </div>
+
     <!-- Unified Portal Footer -->
     <footer class="portal-unified-footer">
-        <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+        <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
         <p class="footer-subtitle">نموذج الإبلاغ الفوري عن الحوادث والظروف الوشيكة PWA • معتمد طبقاً لمعايير ISO 45001: 10.2 & OSHA 1904</p>
         <div class="footer-meta-strip">
             <i class="fas fa-code-branch text-amber-600"></i>
             <span>إصدار النموذج:</span>
-            <span class="footer-version-pill" id="lblNearMissVersion">v1.0.1768</span>
+            <span class="footer-version-pill" id="lblNearMissVersion">v1.0.1769</span>
             <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                 <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
             </button>
@@ -1378,7 +1486,8 @@
             dir: 'rtl',
             langBtn: 'EN',
             pageTitle: 'SafetyHub | نموذج الإبلاغ عن حادث وشيك (Near Miss)',
-            deptName: 'إدارة السلامة والصحة المهنية',
+            companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+            deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
             docTitle: 'نموذج الإبلاغ عن حادث وشيك',
             docSubtitle: 'Near Miss Report',
             hubBtn: 'بوابة النماذج',
@@ -1440,7 +1549,8 @@
             dir: 'ltr',
             langBtn: 'AR',
             pageTitle: 'SafetyHub | Near Miss Incident Report',
-            deptName: 'HSE Department',
+            companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+            deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
             docTitle: 'Near Miss Incident Report',
             docSubtitle: 'Near Miss Incident Report',
             hubBtn: 'Forms Hub',
@@ -1513,8 +1623,10 @@
         if (langBtnText) langBtnText.textContent = t.langBtn;
 
         // ISO Header
-        const deptName = document.querySelector('.iso-dept-name');
-        if (deptName) deptName.textContent = t.deptName;
+        const compName = document.getElementById('isoCompanyName') || document.querySelector('.iso-company-name');
+        if (compName && t.companyName) compName.textContent = t.companyName;
+        const deptName = document.getElementById('isoDeptName') || document.querySelector('.iso-dept-name');
+        if (deptName && t.deptName) deptName.textContent = t.deptName;
         const docTitle = document.getElementById('isoDocTitle');
         if (docTitle) docTitle.textContent = t.docTitle;
         const docSubtitle = document.getElementById('isoDocSubtitle');

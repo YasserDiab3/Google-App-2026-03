@@ -439,17 +439,27 @@
             object-fit: contain;
         }
 
-        .iso-dept-name {
-            font-size: 0.68rem;
-            font-weight: 800;
+        .iso-company-name {
+            font-size: 0.62rem;
+            font-weight: 900;
             color: #1e3a8a;
             text-align: center;
-            line-height: 1.2;
+            line-height: 1.15;
             white-space: normal;
             max-width: 100%;
         }
+        [data-theme="dark"] .iso-company-name { color: #93c5fd; }
 
-        [data-theme="dark"] .iso-dept-name { color: #818cf8; }
+        .iso-dept-name {
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.15;
+            white-space: normal;
+            max-width: 100%;
+        }
+        [data-theme="dark"] .iso-dept-name { color: #94a3b8; }
 
         /* 2. عمود العنوان */
         .iso-col-title {
@@ -579,8 +589,13 @@
                 max-height: 28px;
                 max-width: 48px;
             }
+            .iso-company-name {
+                font-size: 0.52rem;
+                line-height: 1.1;
+            }
             .iso-dept-name {
-                font-size: 0.58rem;
+                font-size: 0.48rem;
+                line-height: 1.1;
             }
             .iso-col-title {
                 padding: 4px 6px;
@@ -616,6 +631,12 @@
                 min-width: 70px !important;
                 max-width: 70px !important;
                 padding: 3px 4px !important;
+            }
+            .iso-company-name {
+                font-size: 0.46rem !important;
+            }
+            .iso-dept-name {
+                font-size: 0.42rem !important;
             }
             .iso-col-meta {
                 min-width: 92px !important;
@@ -3772,7 +3793,8 @@
                     <div class="iso-logo-wrap">
                         <img id="isoLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                     </div>
-                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                    <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                 </div>
 
                 <div class="iso-col-title">
@@ -3787,7 +3809,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1768</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1769</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -4161,12 +4183,12 @@
 
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer">
-            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة السلامة والصحة المهنية المتكاملة</p>
             <p class="footer-subtitle">البوابة الرقمية الموحدة لنماذج وإجراءات السلامة الميدانية PWA • معتمدة طبقاً لمعايير ISO 45001 / 14001 / 9001</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1768</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1769</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -4574,7 +4596,8 @@
                 pageTitle: 'بوابة النماذج الميدانية | ICAPP HSE Hub',
                 headerTitle: 'بوابة النماذج الميدانية',
                 headerSubtitle: 'إدارة السلامة والصحة المهنية - ICAPP',
-                deptName: 'إدارة السلامة والصحة المهنية',
+                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+                deptName: 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة',
                 docTitle: 'بوابة النماذج الميدانية',
                 docSubtitle: 'Field Forms & Digital HSE Hub',
                 docCodeKey: 'كود المنظومة:',
@@ -4772,7 +4795,8 @@
                 pageTitle: 'Field Forms Portal | ICAPP HSE Hub',
                 headerTitle: 'Field Forms Portal',
                 headerSubtitle: 'HSE Management System - ICAPP',
-                deptName: 'HSE Department',
+                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+                deptName: 'General Administration of Occupational Safety, Health & Environmental Protection',
                 docTitle: 'Field Forms Portal',
                 docSubtitle: 'Field Forms & Digital HSE Hub',
                 docCodeKey: 'Doc Code:',
@@ -5020,6 +5044,8 @@
             if (tKpiAuditsStatus) tKpiAuditsStatus.textContent = t.kpiAuditsStatus;
 
             // ISO Header
+            const isoComp = document.getElementById('isoCompanyName');
+            if (isoComp && t.companyName) isoComp.textContent = t.companyName;
             const isoDept = document.getElementById('isoDeptName');
             if (isoDept) isoDept.textContent = t.deptName;
             const isoDoc = document.getElementById('isoDocTitle');
@@ -9342,7 +9368,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1768-20260927')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1769-20260927')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);

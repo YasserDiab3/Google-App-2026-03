@@ -75,35 +75,54 @@ function syncVercelServerlessBundle() {
 }
 
 function syncObservationAndFormsMirrors() {
-    const obsSrc = path.join(frontendRoot, 'public-observation.html');
-    if (fs.existsSync(obsSrc)) {
-        const targets = [
-            path.join(frontendRoot, 'public-observation', 'index.html'),
-            path.join(frontendRoot, 'observation', 'index.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'public-observation.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'public-observation', 'index.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'observation', 'index.html'),
-        ];
-        for (const t of targets) {
-            try {
-                fs.mkdirSync(path.dirname(t), { recursive: true });
-                fs.copyFileSync(obsSrc, t);
-            } catch (_) {}
+    const formConfigs = [
+        {
+            src: 'public-observation.html',
+            subdirs: ['public-observation', 'observation']
+        },
+        {
+            src: 'public-near-miss.html',
+            subdirs: ['public-near-miss', 'near-miss']
+        },
+        {
+            src: 'public-fire-inspection.html',
+            subdirs: ['public-fire-inspection', 'fire-inspection']
+        },
+        {
+            src: 'public-daily-safety.html',
+            subdirs: ['public-daily-safety', 'daily-safety']
+        },
+        {
+            src: 'gate-visitor-entry.html',
+            subdirs: ['gate-visitor-entry', 'gate', 'visitor']
+        },
+        {
+            src: 'public-tbt-record.html',
+            subdirs: ['public-tbt-record', 'tbt']
+        },
+        {
+            src: 'forms-hub.html',
+            subdirs: ['forms-hub', 'forms']
         }
-    }
-    const formsSrc = path.join(frontendRoot, 'forms-hub.html');
-    if (fs.existsSync(formsSrc)) {
+    ];
+
+    for (const item of formConfigs) {
+        const fileSrc = path.join(frontendRoot, item.src);
+        if (!fs.existsSync(fileSrc)) continue;
+
         const targets = [
-            path.join(frontendRoot, 'forms-hub', 'index.html'),
-            path.join(frontendRoot, 'forms', 'index.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms-hub.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms-hub', 'index.html'),
-            path.join(repoRoot, 'vercel-deploy', 'frontend', 'forms', 'index.html'),
+            path.join(repoRoot, 'vercel-deploy', 'frontend', item.src)
         ];
+
+        for (const sub of item.subdirs) {
+            targets.push(path.join(frontendRoot, sub, 'index.html'));
+            targets.push(path.join(repoRoot, 'vercel-deploy', 'frontend', sub, 'index.html'));
+        }
+
         for (const t of targets) {
             try {
                 fs.mkdirSync(path.dirname(t), { recursive: true });
-                fs.copyFileSync(formsSrc, t);
+                fs.copyFileSync(fileSrc, t);
             } catch (_) {}
         }
     }

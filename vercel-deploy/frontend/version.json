@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1768",
+  "version": "1.0.1769",
   "highlights": {
     "ar": [
-      "تعميم وتوحيد محرك الطباعة والتوثيق الأيزو الرسمي (HsePrintEngine) بتصميم موحد وأنيق على كل مخرجات وتقارير النظام.",
-      "اعتماد الاسم الرسمي الموحد (الشركة العالمية للإنتاج والتصنيع الزراعي ICAPP) والإدارة العامة للسلامة والصحة المهنية وحماية البيئة بكافة النماذج والتقارير.",
-      "تطبيق الترويسة الأيزو المعتمدة ثلاثية الصناديق وبلوك التوقيعات الثلاثي المعتمد وفوتر ضبط الوثائق على تقارير المرور اليومي، فحص معدات الإطفاء، الحوادث الوشيكة، حصر الزوار للطوارئ، وتصاريح البوابات.",
-      "تحديث منظومة تقارير PDF المركزية في لوحة التحكم الإدارية لترث الهوية الرسمية وضوابط الأيزو تلقائياً."
+      "توحيد التصميم والواجهات التفاعلية لجميع النماذج الميدانية داخل النظام كاملة لكل المديولات طبقاً للهوية المؤسسية والترويسة المعتمدة (ISO).",
+      "اعتماد الاسم الرسمي للشركة (الشركة العالمية للإنتاج والتصنيع الزراعي - ICAPP) والإدارة العامة للسلامة والصحة المهنية وحماية البيئة في واجهات النماذج وترجمتها المزدوجة.",
+      "تطبيق الترويسة ثلاثية الأعمدة وشريط ضبط الوثائق الرسمي والفوتر الموحد على نماذج: الملاحظات، الحوادث الوشيكة، فحص الحريق، المرور اليومي، تسجيل الزائرين، ومحاضر الـ TBT وبوابة النماذج.",
+      "مزامنة كاملة وشاملة لكافة النماذج الميدانية في خط إنتاج التطبيق والتوزيع السحابي والذاكرة المؤقتة."
     ],
     "en": [
-      "Unified official ISO Master Print Engine (HsePrintEngine) across all system outputs, forms, and printable certificates.",
-      "Standardized corporate branding for 'International Company for Agricultural Production & Processing (ICAPP)' and HSE General Directorate.",
-      "Applied official ISO 3-column header, KPI metrics bar, structured findings, 3-party approval signatures, and ISO document control footer to Daily Safety Patrol, Fire Equipment Inspection, Near-Miss, Emergency Muster, and Gate Pass.",
-      "Updated centralized PDF template engine in administrative dashboard to inherit corporate identity and ISO control metadata."
+      "Unified interactive form interfaces across all system modules with standardized corporate ISO layout, header tables, and metadata strips.",
+      "Enforced official corporate name 'International Company for Agricultural Production & Processing (ICAPP)' and 'General Administration of Occupational Safety, Health & Environmental Protection' in all forms.",
+      "Applied official 3-column ISO header, document control strip, and unified portal footer across Observation, Near-Miss, Fire Inspection, Daily Patrol, Visitor Gate, TBT Briefing, and Forms Hub.",
+      "Full synchronization of all 7 in-app forms across build pipelines, subdirectories, and Vercel cloud deployment."
     ]
   }
 }
