@@ -1,19 +1,19 @@
 {
-  "version": "1.0.1772",
+  "version": "1.0.1774",
   "highlights": {
     "ar": [
-      "توحيد نظام التصدير والتحميل المباشر لجميع ملفات PDF في كامل النظام دون فتح شاشة الطباعة (window.print) أو النوافذ المنبثقة.",
-      "التحميل التلقائي المباشر لتقرير تدريبات المقاولين فور اختياره واختيار الفترة المحددة كملف PDF إلى جهاز المستخدم.",
-      "تطبيق التصدير والتحميل المباشر في تصاريح العمل (PTW) وسجل حصر التصاريح ونماذج التصاريح.",
-      "تحديث محرك التصدير المركزي Utils.downloadHtmlAsPdf لدعم تقارير الحوادث، الإجراءات التصحيحية، المواد الكيميائية، وتقييم المقاولين."
+      "توحيد إصدارات النظام في جميع البوابات والنماذج وشاشات النظام لتكون موحدة برقم V.1.0.1774.",
+      "تطابق نموذج تقرير المرور اليومي للسلامة والصحة المهنية (DOC-HSE-DSR-01) عند التصدير والطباعة من داخل النظام مع تصميم البوابة الرسمي المعين بهوية ISO.",
+      "تضمين شريط الترويسة الثلاثي ISO وشبكة البيانات والكروت الرقمية الأربعة KPI وجدول بنود الفحص الميداني الـ 18 مع شارات المطابقة الملونة وقراءة ضغط طلمبة الحريق وبلوك التوقيع الثلاثي المعتمد.",
+      "التحميل المباشر لتقرير المرور اليومي كملف PDF عالي الدقة دون أخطاء أو صفحات بيضاء."
     ],
     "en": [
-      "Unified direct export and download system for all PDF files across the entire platform without opening print preview dialogs or popup windows.",
-      "Direct automatic download of Contractor Training Reports to user device immediately upon selection and filter criteria.",
-      "Direct PDF download implemented for Work Permits (PTW), PTW registry logs, and permit issuance forms.",
-      "Centralized Utils.downloadHtmlAsPdf engine powering instant downloads for Incidents, Action Tracking, Chemical Safety SDS, and Contractor evaluations."
+      "Unified system version numbers across all portals, public forms, and main system views to V.1.0.1774.",
+      "Aligned in-system Daily Safety Patrol report print and export (DOC-HSE-DSR-01) to match the official ISO portal design.",
+      "Included 3-column ISO header, metadata grid, 4 KPI cards, 18-item field checklist with colored badges, fire pump pressure reading, and triple verified signature block.",
+      "Instant high-resolution PDF download for Daily Safety Patrol inspection records without blank page glitches."
     ]
   },
-  "releaseName": "v1.0.1772 - Direct PDF Download and Unified Export Across All Modules",
-  "lastUpdate": "2026-09-27T20:20:59.863Z"
+  "releaseName": "v1.0.1774 - Unified ISO Daily Safety Patrol Export and System Version Unification",
+  "lastUpdate": "2026-09-27T23:55:00.000Z"
 }
