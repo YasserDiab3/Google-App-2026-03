@@ -740,6 +740,678 @@
             showTemporaryToast('✅ تم نسخ توجيهات الوردية السابقة للوردية الحالية');
         }
 
+        function buildOfficialHandoverDocumentHtml(data, options = {}) {
+            const autoPrint = Boolean(options.autoPrint);
+
+            const date = escapeHtml(data.date || new Date().toISOString().slice(0, 10));
+            const shift = escapeHtml(data.shift || 'الوردية الصباحية');
+            const site = escapeHtml(data.site || 'كافة مصانع ICAPP');
+            const outgoing = escapeHtml(data.outgoing || 'مسؤول السلامة المسلِّم');
+            const incoming = escapeHtml(data.incoming || 'مسؤول السلامة المستلِم');
+
+            // Handling instructions
+            let instructionsText = data.instructions || '';
+            if (!instructionsText && data.fullSummaryText) {
+                const match = data.fullSummaryText.match(/توجيهات وبنود المتابعة للوردية القادمة:[\r\n]+([\s\S]*?)(\r?\n─|\r?\n✅|$)/);
+                if (match && match[1]) {
+                    instructionsText = match[1].trim();
+                } else {
+                    instructionsText = data.fullSummaryText;
+                }
+            }
+            if (!instructionsText) {
+                instructionsText = 'تم تسليم الوردية وفقاً للضوابط التشغيلية المعتمدة دون وجود معوقات حرجة.';
+            }
+
+            const kpis = data.kpis || {
+                total: '0',
+                high: '0',
+                closed: '0',
+                ptw: '0'
+            };
+
+            const tbt = data.tbtInfo || null;
+
+            let printTimeStr = '';
+            try {
+                const now = data.createdAt ? new Date(data.createdAt) : new Date();
+                printTimeStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+            } catch (_) {
+                printTimeStr = date;
+            }
+
+            const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+            const logoSrc = `${origin}/icons/icapp-logo.png`;
+            const logoFallback = `${origin}/icons/icon-192x192.png`;
+
+            const tbtHtml = (tbt && tbt.topic) ? `
+                <div class="tbt-banner">
+                    <div>
+                        <span style="font-size: 10px; background: #86198f; color: #fff; padding: 2px 7px; border-radius: 4px; font-weight: 800; margin-left: 6px;">TBT مُعتمد</span>
+                        <span class="tbt-topic">📢 موضوع التوعية: ${escapeHtml(tbt.topic)}</span>
+                    </div>
+                    <div class="tbt-meta">
+                        <span>👥 الحضور: <strong>${escapeHtml(tbt.attendees || '0')} عامل</strong></span>
+                        <span>👤 المشرف/المدرب: <strong>${escapeHtml(tbt.trainer || 'مشرف السلامة')}</strong></span>
+                        ${tbt.category ? `<span>🏷️ التصنيف: <strong>${escapeHtml(tbt.category)}</strong></span>` : ''}
+                    </div>
+                </div>
+            ` : '';
+
+            return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محضر تسليم واستلام وردية السلامة — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --brand-primary: #1e3a8a;
+            --brand-navy: #0f172a;
+            --brand-green: #047857;
+            --brand-red: #b91c1c;
+            --border-color: #cbd5e1;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        body {
+            font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f8fafc;
+            color: #0f172a;
+            line-height: 1.5;
+            direction: rtl;
+        }
+        
+        .no-print-bar {
+            position: sticky;
+            top: 0;
+            z-index: 9999;
+            background: #0f172a;
+            color: #ffffff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+            border-bottom: 3px solid #2563eb;
+        }
+        .no-print-bar .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .no-print-bar .pill-tag {
+            background: #2563eb;
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+        }
+        .no-print-bar .title-text {
+            font-size: 13.5px;
+            font-weight: 800;
+        }
+        .no-print-bar .action-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn-print {
+            padding: 8px 20px;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+        }
+        .btn-print:hover { background: #1d4ed8; }
+        .btn-close {
+            padding: 8px 18px;
+            background: #475569;
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .btn-close:hover { background: #334155; }
+
+        .report-page-container {
+            max-width: 900px;
+            margin: 22px auto 40px auto;
+            background: #ffffff;
+            padding: 28px 34px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+            border: 1px solid #e2e8f0;
+        }
+
+        .iso-print-header {
+            display: grid;
+            grid-template-columns: 240px 1fr 200px;
+            border: 2px solid #0f172a;
+            border-top: 5px solid #1e3a8a;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+            margin-bottom: 18px;
+        }
+        .iso-box-brand {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-left: 1.5px solid #0f172a;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            gap: 4px;
+            text-align: center;
+        }
+        .iso-print-logo {
+            max-height: 46px;
+            max-width: 130px;
+            object-fit: contain;
+            margin-bottom: 2px;
+        }
+        .iso-company-title {
+            font-size: 10.5px;
+            font-weight: 900;
+            color: #0f172a;
+            line-height: 1.3;
+        }
+        .iso-dept-title {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #1e3a8a;
+            line-height: 1.25;
+        }
+        
+        .iso-box-title {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: #ffffff;
+        }
+        .iso-main-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 900;
+            color: #1e3a8a;
+            line-height: 1.3;
+        }
+        .iso-sub-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #475569;
+            margin-top: 3px;
+        }
+        .iso-badge-std {
+            display: inline-block;
+            margin-top: 5px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 800;
+        }
+
+        .iso-box-meta {
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-right: 1.5px solid #0f172a;
+            background: #f8fafc;
+            gap: 3px;
+        }
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 2px;
+            font-size: 10px;
+        }
+        .meta-row:last-child { border-bottom: none; }
+        .meta-row span { color: #64748b; font-weight: 700; }
+        .meta-row strong { color: #0f172a; font-family: monospace, inherit; font-size: 10px; }
+
+        .handover-info-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .info-card {
+            background: #f8fafc;
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 7px 10px;
+        }
+        .info-card .card-label {
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .info-card .card-value {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .officers-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .officer-card {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+            border: 1.5px solid #86efac;
+            border-radius: 6px;
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .officer-card.incoming-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+            border-color: #93c5fd;
+        }
+        .officer-role {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #166534;
+        }
+        .officer-card.incoming-card .officer-role {
+            color: #1e40af;
+        }
+        .officer-name {
+            font-size: 12.5px;
+            font-weight: 900;
+            color: #0f172a;
+        }
+
+        .kpi-section-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #334155;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+            text-align: center;
+        }
+        .kpi-box {
+            border-radius: 6px;
+            padding: 8px 6px;
+            border: 1.5px solid #cbd5e1;
+            background: #ffffff;
+        }
+        .kpi-box.total { background: #f8fafc; border-color: #cbd5e1; }
+        .kpi-box.high { background: #fef2f2; border-color: #fca5a5; }
+        .kpi-box.closed { background: #f0fdf4; border-color: #86efac; }
+        .kpi-box.ptw { background: #fffbeb; border-color: #fde68a; }
+        .kpi-num {
+            font-size: 1.35rem;
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 2px;
+        }
+        .kpi-box.total .kpi-num { color: #0f172a; }
+        .kpi-box.high .kpi-num { color: #dc2626; }
+        .kpi-box.closed .kpi-num { color: #16a34a; }
+        .kpi-box.ptw .kpi-num { color: #d97706; }
+        .kpi-text {
+            font-size: 10px;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .tbt-banner {
+            background: #fdf4ff;
+            border: 1.5px solid #f0abfc;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tbt-topic {
+            font-weight: 900;
+            font-size: 11.5px;
+            color: #86198f;
+        }
+        .tbt-meta {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #581c87;
+            display: flex;
+            gap: 10px;
+        }
+
+        .instructions-container {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 18px;
+        }
+        .instructions-header {
+            background: #f8fafc;
+            border-bottom: 1.5px solid #cbd5e1;
+            padding: 8px 12px;
+            font-weight: 900;
+            font-size: 11.5px;
+            color: #1e3a8a;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .instructions-body {
+            padding: 12px 14px;
+            background: #ffffff;
+            font-size: 11.5px;
+            line-height: 1.65;
+            color: #1e293b;
+            white-space: pre-wrap;
+            min-height: 90px;
+        }
+
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 18px;
+            page-break-inside: avoid;
+        }
+        .sig-card {
+            border: 1.5px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 10px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 115px;
+        }
+        .sig-card-title {
+            font-size: 10.5px;
+            font-weight: 800;
+            color: #1e3a8a;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
+            text-align: center;
+        }
+        .sig-card-name {
+            font-size: 11px;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+        }
+        .sig-line-area {
+            margin-top: 20px;
+            border-top: 1.5px dashed #64748b;
+            padding-top: 3px;
+            text-align: center;
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-strip {
+            margin-top: 18px;
+            border: 1.5px solid #0f172a;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 12px;
+            background: #f8fafc;
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #334155;
+            page-break-inside: avoid;
+        }
+        .iso-footer-strip span strong {
+            color: #0f172a;
+            font-family: monospace, inherit;
+        }
+
+        .portal-unified-footer {
+            margin-top: 10px;
+            text-align: center;
+            font-size: 9px;
+            color: #64748b;
+            line-height: 1.45;
+            page-break-inside: avoid;
+        }
+        .portal-unified-footer strong {
+            color: #1e3a8a;
+            font-weight: 800;
+        }
+
+        @media print {
+            body {
+                background: #ffffff !important;
+                padding: 0 !important;
+            }
+            .no-print-bar {
+                display: none !important;
+            }
+            .report-page-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 5px 8px !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 8mm 10mm 8mm 10mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <div class="brand-badge">
+            <span class="pill-tag">ICAPP HSE</span>
+            <span class="title-text">محضر تسليم واستلام وردية السلامة الميداني</span>
+        </div>
+        <div class="action-buttons">
+            <button type="button" onclick="window.print()" class="btn-print">
+                🖨️ طباعة المحضر
+            </button>
+            <button type="button" onclick="window.close()" class="btn-close">
+                ❌ إغلاق النافذة
+            </button>
+        </div>
+    </div>
+
+    <div class="report-page-container">
+        <!-- ترويسة ISO المعتمدة ثلاثية الأعمدة والصناديق -->
+        <div class="iso-print-header">
+            <div class="iso-box-brand">
+                <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
+                <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-title">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
+            </div>
+
+            <div class="iso-box-title">
+                <h1 class="iso-main-title">محضر تسليم واستلام وردية السلامة</h1>
+                <div class="iso-sub-title">Shift Safety Handover & Briefing Report</div>
+                <div class="iso-badge-std">معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
+            </div>
+
+            <div class="iso-box-meta">
+                <div class="meta-row">
+                    <span>كود الوثيقة:</span>
+                    <strong>DOC-HSE-SHO-01</strong>
+                </div>
+                <div class="meta-row">
+                    <span>رقم الإصدار:</span>
+                    <strong>Rev. 02</strong>
+                </div>
+                <div class="meta-row">
+                    <span>تاريخ الاعتماد:</span>
+                    <strong>2026-09</strong>
+                </div>
+                <div class="meta-row">
+                    <span>درجة السرية:</span>
+                    <strong style="color: #047857;">عام داخلي</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- شبكة بيانات الوردية والموقع -->
+        <div class="handover-info-grid">
+            <div class="info-card">
+                <div class="card-label">📅 تاريخ الوردية</div>
+                <div class="card-value">${date}</div>
+            </div>
+            <div class="info-card">
+                <div class="card-label">⏰ فترة الوردية</div>
+                <div class="card-value">${shift}</div>
+            </div>
+            <div class="info-card">
+                <div class="card-label">🏭 الموقع / المصنع</div>
+                <div class="card-value">${site}</div>
+            </div>
+            <div class="info-card">
+                <div class="card-label">🕒 توقيت الإصدار</div>
+                <div class="card-value">${printTimeStr}</div>
+            </div>
+        </div>
+
+        <!-- بطاقات مسؤولي السلامة المسلم والمستلم -->
+        <div class="officers-bar">
+            <div class="officer-card">
+                <div>
+                    <div class="officer-role">👤 مسؤول السلامة المسلِّم (Outgoing Officer):</div>
+                    <div class="officer-name">${outgoing}</div>
+                </div>
+                <div style="font-size: 18px;">📤</div>
+            </div>
+            <div class="officer-card incoming-card">
+                <div>
+                    <div class="officer-role">👥 مسؤول السلامة المستلِم (Incoming Officer):</div>
+                    <div class="officer-name">${incoming}</div>
+                </div>
+                <div style="font-size: 18px;">📥</div>
+            </div>
+        </div>
+
+        <!-- إحصائيات ومؤشرات الأداء للوردية -->
+        <div class="kpi-section-title">
+            <span>📊 ملخص مؤشرات ونشاط وردية السلامة الميدانية:</span>
+        </div>
+        <div class="kpi-grid">
+            <div class="kpi-box total">
+                <div class="kpi-num">${escapeHtml(kpis.total || '0')}</div>
+                <div class="kpi-text">إجمالي الملاحظات المرصودة</div>
+            </div>
+            <div class="kpi-box high">
+                <div class="kpi-num">${escapeHtml(kpis.high || '0')}</div>
+                <div class="kpi-text">أخطار حرجة / عالية ⚠️</div>
+            </div>
+            <div class="kpi-box closed">
+                <div class="kpi-num">${escapeHtml(kpis.closed || '0')}</div>
+                <div class="kpi-text">ملاحظات تم إغلاقها ✅</div>
+            </div>
+            <div class="kpi-box ptw">
+                <div class="kpi-num">${escapeHtml(kpis.ptw || '0')}</div>
+                <div class="kpi-text">تصاريح عمل نشطة (PTW) 📜</div>
+            </div>
+        </div>
+
+        <!-- نشاط توعية بداية الوردية TBT إن وجد -->
+        ${tbtHtml}
+
+        <!-- التوجيهات وبنود المتابعة للوردية القادمة -->
+        <div class="instructions-container">
+            <div class="instructions-header">
+                <span>📝 توجيهات وبنود المتابعة والمهام الميدانية للوردية القادمة:</span>
+            </div>
+            <div class="instructions-body">${escapeHtml(instructionsText)}</div>
+        </div>
+
+        <!-- اعتماد وإقرار التسليم والتسلم الرسمي -->
+        <div class="signatures-grid">
+            <div class="sig-card">
+                <div class="sig-card-title">إقرار مسؤول السلامة المسلِّم</div>
+                <div class="sig-card-name">${outgoing}</div>
+                <div class="sig-line-area">التوقيع والتاريخ</div>
+            </div>
+            <div class="sig-card">
+                <div class="sig-card-title">إقرار مسؤول السلامة المستلِم</div>
+                <div class="sig-card-name">${incoming}</div>
+                <div class="sig-line-area">التوقيع والتاريخ</div>
+            </div>
+            <div class="sig-card">
+                <div class="sig-card-title">اعتماد الإدارة العامة للسلامة</div>
+                <div class="sig-card-name">إدارة السلامة والصحة المهنية</div>
+                <div class="sig-line-area">الختم والاعتماد الرقمي</div>
+            </div>
+        </div>
+
+        <!-- شريط ضبط وتوثيق الوثيقة المعتمدة (ISO Document Control) -->
+        <div class="iso-footer-strip">
+            <span>كود الوثيقة: <strong>DOC-HSE-SHO-01</strong></span>
+            <span>رقم الإصدار: <strong>Rev. 02</strong></span>
+            <span>مرجعية التوثيق: <strong>ISO 45001:2018 (Clause 8.1 & 7.4)</strong></span>
+            <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+        </div>
+
+        <!-- الفوتر الموحد لمنظومة السلامة -->
+        <footer class="portal-unified-footer">
+            <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+            <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الداخلية</div>
+        </footer>
+    </div>
+
+    ${autoPrint ? `<script>window.onload = function() { setTimeout(function() { window.print(); }, 350); };<\/script>` : ''}
+</body>
+</html>`;
+        }
+
         function viewFullHistoryReport(id) {
             let history = [];
             try {
@@ -748,46 +1420,10 @@
             const item = history.find(h => h.id === id);
             if (!item) return;
 
-            const previewText = item.fullSummaryText || item.instructions || '';
             const win = window.open('', '_blank');
             if (!win) return;
 
-            win.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="utf-8">
-                    <title>أرشيف محضر تسليم الوردية — ${escapeHtml(item.date)}</title>
-                    <style>
-                        body { font-family: system-ui, -apple-system, sans-serif; padding: 30px; direction: rtl; color: #0f172a; line-height: 1.6; }
-                        .report-header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 20px; }
-                        .report-header h2 { margin: 0 0 6px 0; font-size: 1.4rem; color: #1e3a8a; }
-                        .report-header p { margin: 0; font-size: 0.9rem; color: #64748b; }
-                        .content-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 18px; white-space: pre-wrap; font-size: 0.95rem; margin-bottom: 30px; }
-                        .sig-grid { display: flex; justify-content: space-between; margin-top: 40px; padding: 0 40px; }
-                        .sig-box { text-align: center; font-size: 0.9rem; font-weight: bold; }
-                        .sig-line { width: 180px; border-bottom: 1.5px dashed #475569; margin-top: 50px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-header">
-                        <h2>شركة الإسكندرية للصناعات الغذائية (ICAPP)</h2>
-                        <p>الإدارة العامة للسلامة والصحة المهنية والبيئة • أرشيف تسليم واستلام الوردية</p>
-                    </div>
-                    <div class="content-box">${escapeHtml(previewText)}</div>
-                    <div class="sig-grid">
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المسلِّم: ${escapeHtml(item.outgoing)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المستلِم: ${escapeHtml(item.incoming)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                    </div>
-                </body>
-                </html>
-            `);
+            win.document.write(buildOfficialHandoverDocumentHtml(item, { autoPrint: false, isArchive: true }));
             win.document.close();
         }
 
@@ -799,48 +1435,10 @@
             const item = history.find(h => h.id === id);
             if (!item) return;
 
-            const text = item.fullSummaryText || item.instructions || '';
             const win = window.open('', '_blank');
             if (!win) return;
 
-            win.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="utf-8">
-                    <title>طباعة محضر تسليم واستلام الوردية</title>
-                    <style>
-                        body { font-family: system-ui, -apple-system, sans-serif; padding: 30px; direction: rtl; color: #0f172a; line-height: 1.6; }
-                        .report-header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 20px; }
-                        .report-header h2 { margin: 0 0 6px 0; font-size: 1.4rem; color: #1e3a8a; }
-                        .report-header p { margin: 0; font-size: 0.9rem; color: #64748b; }
-                        .content-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; white-space: pre-wrap; font-size: 0.95rem; margin-bottom: 30px; }
-                        .sig-grid { display: flex; justify-content: space-between; margin-top: 40px; padding: 0 40px; }
-                        .sig-box { text-align: center; font-size: 0.9rem; font-weight: bold; }
-                        .sig-line { width: 180px; border-bottom: 1.5px dashed #475569; margin-top: 50px; }
-                        @media print { body { padding: 0; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-header">
-                        <h2>شركة الإسكندرية للصناعات الغذائية (ICAPP)</h2>
-                        <p>الإدارة العامة للسلامة والصحة المهنية والبيئة • محضر تسليم واستلام الوردية</p>
-                    </div>
-                    <div class="content-box">${escapeHtml(text)}</div>
-                    <div class="sig-grid">
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المسلِّم: ${escapeHtml(item.outgoing)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المستلِم: ${escapeHtml(item.incoming)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                    </div>
-                    <script>window.onload = () => { window.print(); };<\/script>
-                </body>
-                </html>
-            `);
+            win.document.write(buildOfficialHandoverDocumentHtml(item, { autoPrint: true, isArchive: true }));
             win.document.close();
         }
 
@@ -977,6 +1575,8 @@
 
             const text = 
 `📋 *محضر تسليم واستلام وردية السلامة — ICAPP HSE*
+🏢 *الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)*
+الإدارة العامة للسلامة والصحة المهنية وحماية البيئة
 ────────────────────────
 📅 *التاريخ:* ${date}
 ⏰ *الوردية:* ${shift}
@@ -993,7 +1593,7 @@
 📝 *توجيهات وبنود المتابعة للوردية القادمة:*
 ${instructions}
 ────────────────────────
-✅ *معتمد طبقاً لمعايير إدارة السلامة والصحة المهنية ISO 45001*`;
+✅ *معتمد طبقاً لمعايير إدارة السلامة والصحة المهنية ISO 45001:2018 & OSHA 1910*`;
 
             return text;
         }
@@ -1006,52 +1606,36 @@ ${instructions}
         }
 
         function printHandoverReport() {
-            saveHandoverToHistory(false);
-            const text = generateHandoverText();
+            const savedRecord = saveHandoverToHistory(false);
+            const date = document.getElementById('hoDate')?.value || new Date().toISOString().slice(0, 10);
+            const shift = document.getElementById('hoShift')?.value || 'الوردية الصباحية';
+            const site = document.getElementById('hoSite')?.value || 'مصانع ICAPP';
             const outgoing = document.getElementById('hoOutgoingOfficer')?.value.trim() || 'مسؤول السلامة';
             const incoming = document.getElementById('hoIncomingOfficer')?.value.trim() || 'مشرف الاستلام';
+            const instructions = document.getElementById('hoInstructions')?.value.trim() || 'لا توجد توجيهات خاصة مسجلة.';
+
+            const total = document.getElementById('hoKpiObsTotal')?.textContent || '0';
+            const high = document.getElementById('hoKpiObsHigh')?.textContent || '0';
+            const closed = document.getElementById('hoKpiObsClosed')?.textContent || '0';
+            const ptw = document.getElementById('hoKpiPtwCount')?.textContent || '0';
+
+            const currentData = {
+                id: savedRecord?.id || ('HO_' + Date.now()),
+                createdAt: savedRecord?.createdAt || new Date().toISOString(),
+                date,
+                shift,
+                site,
+                outgoing,
+                incoming,
+                instructions,
+                kpis: { total, high, closed, ptw },
+                tbtInfo: currentShiftTbtData || null
+            };
 
             const win = window.open('', '_blank');
             if (!win) return;
 
-            win.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="utf-8">
-                    <title>محضر تسليم واستلام وردية السلامة</title>
-                    <style>
-                        body { font-family: system-ui, -apple-system, sans-serif; padding: 30px; direction: rtl; color: #0f172a; line-height: 1.6; }
-                        .report-header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 16px; margin-bottom: 20px; }
-                        .report-header h2 { margin: 0 0 6px 0; font-size: 1.4rem; color: #1e3a8a; }
-                        .report-header p { margin: 0; font-size: 0.9rem; color: #64748b; }
-                        .content-box { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; white-space: pre-wrap; font-size: 0.95rem; margin-bottom: 30px; }
-                        .sig-grid { display: flex; justify-content: space-between; margin-top: 40px; padding: 0 40px; }
-                        .sig-box { text-align: center; font-size: 0.9rem; font-weight: bold; }
-                        .sig-line { width: 180px; border-bottom: 1.5px dashed #475569; margin-top: 50px; }
-                        @media print { body { padding: 0; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-header">
-                        <h2>شركة الإسكندرية للصناعات الغذائية (ICAPP)</h2>
-                        <p>الإدارة العامة للسلامة والصحة المهنية والبيئة • محضر تسليم واستلام الوردية</p>
-                    </div>
-                    <div class="content-box">${escapeHtml(text)}</div>
-                    <div class="sig-grid">
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المسلِّم: ${escapeHtml(outgoing)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                        <div class="sig-box">
-                            <div>توقيع مسؤول السلامة المستلِم: ${escapeHtml(incoming)}</div>
-                            <div class="sig-line"></div>
-                        </div>
-                    </div>
-                    <script>window.onload = () => { window.print(); };<\/script>
-                </body>
-                </html>
-            `);
+            win.document.write(buildOfficialHandoverDocumentHtml(currentData, { autoPrint: true, isArchive: false }));
             win.document.close();
         }
 
@@ -1082,7 +1666,8 @@ ${instructions}
             viewFullHistoryReport,
             printHistoryReport,
             shareHistoryWhatsApp,
-            deleteHistoryItem
+            deleteHistoryItem,
+            buildOfficialHandoverDocumentHtml
         };
 
         window.HseShiftHandover = api;
