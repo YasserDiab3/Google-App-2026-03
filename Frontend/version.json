@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1764",
+  "version": "1.0.1765",
   "highlights": {
     "ar": [
-      "قوائم اختيار منسدلة لمسؤولي السلامة (المسلِّم والمستلِم) في تقرير تسليم الوردية الرقمي لضمان سرعة ودقة التسجيل.",
-      "التحديد التلقائي لمسؤول السلامة المسلِّم وفقاً لبيانات الدخول النشطة للمستخدم مع وسم توضيحي.",
-      "إتاحة اختيار المشرف المستلِم بضغطة واحدة من قائمة أعضاء فريق السلامة المعتمدين."
+      "فحص ومزامنة البيانات العالقة أوفلاين قبل تسليم الوردية (Pre-Handover Offline Sync Check) لضمان سلامة كافة السجلات.",
+      "الربط التلقائي بموضوع جلسة التوعية اليومية (TBT Linkage) مع إمكانية إدراج ملخص التوعية في توجيهات الوردية.",
+      "أرشيف وسجل استعراض الورديات السابقة (Shift Handover History) مع إمكانية استيراد التوجيهات وإعادة الطباعة والمشاركة."
     ],
     "en": [
-      "Safety team dropdown selectors for Outgoing and Incoming Officers in Digital Shift Handover.",
-      "Automatic pre-selection of Outgoing Safety Officer based on active login session.",
-      "Streamlined incoming officer assignment directly from verified safety personnel list."
+      "Pre-Handover Offline Sync Check alerts field officers of unsynced records before closing their shift.",
+      "Automated TBT Linkage detects the shift's safety briefing topic with 1-click insertion into instructions.",
+      "Digital Shift Handover History & Archive with fast instructions reuse, reprint, and WhatsApp sharing."
     ]
   }
 }
