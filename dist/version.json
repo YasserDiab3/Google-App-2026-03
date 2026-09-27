@@ -1,15 +1,15 @@
 {
-  "version": "1.0.1763",
+  "version": "1.0.1764",
   "highlights": {
     "ar": [
-      "تحسين وتوحيد تصميم زر الإغلاق (X) في كافة نوافذ وموديولات السلامة بتصميم عصري وأيقونة واضحة.",
-      "إزالة بطاقة تسليم الوردية المكررة في شبكة الأدوات وتوحيدها في بطاقة رسمية واحدة متكاملة للطباعة والواتساب.",
-      "لوحة «مهامي وملاحظاتي المفتوحة اليوم» لتمكين فنيي السلامة من تتبع وإغلاق ملاحظاتهم الميدانية بصور الإثبات."
+      "قوائم اختيار منسدلة لمسؤولي السلامة (المسلِّم والمستلِم) في تقرير تسليم الوردية الرقمي لضمان سرعة ودقة التسجيل.",
+      "التحديد التلقائي لمسؤول السلامة المسلِّم وفقاً لبيانات الدخول النشطة للمستخدم مع وسم توضيحي.",
+      "إتاحة اختيار المشرف المستلِم بضغطة واحدة من قائمة أعضاء فريق السلامة المعتمدين."
     ],
     "en": [
-      "Polished and unified modal close (X) button design with sharp icons across all modals and modules.",
-      "Eliminated duplicate shift handover tool cards into a single unified ISO 45001 digital handover tool.",
-      "Interactive 'My Active Tasks' dashboard for fast field observation tracking and photographic closure."
+      "Safety team dropdown selectors for Outgoing and Incoming Officers in Digital Shift Handover.",
+      "Automatic pre-selection of Outgoing Safety Officer based on active login session.",
+      "Streamlined incoming officer assignment directly from verified safety personnel list."
     ]
   }
 }

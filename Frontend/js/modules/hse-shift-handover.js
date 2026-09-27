@@ -87,12 +87,19 @@
                             <!-- Officers Info -->
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; background: #f8fafc; padding: 12px; border-radius: 10px; border: 1px solid #e2e8f0;">
                                 <div>
-                                    <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #1e293b; margin-bottom: 4px;">مسؤول السلامة المسلِّم:</label>
-                                    <input type="text" id="hoOutgoingOfficer" placeholder="اسمك / رقمك الوظيفي..." style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;" />
+                                    <label style="display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; font-weight: 800; color: #1e293b; margin-bottom: 4px;">
+                                        <span>مسؤول السلامة المسلِّم:</span>
+                                        <span id="hoOutgoingBadge" style="font-size: 0.68rem; color: #0284c7; background: #e0f2fe; padding: 1px 6px; border-radius: 4px; display: none;">محدد تلقائياً</span>
+                                    </label>
+                                    <select id="hoOutgoingOfficer" style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box; background: #ffffff; font-weight: 700; color: #1e293b;">
+                                        <option value="">— اختر المشرف المسلِّم —</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #1e293b; margin-bottom: 4px;">مسؤول السلامة المستلِم:</label>
-                                    <input type="text" id="hoIncomingOfficer" placeholder="اسم المشرف المستلِم..." style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box;" />
+                                    <label style="display: block; font-size: 0.8rem; font-weight: 800; color: #1e293b; margin-bottom: 4px;">مسؤول السلامة المستلِم: <span style="color:#ef4444;">*</span></label>
+                                    <select id="hoIncomingOfficer" style="width: 100%; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 0.85rem; box-sizing: border-box; background: #ffffff; font-weight: 700; color: #1e293b;">
+                                        <option value="">— اختر المشرف المستلِم —</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -170,20 +177,135 @@
             return modal;
         }
 
-        function openHandoverModal() {
-            const modal = createModalDom();
+        function getSafetyTeamList() {
+            const names = new Set();
 
-            // Autofill outgoing officer
+            if (typeof window.getSystemSafetyTeamMembers === 'function') {
+                try {
+                    const list = window.getSystemSafetyTeamMembers();
+                    if (Array.isArray(list)) list.forEach(n => n && names.add(n.trim()));
+                } catch (_) {}
+            }
+
+            try {
+                const obsCfg = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_CONFIG') || '{}');
+                if (Array.isArray(obsCfg.safetyMembers)) {
+                    obsCfg.safetyMembers.forEach(m => {
+                        const n = typeof m === 'string' ? m.trim() : (m && m.name ? m.name.trim() : '');
+                        if (n) names.add(n);
+                    });
+                }
+            } catch (_) {}
+
+            try {
+                const dMembers = JSON.parse(localStorage.getItem('HSE_DAILY_SAFETY_MEMBERS') || '[]');
+                if (Array.isArray(dMembers)) {
+                    dMembers.forEach(m => {
+                        const n = typeof m === 'string' ? m.trim() : (m && m.name ? m.name.trim() : '');
+                        if (n) names.add(n);
+                    });
+                }
+            } catch (_) {}
+
+            if (names.size === 0) {
+                ['م/ محمد سعيد', 'م/ حسام السيد', 'أ/ أحمد فؤاد', 'م/ عماد طارق', 'م/ محمود علي', 'أ/ طارق مصطفى'].forEach(n => names.add(n));
+            }
+
+            return Array.from(names).sort((a, b) => a.localeCompare(b, 'ar'));
+        }
+
+        function populateOfficersDropdowns() {
+            const outSel = document.getElementById('hoOutgoingOfficer');
+            const inSel = document.getElementById('hoIncomingOfficer');
+            if (!outSel || !inSel) return;
+
+            const team = getSafetyTeamList();
+
+            // Detect current logged-in user
+            let currentUser = '';
             try {
                 const sessionStr = sessionStorage.getItem('HSE_FIELD_SESSION') || localStorage.getItem('HSE_LAST_USER_NAME');
                 if (sessionStr) {
                     let parsed = null;
                     try { parsed = JSON.parse(sessionStr); } catch (_) {}
-                    const name = (parsed && (parsed.userName || parsed.name)) || (typeof sessionStr === 'string' && !sessionStr.startsWith('{') ? sessionStr : '');
-                    const nameInput = modal.querySelector('#hoOutgoingOfficer');
-                    if (nameInput && name && !nameInput.value) nameInput.value = name;
+                    currentUser = (parsed && (parsed.userName || parsed.name || parsed.inspector)) || 
+                                  (typeof sessionStr === 'string' && !sessionStr.startsWith('{') ? sessionStr : '');
+                    if (currentUser) currentUser = currentUser.trim();
                 }
             } catch (_) {}
+
+            // Populate Outgoing Officer
+            const prevOut = outSel.value;
+            outSel.innerHTML = '<option value="">— اختر المشرف المسلِّم —</option>';
+            
+            let foundCurrentUserInList = false;
+            team.forEach(name => {
+                if (currentUser && (name.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(name.toLowerCase()))) {
+                    foundCurrentUserInList = true;
+                }
+            });
+
+            if (currentUser && !foundCurrentUserInList) {
+                const curOpt = document.createElement('option');
+                curOpt.value = currentUser;
+                curOpt.textContent = `👤 ${currentUser} (المستخدم الحالي)`;
+                outSel.appendChild(curOpt);
+            }
+
+            team.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = `👤 ${name}`;
+                outSel.appendChild(opt);
+            });
+
+            // Set Outgoing value to current user by default
+            if (prevOut) {
+                outSel.value = prevOut;
+            } else if (currentUser) {
+                for (let i = 0; i < outSel.options.length; i++) {
+                    const optVal = outSel.options[i].value;
+                    if (optVal && (optVal.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(optVal.toLowerCase()))) {
+                        outSel.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            outSel.onchange = () => {
+                const badge = document.getElementById('hoOutgoingBadge');
+                if (!badge) return;
+                if (currentUser && outSel.value && (outSel.value.toLowerCase().includes(currentUser.toLowerCase()) || currentUser.toLowerCase().includes(outSel.value.toLowerCase()))) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = 'محدد تلقائياً';
+                    badge.style.background = '#e0f2fe';
+                    badge.style.color = '#0284c7';
+                } else if (outSel.value) {
+                    badge.style.display = 'inline-block';
+                    badge.textContent = 'اختيار يدوي';
+                    badge.style.background = '#f1f5f9';
+                    badge.style.color = '#475569';
+                } else {
+                    badge.style.display = 'none';
+                }
+            };
+            outSel.onchange();
+
+            // Populate Incoming Officer
+            const prevIn = inSel.value;
+            inSel.innerHTML = '<option value="">— اختر المشرف المستلِم —</option>';
+            team.forEach(name => {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = `👥 ${name}`;
+                inSel.appendChild(opt);
+            });
+            if (prevIn) inSel.value = prevIn;
+        }
+
+        function openHandoverModal() {
+            const modal = createModalDom();
+            populateOfficersDropdowns();
 
             refreshKpis();
             modal.style.display = 'flex';
