@@ -8946,6 +8946,13 @@ ${inner}
 </body>
 </html>`;
 
+            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                await Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'قائمة الممنوعين من الدخول' });
+                Loading.hide();
+                Notification.success('تم تصدير البيانات إلى PDF بنجاح');
+                return;
+            }
+
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const printWindow = window.open(url, '_blank');

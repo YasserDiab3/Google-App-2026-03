@@ -1441,6 +1441,13 @@
             const item = history.find(h => h.id === id);
             if (!item) return;
 
+            const html = buildOfficialHandoverDocumentHtml(item, { autoPrint: false, isArchive: true });
+            const fileName = `محضر_تسليم_وردية_${(item.date || 'سجل').replace(/[/\\:]/g, '-')}.pdf`;
+            if (window.Utils && typeof window.Utils.downloadHtmlAsPdf === 'function') {
+                window.Utils.downloadHtmlAsPdf(html, fileName, { title: 'محضر تسليم واستلام وردية السلامة' });
+                return;
+            }
+
             const win = window.open('', '_blank');
             if (!win) return;
 
@@ -1637,6 +1644,13 @@ ${instructions}
                 kpis: { total, high, closed, ptw },
                 tbtInfo: currentShiftTbtData || null
             };
+
+            const html = buildOfficialHandoverDocumentHtml(currentData, { autoPrint: false, isArchive: false });
+            const fileName = `محضر_تسليم_وردية_${(date || 'تقرير').replace(/[/\\:]/g, '-')}.pdf`;
+            if (window.Utils && typeof window.Utils.downloadHtmlAsPdf === 'function') {
+                window.Utils.downloadHtmlAsPdf(html, fileName, { title: 'محضر تسليم واستلام وردية السلامة' });
+                return;
+            }
 
             const win = window.open('', '_blank');
             if (!win) return;

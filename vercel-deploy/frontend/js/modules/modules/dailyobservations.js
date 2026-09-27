@@ -12032,12 +12032,6 @@ const DailyObservations = {
         const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
         const publicObsUrl = `${origin}${basePath}public-observation.html`;
 
-        const printWin = window.open('', '_blank');
-        if (!printWin) {
-            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
-            return;
-        }
-
         const cardsHtml = itemsToPrint.map((item, idx) => {
             const site = item.site;
             const place = item.place === 'الموقع العام' ? '' : item.place;
@@ -12088,7 +12082,7 @@ const DailyObservations = {
             `;
         }).join('');
 
-        printWin.document.write(`
+        const fullHtml = `
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -12205,7 +12199,20 @@ const DailyObservations = {
                 </div>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `كروت_QR_مواقع_الملاحظات_${itemsToPrint.length}.pdf`;
+            Utils.downloadHtmlAsPdf(fullHtml, fileName, { title: 'كروت QR للمواقع والمصانع الميدانية' });
+            return;
+        }
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
+            return;
+        }
+        printWin.document.write(fullHtml);
         printWin.document.close();
     },
 
@@ -16597,13 +16604,7 @@ const DailyObservations = {
                 printQrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(rawUrl)}`;
             }
 
-            const printWin = window.open('', '_blank');
-            if (!printWin) {
-                if (typeof Notification !== 'undefined') Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
-                return;
-            }
-
-            printWin.document.write(`
+            const posterHtml = `
                 <!DOCTYPE html>
                 <html lang="ar" dir="rtl">
                 <head>
@@ -16715,7 +16716,20 @@ const DailyObservations = {
                     <\/script>
                 </body>
                 </html>
-            `);
+            `;
+
+            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                const fileName = `بوستر_الإبلاغ_عن_الملاحظات_${facName.replace(/[/\\:]/g, '_')}.pdf`;
+                Utils.downloadHtmlAsPdf(posterHtml, fileName, { title: `بوستر الإبلاغ عن الملاحظات - ${facName}` });
+                return;
+            }
+
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                if (typeof Notification !== 'undefined') Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
+            }
+            printWin.document.write(posterHtml);
             printWin.document.close();
         });
     }

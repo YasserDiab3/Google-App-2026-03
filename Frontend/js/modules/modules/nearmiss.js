@@ -570,7 +570,7 @@ const NearMiss = {
                             <p style="margin:2px 0 0 0; font-size:0.75rem; color:#64748b;">تحليل توزيع المخاطر المحتملة ومعدلات التكرار بالمصانع والأقسام</p>
                         </div>
                     </div>
-                    <button onclick="window.print()" class="btn-secondary flex items-center gap-2" style="font-size:0.8rem; font-weight:700; padding:7px 14px; border-radius:8px;">
+                    <button onclick="NearMiss.exportAnalyticsPDF()" class="btn-secondary flex items-center gap-2" style="font-size:0.8rem; font-weight:700; padding:7px 14px; border-radius:8px;">
                         <i class="fas fa-file-pdf text-red-500"></i>
                         <span>تصدير تقرير PDF</span>
                     </button>
@@ -2074,12 +2074,6 @@ const NearMiss = {
         if (!basePath.endsWith('/')) basePath += '/';
         const logoUrl = `${origin}${basePath}icons/icapp-logo.png`;
 
-        const printWin = window.open('', '_blank');
-        if (!printWin) {
-            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت وبوسترات QR');
-            return;
-        }
-
         const cleanPlaceName = (rawPlace, siteName) => {
             if (!rawPlace) return 'الموقع العام';
             let p = String(rawPlace).trim();
@@ -2199,7 +2193,7 @@ const NearMiss = {
                 `;
             }).join('');
 
-            printWin.document.write(`
+            const fullPosterHtml = `
                 <!DOCTYPE html>
                 <html lang="ar" dir="rtl">
                 <head>
@@ -2472,7 +2466,20 @@ const NearMiss = {
                     </script>
                 </body>
                 </html>
-            `);
+            `;
+
+            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                const fileName = `بوسترات_الحوادث_الوشيكة_${itemsToPrint.length}.pdf`;
+                Utils.downloadHtmlAsPdf(fullPosterHtml, fileName, { title: 'بوسترات QR للحوادث الوشيكة' });
+                return;
+            }
+
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت وبوسترات QR');
+                return;
+            }
+            printWin.document.write(fullPosterHtml);
             printWin.document.close();
             return;
         }
@@ -2541,7 +2548,7 @@ const NearMiss = {
             `;
         }).join('');
 
-        printWin.document.write(`
+        const fullCardsHtml = `
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -2622,8 +2629,43 @@ const NearMiss = {
                 </script>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `ملصقات_QR_الحوادث_الوشيكة_${itemsToPrint.length}.pdf`;
+            Utils.downloadHtmlAsPdf(fullCardsHtml, fileName, { title: 'ملصقات QR للحوادث الوشيكة' });
+            return;
+        }
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة كروت وبوسترات QR');
+            return;
+        }
+        printWin.document.write(fullCardsHtml);
         printWin.document.close();
+    },
+
+    exportAnalyticsPDF() {
+        const container = document.getElementById('nearmiss-analytics-container') || document.querySelector('#tab-analytics') || document.querySelector('.tab-content.active');
+        const content = container ? container.innerHTML : '';
+        const html = `
+            <div style="direction: rtl; font-family: Cairo, Tahoma, sans-serif; padding: 20px;">
+                <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #4f46e5; padding-bottom: 12px;">
+                    <h2 style="color: #1e1b4b; margin: 0 0 6px 0;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</h2>
+                    <h3 style="color: #4338ca; margin: 0 0 6px 0;">إدارة السلامة والصحة المهنية والبيئة</h3>
+                    <h4 style="color: #334155; margin: 0;">لوحة التحليل البياني للحوادث الوشيكة</h4>
+                    <p style="color: #64748b; font-size: 12px; margin: 6px 0 0 0;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                </div>
+                ${content}
+            </div>
+        `;
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `تقرير_تحليل_الحوادث_الوشيكة_${new Date().toISOString().slice(0, 10)}.pdf`;
+            Utils.downloadHtmlAsPdf(html, fileName, { title: 'لوحة التحليل البياني للحوادث الوشيكة' });
+            return;
+        }
+        window.print();
     }
 };
 

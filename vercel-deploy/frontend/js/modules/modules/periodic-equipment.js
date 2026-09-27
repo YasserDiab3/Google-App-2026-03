@@ -721,14 +721,21 @@ const PeriodicEquipment = {
 
     printQr(asset) {
         const qrImage = typeof QRCode !== 'undefined' ? QRCode.generate(asset.qrCodeData || asset.id, 240) : '';
-        const w = window.open('', '_blank');
-        if (!w) { Notification.warning('اسمح بالنوافذ المنبثقة للطباعة'); return; }
-        w.document.write(`<html dir="rtl"><head><title>QR ${asset.id}</title></head><body style="text-align:center;font-family:sans-serif;padding:24px">
+        const html = `<html dir="rtl"><head><title>QR ${asset.id}</title></head><body style="text-align:center;font-family:sans-serif;padding:24px">
             <h2>${Utils.escapeHTML(asset.typeName || '')}</h2>
             <p>${Utils.escapeHTML(asset.assetNumber || asset.id)} — ${Utils.escapeHTML(this.getAssetSiteLabel(asset))}</p>
             ${qrImage ? `<img src="${qrImage}" style="width:240px;height:240px">` : ''}
             <p style="font-size:12px;margin-top:12px">${Utils.escapeHTML(asset.qrCodeData || asset.id)}</p>
-            <script>window.onload=function(){window.print();}</script></body></html>`);
+        </body></html>`;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            Utils.downloadHtmlAsPdf(html, `QR_${(asset.assetNumber || asset.id || 'equipment').replace(/[/\\:]/g, '_')}.pdf`, { title: `QR ${asset.id}` });
+            return;
+        }
+
+        const w = window.open('', '_blank');
+        if (!w) { Notification.warning('اسمح بالنوافذ المنبثقة للطباعة'); return; }
+        w.document.write(`${html}<script>window.onload=function(){window.print();}<\/script>`);
         w.document.close();
     },
 

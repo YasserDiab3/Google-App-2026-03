@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1771",
+  "version": "1.0.1772",
   "highlights": {
     "ar": [
       "توحيد نظام التصدير والتحميل المباشر لجميع ملفات PDF في كامل النظام دون فتح شاشة الطباعة (window.print) أو النوافذ المنبثقة.",
@@ -13,5 +13,7 @@
       "Direct PDF download implemented for Work Permits (PTW), PTW registry logs, and permit issuance forms.",
       "Centralized Utils.downloadHtmlAsPdf engine powering instant downloads for Incidents, Action Tracking, Chemical Safety SDS, and Contractor evaluations."
     ]
-  }
+  },
+  "releaseName": "v1.0.1772 - Direct PDF Download and Unified Export Across All Modules",
+  "lastUpdate": "2026-09-27T20:20:59.872Z"
 }

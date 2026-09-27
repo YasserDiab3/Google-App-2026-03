@@ -614,10 +614,9 @@ class GateSecurityModule {
 
     printEmergencyMusterList() {
         const active = this.visitors.filter(v => !v.exitTime);
-        const win = window.open('', '_blank');
         const now = new Date();
 
-        win.document.write(`
+        const htmlContent = `
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -864,20 +863,28 @@ class GateSecurityModule {
                 </div>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `كشف_حصر_الزائرين_للطوارئ_${now.toISOString().slice(0, 10)}.pdf`;
+            Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'كشف اسماء الزائرين والمقاولين' });
+            return;
+        }
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة الكشف');
+            return;
+        }
+        win.document.write(htmlContent);
         win.document.close();
     }
 
     printGateQrPoster() {
         const portalUrl = this.getGatePortalUrl();
         const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=480x480&format=png&margin=0&data=${encodeURIComponent(portalUrl)}`;
-        const win = window.open('', '_blank');
-        if (!win) {
-            alert('يرجى السماح بالنوافذ المنبثقة لطباعة البوستر (Pop-ups)');
-            return;
-        }
 
-        win.document.write(`
+        const htmlContent = `
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -1239,7 +1246,20 @@ class GateSecurityModule {
                 </div>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `لوحة_رمز_الاستجابة_السريع_QR_البوابات.pdf`;
+            Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'لوحة رمز الاستجابة السريع QR - أمن البوابات' });
+            return;
+        }
+
+        const win = window.open('', '_blank');
+        if (!win) {
+            alert('يرجى السماح بالنوافذ المنبثقة لطباعة البوستر (Pop-ups)');
+            return;
+        }
+        win.document.write(htmlContent);
         win.document.close();
     }
 

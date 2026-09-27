@@ -3880,7 +3880,8 @@ const SafetyHealthManagement = {
                     </div>
                 `;
 
-                // Use PDFTemplates if available, otherwise fallback to window.print
+                // Use Utils.downloadHtmlAsPdf for direct PDF download
+                const fileName = `تقرير_أداء_${(member.name || 'موظف').replace(/[/\\:]/g, '_')}.pdf`;
                 if (typeof PDFTemplates !== 'undefined' && PDFTemplates.buildDocument) {
                     const formCode = `SAFETY-TEAM-PERFORMANCE-${member.id?.substring(0, 8) || 'UNKNOWN'}`;
                     const html = PDFTemplates.buildDocument({
@@ -3894,6 +3895,11 @@ const SafetyHealthManagement = {
                             'القسم': Utils.escapeHTML(member.department || '')
                         }
                     });
+
+                    if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                        Utils.downloadHtmlAsPdf(html, fileName, { title: `تقرير أداء - ${member.name || ''}` });
+                        return;
+                    }
                     
                     const printWindow = window.open('', '_blank');
                     if (printWindow) {
@@ -3902,9 +3908,7 @@ const SafetyHealthManagement = {
                         setTimeout(() => printWindow.print(), 500);
                     }
                 } else {
-                    // Fallback: open in new window for printing
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write(`
+                    const fallbackHtml = `
                         <!DOCTYPE html>
                         <html dir="rtl">
                         <head>
@@ -3919,7 +3923,16 @@ const SafetyHealthManagement = {
                         </head>
                         <body>${pdfContent}</body>
                         </html>
-                    `);
+                    `;
+
+                    if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                        Utils.downloadHtmlAsPdf(fallbackHtml, fileName, { title: `تقرير أداء - ${member.name || ''}` });
+                        return;
+                    }
+
+                    // Fallback: open in new window for printing
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(fallbackHtml);
                     printWindow.document.close();
                     setTimeout(() => printWindow.print(), 250);
                 }

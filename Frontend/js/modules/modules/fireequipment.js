@@ -5210,13 +5210,7 @@ FireEquipment = {
 
         printBtn?.addEventListener('click', () => {
             const rawUrl = linkInput.value;
-            const printWin = window.open('', '_blank');
-            if (!printWin) {
-                Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
-                return;
-            }
-
-            printWin.document.write(`
+            const posterHtml = `
                 <!DOCTYPE html>
                 <html lang="ar" dir="rtl">
                 <head>
@@ -5281,7 +5275,20 @@ FireEquipment = {
                     <\/script>
                 </body>
                 </html>
-            `);
+            `;
+
+            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                const fileName = `بوستر_فحص_معدات_الإطفاء.pdf`;
+                Utils.downloadHtmlAsPdf(posterHtml, fileName, { title: 'بوستر فحص معدات الإطفاء' });
+                return;
+            }
+
+            const printWin = window.open('', '_blank');
+            if (!printWin) {
+                Notification.warning('يرجى السماح بالنوافذ المنبثقة للطباعة');
+                return;
+            }
+            printWin.document.write(posterHtml);
             printWin.document.close();
         });
     },
@@ -5439,12 +5446,6 @@ FireEquipment = {
             fontSizeSub = '11.5px';
         }
 
-        const printWin = window.open('', '_blank');
-        if (!printWin) {
-            Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
-            return;
-        }
-
         // توليد HTML للكروت
         const cardsHtml = assetsToPrint.map(asset => {
             const cleanId = String(asset.id || '').trim();
@@ -5489,7 +5490,7 @@ FireEquipment = {
             `;
         }).join('');
 
-        printWin.document.write(`
+        const fullBatchCardsHtml = `
             <!DOCTYPE html>
             <html lang="ar" dir="rtl">
             <head>
@@ -5631,7 +5632,20 @@ FireEquipment = {
                 <\/script>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `ملصقات_QR_معدات_الإطفاء_${assetsToPrint.length}.pdf`;
+            Utils.downloadHtmlAsPdf(fullBatchCardsHtml, fileName, { title: 'ملصقات وكروت QR معدات الإطفاء' });
+            return;
+        }
+
+        const printWin = window.open('', '_blank');
+        if (!printWin) {
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة كروت QR');
+            return;
+        }
+        printWin.document.write(fullBatchCardsHtml);
         printWin.document.close();
     },
 
@@ -5659,13 +5673,7 @@ FireEquipment = {
             qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(directUrl)}`;
         }
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            Notification.error('يرجى السماح للنوافذ المنبثقة لطباعة QR Code');
-            return;
-        }
-
-        printWindow.document.write(`
+        const html = `
             <!DOCTYPE html>
             <html dir="rtl" lang="ar">
             <head>
@@ -5691,10 +5699,23 @@ FireEquipment = {
                     <img src="${qrImage}" alt="QR Code">
                     <div class="hint">امسح الرمز بكاميرا الهاتف للفحص الشهري المباشر</div>
                 </div>
-                <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
             </body>
             </html>
-        `);
+        `;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `QR_طفاية_${(asset.number || asset.id || 'equipment').replace(/[/\\:]/g, '_')}.pdf`;
+            Utils.downloadHtmlAsPdf(html, fileName, { title: `QR Code - ${asset.id}` });
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            Notification.error('يرجى السماح للنوافذ المنبثقة لطباعة QR Code');
+            return;
+        }
+
+        printWindow.document.write(`${html}<script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>`);
         printWindow.document.close();
     },
 
@@ -6186,16 +6207,8 @@ FireEquipment = {
             return;
         }
 
-        Loading.show('جاري إنشاء PDF...');
+        Loading.show('جاري إنشاء وتصدير PDF...');
         try {
-            // استخدام window.print() إذا لم تكن مكتبة jsPDF متوفرة
-            const printWindow = window.open('', '_blank');
-            if (!printWindow) {
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-                Loading.hide();
-                return;
-            }
-
             const rows = assets.map(asset => `
                 <tr>
                     <td>${Utils.escapeHTML(asset.factoryName || asset.factory || '-')}</td>
@@ -6284,6 +6297,20 @@ FireEquipment = {
                 </html>
             `;
 
+            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+                const fileName = `سجل_حصر_معدات_الإطفاء_${new Date().toISOString().slice(0, 10)}.pdf`;
+                await Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'سجل حصر معدات الإطفاء' });
+                Loading.hide();
+                Notification.success('تم تحميل ملف PDF بنجاح');
+                return;
+            }
+
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
+                Loading.hide();
+                return;
+            }
             printWindow.document.write(htmlContent);
             printWindow.document.close();
 
@@ -7387,7 +7414,25 @@ FireEquipment = {
     /**
      * تصدير تقرير التحليل إلى PDF
      */
-    exportFireAnalyticsPDF() {
+    async exportFireAnalyticsPDF() {
+        const root = document.getElementById('fire-analytics-root');
+        if (root && typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const fileName = `تقرير_تحليل_معدات_الإطفاء_${new Date().toISOString().slice(0, 10)}.pdf`;
+            const html = `
+                <div style="direction: rtl; font-family: Cairo, Tahoma, sans-serif; padding: 20px;">
+                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #dc2626; padding-bottom: 12px;">
+                        <h2 style="color: #991b1b; margin: 0 0 6px 0;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</h2>
+                        <h3 style="color: #1e3a8a; margin: 0 0 6px 0;">إدارة السلامة والصحة المهنية والبيئة</h3>
+                        <h4 style="color: #334155; margin: 0;">تقرير تحليل ومؤشرات أداء معدات الإطفاء</h4>
+                        <p style="color: #64748b; font-size: 12px; margin: 6px 0 0 0;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    </div>
+                    ${root.innerHTML}
+                </div>
+            `;
+            await Utils.downloadHtmlAsPdf(html, fileName, { title: 'تقرير تحليل معدات الإطفاء' });
+            return;
+        }
+
         if (typeof window.print === 'function') {
             window.print();
         } else {
