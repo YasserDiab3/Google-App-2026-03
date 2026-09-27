@@ -780,9 +780,15 @@
                 printTimeStr = date;
             }
 
-            const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
-            const logoSrc = `${origin}/icons/icapp-logo.png`;
-            const logoFallback = `${origin}/icons/icon-192x192.png`;
+            let logoSrc = '/icons/icapp-logo.png';
+            if (typeof window !== 'undefined' && window.location) {
+                if (window.location.protocol === 'file:') {
+                    logoSrc = 'icons/icapp-logo.png';
+                } else if (window.location.origin && window.location.origin !== 'null') {
+                    logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+                }
+            }
+            const logoFallback = 'icons/icon-192x192.png';
 
             const tbtHtml = (tbt && tbt.topic) ? `
                 <div class="tbt-banner">

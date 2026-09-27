@@ -13,6 +13,7 @@ const companySettingsHandlers = require('./handlers/company-settings-handlers');
 const ppeHandlers = require('./handlers/ppe-handlers');
 const formSettingsHandlers = require('./handlers/form-settings-handlers');
 const publicFormsHandlers = require('./handlers/public-forms-handlers');
+const portalAuthHandlers = require('./handlers/portal-auth-handlers');
 const {
     enforceRpcSecurity,
     checkSheetReadAccess,
@@ -27,6 +28,7 @@ const ActionRegistry = {
     ...genericSheetOps,
     ...authHandlers,
     ...mfaHandlers,
+    ...portalAuthHandlers,
     ...publicFormsHandlers,
     ...moduleHandlers,
     uploadFileToDrive: (p) => fileHandlers.uploadFileToDrive(p),

@@ -53,6 +53,7 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <!-- 🌐 HSE Smart Media & GPS Geofencing Suite -->
+    <script src="js/modules/hse-print-engine.js"></script>
     <script src="js/modules/hse-smart-media-geo.js"></script>
     <script src="js/modules/hse-dark-mode.js"></script>
     <script src="js/modules/hse-device-audit.js"></script>
@@ -3786,7 +3787,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1767</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1768</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -4165,7 +4166,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1767</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1768</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -6359,262 +6360,98 @@
 
         function printEmergencyVisitorsList() {
             const active = getActiveVisitorsList();
-            const win = window.open('', '_blank');
-            if (!win) {
-                alert('يرجى السماح بالنوافذ المنبثقة للطباعة (Pop-ups)');
-                return;
-            }
             const now = new Date();
+            const dateStr = now.toLocaleDateString('ar-EG');
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-            win.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>كشف اسماء الزائرين والمقاولين - ICAPP</title>
-                    <style>
-                        @page {
-                            size: A4 portrait;
-                            margin: 10mm 10mm 12mm 10mm;
-                        }
-                        * { box-sizing: border-box; }
-                        body {
-                            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-                            padding: 10px;
-                            direction: rtl;
-                            color: #0f172a;
-                            background: #ffffff;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                        /* ترويسة ISO ثلاثية الصناديق المعتمدة */
-                        .iso-print-header {
-                            display: grid;
-                            grid-template-columns: 160px 1fr 200px;
-                            border: 2px solid #0f172a;
-                            border-top: 5px solid #1e3a8a;
-                            border-radius: 8px;
-                            margin-bottom: 16px;
-                            overflow: hidden;
-                            background: #ffffff;
-                        }
-                        .iso-box-brand {
-                            padding: 8px 10px;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            border-left: 1.5px solid #0f172a;
-                            background: #f8fafc;
-                            gap: 4px;
-                        }
-                        .iso-print-logo {
-                            max-height: 44px;
-                            max-width: 100px;
-                            object-fit: contain;
-                        }
-                        .iso-dept-title {
-                            font-size: 11px;
-                            font-weight: 800;
-                            color: #1e3a8a;
-                            text-align: center;
-                            line-height: 1.2;
-                        }
-                        .iso-box-title {
-                            padding: 8px 12px;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            text-align: center;
-                        }
-                        .iso-main-title {
-                            margin: 0;
-                            font-size: 15px;
-                            font-weight: 900;
-                            color: #b91c1c;
-                            line-height: 1.25;
-                        }
-                        .iso-sub-title {
-                            font-size: 10px;
-                            font-weight: 700;
-                            color: #475569;
-                            margin-top: 3px;
-                        }
-                        .iso-box-meta {
-                            padding: 6px 10px;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            border-right: 1.5px solid #0f172a;
-                            background: #f8fafc;
-                            font-size: 10.5px;
-                            gap: 3px;
-                        }
-                        .meta-row {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-bottom: 1px dashed #cbd5e1;
-                            padding-bottom: 2px;
-                        }
-                        .meta-row:last-child { border-bottom: none; }
-                        .meta-row span { color: #64748b; font-size: 10px; font-weight: 700; }
-                        .meta-row strong { color: #0f172a; font-size: 10px; }
+            const rows = active.map((v, i) => `
+                <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 800;">${i + 1}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 900; color: #1e40af;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.badge || '-') : (v.badge || '-')}</td>
+                    <td style="padding: 7px 8px; font-weight: 800; color: #0f172a;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.name || '--') : (v.name || '--')}</td>
+                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.org || '--') : (v.org || '--')}</td>
+                    <td style="padding: 7px 8px;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.site || '') : (v.site || '')} - ${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.area || '') : (v.area || '')}</td>
+                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.host || '--') : (v.host || '--')}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 800; color: #047857;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.entryTime || '--') : (v.entryTime || '--')}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-size: 0.8rem; font-weight: 800;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp;&nbsp; [ &nbsp; ] مفقود</td>
+                </tr>
+            `).join('');
 
-                        table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
-                        th, td { border: 1.5px solid #334155; padding: 6px 8px; text-align: right; }
-                        th { background: #f1f5f9; font-weight: 800; color: #0f172a; font-size: 11px; }
-
-                        /* فوتر الاعتمادات والتوقيعات ثلاثي الصناديق */
-                        .iso-print-footer {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr 1fr;
-                            gap: 12px;
-                            margin-top: 28px;
-                            page-break-inside: avoid;
-                        }
-                        .footer-box {
-                            border: 1.5px solid #334155;
-                            border-radius: 6px;
-                            padding: 8px 10px;
-                            background: #f8fafc;
-                        }
-                        .footer-box-title {
-                            font-size: 11px;
-                            font-weight: 800;
-                            color: #1e3a8a;
-                            text-align: center;
-                            border-bottom: 1px solid #cbd5e1;
-                            padding-bottom: 5px;
-                            margin-bottom: 8px;
-                        }
-                        .footer-sig-line {
-                            font-size: 10.5px;
-                            color: #334155;
-                            margin-top: 6px;
-                            font-weight: 600;
-                        }
-                        .print-btn-wrap { text-align: center; margin-top: 25px; }
-                        @media print {
-                            .no-print-bar { display: none !important; }
-                            .print-btn-wrap { display: none !important; }
-                            body { padding: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <!-- شريط أدوات علوي للطباعة والإغلاق والعودة للنموذج -->
-                    <div class="no-print-bar" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #ffffff; padding: 12px 18px; margin: -10px -10px 18px -10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-bottom: 2px solid #3b82f6;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="background: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 11px;">ICAPP EMERGENCY</span>
-                            <span style="font-weight: 800; font-size: 13px;">🚨 كشف حصر وتتبع الزائرين والمقاولين داخل المصانع</span>
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <button onclick="window.print()" style="padding: 8px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
-                                🖨️ طباعة الكشف
-                            </button>
-                            <button onclick="window.close()" style="padding: 8px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220,38,38,0.4);">
-                                ❌ عودة / إغلاق النافذة
-                            </button>
-                        </div>
+            const bodyHtml = `
+                <div style="background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem; color: #991b1b; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <strong>🚨 كشف حصر وتتبع الزائرين والمقاولين داخل المنشأة (طوارئ وإخلاء)</strong>
+                        <div style="font-size: 0.78rem; color: #b91c1c; margin-top: 2px;">يستخدم هذا الكشف عند نقاط التجمع (Muster Points) للتحقق الفوري من سلامة جميع المتواجدين غير العاملين.</div>
                     </div>
-                    <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
-                    <div class="iso-print-header">
-                        <div class="iso-box-brand">
-                            <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
-                            <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
-                        </div>
-
-                        <div class="iso-box-title">
-                            <h1 class="iso-main-title">🚨 كشف اسماء الزائرين والمقاولين</h1>
-                            <div class="iso-sub-title">Onsite Visitors & Contractors List</div>
-                        </div>
-
-                        <div class="iso-box-meta">
-                            <div class="meta-row">
-                                <span>كود الوثيقة:</span>
-                                <strong>DOC-HSE-EMR-VIS-01</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>رقم الإصدار:</span>
-                                <strong>Rev. 02</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>توقيت الطباعة:</span>
-                                <strong>${now.toLocaleDateString('ar-EG')} ${now.toLocaleTimeString('ar-EG')}</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>إجمالي المتواجدين:</span>
-                                <strong style="color: #b91c1c; font-size: 11px;">${active.length} فرد</strong>
-                            </div>
-                        </div>
+                    <div style="background: #dc2626; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 0.85rem;">
+                        العدد الفعلي: ${active.length} فرد
                     </div>
+                </div>
 
-                    ${active.length === 0 ? `
-                        <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
-                            <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
-                            <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">تم إجراء الفحص اللحظي لسجل البوابات وتأكيد عدم وجود أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
-                        </div>
-                    ` : `
-                        <table>
+                ${active.length === 0 ? `
+                    <div style="text-align: center; padding: 36px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
+                        <h3 style="color: #059669; margin: 0 0 8px; font-size: 1.1rem; font-weight: 900;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
+                        <p style="color: #166534; margin: 0; font-size: 0.9rem; font-weight: 700;">تم إجراء الفحص اللحظي لسجل البوابات الإلكتروني وتأكيد عدم تواجد أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
+                    </div>
+                ` : `
+                    <div style="margin-bottom: 16px;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
                             <thead>
-                                <tr>
-                                    <th style="width: 25px; text-align: center;">#</th>
-                                    <th style="width: 70px;">رقم الكارت</th>
-                                    <th>اسم الزائر / المقاول</th>
-                                    <th>الجهة / الشركة</th>
-                                    <th>المصنع</th>
-                                    <th>الموقع الفرعي</th>
-                                    <th>الموظف المستضيف</th>
-                                    <th style="width: 70px;">وقت الدخول</th>
-                                    <th style="width: 140px; text-align: center;">التحقق عند نقطة التجمع (Muster Point)</th>
+                                <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
+                                    <th style="width: 4%; text-align: center; padding: 8px 4px;">#</th>
+                                    <th style="width: 10%; text-align: center; padding: 8px;">رقم الكارت</th>
+                                    <th style="width: 20%; padding: 8px;">اسم الزائر / المقاول</th>
+                                    <th style="width: 16%; padding: 8px;">الجهة / الشركة</th>
+                                    <th style="width: 18%; padding: 8px;">المصنع والموقع</th>
+                                    <th style="width: 14%; padding: 8px;">الموظف المستضيف</th>
+                                    <th style="width: 8%; text-align: center; padding: 8px;">وقت الدخول</th>
+                                    <th style="width: 16%; text-align: center; padding: 8px;">التحقق بنقطة التجمع</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${active.map((v, i) => `
-                                    <tr>
-                                        <td style="text-align: center;">${i + 1}</td>
-                                        <td><strong>${v.badge || '-'}</strong></td>
-                                        <td><strong>${v.name}</strong></td>
-                                        <td>${v.org}</td>
-                                        <td>${v.site}</td>
-                                        <td>${v.area}</td>
-                                        <td>${v.host}</td>
-                                        <td>${v.entryTime}</td>
-                                        <td style="text-align: center; font-size: 11px;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp; [ &nbsp; ] مفقود</td>
-                                    </tr>
-                                `).join('')}
+                                ${rows}
                             </tbody>
                         </table>
-                    `}
-
-                    <!-- فوتر الاعتمادات والتوقيعات ثلاثي الصناديق -->
-                    <div class="iso-print-footer">
-                        <div class="footer-box">
-                            <div class="footer-box-title">مسؤول السلامة والصحة المهنية</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
-                        <div class="footer-box">
-                            <div class="footer-box-title">مسؤول الإخلاء ونقطة التجمع</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
-                        <div class="footer-box">
-                            <div class="footer-box-title">قائد فريق الطوارئ (Incident Commander)</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
                     </div>
+                `}
+            `;
 
-                    <div class="print-btn-wrap">
-                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">🖨️ طباعة كشف الإخلاء الآن</button>
-                    </div>
-                </body>
-                </html>
-            `);
-            win.document.close();
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: 'كشف حصر وتتبع الزائرين والمقاولين للطوارئ',
+                    docTitle: 'كشف حصر وتتبع الزائرين والمقاولين (طوارئ)',
+                    docSubtitle: 'Emergency Muster List — Onsite Visitors & Contractors',
+                    docCode: 'DOC-HSE-EMR-VIS-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: dateStr,
+                    confidentiality: 'سري / طوارئ داخلية',
+                    standardRef: 'ISO 45001:2018 (Clause 8.2) & OSHA 1910.38',
+                    metaItems: [
+                        { label: 'تاريخ الفحص', value: dateStr },
+                        { label: 'وقت الفحص', value: timeStr },
+                        { label: 'حالة الطوارئ', value: 'إخلاء / جاهزية تامة' },
+                        { label: 'إجمالي المتواجدين', value: active.length + ' فرد' }
+                    ],
+                    kpis: {
+                        total: active.length,
+                        totalLabel: 'إجمالي المتواجدين بالمنشأة',
+                        high: active.length,
+                        highLabel: 'مطلوب التحقق منهم ⚠️',
+                        closed: '0',
+                        closedLabel: 'تم التحقق بنجاح ✅',
+                        pending: active.length,
+                        pendingLabel: 'قيد الحصر بنقاط التجمع ⏳'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'مسؤول السلامة والصحة المهنية', name: 'أخصائي السلامة الميداني', line: 'التوقيع والتاريخ' },
+                        { title: 'مسؤول الإخلاء ونقطة التجمع', name: 'قائد نقطة التجمع (Muster)', line: 'التوقيع والتاريخ' },
+                        { title: 'قائد فريق الطوارئ (Incident Commander)', name: 'مدير الطوارئ والسلامة', line: 'الختم والاعتماد' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
         }
 
         function printGateQrPoster() {
@@ -6886,17 +6723,35 @@
                     </style>
                 </head>
                 <body>
+                    <!-- شريط أدوات علوي للطباعة والإغلاق والعودة للنموذج -->
+                    <div class="no-print-bar" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-bottom: 3px solid #2563eb; margin: -10px -10px 14px -10px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: #2563eb; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 11px;">ICAPP SEC</span>
+                            <span style="font-weight: 800; font-size: 13px;">🛡️ لوحة رمز الاستجابة السريع QR — منظومة أمن البوابات والزوار</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button onclick="window.print()" style="padding: 8px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
+                                🖨️ طباعة لوحة QR
+                            </button>
+                            <button onclick="window.close()" style="padding: 8px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220,38,38,0.4);">
+                                ❌ عودة / إغلاق النافذة
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="poster-wrapper">
-                        <!-- ترويسة ISO ثلاثية الصناديق -->
+                        <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
                         <div class="iso-print-header">
                             <div class="iso-box-brand">
                                 <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
-                                <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
+                                <div style="font-size: 9.5px; font-weight: 900; color: #0f172a; text-align: center; line-height: 1.15; margin-top: 2px;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                                <div class="iso-dept-title">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                             </div>
 
                             <div class="iso-box-title">
                                 <h1 class="iso-main-title">🛡️ منظومة أمن البوابات وسجل الزوار والمقاولين</h1>
                                 <div class="iso-sub-title">Gate Security Visitor & Contractor Control System</div>
+                                <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 8.5px; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
                             </div>
 
                             <div class="iso-box-meta">
@@ -6948,7 +6803,7 @@
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
                             <div class="footer-box">
-                                <div class="footer-box-title">مدير إدارة السلامة والصحة المهنية</div>
+                                <div class="footer-box-title">الإدارة العامة للسلامة والصحة المهنية</div>
                                 <div class="footer-sig-line">الاسم: .......................................</div>
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
@@ -6957,6 +6812,19 @@
                                 <div class="footer-sig-line">الاسم: .......................................</div>
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
+                        </div>
+
+                        <!-- شريط ضبط وتوثيق الوثيقة المعتمدة (ISO Document Control) -->
+                        <div style="margin-top: 10px; padding: 6px 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; font-weight: 700;">
+                            <span>كود الوثيقة: <strong>DOC-SEC-QR-01</strong></span>
+                            <span>رقم الإصدار: <strong>Rev. 02</strong></span>
+                            <span>مرجعية التوثيق: <strong>ISO 45001:2018 (Clause 8.1 & 8.2)</strong></span>
+                            <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+                        </div>
+
+                        <!-- الفوتر الموحد لمنظومة السلامة -->
+                        <div style="margin-top: 6px; text-align: center; font-size: 8px; color: #64748b; font-weight: 700; line-height: 1.3;">
+                            <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
                         </div>
                     </div>
 
@@ -9474,7 +9342,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1767-20260927')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1768-20260927')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -10457,21 +10325,41 @@
             <!-- جسم النافذة ومحتوى التحليل -->
             <div style="padding: 16px; background: #f8fafc; overflow-y: auto; flex: 1;">
                 
-                <!-- ترويسة التقرير الرسمية للطباعة المعتمدة ISO -->
-                <div class="anl-print-header" style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="text-align: right;">
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)</div>
-                            <div style="font-size: 0.85rem; font-weight: 700; color: #334155;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
-                            <div style="font-size: 0.82rem; font-weight: 800; color: #4338ca; margin-top: 4px;">📊 تقرير التحليل الإحصائي الميداني للملاحظات ونتائج السلامة</div>
+                <!-- ترويسة ISO المعتمدة ثلاثية الصناديق للطباعة المعتمدة -->
+                <div class="anl-print-header" style="margin-bottom: 16px;">
+                    <div class="iso-print-header" style="display: grid; grid-template-columns: 240px 1fr 200px; border: 2px solid #0f172a; border-top: 5px solid #1e3a8a; border-radius: 8px; overflow: hidden; background: #ffffff; margin-bottom: 8px;">
+                        <div class="iso-box-brand" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1.5px solid #0f172a; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); gap: 4px; text-align: center;">
+                            <img src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-print-logo" style="max-height: 44px; max-width: 120px; object-fit: contain; margin-bottom: 2px;" onerror="this.src='icons/icapp-logo.png'">
+                            <div class="iso-company-title" style="font-size: 10.5px; font-weight: 900; color: #0f172a; line-height: 1.3;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                            <div class="iso-dept-title" style="font-size: 9.5px; font-weight: 800; color: #1e3a8a; line-height: 1.25;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                         </div>
-                        <div style="text-align: left; font-size: 0.76rem; color: #475569; border-right: 1px solid #cbd5e1; padding-right: 12px;">
-                            <div><b>كود الوثيقة:</b> DOC-HSE-OBS-REP-01</div>
-                            <div><b>تاريخ الإصدار:</b> <span id="anlPrintDate"></span></div>
-                            <div><b>النظام:</b> منظومة السلامة الرقمية الموحدة</div>
+
+                        <div class="iso-box-title" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff;">
+                            <h1 class="iso-main-title" style="margin: 0; font-size: 16px; font-weight: 900; color: #1e3a8a; line-height: 1.3;">📊 تقرير التحليل الإحصائي الميداني للملاحظات ونتائج السلامة</h1>
+                            <div class="iso-sub-title" style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">Field Safety Observations & Risk Analytics Digest</div>
+                            <div class="iso-badge-std" style="display: inline-block; margin-top: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800;">معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
+                        </div>
+
+                        <div class="iso-box-meta" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; border-right: 1.5px solid #0f172a; background: #f8fafc; gap: 3px;">
+                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                                <span style="color: #64748b; font-weight: 700;">كود الوثيقة:</span>
+                                <strong style="color: #0f172a; font-family: monospace;">DOC-HSE-OBS-ANL-01</strong>
+                            </div>
+                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                                <span style="color: #64748b; font-weight: 700;">رقم الإصدار:</span>
+                                <strong style="color: #0f172a;">Rev. 02</strong>
+                            </div>
+                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                                <span style="color: #64748b; font-weight: 700;">تاريخ الإصدار:</span>
+                                <strong style="color: #0f172a;" id="anlPrintDate"></strong>
+                            </div>
+                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                                <span style="color: #64748b; font-weight: 700;">درجة السرية:</span>
+                                <strong style="color: #047857;">عام داخلي</strong>
+                            </div>
                         </div>
                     </div>
-                    <div id="anlPrintScopeBadge" style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; color: #1e293b;">
+                    <div id="anlPrintScopeBadge" style="font-size: 0.8rem; font-weight: 700; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; color: #1e293b;">
                         نطاق التقرير: كافة مواقع ومصانع الشركة
                     </div>
                 </div>
@@ -12472,13 +12360,15 @@
         wrap.innerHTML = `
             <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
                 <!-- Header -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #064e3b; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #064e3b; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                     <div>
                         <div style="font-weight: 900; font-size: 1.05rem; color: #064e3b;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                        <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">إدارة السلامة والصحة المهنية — كشف تسليم الوردية الميداني (Shift Handover)</div>
+                        <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة — كشف تسليم الوردية الميداني (Shift Handover)</div>
+                        <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.68rem; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
                     </div>
                     <div style="text-align: left; font-size: 0.72rem; color: #475569;">
                         <div><strong>كود الوثيقة:</strong> DOC-HSE-SHO-01</div>
+                        <div><strong>رقم الإصدار:</strong> Rev. 02</div>
                         <div><strong>التاريخ:</strong> ${data.date}</div>
                         <div><strong>الوردية:</strong> ${data.shift}</div>
                     </div>
@@ -12653,7 +12543,112 @@
     }
 
     function printShiftDigestReport() {
-        window.print();
+        const data = getShiftDigestData();
+        const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : escapeHtml;
+
+        const rows = data.filtered.map((obs, idx) => `
+            <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.85rem;">
+                <td style="padding: 7px 8px; font-weight: 800; color: #1e40af; text-align: center;">${esc(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
+                <td style="padding: 7px 8px; font-weight: 700;">${esc(obs.site || obs.siteName || '')} - ${esc(obs.place || obs.locationName || '')}</td>
+                <td style="padding: 7px 8px;"><span style="background: #f1f5f9; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">${esc(obs.type || obs.observationType || 'سلوك/ظرف')}</span></td>
+                <td style="padding: 7px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#dc2626' : '#334155'}; font-weight: 800; text-align: center;">${esc(obs.riskLevel || 'متوسط')}</td>
+                <td style="padding: 7px 8px; line-height: 1.4;">${esc(obs.details || '--')}</td>
+                <td style="padding: 7px 8px; font-weight: 800; text-align: center; color: ${String(obs.status).includes('إغلاق') || String(obs.status).toLowerCase().includes('closed') ? '#15803d' : '#ea580c'};">${esc(obs.status || 'مفتوح')}</td>
+            </tr>
+        `).join('');
+
+        const bodyHtml = `
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
+                <div>
+                    <span style="color: #1e3a8a; font-weight: 800;">👤 مشرف السلامة المُسَلِّم:</span>
+                    <strong style="color: #0f172a; margin-right: 6px;">${esc(data.outgoing || '--')}</strong>
+                </div>
+                <div>
+                    <span style="color: #1e3a8a; font-weight: 800;">👥 مشرف السلامة المُسْتَلِم:</span>
+                    <strong style="color: #0f172a; margin-right: 6px;">${esc(data.incoming || '--')}</strong>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 0.82rem;">
+                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 8px 12px;">
+                    <strong style="color: #92400e;">🧯 شبكة وطلمبات الحريق:</strong>
+                    <div style="color: #78350f; font-weight: 800; margin-top: 2px;">${esc(data.pumpStatus || 'جاهزة وتعمل تلقائياً')}</div>
+                </div>
+                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 8px 12px;">
+                    <strong style="color: #1e40af;">⚡ تصاريح عمل سارية (PTW):</strong>
+                    <div style="color: #1d4ed8; font-weight: 900; font-size: 1rem; margin-top: 2px;">${esc(data.activePtw || '0')} تصريح</div>
+                </div>
+                <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 8px; padding: 8px 12px;">
+                    <strong style="color: #6d28d9;">🦺 متواجدين بالمصانع (زوار/مقاولين):</strong>
+                    <div style="color: #7c3aed; font-weight: 900; font-size: 1rem; margin-top: 2px;">${esc(data.activeVisitors || '0')} فرد</div>
+                </div>
+            </div>
+
+            ${data.notes ? `
+            <div style="background: #fefce8; border: 1.5px solid #fde047; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem;">
+                <div style="font-weight: 900; color: #854d0e; margin-bottom: 4px;">📢 توجيهات وملاحظات التسليم الهامة للوردية القادمة:</div>
+                <div style="color: #713f12; line-height: 1.6;">${esc(data.notes)}</div>
+            </div>
+            ` : ''}
+
+            <div style="margin-bottom: 16px;">
+                <h3 style="font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; border-bottom: 2px solid #0f172a; padding-bottom: 4px;">
+                    📋 كشف وسجل الملاحظات المرصودة خلال الوردية (${data.filtered.length})
+                </h3>
+                <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
+                    <thead>
+                        <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
+                            <th style="padding: 8px; width: 12%; text-align: center;">الكود</th>
+                            <th style="padding: 8px; width: 22%;">الموقع والمكان</th>
+                            <th style="padding: 8px; width: 14%;">نوع الملاحظة</th>
+                            <th style="padding: 8px; width: 12%; text-align: center;">درجة الخطورة</th>
+                            <th style="padding: 8px; width: 28%;">تفاصيل الملاحظة</th>
+                            <th style="padding: 8px; width: 12%; text-align: center;">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.length > 0 ? rows : `<tr><td colspan="6" style="text-align: center; padding: 18px; color: #64748b; font-weight: 800;">لا توجد ملاحظات مرصودة مسجلة خلال هذه الوردية.</td></tr>`}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        if (typeof HsePrintEngine !== 'undefined') {
+            HsePrintEngine.printDocument({
+                pageTitle: 'كشف تسليم الوردية الميداني',
+                docTitle: 'كشف تسليم الوردية الميداني (Shift Handover)',
+                docSubtitle: 'Field Shift Handover & Safety Readiness Log',
+                docCode: 'DOC-HSE-SHO-01',
+                rev: 'Rev. 02',
+                effectiveDate: data.date || '2026-09',
+                confidentiality: 'عام داخلي',
+                standardRef: 'ISO 45001:2018 (Clause 8.1 & 7.4) & OSHA 1910',
+                metaItems: [
+                    { label: 'التاريخ', value: data.date },
+                    { label: 'الوردية', value: data.shift },
+                    { label: 'الموقع / المصنع', value: data.site },
+                    { label: 'وقت التقرير', value: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) }
+                ],
+                kpis: {
+                    total: data.total,
+                    totalLabel: 'إجمالي الملاحظات',
+                    high: data.high,
+                    highLabel: 'عالية الخطورة 🔴',
+                    closed: data.closed,
+                    closedLabel: 'تم إغلاقها ✅',
+                    pending: data.open,
+                    pendingLabel: 'قيد المتابعة ⏳'
+                },
+                bodyHtml: bodyHtml,
+                signatures: [
+                    { title: 'مشرف السلامة المُسَلِّم', name: data.outgoing || 'مسؤول السلامة', line: 'التوقيع والتاريخ' },
+                    { title: 'مشرف السلامة المُسْتَلِم', name: data.incoming || 'مسؤول السلامة', line: 'التوقيع والتاريخ' },
+                    { title: 'اعتماد مدير السلامة والصحة المهنية', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
+                ]
+            });
+        } else {
+            window.print();
+        }
     }
 
     // --- 4. بوت ومساعد السلامة الصوتي الميداني (Field HSE Voice Assistant) ---
@@ -13644,41 +13639,71 @@
          قالب الطباعة الرسمي لكشف حصر تصاريح العمل للوردية والطوارئ (A4 Shift Log)
          ══════════════════════════════════════════════════════════════════════ -->
     <div id="ptwPrintLogContainer">
-        <!-- ترويسة التقرير الرسمي -->
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 14px;">
-            <div style="text-align: right;">
-                <div style="font-size: 1rem; font-weight: 900; color: #1e293b;">الشركة العالمية للانتاج والتصنيع الزراعي</div>
-                <div style="font-size: 0.85rem; font-weight: 800; color: #1e40af;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
+        <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
+        <div class="iso-print-header" style="display: grid; grid-template-columns: 240px 1fr 200px; border: 2px solid #0f172a; border-top: 5px solid #1e3a8a; border-radius: 8px; overflow: hidden; background: #ffffff; margin-bottom: 14px;">
+            <div class="iso-box-brand" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1.5px solid #0f172a; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); gap: 4px; text-align: center;">
+                <img src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-print-logo" style="max-height: 44px; max-width: 120px; object-fit: contain; margin-bottom: 2px;" onerror="this.src='icons/icapp-logo.png'">
+                <div class="iso-company-title" style="font-size: 10.5px; font-weight: 900; color: #0f172a; line-height: 1.3;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-title" style="font-size: 9.5px; font-weight: 800; color: #1e3a8a; line-height: 1.25;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
             </div>
-            <div style="text-align: center;">
-                <div style="font-size: 1.15rem; font-weight: 900; color: #1e3a8a;">كشف حصر تصاريح العمل الميدانية للوردية</div>
-                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">Daily Active PTW & Emergency Shift Log Sheet</div>
+
+            <div class="iso-box-title" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff;">
+                <h1 class="iso-main-title" style="margin: 0; font-size: 16px; font-weight: 900; color: #1e3a8a; line-height: 1.3;">كشف حصر تصاريح العمل الميدانية السارية (PTW Log)</h1>
+                <div class="iso-sub-title" style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">Permit to Work (PTW) Active Shift Register & Emergency Log</div>
+                <div class="iso-badge-std" style="display: inline-block; margin-top: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800;">معتمد طبقاً للمواصفة القياسية ISO 45001:2018 & OSHA 1910</div>
             </div>
-            <div style="text-align: left; font-size: 0.75rem; color: #475569;">
-                <div><b>كود الوثيقة:</b> DOC-HSE-PTW-LOG</div>
-                <div><b>تاريخ التوليد:</b> <span id="ptwPrintLogDate"></span></div>
+
+            <div class="iso-box-meta" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; border-right: 1.5px solid #0f172a; background: #f8fafc; gap: 3px;">
+                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                    <span style="color: #64748b; font-weight: 700;">كود الوثيقة:</span>
+                    <strong style="color: #0f172a; font-family: monospace;">DOC-HSE-PTW-LOG</strong>
+                </div>
+                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                    <span style="color: #64748b; font-weight: 700;">رقم الإصدار:</span>
+                    <strong style="color: #0f172a;">Rev. 02</strong>
+                </div>
+                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
+                    <span style="color: #64748b; font-weight: 700;">تاريخ التوليد:</span>
+                    <strong style="color: #0f172a;" id="ptwPrintLogDate"></strong>
+                </div>
+                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
+                    <span style="color: #64748b; font-weight: 700;">درجة السرية:</span>
+                    <strong style="color: #047857;">عام داخلي</strong>
+                </div>
             </div>
         </div>
 
-        <!-- ملخص أرقام الوردية -->
-        <div style="display: flex; justify-content: space-around; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; margin-bottom: 14px; font-size: 0.8rem; font-weight: 800;">
-            <div>إجمالي الساري: <b id="ptwPrintTotal" style="color:#1e40af;">0</b></div>
-            <div>ساخن ولحام: <b id="ptwPrintHot" style="color:#dc2626;">0</b></div>
-            <div>ارتفاعات: <b id="ptwPrintHeight" style="color:#d97706;">0</b></div>
-            <div>أماكن مغلقة: <b id="ptwPrintConfined" style="color:#7c3aed;">0</b></div>
+        <!-- كروت إحصائيات التصاريح -->
+        <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; text-align: center;">
+            <div class="kpi-box total" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 8px 6px;">
+                <div class="kpi-num" id="ptwPrintTotal" style="font-size: 1.35rem; font-weight: 900; color: #0f172a; line-height: 1.1; margin-bottom: 2px;">0</div>
+                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">إجمالي التصاريح السارية</div>
+            </div>
+            <div class="kpi-box high" style="background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 6px; padding: 8px 6px;">
+                <div class="kpi-num" id="ptwPrintHot" style="font-size: 1.35rem; font-weight: 900; color: #dc2626; line-height: 1.1; margin-bottom: 2px;">0</div>
+                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">ساخن ولحام 🔥</div>
+            </div>
+            <div class="kpi-box closed" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 6px; padding: 8px 6px;">
+                <div class="kpi-num" id="ptwPrintHeight" style="font-size: 1.35rem; font-weight: 900; color: #d97706; line-height: 1.1; margin-bottom: 2px;">0</div>
+                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">عمل على ارتفاعات 🧗</div>
+            </div>
+            <div class="kpi-box ptw" style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 6px; padding: 8px 6px;">
+                <div class="kpi-num" id="ptwPrintConfined" style="font-size: 1.35rem; font-weight: 900; color: #86198f; line-height: 1.1; margin-bottom: 2px;">0</div>
+                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">أماكن مغلقة وكهرباء ⚡</div>
+            </div>
         </div>
 
         <!-- جدول تفاصيل التصاريح السارية -->
-        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-bottom: 20px;">
+        <table class="report-table" style="width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 16px;">
             <thead>
-                <tr style="background: #1e3a8a; color: #ffffff;">
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">كود التصريح</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">المصنع والموقع</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">نوع العمل</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">الجهة المنفذة</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">المشرف المسؤول</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">التوقيت</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px;">الحالة</th>
+                <tr style="background: #0f172a; color: #ffffff;">
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; width: 95px;">كود التصريح</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">المصنع والموقع</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">نوع العمل</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">الجهة المنفذة</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">المشرف المسؤول</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center;">فترة السريان</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center;">الحالة</th>
                 </tr>
             </thead>
             <tbody id="ptwPrintLogTbody">
@@ -13686,21 +13711,38 @@
             </tbody>
         </table>
 
-        <!-- تواقيع الاستلام والتسليم -->
-        <div style="display: flex; justify-content: space-between; border-top: 1.5px solid #cbd5e1; padding-top: 20px; font-size: 0.82rem; font-weight: 800;">
-            <div style="text-align: center; width: 30%;">
-                <div>مشرف السلامة الميداني (HSE)</div>
-                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
+        <!-- تواقيع الاستلام والتسليم الثلاثية -->
+        <div class="signatures-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 18px; page-break-inside: avoid;">
+            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">مشرف السلامة الميداني (HSE)</div>
+                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مشرف وردية السلامة</div>
+                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">التوقيع والتاريخ</div>
             </div>
-            <div style="text-align: center; width: 30%;">
-                <div>قائد نوبتجية الطوارئ والإطفاء</div>
-                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
+            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">قائد نوبتجية الطوارئ والإطفاء</div>
+                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مسؤول الحريق والطوارئ</div>
+                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">التوقيع والتاريخ</div>
             </div>
-            <div style="text-align: center; width: 30%;">
-                <div>مدير إدارة السلامة والصحة المهنية</div>
-                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
+            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">اعتماد الإدارة العامة للسلامة</div>
+                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مدير السلامة والصحة المهنية</div>
+                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">الختم والاعتماد الرقمي</div>
             </div>
         </div>
+
+        <!-- شريط ضبط وتوثيق الوثيقة المعتمدة (ISO Document Control) -->
+        <div class="iso-footer-strip" style="margin-top: 16px; border: 1.5px solid #0f172a; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; padding: 5px 12px; background: #f8fafc; font-size: 9.5px; font-weight: 800; color: #334155; page-break-inside: avoid;">
+            <span>كود الوثيقة: <strong style="color:#0f172a; font-family: monospace;">DOC-HSE-PTW-LOG</strong></span>
+            <span>رقم الإصدار: <strong>Rev. 02</strong></span>
+            <span>مرجعية التوثيق: <strong>ISO 45001:2018 (Clause 8.1.2)</strong></span>
+            <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+        </div>
+
+        <!-- الفوتر الموحد لمنظومة السلامة -->
+        <footer class="portal-unified-footer" style="margin-top: 10px; text-align: center; font-size: 9px; color: #64748b; line-height: 1.45; page-break-inside: avoid;">
+            <div><strong style="color: #1e3a8a; font-weight: 800;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+            <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الداخلية</div>
+        </footer>
     </div>
 
 
@@ -14688,7 +14730,146 @@
         }
 
         function printHazmatCard() {
-            window.print();
+            const chem = HAZMAT_DATABASE.find(c => c.id === selectedHazmatId) || HAZMAT_DATABASE[0];
+            if (!chem) return;
+            const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : (str => str || '');
+
+            const bodyHtml = `
+                <div style="background: #faf5ff; border: 2px solid #c084fc; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h2 style="font-size: 1.3rem; font-weight: 900; color: #581c87; margin: 0 0 4px;">${esc(chem.nameAr)}</h2>
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #7e22ce;">${esc(chem.nameEn)} — <span style="background: #f3e8ff; padding: 2px 8px; border-radius: 6px; font-family: monospace;">${esc(chem.formula)}</span></div>
+                        </div>
+                        <div style="text-align: left;">
+                            <div style="font-size: 0.8rem; font-weight: 800; color: #6b21a8;">كود تصنيف الخطورة:</div>
+                            <div style="font-size: 1rem; font-weight: 900; color: #3b0764; font-family: monospace;">GHS / NFPA-704</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.85rem; color: #4c1d95; line-height: 1.5; border-top: 1px dashed #d8b4fe; padding-top: 8px;">
+                        <strong>مجالات واستخدامات المادة بالمصانع:</strong> ${esc(chem.usage)}
+                    </div>
+                </div>
+
+                <!-- 2-Column Grid: NFPA Diamond + GHS & Fire Measures -->
+                <div style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 16px;">
+                    <!-- NFPA Diamond Box -->
+                    <div style="background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <div style="font-size: 0.82rem; font-weight: 900; color: #0f172a; margin-bottom: 8px;">ماسة تصنيف المخاطر (NFPA 704)</div>
+                        <div style="width: 140px; height: 140px; position: relative; margin: 10px 0;">
+                            <!-- Top: Flammability (Red) -->
+                            <div style="position: absolute; top: 0; left: 35px; width: 70px; height: 70px; background: #dc2626; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                <span style="transform: rotate(-45deg); color: #fff; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.flammability}</span>
+                            </div>
+                            <!-- Left: Health (Blue) -->
+                            <div style="position: absolute; top: 35px; left: 0; width: 70px; height: 70px; background: #2563eb; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                <span style="transform: rotate(-45deg); color: #fff; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.health}</span>
+                            </div>
+                            <!-- Right: Instability (Yellow) -->
+                            <div style="position: absolute; top: 35px; right: 0; width: 70px; height: 70px; background: #eab308; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                <span style="transform: rotate(-45deg); color: #000; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.instability}</span>
+                            </div>
+                            <!-- Bottom: Special (White) -->
+                            <div style="position: absolute; bottom: 0; left: 35px; width: 70px; height: 70px; background: #f8fafc; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #94a3b8; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                                <span style="transform: rotate(-45deg); color: #0f172a; font-weight: 900; font-size: 0.95rem;">${chem.nfpa.special || 'W'}</span>
+                            </div>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-top: 6px;">
+                            أحمر: اشتعال | أزرق: صحة | أصفر: تفاعلية | أبيض: خاص
+                        </div>
+                    </div>
+
+                    <!-- GHS Warnings & Fire Fighting -->
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px;">
+                            <div style="font-weight: 900; font-size: 0.85rem; color: #991b1b; margin-bottom: 4px;">⚠️ تحذيرات السلامة والمخاطر الرئيسية (GHS Hazards):</div>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                ${(chem.ghs || []).map(g => `<span style="background: #dc2626; color: #fff; padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">${esc(g)}</span>`).join('')}
+                            </div>
+                        </div>
+
+                        <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 10px 14px;">
+                            <div style="font-weight: 900; font-size: 0.85rem; color: #9a3412; margin-bottom: 4px;">🧯 إجراءات الإطفاء ومكافحة الحريق:</div>
+                            <div style="font-size: 0.82rem; color: #7c2d12; line-height: 1.5;">${esc(chem.fireFighting)}</div>
+                        </div>
+
+                        <div style="background: #fefce8; border: 1.5px solid #fef08a; border-radius: 10px; padding: 10px 14px;">
+                            <div style="font-weight: 900; font-size: 0.85rem; color: #854d0e; margin-bottom: 4px;">☣️ إجراءات التعامل مع التسرب والانسكابات:</div>
+                            <div style="font-size: 0.82rem; color: #713f12; line-height: 1.5;">${esc(chem.spills)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- First Aid Table -->
+                <div style="margin-bottom: 16px;">
+                    <h3 style="font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; border-bottom: 2px solid #0f172a; padding-bottom: 4px;">
+                        🩹 بروتوكول الإسعافات الأولية للطوارئ (Emergency First Aid)
+                    </h3>
+                    <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; font-size: 0.82rem;">
+                        <tbody>
+                            <tr style="border-bottom: 1px solid #cbd5e1;">
+                                <td style="width: 22%; background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">💨 في حالة الاستنشاق:</td>
+                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.inhalation)}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #cbd5e1;">
+                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">👁️ ملامسة العينين:</td>
+                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.eyes)}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #cbd5e1;">
+                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">🖐️ ملامسة الجلد:</td>
+                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.skin)}</td>
+                            </tr>
+                            <tr>
+                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">⛔ في حالة البلع:</td>
+                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.ingestion)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- PPE Required Callout -->
+                <div style="background: #faf5ff; border: 2px solid #c084fc; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
+                    <div style="font-weight: 900; font-size: 0.9rem; color: #6b21a8; margin-bottom: 4px;">🦺 مهمات الوقاية الشخصية الإلزامية للتعامل مع المادة (Mandatory PPE):</div>
+                    <div style="font-size: 0.85rem; color: #581c87; font-weight: 800; line-height: 1.6;">${esc(chem.ppe)}</div>
+                </div>
+            `;
+
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: `بطاقة السلامة SDS — ${chem.nameAr}`,
+                    docTitle: 'بطاقة السلامة والتعامل الآمن مع المواد الكيميائية',
+                    docSubtitle: 'Material Safety Data Sheet (SDS) & Chemical Emergency Card',
+                    docCode: 'DOC-HSE-CHM-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: '2026-09',
+                    confidentiality: 'عام داخلي / تشغيلي',
+                    standardRef: 'OSHA 29 CFR 1910.1200 / GHS & ISO 45001:2018',
+                    metaItems: [
+                        { label: 'اسم المادة والصيغة', value: `${chem.nameAr} (${chem.formula})` },
+                        { label: 'التصنيف الميداني', value: chem.category === 'acids_alkalis' ? 'أحماض وقلويات' : (chem.category === 'solvents_fuels' ? 'مذيبات ووقود' : 'كيماويات صناعية') },
+                        { label: 'المرجعية الفنية', value: 'صحيفة بيانات السلامة SDS' },
+                        { label: 'جهة التطبيق', value: 'كافة مصانع ومحطات ICAPP' }
+                    ],
+                    kpis: {
+                        total: chem.formula,
+                        totalLabel: 'الصيغة الكيميائية',
+                        high: chem.nfpa.health,
+                        highLabel: 'درجة خطورة الصحة (NFPA)',
+                        closed: chem.nfpa.flammability,
+                        closedLabel: 'درجة قابلية الاشتعال',
+                        pending: chem.nfpa.instability,
+                        pendingLabel: 'درجة حساسية التفاعل'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'إعداد أخصائي السلامة الكيميائية', name: 'مهندس / أخصائي السلامة', line: 'التوقيع والتاريخ' },
+                        { title: 'مراجعة وتدقيق المعامل والبيئة', name: 'رئيس قسم البيئة والمختبرات', line: 'التوقيع والتاريخ' },
+                        { title: 'اعتماد الإدارة العامة للسلامة والصحة المهنية', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
         }
     </script>
 

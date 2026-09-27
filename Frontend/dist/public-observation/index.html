@@ -60,6 +60,7 @@
     <script src="js/modules/hse-glossary.js"></script>
     <script src="js/modules/hse-action-closure.js"></script>
     <script src="js/modules/hse-my-tasks.js"></script>
+    <script src="js/modules/hse-print-engine.js"></script>
     
     <style>
         :root {
@@ -3123,12 +3124,14 @@
                     <div class="iso-logo-wrap">
                         <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                     </div>
-                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                    <div style="font-size: 0.65rem; font-weight: 900; color: #0f172a; text-align: center; line-height: 1.15; margin-top: 2px;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-name" id="isoDeptName">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</div>
                 </div>
 
                 <div class="iso-col-title">
                     <h1 class="iso-doc-title" id="isoDocTitle">نموذج تسجيل الملاحظات اليومية</h1>
                     <div class="iso-doc-subtitle" id="isoDocSubtitle">Daily Observation Report</div>
+                    <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.65rem; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
                 </div>
 
                 <div class="iso-col-meta">
@@ -3202,7 +3205,7 @@
                 <button type="button" class="btn-copy-receipt" onclick="copyReceiptSummary()">
                     <i class="fas fa-copy"></i> نسخ الملخص
                 </button>
-                <button type="button" class="btn-pdf" onclick="window.print()">
+                <button type="button" class="btn-pdf" onclick="printObservationReceipt()">
                     <i class="fas fa-file-pdf"></i> طباعة / PDF
                 </button>
             </div>
@@ -3793,7 +3796,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1767</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1768</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -8279,6 +8282,7 @@
                 document.getElementById('refBadge').textContent = 'رقم الملاحظة: ' + refId;
             }
             document.getElementById('observationForm').style.display = 'none';
+            window.lastSubmittedObservation = { p, refId, isFollowUp };
 
             // تجهيز رابط التتبع الرقمي المباشر
             const trackingCode = isFollowUp ? (p.followUpIsoCode || refId) : refId;
@@ -8405,6 +8409,107 @@
                 });
             } else {
                 fallbackCopyText(textToCopy);
+            }
+        }
+
+        function printObservationReceipt() {
+            const lastSub = window.lastSubmittedObservation || {};
+            const p = lastSub.p || {};
+            const refBadge = document.getElementById('refBadge');
+            const refId = lastSub.refId || (refBadge ? refBadge.textContent.replace('رقم الملاحظة:', '').trim() : 'OBS-2026');
+            const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : (str => str || '');
+
+            const photosList = Array.isArray(p.photos) ? p.photos : (p.photoBase64 ? [p.photoBase64] : []);
+            const photosHtml = photosList.length > 0 ? `
+                <div style="margin-top: 14px; border-top: 1.5px dashed #cbd5e1; padding-top: 10px;">
+                    <div style="font-weight: 800; font-size: 0.85rem; color: #1e3a8a; margin-bottom: 8px;">
+                        📸 الصور التوثيقية المرفقة الميدانية (${photosList.length}):
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        ${photosList.map((imgB64, i) => `
+                            <div style="border: 1.5px solid #94a3b8; border-radius: 8px; overflow: hidden; width: 140px; height: 110px;">
+                                <img src="${imgB64}" alt="صورة ${i+1}" style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : '';
+
+            const bodyHtml = `
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">الرقم المرجعي للبلاغ:</span>
+                            <strong style="font-size: 1.15rem; color: #1e40af; margin-right: 6px;">${esc(refId)}</strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">حالة البلاغ:</span>
+                            <strong style="font-size: 0.95rem; color: ${String(p.status).includes('إغلاق') ? '#15803d' : '#ea580c'}; margin-right: 6px;">${esc(p.status || 'مفتوح')}</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 0.85rem;">
+                        <div><span style="color: #64748b; font-weight: 700;">المصنع / الموقع:</span> <strong style="color: #0f172a;">${esc(p.siteName || '--')}</strong></div>
+                        <div><span style="color: #64748b; font-weight: 700;">المكان الفرعي:</span> <strong style="color: #0f172a;">${esc(p.locationName || '--')}</strong></div>
+                        <div><span style="color: #64748b; font-weight: 700;">نوع الملاحظة:</span> <strong style="color: #0f172a;">${esc(p.observationType || 'سلوك / ظرف')}</strong></div>
+                        <div><span style="color: #64748b; font-weight: 700;">درجة الخطورة:</span> <strong style="color: ${String(p.riskLevel).includes('عالي') ? '#dc2626' : '#0f172a'};">${esc(p.riskLevel || 'متوسط')}</strong></div>
+                        <div><span style="color: #64748b; font-weight: 700;">الإدارة المعنية بالمعالجة:</span> <strong style="color: #0f172a;">${esc(p.responsibleDepartment || 'إدارة الصيانة / العمليات')}</strong></div>
+                        <div><span style="color: #64748b; font-weight: 700;">صاحب الملاحظة:</span> <strong style="color: #0f172a;">${esc(p.observerName || 'ملاحظة عامة')}</strong></div>
+                    </div>
+
+                    ${p.details ? `
+                    <div style="margin-top: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; font-size: 0.85rem;">
+                        <div style="font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">📝 تفاصيل ووصف الملاحظة الميدانية:</div>
+                        <div style="color: #334155; line-height: 1.6;">${esc(p.details)}</div>
+                    </div>
+                    ` : ''}
+
+                    ${p.correctiveAction ? `
+                    <div style="margin-top: 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; font-size: 0.85rem;">
+                        <div style="font-weight: 800; color: #166534; margin-bottom: 4px;">🛡️ الإجراء التصحيحي المقترح / المطلوب:</div>
+                        <div style="color: #14532d; line-height: 1.6;">${esc(p.correctiveAction)}</div>
+                    </div>
+                    ` : ''}
+
+                    ${photosHtml}
+                </div>
+            `;
+
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: `إيصال تسجيل ملاحظة — ${refId}`,
+                    docTitle: 'إشعار تسجيل وتوثيق ملاحظة سلامة وصحة مهنية',
+                    docSubtitle: 'Safety & Health Hazard Observation Notification',
+                    docCode: 'DOC-HSE-OBS-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: p.date || new Date().toISOString().split('T')[0],
+                    confidentiality: 'عام داخلي',
+                    standardRef: 'ISO 45001:2018 (Clause 8.1 & 9.1) & OSHA 1910',
+                    metaItems: [
+                        { label: 'كود البلاغ', value: refId },
+                        { label: 'المصنع', value: p.siteName || 'مصانع ICAPP' },
+                        { label: 'الوردية / التاريخ', value: `${p.date || 'اليوم'} (${p.shift || 'الأولى'})` },
+                        { label: 'مستوى الخطورة', value: p.riskLevel || 'متوسط' }
+                    ],
+                    kpis: {
+                        total: refId,
+                        totalLabel: 'كود التسجيل المرجعي',
+                        high: p.riskLevel || 'متوسط',
+                        highLabel: 'مستوى الخطر المحدد',
+                        closed: p.status || 'مفتوح',
+                        closedLabel: 'حالة المعالجة الحالية',
+                        pending: p.responsibleDepartment || 'السلامة والصيانة',
+                        pendingLabel: 'الإدارة المسؤولة عن الحل'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'القائم برصد الملاحظة', name: p.observerName || 'ملاحظ السلامة', line: 'التوقيع والتاريخ' },
+                        { title: 'مسؤول التحقق الميداني', name: 'أخصائي السلامة والصحة المهنية', line: 'التوقيع والتاريخ' },
+                        { title: 'اعتماد الإدارة العامة للسلامة', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
+                    ]
+                });
+            } else {
+                window.print();
             }
         }
 
@@ -8782,13 +8887,15 @@
 
             wrap.innerHTML = `
                 <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #064e3b; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                         <div>
-                            <div style="font-weight: 900; font-size: 1.05rem; color: #0f172a;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                            <div style="font-size: 0.8rem; color: #64748b; font-weight: 700;">إدارة السلامة والصحة المهنية والبيئة (HSE)</div>
+                            <div style="font-weight: 900; font-size: 1.05rem; color: #064e3b;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                            <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">الإدارة العامة للسلامة والصحة المهنية وحماية البيئة — كشف الوردية الميداني المجمع للملاحظات</div>
+                            <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.68rem; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
                         </div>
                         <div style="text-align: left; font-size: 0.72rem; color: #475569;">
                             <div><strong>كود الوثيقة:</strong> DOC-HSE-OBS-SDR-01</div>
+                            <div><strong>رقم الإصدار:</strong> Rev. 02</div>
                             <div><strong>التاريخ:</strong> ${data.date}</div>
                             <div><strong>الوردية:</strong> ${data.shift}</div>
                         </div>
@@ -8833,7 +8940,79 @@
         }
 
         function printShiftDigestReport() {
-            window.print();
+            const data = getShiftDigestData();
+            const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : escapeHtml;
+
+            const rows = data.filtered.map((obs, idx) => `
+                <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.85rem;">
+                    <td style="padding: 7px 8px; font-weight: 800; color: #1e40af; text-align: center;">${esc(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
+                    <td style="padding: 7px 8px; font-weight: 700;">${esc(obs.siteName || '')} - ${esc(obs.locationName || '')}</td>
+                    <td style="padding: 7px 8px;"><span style="background: #f1f5f9; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">${esc(obs.observationType || 'سلوك/ظرف')}</span></td>
+                    <td style="padding: 7px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#dc2626' : '#334155'}; font-weight: 800; text-align: center;">${esc(obs.riskLevel || 'متوسط')}</td>
+                    <td style="padding: 7px 8px; line-height: 1.4;">${esc(obs.details || '--')}</td>
+                    <td style="padding: 7px 8px; font-weight: 800; text-align: center; color: ${String(obs.status).includes('إغلاق') || String(obs.status).toLowerCase().includes('closed') ? '#15803d' : '#ea580c'};">${esc(obs.status || 'مفتوح')}</td>
+                </tr>
+            `).join('');
+
+            const bodyHtml = `
+                <div style="margin-bottom: 16px;">
+                    <h3 style="font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; border-bottom: 2px solid #0f172a; padding-bottom: 4px;">
+                        📋 كشف وسجل الملاحظات المرصودة خلال الوردية (${data.filtered.length})
+                    </h3>
+                    <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
+                        <thead>
+                            <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
+                                <th style="padding: 8px; width: 12%; text-align: center;">الكود</th>
+                                <th style="padding: 8px; width: 22%;">الموقع والمكان</th>
+                                <th style="padding: 8px; width: 14%;">نوع الملاحظة</th>
+                                <th style="padding: 8px; width: 12%; text-align: center;">درجة الخطورة</th>
+                                <th style="padding: 8px; width: 28%;">تفاصيل الملاحظة</th>
+                                <th style="padding: 8px; width: 12%; text-align: center;">الحالة</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows.length > 0 ? rows : `<tr><td colspan="6" style="text-align: center; padding: 18px; color: #64748b; font-weight: 800;">لا توجد ملاحظات مرصودة مسجلة خلال هذه الوردية.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: 'كشف الوردية الميداني المجمع للملاحظات',
+                    docTitle: 'كشف الوردية الميداني المجمع للملاحظات',
+                    docSubtitle: 'Shift HSE Observations Digest & Risk Breakdown',
+                    docCode: 'DOC-HSE-OBS-SDR-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: data.date || '2026-09',
+                    confidentiality: 'عام داخلي',
+                    standardRef: 'ISO 45001:2018 (Clause 8.1 & 9.1) & OSHA 1910',
+                    metaItems: [
+                        { label: 'التاريخ', value: data.date },
+                        { label: 'الوردية', value: data.shift },
+                        { label: 'الموقع / المصنع', value: data.site },
+                        { label: 'وقت التقرير', value: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) }
+                    ],
+                    kpis: {
+                        total: data.total,
+                        totalLabel: 'إجمالي الملاحظات',
+                        high: data.high,
+                        highLabel: 'عالية الخطورة 🔴',
+                        closed: data.closed,
+                        closedLabel: 'تم إغلاقها ✅',
+                        pending: data.open,
+                        pendingLabel: 'قيد المتابعة ⏳'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'إعداد مشرف السلامة الميداني', name: 'أخصائي السلامة والصحة المهنية', line: 'التوقيع والتاريخ' },
+                        { title: 'مراجعة وتدقيق الوردية', name: 'رئيس قسم السلامة', line: 'التوقيع والتاريخ' },
+                        { title: 'اعتماد الإدارة العامة للسلامة', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
         }
 
         function shareShiftDigestWhatsapp() {

@@ -1,15 +1,17 @@
 {
-  "version": "1.0.1767",
+  "version": "1.0.1768",
   "highlights": {
     "ar": [
-      "اعتماد الاسم الرسمي للشركة (الشركة العالمية للإنتاج والتصنيع الزراعي ICAPP) والإدارة العامة للسلامة عند طباعة واستعراض محضر الوردية بدقة تامة.",
-      "تطبيق الترويسة المعتمدة ثلاثية الصناديق لنظام ISO 45001 وفوتر ضبط الوثائق الرسمي DOC-HSE-SHO-01.",
-      "تصميم نموذجي متكامل للطباعة يشمل بطاقات مسؤولي السلامة، كروت المؤشرات، توعية TBT، وبلوك التوقيعات الثلاثي المعتمد."
+      "تعميم وتوحيد محرك الطباعة والتوثيق الأيزو الرسمي (HsePrintEngine) بتصميم موحد وأنيق على كل مخرجات وتقارير النظام.",
+      "اعتماد الاسم الرسمي الموحد (الشركة العالمية للإنتاج والتصنيع الزراعي ICAPP) والإدارة العامة للسلامة والصحة المهنية وحماية البيئة بكافة النماذج والتقارير.",
+      "تطبيق الترويسة الأيزو المعتمدة ثلاثية الصناديق وبلوك التوقيعات الثلاثي المعتمد وفوتر ضبط الوثائق على تقارير المرور اليومي، فحص معدات الإطفاء، الحوادث الوشيكة، حصر الزوار للطوارئ، وتصاريح البوابات.",
+      "تحديث منظومة تقارير PDF المركزية في لوحة التحكم الإدارية لترث الهوية الرسمية وضوابط الأيزو تلقائياً."
     ],
     "en": [
-      "Standardized official company name (International Company for Agricultural Production & Processing ICAPP) & HSE Dept across shift handover printing.",
-      "Applied official ISO 3-column header table and ISO document control footer strip (DOC-HSE-SHO-01 Rev.02).",
-      "Comprehensive handover print layout including officer cards, operational KPI widgets, TBT linkage, and 3-party approval blocks."
+      "Unified official ISO Master Print Engine (HsePrintEngine) across all system outputs, forms, and printable certificates.",
+      "Standardized corporate branding for 'International Company for Agricultural Production & Processing (ICAPP)' and HSE General Directorate.",
+      "Applied official ISO 3-column header, KPI metrics bar, structured findings, 3-party approval signatures, and ISO document control footer to Daily Safety Patrol, Fire Equipment Inspection, Near-Miss, Emergency Muster, and Gate Pass.",
+      "Updated centralized PDF template engine in administrative dashboard to inherit corporate identity and ISO control metadata."
     ]
   }
 }

@@ -1359,6 +1359,7 @@
         }
 </style>
 <script src="js/modules/hse-dark-mode.js"></script>
+<script src="js/modules/hse-print-engine.js"></script>
 </head>
 <body>
     <div id="toastMsg" class="toast-msg"></div>
@@ -1572,12 +1573,13 @@
                     <div class="iso-logo-wrap">
                         <img id="isoLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                     </div>
-                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
+                    <div class="iso-dept-name" id="isoDeptName" style="font-size: 0.62rem; font-weight: 800; color: #1e3a8a; line-height: 1.2; text-align: center;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)<br><span style="color: #64748b; font-size: 0.58rem;">الإدارة العامة للسلامة والصحة المهنية</span></div>
                 </div>
 
                 <div class="iso-col-title">
-                    <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل الزائرين</h1>
-                    <div class="iso-doc-subtitle" id="isoDocSubtitle">Visitor Registration</div>
+                    <h1 class="iso-doc-title" id="isoDocTitle">نظام تسجيل الزائرين والمقاولين</h1>
+                    <div class="iso-doc-subtitle" id="isoDocSubtitle">Gate Visitor & Contractor Access Control</div>
+                    <span class="iso-platform-tag" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800;"><i class="fas fa-certificate text-amber-500"></i> معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</span>
                 </div>
 
                 <div class="iso-col-meta">
@@ -3142,28 +3144,31 @@ _نظام إدارة أمن البوابات والسلامة المهنية —
                 <html lang="ar" dir="rtl">
                 <head>
                     <meta charset="UTF-8">
-                    <title>تصريح دخول زائر - ${v.badge}</title>
+                    <title>تصريح دخول زائر - ${v.badge || ''}</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
                     <style>
-                        @page { size: A6 portrait; margin: 6mm; }
-                        * { box-sizing: border-box; }
-                        body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 0; padding: 6px; color: #0f172a; direction: rtl; }
-                        .no-print-bar { position: sticky; top: 0; background: #f8fafc; padding: 8px 12px; border: 1.5px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; display: flex; gap: 10px; justify-content: center; align-items: center; }
-                        .btn-print-act { padding: 6px 14px; background: #1e40af; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
-                        .btn-close-act { padding: 6px 14px; background: #64748b; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
-                        .pass-card { border: 2.5px solid #1e3a8a; border-radius: 12px; padding: 12px; text-align: center; }
-                        .pass-header { border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-                        .pass-badge { background: #1e3a8a; color: #fff; font-size: 1.15rem; font-weight: 900; padding: 4px 14px; border-radius: 8px; display: inline-block; margin-bottom: 8px; }
-                        .pass-title { font-size: 1rem; font-weight: 900; color: #1e1b4b; margin: 2px 0; }
-                        .pass-sub { font-size: 0.7rem; color: #64748b; font-weight: 700; }
-                        .pass-grid { text-align: right; font-size: 0.8rem; line-height: 1.6; margin: 10px 0; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; background: #f8fafc; }
-                        .pass-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 3px 0; }
+                        @page { size: A6 portrait; margin: 5mm; }
+                        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; }
+                        body { margin: 0; padding: 6px; color: #0f172a; direction: rtl; background: #fff; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        .no-print-bar { position: sticky; top: 0; background: #0f172a; color: #fff; padding: 8px 12px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 8px; justify-content: center; align-items: center; }
+                        .btn-print-act { padding: 6px 14px; background: #2563eb; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+                        .btn-close-act { padding: 6px 14px; background: #dc2626; color: #ffffff; border: none; border-radius: 6px; font-weight: 800; font-size: 0.8rem; cursor: pointer; }
+                        .pass-card { border: 2.5px solid #0f172a; border-radius: 10px; padding: 10px; text-align: center; }
+                        .pass-header { border-bottom: 2px solid #0f172a; padding-bottom: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+                        .pass-company { font-size: 0.68rem; font-weight: 900; color: #1e3a8a; line-height: 1.2; text-align: right; }
+                        .pass-dept { font-size: 0.58rem; font-weight: 700; color: #64748b; }
+                        .pass-badge { background: #0f172a; color: #fff; font-size: 1.1rem; font-weight: 900; padding: 4px 14px; border-radius: 8px; display: inline-block; margin-bottom: 6px; letter-spacing: 0.5px; }
+                        .pass-title { font-size: 0.95rem; font-weight: 900; color: #0f172a; margin: 2px 0; }
+                        .pass-sub { font-size: 0.65rem; color: #64748b; font-weight: 700; }
+                        .pass-grid { text-align: right; font-size: 0.76rem; line-height: 1.5; margin: 8px 0; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; background: #f8fafc; }
+                        .pass-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #e2e8f0; padding: 2.5px 0; }
                         .pass-row:last-child { border-bottom: none; }
-                        .pass-row span { color: #64748b; font-weight: 700; }
-                        .pass-row strong { color: #0f172a; }
-                        .pass-rules { font-size: 0.65rem; color: #047857; background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 6px; padding: 6px; margin-top: 8px; text-align: center; font-weight: 700; }
-                        .pass-sig { margin-top: 12px; display: flex; justify-content: space-between; font-size: 0.7rem; font-weight: 800; }
+                        .pass-row span { color: #64748b; font-weight: 700; font-size: 0.72rem; }
+                        .pass-row strong { color: #0f172a; font-weight: 800; }
+                        .pass-rules { font-size: 0.62rem; color: #065f46; background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 5px; margin-top: 6px; text-align: center; font-weight: 800; line-height: 1.4; }
+                        .pass-sig { margin-top: 8px; display: flex; justify-content: space-between; font-size: 0.65rem; font-weight: 800; color: #334155; }
+                        .pass-footer-meta { margin-top: 6px; font-size: 0.55rem; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 4px; display: flex; justify-content: space-between; }
                         @media print {
-                            .no-print-bar { display: none !important; }
                             .no-print-bar { display: none !important; }
                         }
                     </style>
@@ -3175,28 +3180,35 @@ _نظام إدارة أمن البوابات والسلامة المهنية —
                     </div>
                     <div class="pass-card">
                         <div class="pass-header">
-                            <img src="icons/icapp-logo.png" style="max-height: 32px; max-width: 60px; object-fit: contain;" onerror="this.style.display='none'">
+                            <img src="icons/icapp-logo.png" style="max-height: 36px; max-width: 65px; object-fit: contain;" onerror="this.style.display='none'">
                             <div>
-                                <div class="pass-title">تصريح دخول زائر / مقاول</div>
-                                <div class="pass-sub">ICAPP Visitor Access Pass</div>
+                                <div class="pass-company">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                                <div class="pass-dept">الإدارة العامة للسلامة والصحة المهنية • أمن البوابات</div>
                             </div>
                         </div>
-                        <div class="pass-badge">كارت رقم: ${v.badge}</div>
+                        <div class="pass-title">تصريح دخول زائر / مقاول</div>
+                        <div class="pass-sub">ICAPP Official Visitor & Contractor Access Pass</div>
+                        <div class="pass-badge">كارت رقم: ${v.badge || '--'}</div>
                         <div class="pass-grid">
-                            <div class="pass-row"><span>اسم الزائر:</span><strong>${v.name}</strong></div>
-                            <div class="pass-row"><span>الجهة / الشركة:</span><strong>${v.org}</strong></div>
-                            <div class="pass-row"><span>المصنع / الموقع:</span><strong>${v.site} — ${v.area}</strong></div>
-                            <div class="pass-row"><span>المستضيف:</span><strong>${v.host}</strong></div>
-                            <div class="pass-row"><span>القائم بالتسجيل:</span><strong>${v.registeredBy || 'مسؤول الأمن'}</strong></div>
-                            <div class="pass-row"><span>وقت الدخول:</span><strong>${v.entryTime} (${v.entryDate})</strong></div>
-                            <div class="pass-row"><span>الغرض:</span><strong>${v.purpose}</strong></div>
+                            <div class="pass-row"><span>اسم الزائر:</span><strong>${v.name || '--'}</strong></div>
+                            <div class="pass-row"><span>الجهة / الشركة:</span><strong>${v.org || '--'}</strong></div>
+                            <div class="pass-row"><span>المصنع والموقع:</span><strong>${v.site || ''} — ${v.area || ''}</strong></div>
+                            <div class="pass-row"><span>الموظف المستضيف:</span><strong>${v.host || '--'}</strong></div>
+                            <div class="pass-row"><span>مسؤول التسجيل:</span><strong>${v.registeredBy || 'مسؤول الأمن'}</strong></div>
+                            <div class="pass-row"><span>وقت وتاريخ الدخول:</span><strong>${v.entryTime || '--'} (${v.entryDate || '--'})</strong></div>
+                            <div class="pass-row"><span>الغرض من الزيارة:</span><strong>${v.purpose || '--'}</strong></div>
                         </div>
                         <div class="pass-rules">
-                            🛡️ مهمات الوقاية إلزامية | 🚭 التدخين والتصوير ممنوع | 🚶 الالتزام بالمرافقة
+                            🛡️ مهمات الوقاية إلزامية | 🚭 التدخين والتصوير ممنوع تماماً | 🚶 الالتزام بالمرافقة ومسارات المشاة
                         </div>
                         <div class="pass-sig">
-                            <div>توقيع مسؤول الأمن: ...........</div>
-                            <div>توقيع الزائر: ...........</div>
+                            <div>مسؤول أمن البوابة: ...................</div>
+                            <div>توقيع الزائر: ...................</div>
+                        </div>
+                        <div class="pass-footer-meta">
+                            <span>DOC-SEC-VIS-PASS</span>
+                            <span>Rev. 02</span>
+                            <span>ISO 45001:2018</span>
                         </div>
                     </div>
                 </body>
@@ -3380,263 +3392,99 @@ function resetCheckInForm() {
 
         function printEmergencyMusterList() {
             const list = getVisitorsRegistry();
-            const todayStr = new Date().toISOString().split('T')[0];
             const active = list.filter(v => !v.exitTime);
-            const win = window.open('', '_blank');
-            if (!win) {
-                alert('يرجى السماح بالنوافذ المنبثقة للطباعة (Pop-ups)');
-                return;
-            }
             const now = new Date();
+            const dateStr = now.toLocaleDateString('ar-EG');
+            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-            win.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>كشف اسماء الزائرين والمقاولين - ICAPP</title>
-                    <style>
-                        @page {
-                            size: A4 portrait;
-                            margin: 10mm 10mm 12mm 10mm;
-                        }
-                        * { box-sizing: border-box; }
-                        body {
-                            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-                            padding: 10px;
-                            direction: rtl;
-                            color: #0f172a;
-                            background: #ffffff;
-                            -webkit-print-color-adjust: exact;
-                            print-color-adjust: exact;
-                        }
-                        /* ترويسة ISO ثلاثية الصناديق المعتمدة */
-                        .iso-print-header {
-                            display: grid;
-                            grid-template-columns: 160px 1fr 200px;
-                            border: 2px solid #0f172a;
-                            border-top: 5px solid #1e3a8a;
-                            border-radius: 8px;
-                            margin-bottom: 16px;
-                            overflow: hidden;
-                            background: #ffffff;
-                        }
-                        .iso-box-brand {
-                            padding: 8px 10px;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            border-left: 1.5px solid #0f172a;
-                            background: #f8fafc;
-                            gap: 4px;
-                        }
-                        .iso-print-logo {
-                            max-height: 44px;
-                            max-width: 100px;
-                            object-fit: contain;
-                        }
-                        .iso-dept-title {
-                            font-size: 11px;
-                            font-weight: 800;
-                            color: #1e3a8a;
-                            text-align: center;
-                            line-height: 1.2;
-                        }
-                        .iso-box-title {
-                            padding: 8px 12px;
-                            display: flex;
-                            flex-direction: column;
-                            align-items: center;
-                            justify-content: center;
-                            text-align: center;
-                        }
-                        .iso-main-title {
-                            margin: 0;
-                            font-size: 15px;
-                            font-weight: 900;
-                            color: #b91c1c;
-                            line-height: 1.25;
-                        }
-                        .iso-sub-title {
-                            font-size: 10px;
-                            font-weight: 700;
-                            color: #475569;
-                            margin-top: 3px;
-                        }
-                        .iso-box-meta {
-                            padding: 6px 10px;
-                            display: flex;
-                            flex-direction: column;
-                            justify-content: center;
-                            border-right: 1.5px solid #0f172a;
-                            background: #f8fafc;
-                            font-size: 10.5px;
-                            gap: 3px;
-                        }
-                        .meta-row {
-                            display: flex;
-                            justify-content: space-between;
-                            align-items: center;
-                            border-bottom: 1px dashed #cbd5e1;
-                            padding-bottom: 2px;
-                        }
-                        .meta-row:last-child { border-bottom: none; }
-                        .meta-row span { color: #64748b; font-size: 10px; font-weight: 700; }
-                        .meta-row strong { color: #0f172a; font-size: 10px; }
+            const rows = active.map((v, i) => `
+                <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.82rem;">
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 800;">${i + 1}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 900; color: #1e40af;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.badge || '-') : (v.badge || '-')}</td>
+                    <td style="padding: 7px 8px; font-weight: 800; color: #0f172a;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.name || '--') : (v.name || '--')}</td>
+                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.org || '--') : (v.org || '--')}</td>
+                    <td style="padding: 7px 8px;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.site || '') : (v.site || '')} - ${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.area || '') : (v.area || '')}</td>
+                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.host || '--') : (v.host || '--')}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-weight: 800; color: #047857;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.entryTime || '--') : (v.entryTime || '--')}</td>
+                    <td style="text-align: center; padding: 7px 6px; font-size: 0.8rem; font-weight: 800;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp;&nbsp; [ &nbsp; ] مفقود</td>
+                </tr>
+            `).join('');
 
-                        table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
-                        th, td { border: 1.5px solid #334155; padding: 6px 8px; text-align: right; }
-                        th { background: #f1f5f9; font-weight: 800; color: #0f172a; font-size: 11px; }
-
-                        /* فوتر الاعتمادات والتوقيعات ثلاثي الصناديق */
-                        .iso-print-footer {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr 1fr;
-                            gap: 12px;
-                            margin-top: 28px;
-                            page-break-inside: avoid;
-                        }
-                        .footer-box {
-                            border: 1.5px solid #334155;
-                            border-radius: 6px;
-                            padding: 8px 10px;
-                            background: #f8fafc;
-                        }
-                        .footer-box-title {
-                            font-size: 11px;
-                            font-weight: 800;
-                            color: #1e3a8a;
-                            text-align: center;
-                            border-bottom: 1px solid #cbd5e1;
-                            padding-bottom: 5px;
-                            margin-bottom: 8px;
-                        }
-                        .footer-sig-line {
-                            font-size: 10.5px;
-                            color: #334155;
-                            margin-top: 6px;
-                            font-weight: 600;
-                        }
-                        .print-btn-wrap { text-align: center; margin-top: 25px; }
-                        @media print {
-                            .print-btn-wrap { display: none !important; }
-                            body { padding: 0; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    <!-- شريط أدوات علوي للطباعة والإغلاق والعودة للنموذج -->
-                    <div class="no-print-bar" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #ffffff; padding: 12px 18px; margin: -10px -10px 18px -10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-bottom: 2px solid #3b82f6;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="background: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 11px;">ICAPP EMERGENCY</span>
-                            <span style="font-weight: 800; font-size: 13px;">🚨 كشف حصر وتتبع الزائرين والمقاولين داخل المصانع</span>
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <button onclick="window.print()" style="padding: 8px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
-                                🖨️ طباعة الكشف
-                            </button>
-                            <button onclick="window.close()" style="padding: 8px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220,38,38,0.4);">
-                                ❌ عودة / إغلاق النافذة
-                            </button>
-                        </div>
+            const bodyHtml = `
+                <div style="background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem; color: #991b1b; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <strong>🚨 كشف حصر وتتبع الزائرين والمقاولين لحالات الطوارئ (الإخلاء الميداني)</strong>
+                        <div style="font-size: 0.78rem; color: #b91c1c; margin-top: 2px;">يستخدم هذا الكشف عند نقاط التجمع (Muster Points) للتحقق الفوري من سلامة جميع الزائرين والمقاولين غير العاملين.</div>
                     </div>
-                    <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
-                    <div class="iso-print-header">
-                        <div class="iso-box-brand">
-                            <img src="icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
-                            <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
-                        </div>
-
-                        <div class="iso-box-title">
-                            <h1 class="iso-main-title">🚨 كشف اسماء الزائرين والمقاولين</h1>
-                            <div class="iso-sub-title">Onsite Visitors & Contractors List</div>
-                        </div>
-
-                        <div class="iso-box-meta">
-                            <div class="meta-row">
-                                <span>كود الوثيقة:</span>
-                                <strong>DOC-HSE-EMR-VIS-01</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>رقم الإصدار:</span>
-                                <strong>Rev. 02</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>توقيت الطباعة:</span>
-                                <strong>${now.toLocaleDateString('ar-EG')} ${now.toLocaleTimeString('ar-EG')}</strong>
-                            </div>
-                            <div class="meta-row">
-                                <span>إجمالي المتواجدين:</span>
-                                <strong style="color: #b91c1c; font-size: 11px;">${active.length} فرد</strong>
-                            </div>
-                        </div>
+                    <div style="background: #dc2626; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 0.85rem;">
+                        العدد الفعلي: ${active.length} فرد
                     </div>
+                </div>
 
-                    ${active.length === 0 ? `
-                        <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
-                            <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
-                            <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">تم إجراء الفحص اللحظي لسجل البوابات وتأكيد عدم وجود أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
-                        </div>
-                    ` : `
-                        <table>
+                ${active.length === 0 ? `
+                    <div style="text-align: center; padding: 36px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
+                        <h3 style="color: #059669; margin: 0 0 8px; font-size: 1.1rem; font-weight: 900;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
+                        <p style="color: #166534; margin: 0; font-size: 0.9rem; font-weight: 700;">تم إجراء الفحص اللحظي لسجل البوابات الإلكتروني وتأكيد عدم تواجد أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
+                    </div>
+                ` : `
+                    <div style="margin-bottom: 16px;">
+                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
                             <thead>
-                                <tr>
-                                    <th style="width: 25px; text-align: center;">#</th>
-                                    <th style="width: 70px;">رقم الكارت</th>
-                                    <th>اسم الزائر / المقاول</th>
-                                    <th>الجهة / الشركة</th>
-                                    <th>المصنع</th>
-                                    <th>الموقع الفرعي</th>
-                                    <th>الموظف المستضيف</th>
-                                    <th style="width: 70px;">وقت الدخول</th>
-                                    <th style="width: 140px; text-align: center;">التحقق عند نقطة التجمع (Muster Point)</th>
+                                <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
+                                    <th style="width: 4%; text-align: center; padding: 8px 4px;">#</th>
+                                    <th style="width: 10%; text-align: center; padding: 8px;">رقم الكارت</th>
+                                    <th style="width: 20%; padding: 8px;">اسم الزائر / المقاول</th>
+                                    <th style="width: 16%; padding: 8px;">الجهة / الشركة</th>
+                                    <th style="width: 18%; padding: 8px;">المصنع والموقع</th>
+                                    <th style="width: 14%; padding: 8px;">الموظف المستضيف</th>
+                                    <th style="width: 8%; text-align: center; padding: 8px;">وقت الدخول</th>
+                                    <th style="width: 16%; text-align: center; padding: 8px;">التحقق بنقطة التجمع</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${active.map((v, i) => `
-                                    <tr>
-                                        <td style="text-align: center;">${i + 1}</td>
-                                        <td><strong>${v.badge || '-'}</strong></td>
-                                        <td><strong>${v.name}</strong></td>
-                                        <td>${v.org}</td>
-                                        <td>${v.site}</td>
-                                        <td>${v.area}</td>
-                                        <td>${v.host}</td>
-                                        <td>${v.entryTime}</td>
-                                        <td style="text-align: center; font-size: 11px;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp; [ &nbsp; ] مفقود</td>
-                                    </tr>
-                                `).join('')}
+                                ${rows}
                             </tbody>
                         </table>
-                    `}
-
-                    <!-- فوتر الاعتمادات والتوقيعات ثلاثي الصناديق -->
-                    <div class="iso-print-footer">
-                        <div class="footer-box">
-                            <div class="footer-box-title">مسؤول السلامة والصحة المهنية</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
-                        <div class="footer-box">
-                            <div class="footer-box-title">مسؤول الإخلاء ونقطة التجمع</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
-                        <div class="footer-box">
-                            <div class="footer-box-title">قائد فريق الطوارئ (Incident Commander)</div>
-                            <div class="footer-sig-line">الاسم: .......................................</div>
-                            <div class="footer-sig-line">التوقيع: ....................................</div>
-                        </div>
                     </div>
+                `}
+            `;
 
-                    <div class="print-btn-wrap">
-                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">🖨️ طباعة كشف الإخلاء الآن</button>
-                    </div>
-                </body>
-                </html>
-            `);
-            win.document.close();
+            if (typeof HsePrintEngine !== 'undefined') {
+                HsePrintEngine.printDocument({
+                    pageTitle: 'كشف حصر وتتبع الزائرين والمقاولين للطوارئ',
+                    docTitle: 'كشف حصر وتتبع الزائرين والمقاولين (طوارئ)',
+                    docSubtitle: 'Emergency Muster List — Onsite Visitors & Contractors',
+                    docCode: 'DOC-HSE-EMR-VIS-01',
+                    rev: 'Rev. 02',
+                    effectiveDate: dateStr,
+                    confidentiality: 'سري / طوارئ داخلية',
+                    standardRef: 'ISO 45001:2018 (Clause 8.2) & OSHA 1910.38',
+                    metaItems: [
+                        { label: 'تاريخ الفحص', value: dateStr },
+                        { label: 'وقت الفحص', value: timeStr },
+                        { label: 'حالة الطوارئ', value: 'إخلاء / جاهزية تامة' },
+                        { label: 'إجمالي المتواجدين', value: active.length + ' فرد' }
+                    ],
+                    kpis: {
+                        total: active.length,
+                        totalLabel: 'إجمالي المتواجدين بالمنشأة',
+                        high: active.length,
+                        highLabel: 'مطلوب التحقق منهم ⚠️',
+                        closed: '0',
+                        closedLabel: 'تم التحقق بنجاح ✅',
+                        pending: active.length,
+                        pendingLabel: 'قيد الحصر بنقاط التجمع ⏳'
+                    },
+                    bodyHtml: bodyHtml,
+                    signatures: [
+                        { title: 'مسؤول السلامة والصحة المهنية', name: 'أخصائي السلامة الميداني', line: 'التوقيع والتاريخ' },
+                        { title: 'مسؤول الإخلاء ونقطة التجمع', name: 'قائد نقطة التجمع (Muster)', line: 'التوقيع والتاريخ' },
+                        { title: 'قائد فريق الطوارئ (Incident Commander)', name: 'مدير الطوارئ والسلامة', line: 'الختم والاعتماد' }
+                    ]
+                });
+            } else {
+                window.print();
+            }
         }
 
                 function getEffectiveApiUrl() {

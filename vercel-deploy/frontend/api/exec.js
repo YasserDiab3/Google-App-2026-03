@@ -34,6 +34,7 @@ const GAS_PUBLIC_ACTIONS = new Set([
     'getPublicTbtConfig',
     'submitPublicTbtRecord',
     'trackObservation',
+    'submitObservationClosure',
     'testConnection',
     'warmup'
 ]);

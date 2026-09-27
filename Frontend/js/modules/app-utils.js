@@ -4446,11 +4446,11 @@ const Permissions = {
 };
 
 // ===== Global State =====
-const DEFAULT_COMPANY_NAME = '';
+const DEFAULT_COMPANY_NAME = 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)';
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1767',
+    appVersion: '1.0.1768',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -4618,7 +4618,7 @@ const AppState = {
     companyLogo: '',
     companySettings: {
         name: DEFAULT_COMPANY_NAME,
-        secondaryName: '',
+        secondaryName: 'International Company for Agricultural Production & Processing (ICAPP)',
         address: '',
         phone: '',
         email: '',
@@ -8282,8 +8282,8 @@ const PDFTemplates = {
         const qrTextForScript = JSON.stringify(qrText);
         const formCodeDisplay = escape(formCode || '-');
         const msrHseDept = documentLang === 'en'
-            ? escape(meta?.hseDeptEn || 'HSE Department')
-            : escape(meta?.hseDeptAr || 'إدارة السلامة والصحة المهنية والبيئة');
+            ? escape(meta?.hseDeptEn || 'Occupational Safety, Health & Environmental Affairs General Directorate (ICAPP)')
+            : escape(meta?.hseDeptAr || 'الإدارة العامة للسلامة والصحة المهنية وحماية البيئة');
         // تسمية كود التقرير - يمكن تخصيصها من إعدادات الشركة
         const formCodeLabel = formCode ? 'كود التقرير' : '';
         return `<!DOCTYPE html>
@@ -9306,7 +9306,7 @@ const PDFTemplates = {
                     </div>
                     <div class="footer-bottom-text">
                         <span>${companyName}</span>
-                        ${companySecondaryNameTrimmed ? `<span>${companySecondaryName}</span>` : '<span>إدارة السلامة والصحة المهنية والبيئة</span>'}
+                        ${companySecondaryNameTrimmed ? `<span>${companySecondaryName}</span>` : '<span>الإدارة العامة للسلامة والصحة المهنية وحماية البيئة</span>'}
                     </div>
                 </div>
             </div>
