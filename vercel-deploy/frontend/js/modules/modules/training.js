@@ -6347,6 +6347,10 @@ const Training = {
         this.ensureData();
         try {
             Loading.show();
+
+            if ((!AppState.appData.contractorTrainings || AppState.appData.contractorTrainings.length === 0) && typeof this.loadContractorTrainingsPriority === 'function' && !this._contractorTrainingsFetchOk) {
+                await this.loadContractorTrainingsPriority().catch(() => {});
+            }
             
             // ✅ إصلاح: استخدام نفس مصدر البيانات المستخدم في القائمة المنسدلة
             const contractorOptions = this.getContractorOptions();
@@ -6397,6 +6401,15 @@ const Training = {
             }
             
             let records = (AppState.appData.contractorTrainings || []).slice().sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+            if (records.length === 0 && Array.isArray(AppState.appData.training)) {
+                const extraRecords = AppState.appData.training.filter(t => {
+                    if (!t) return false;
+                    return t.targetAudience === 'contractor' || t.audience === 'contractor' || t.type === 'contractor' || t.category === 'contractor' || t.contractorName || t.contractorId;
+                });
+                if (extraRecords.length > 0) {
+                    records = extraRecords.slice().sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+                }
+            }
             
             const getRecordContractorName = (record) => {
                 const rid = String(record?.contractorId ?? '').trim();

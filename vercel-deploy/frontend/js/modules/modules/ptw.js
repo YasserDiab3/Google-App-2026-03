@@ -9415,6 +9415,15 @@ const PTW = {
     },
 
     async _downloadPermitHtmlAsPdf(htmlContent, fileName) {
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            const ok = await Utils.downloadHtmlAsPdf(htmlContent, fileName, { scale: 2 });
+            if (ok) return true;
+        }
+
+        if (typeof Utils !== 'undefined' && Utils.PdfExport && typeof Utils.PdfExport.ensurePdfLibraries === 'function') {
+            await Utils.PdfExport.ensurePdfLibraries();
+        }
+
         const JsPDF = this._getPermitJsPdfConstructor_();
         if (!JsPDF || typeof html2canvas === 'undefined') return false;
 
@@ -9429,7 +9438,7 @@ const PTW = {
 
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = `position:fixed;left:-20000px;top:0;width:${a4W}px;height:200px;border:0;visibility:hidden;`;
+        iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4W}px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-9999;`;
         document.body.appendChild(iframe);
 
         try {
@@ -9443,6 +9452,12 @@ const PTW = {
             const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
             const iWin = iframe.contentWindow;
             if (!iDoc || !iWin) return false;
+
+            if (iDoc.body) {
+                iDoc.body.style.visibility = 'visible';
+                iDoc.body.style.opacity = '1';
+                iDoc.body.style.background = '#ffffff';
+            }
 
             await this._preloadPermitPdfFonts_(iDoc);
             await new Promise((r) => setTimeout(r, 900));
@@ -9619,7 +9634,9 @@ const PTW = {
             Notification.error(this._t('module.ptw.notify.permitNotFound', 'لم يتم العثور على التصريح'));
             return;
         }
-        const ok = await this._downloadPermitHtmlAsPdf(payload.html, payload.fileName);
+        const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
+            ? Utils.downloadHtmlAsPdf(payload.html, payload.fileName, { title: payload.displayNo ? `تصريح عمل #${payload.displayNo}` : 'تصريح عمل' })
+            : this._downloadPermitHtmlAsPdf(payload.html, payload.fileName));
         if (ok) {
             Notification.success(this._t('module.ptw.notify.pdfDownloadOk', 'تم تحميل التصريح PDF بنجاح'));
         } else {

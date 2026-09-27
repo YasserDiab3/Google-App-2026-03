@@ -6988,7 +6988,7 @@ const Utils = {
                 const a4WidthPx = options.windowWidth || (options.landscape ? 1123 : 794);
                 const iframe = document.createElement('iframe');
                 iframe.setAttribute('aria-hidden', 'true');
-                iframe.style.cssText = `position:fixed;left:-100000px;top:0;width:${a4WidthPx}px;height:1123px;border:0;visibility:hidden;z-index:-9999;`;
+                iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4WidthPx}px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-9999;`;
                 document.body.appendChild(iframe);
 
                 try {
@@ -7002,6 +7002,12 @@ const Utils = {
                     const iDoc = iframe.contentDocument || iframe.contentWindow?.document;
                     const iWin = iframe.contentWindow;
                     if (!iDoc || !iWin) return false;
+
+                    if (iDoc.body) {
+                        iDoc.body.style.visibility = 'visible';
+                        iDoc.body.style.opacity = '1';
+                        iDoc.body.style.background = '#ffffff';
+                    }
 
                     if (iDoc.fonts && typeof iDoc.fonts.load === 'function') {
                         try {
@@ -7070,6 +7076,7 @@ const Utils = {
                         root.style.background = '#ffffff';
 
                         const scrollH = Math.max(root.scrollHeight, root.offsetHeight, 1);
+                        iframe.style.height = `${scrollH + 100}px`;
                         const canvas = await h2c(root, {
                             scale: options.scale || 2,
                             backgroundColor: '#ffffff',
@@ -8603,9 +8610,9 @@ const PDFTemplates = {
             unicode-bidi: plaintext;
         }
         .report-header .company-brand .company-name {
-            white-space: nowrap;
-            word-break: keep-all;
-            overflow-wrap: normal;
+            white-space: normal;
+            word-break: normal;
+            overflow-wrap: break-word;
         }
         .company-brand .company-name-group {
             display: flex;

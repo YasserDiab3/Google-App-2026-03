@@ -647,6 +647,23 @@
 </html>`;
     }
 
+    function printDocument(config = {}) {
+        const fullHtml = buildDocumentHtml({ ...config, autoPrint: true });
+        if (typeof window !== 'undefined') {
+            const printWin = window.open('', '_blank');
+            if (printWin) {
+                printWin.document.open();
+                printWin.document.write(fullHtml);
+                printWin.document.close();
+                return true;
+            } else {
+                window.print();
+                return false;
+            }
+        }
+        return false;
+    }
+
     async function downloadDocumentAsPdf(config = {}, fileName = 'document.pdf') {
         const fullHtml = buildDocumentHtml({ ...config, autoPrint: false });
         if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {

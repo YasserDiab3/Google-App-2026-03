@@ -1,4 +1,4 @@
-(function(n,a){typeof define=="function"&&define.amd?define([],a):typeof module=="object"&&module.exports?module.exports=a():n.HsePrintEngine=a()})(typeof self<"u"?self:this,function(){"use strict";const n="\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A (ICAPP)",a="International Company for Agricultural Production & Processing (ICAPP)",f="\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629",w="Occupational Safety, Health & Environment Department";function o(t){return t==null?"":String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function y(){let t="/icons/icapp-logo.png";return typeof window<"u"&&window.location&&(window.location.protocol==="file:"?t="icons/icapp-logo.png":window.location.origin&&window.location.origin!=="null"&&(t=`${window.location.origin}/icons/icapp-logo.png`)),{logoSrc:t,logoFallback:"icons/icon-192x192.png"}}function g(){return`
+(function(n,a){typeof define=="function"&&define.amd?define([],a):typeof module=="object"&&module.exports?module.exports=a():n.HsePrintEngine=a()})(typeof self<"u"?self:this,function(){"use strict";const n="\u0627\u0644\u0634\u0631\u0643\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629 \u0644\u0644\u0625\u0646\u062A\u0627\u062C \u0648\u0627\u0644\u062A\u0635\u0646\u064A\u0639 \u0627\u0644\u0632\u0631\u0627\u0639\u064A (ICAPP)",a="International Company for Agricultural Production & Processing (ICAPP)",g="\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0648\u0627\u0644\u0628\u064A\u0626\u0629",w="Occupational Safety, Health & Environment Department";function o(t){return t==null?"":String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;")}function y(){let t="/icons/icapp-logo.png";return typeof window<"u"&&window.location&&(window.location.protocol==="file:"?t="icons/icapp-logo.png":window.location.origin&&window.location.origin!=="null"&&(t=`${window.location.origin}/icons/icapp-logo.png`)),{logoSrc:t,logoFallback:"icons/icon-192x192.png"}}function b(){return`
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -415,40 +415,40 @@
                 margin: 8mm 10mm 8mm 10mm;
             }
         }
-    </style>`}function b(t={}){const{logoSrc:i,logoFallback:e}=y(),r=o(t.docTitle||"\u0646\u0645\u0648\u0630\u062C \u0648\u062B\u064A\u0642\u0629 \u0633\u0644\u0627\u0645\u0629 \u0645\u0639\u062A\u0645\u062F\u0629"),d=o(t.docSubtitle||"Official HSE Document Sheet"),s=o(t.standardBadge||"\u0645\u0639\u062A\u0645\u062F \u0637\u0628\u0642\u0627\u064B \u0644\u0644\u0645\u0648\u0627\u0635\u0641\u0629 ISO 45001:2018 & OSHA 1910"),l=o(t.docCode||"DOC-HSE-GEN-01"),p=o(t.rev||"Rev. 02"),c=o(t.effectiveDate||"2026-09"),$=o(t.confidentiality||"\u0639\u0627\u0645 \u062F\u0627\u062E\u0644\u064A");return`
+    </style>`}function x(t={}){const{logoSrc:i,logoFallback:e}=y(),r=o(t.docTitle||"\u0646\u0645\u0648\u0630\u062C \u0648\u062B\u064A\u0642\u0629 \u0633\u0644\u0627\u0645\u0629 \u0645\u0639\u062A\u0645\u062F\u0629"),d=o(t.docSubtitle||"Official HSE Document Sheet"),l=o(t.standardBadge||"\u0645\u0639\u062A\u0645\u062F \u0637\u0628\u0642\u0627\u064B \u0644\u0644\u0645\u0648\u0627\u0635\u0641\u0629 ISO 45001:2018 & OSHA 1910"),p=o(t.docCode||"DOC-HSE-GEN-01"),c=o(t.rev||"Rev. 02"),f=o(t.effectiveDate||"2026-09"),z=o(t.confidentiality||"\u0639\u0627\u0645 \u062F\u0627\u062E\u0644\u064A");return`
         <!-- \u062A\u0631\u0648\u064A\u0633\u0629 ISO \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 \u062B\u0644\u0627\u062B\u064A\u0629 \u0627\u0644\u0635\u0646\u0627\u062F\u064A\u0642 -->
         <div class="iso-print-header">
             <div class="iso-box-brand">
                 <img src="${i}" alt="\u0634\u0639\u0627\u0631 ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${e}';">
                 <div class="iso-company-title">${n}</div>
-                <div class="iso-dept-title">${f}</div>
+                <div class="iso-dept-title">${g}</div>
             </div>
 
             <div class="iso-box-title">
                 <h1 class="iso-main-title">${r}</h1>
                 <div class="iso-sub-title">${d}</div>
-                <div class="iso-badge-std">${s}</div>
+                <div class="iso-badge-std">${l}</div>
             </div>
 
             <div class="iso-box-meta">
                 <div class="meta-row">
                     <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629:</span>
-                    <strong>${l}</strong>
-                </div>
-                <div class="meta-row">
-                    <span>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span>
                     <strong>${p}</strong>
                 </div>
                 <div class="meta-row">
-                    <span>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F:</span>
+                    <span>\u0631\u0642\u0645 \u0627\u0644\u0625\u0635\u062F\u0627\u0631:</span>
                     <strong>${c}</strong>
                 </div>
                 <div class="meta-row">
+                    <span>\u062A\u0627\u0631\u064A\u062E \u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F:</span>
+                    <strong>${f}</strong>
+                </div>
+                <div class="meta-row">
                     <span>\u062F\u0631\u062C\u0629 \u0627\u0644\u0633\u0631\u064A\u0629:</span>
-                    <strong style="color: #047857;">${$}</strong>
+                    <strong style="color: #047857;">${z}</strong>
                 </div>
             </div>
-        </div>`}function x(t={}){const i=o(t.docCode||"DOC-HSE-GEN-01"),e=o(t.rev||"Rev. 02"),r=o(t.standardRef||"ISO 45001:2018 (Clause 8.1 & 7.4)"),d=o(t.qualitySystem||"ICAPP HSE MS");return`
+        </div>`}function m(t={}){const i=o(t.docCode||"DOC-HSE-GEN-01"),e=o(t.rev||"Rev. 02"),r=o(t.standardRef||"ISO 45001:2018 (Clause 8.1 & 7.4)"),d=o(t.qualitySystem||"ICAPP HSE MS");return`
         <!-- \u0634\u0631\u064A\u0637 \u0636\u0628\u0637 \u0648\u062A\u0648\u062B\u064A\u0642 \u0627\u0644\u0648\u062B\u064A\u0642\u0629 \u0627\u0644\u0645\u0639\u062A\u0645\u062F\u0629 (ISO Document Control) -->
         <div class="iso-footer-strip">
             <span>\u0643\u0648\u062F \u0627\u0644\u0648\u062B\u064A\u0642\u0629: <strong>${i}</strong></span>
@@ -461,7 +461,7 @@
         <footer class="portal-unified-footer">
             <div><strong>${n}</strong> \u2022 \u0645\u0646\u0638\u0648\u0645\u0629 \u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 \u0627\u0644\u0645\u062A\u0643\u0627\u0645\u0644\u0629 \xA9 2026</div>
             <div>\u0648\u062B\u064A\u0642\u0629 \u0631\u0633\u0645\u064A\u0629 \u0645\u0639\u062A\u0645\u062F\u0629 \u0635\u0627\u062F\u0631\u0629 \u0625\u0644\u0643\u062A\u0631\u0648\u0646\u064A\u0627\u064B \u0645\u0646 \u0627\u0644\u0628\u0648\u0627\u0628\u0629 \u0627\u0644\u0631\u0642\u0645\u064A\u0629 \u0644\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629 (ICAPP SafetyHub) \u2022 \u0635\u0627\u0644\u062D\u0629 \u0644\u0644\u062A\u062F\u0642\u064A\u0642 \u0648\u0627\u0644\u0645\u0631\u0627\u062C\u0639\u0629 \u0627\u0644\u062F\u0627\u062E\u0644\u064A\u0629</div>
-        </footer>`}function m(t=[]){(!t||t.length===0)&&(t=[{title:"\u0625\u0639\u062F\u0627\u062F / \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0641\u062D\u0635",name:"\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A",line:"\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E"},{title:"\u0645\u0631\u0627\u062C\u0639\u0629 \u0648\u062A\u062D\u0642\u0642",name:"\u0623\u062E\u0635\u0627\u0626\u064A / \u0631\u0626\u064A\u0633 \u0627\u0644\u0642\u0633\u0645",line:"\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E"},{title:"\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0644\u0644\u0633\u0644\u0627\u0645\u0629",name:"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629",line:"\u0627\u0644\u062E\u062A\u0645 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0631\u0642\u0645\u064A"}]);const i=t.map(e=>`
+        </footer>`}function u(t=[]){(!t||t.length===0)&&(t=[{title:"\u0625\u0639\u062F\u0627\u062F / \u0627\u0644\u0642\u0627\u0626\u0645 \u0628\u0627\u0644\u0641\u062D\u0635",name:"\u0645\u0633\u0624\u0648\u0644 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A",line:"\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E"},{title:"\u0645\u0631\u0627\u062C\u0639\u0629 \u0648\u062A\u062D\u0642\u0642",name:"\u0623\u062E\u0635\u0627\u0626\u064A / \u0631\u0626\u064A\u0633 \u0627\u0644\u0642\u0633\u0645",line:"\u0627\u0644\u062A\u0648\u0642\u064A\u0639 \u0648\u0627\u0644\u062A\u0627\u0631\u064A\u062E"},{title:"\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629 \u0644\u0644\u0633\u0644\u0627\u0645\u0629",name:"\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0633\u0644\u0627\u0645\u0629 \u0648\u0627\u0644\u0635\u062D\u0629 \u0627\u0644\u0645\u0647\u0646\u064A\u0629",line:"\u0627\u0644\u062E\u062A\u0645 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F \u0627\u0644\u0631\u0642\u0645\u064A"}]);const i=t.map(e=>`
             <div class="sig-card">
                 <div class="sig-card-title">${o(e.title||"")}</div>
                 <div class="sig-card-name">${o(e.name||"")}</div>
@@ -470,7 +470,7 @@
         `).join("");return`
         <div class="signatures-grid" style="grid-template-columns: repeat(${t.length}, 1fr);">
             ${i}
-        </div>`}function u(t=[]){if(!t||t.length===0)return"";const i=t.map(e=>`
+        </div>`}function h(t=[]){if(!t||t.length===0)return"";const i=t.map(e=>`
             <div class="info-card">
                 <div class="card-label">${o(e.label||"")}</div>
                 <div class="card-value">${o(e.value||"--")}</div>
@@ -478,7 +478,7 @@
         `).join("");return`
         <div class="report-info-grid" style="grid-template-columns: repeat(${Math.min(t.length,4)}, 1fr);">
             ${i}
-        </div>`}function h(t={}){return`
+        </div>`}function v(t={}){return`
         <div class="kpi-grid">
             <div class="kpi-box total">
                 <div class="kpi-num">${o(t.total||"0")}</div>
@@ -496,13 +496,13 @@
                 <div class="kpi-num">${o(t.pending||t.ptw||"0")}</div>
                 <div class="kpi-text">${o(t.pendingLabel||"\u0642\u064A\u062F \u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629 / \u062A\u0635\u0627\u0631\u064A\u062D \u0633\u0627\u0631\u064A\u0629 \u{1F4DC}")}</div>
             </div>
-        </div>`}function v(t={}){const i=o(t.pageTitle||t.docTitle||"\u062A\u0642\u0631\u064A\u0631 \u0631\u0633\u0645\u064A \u0645\u0639\u062A\u0645\u062F")+" \u2014 "+n,e=!!t.autoPrint,r=b(t),d=t.metaItems?u(t.metaItems):"",s=t.kpis?h(t.kpis):"",l=m(t.signatures),p=x(t),c=t.bodyHtml||"";return`<!DOCTYPE html>
+        </div>`}function s(t={}){const i=o(t.pageTitle||t.docTitle||"\u062A\u0642\u0631\u064A\u0631 \u0631\u0633\u0645\u064A \u0645\u0639\u062A\u0645\u062F")+" \u2014 "+n,e=!!t.autoPrint,r=x(t),d=t.metaItems?h(t.metaItems):"",l=t.kpis?v(t.kpis):"",p=u(t.signatures),c=m(t),f=t.bodyHtml||"";return`<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${i}</title>
-    ${g()}
+    ${b()}
 </head>
 <body>
     <div class="no-print-bar">
@@ -523,12 +523,12 @@
     <div class="report-page-container">
         ${r}
         ${d}
-        ${s}
-        ${c}
         ${l}
+        ${f}
         ${p}
+        ${c}
     </div>
 
     ${e?"<script>window.onload = function() { setTimeout(function() { window.print(); }, 350); };<\/script>":""}
 </body>
-</html>`}async function k(t={},i="document.pdf"){const e=v({...t,autoPrint:!1});return typeof Utils<"u"&&typeof Utils.downloadHtmlAsPdf=="function"?await Utils.downloadHtmlAsPdf(e,i):!1}return{COMPANY_NAME_AR:n,COMPANY_NAME_EN:a,DEPT_NAME_AR:f,DEPT_NAME_EN:w,escapeHtml:o,getStylesHtml:g,getHeaderHtml:b,getFooterHtml:x,getSignaturesHtml:m,getMetaGridHtml:u,getKpisHtml:h,buildDocumentHtml:v,printDocument,downloadDocumentAsPdf:k}});
+</html>`}function k(t={}){const i=s({...t,autoPrint:!0});if(typeof window<"u"){const e=window.open("","_blank");return e?(e.document.open(),e.document.write(i),e.document.close(),!0):(window.print(),!1)}return!1}async function $(t={},i="document.pdf"){const e=s({...t,autoPrint:!1});return typeof Utils<"u"&&typeof Utils.downloadHtmlAsPdf=="function"?await Utils.downloadHtmlAsPdf(e,i):!1}return{COMPANY_NAME_AR:n,COMPANY_NAME_EN:a,DEPT_NAME_AR:g,DEPT_NAME_EN:w,escapeHtml:o,getStylesHtml:b,getHeaderHtml:x,getFooterHtml:m,getSignaturesHtml:u,getMetaGridHtml:h,getKpisHtml:v,buildDocumentHtml:s,printDocument:k,downloadDocumentAsPdf:$}});
