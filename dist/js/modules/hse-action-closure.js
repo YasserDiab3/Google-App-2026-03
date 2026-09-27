@@ -11,7 +11,9 @@
                                 <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.9;">\u062A\u0648\u062B\u064A\u0642 \u0627\u0644\u0645\u0637\u0627\u0628\u0642\u0629 \u0627\u0644\u0645\u064A\u062F\u0627\u0646\u064A\u0629 \u0648\u0625\u0631\u0641\u0627\u0642 \u0625\u062B\u0628\u0627\u062A \u0645\u0627 \u0628\u0639\u062F \u0627\u0644\u0625\u0635\u0644\u0627\u062D (ISO 45001)</p>
                             </div>
                         </div>
-                        <button type="button" class="emergency-modal-close-btn" id="btnCloseClosureModal" title="\u0625\u063A\u0644\u0627\u0642">&times;</button>
+                        <button type="button" class="emergency-modal-close-btn" id="btnCloseClosureModal" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; padding: 0; outline: none; transition: background 0.2s ease;" title="\u0625\u063A\u0644\u0627\u0642">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
 
                     <!-- Body -->

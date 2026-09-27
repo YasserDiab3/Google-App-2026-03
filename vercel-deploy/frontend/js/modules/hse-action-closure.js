@@ -51,7 +51,9 @@
                                 <p style="margin: 2px 0 0; font-size: 0.75rem; opacity: 0.9;">توثيق المطابقة الميدانية وإرفاق إثبات ما بعد الإصلاح (ISO 45001)</p>
                             </div>
                         </div>
-                        <button type="button" class="emergency-modal-close-btn" id="btnCloseClosureModal" title="إغلاق">&times;</button>
+                        <button type="button" class="emergency-modal-close-btn" id="btnCloseClosureModal" style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; color: #ffffff; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; padding: 0; outline: none; transition: background 0.2s ease;" title="إغلاق">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
 
                     <!-- Body -->

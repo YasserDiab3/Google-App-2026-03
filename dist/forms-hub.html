@@ -3374,6 +3374,35 @@
             margin: auto;
         }
 
+        .emergency-modal-close-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            background: rgba(0, 0, 0, 0.2) !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem !important;
+            line-height: 1;
+            padding: 0 !important;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .emergency-modal-close-btn:hover {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border-color: rgba(255, 255, 255, 0.6) !important;
+            transform: scale(1.05);
+        }
+        .emergency-modal-close-btn:active {
+            transform: scale(0.95);
+        }
+
         [data-theme="dark"] .emergency-modal-dialog {
             background: #152243;
             border-color: #334155;
@@ -3757,7 +3786,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1762</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1763</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -3809,12 +3838,6 @@
                 <button type="button" class="obs-tool-card-btn obs-btn-heatmap" id="btnPlantRiskHeatmap" onclick="openPlantRiskHeatmapModal(event)" title="الخريطة الحرارية لمخاطر المصانع / Plant Risk Heatmap">
                     <i class="fas fa-fire-flame-curved"></i>
                     <span id="txtHeatmapBtn">خريطة المخاطر</span>
-                </button>
-
-                <!-- زر ملخص وتسليم الوردية الميداني عبر الواتساب -->
-                <button type="button" class="obs-tool-card-btn obs-btn-digest" id="btnShiftDigest" onclick="openShiftDigestModal(event)" title="ملخص وتسليم الوردية الميداني عبر الواتساب / WhatsApp Shift Handover">
-                    <i class="fab fa-whatsapp" style="color: #25d366; font-size: 0.95rem;"></i>
-                    <span id="txtShiftDigestBtn">تسليم الوردية 📋</span>
                 </button>
 
                 <!-- زر بوصلة المواد الكيميائية وصحائف السلامة SDS -->
@@ -4142,7 +4165,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1762</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1763</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -9451,7 +9474,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1762-20260927')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1763-20260927')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);

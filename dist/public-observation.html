@@ -2711,6 +2711,34 @@
             from { transform: scale(0.95); opacity: 0; }
             to { transform: scale(1); opacity: 1; }
         }
+        .emergency-modal-close-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            min-height: 36px;
+            color: #ffffff !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            background: rgba(0, 0, 0, 0.2) !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem !important;
+            line-height: 1;
+            padding: 0 !important;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .emergency-modal-close-btn:hover {
+            background: rgba(0, 0, 0, 0.4) !important;
+            border-color: rgba(255, 255, 255, 0.6) !important;
+            transform: scale(1.05);
+        }
+        .emergency-modal-close-btn:active {
+            transform: scale(0.95);
+        }
         .emergency-contact-card {
             background: #ffffff;
             border: 1.5px solid #e2e8f0;
@@ -3765,7 +3793,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1762</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1763</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
