@@ -279,19 +279,20 @@ const Violations = {
         const p2 = this._normKeyStr(existing.personType) || 'employee';
         if (pt !== p2) return false;
         if (pt === 'contractor') {
+            const w1 = this._normKeyStr(draft.contractorWorker);
+            const w2 = this._normKeyStr(existing.contractorWorker);
+            // مطابقة اسم العامل التابع للمقاول مباشرة إذا تطابق الاسمان
+            if (w1 && w2 && w1 === w2) return true;
+
             const id1 = this._normKeyStr(draft.contractorId);
             const id2 = this._normKeyStr(existing.contractorId);
             if (id1 && id2 && id1 === id2) {
-                const w1 = this._normKeyStr(draft.contractorWorker);
-                const w2 = this._normKeyStr(existing.contractorWorker);
                 if (!w1 && !w2) return true;
                 return !w1 || !w2 || w1 === w2;
             }
             const n1 = this._normKeyStr(draft.contractorName);
             const n2 = this._normKeyStr(existing.contractorName);
             if (!n1 || !n2 || n1 !== n2) return false;
-            const w1 = this._normKeyStr(draft.contractorWorker);
-            const w2 = this._normKeyStr(existing.contractorWorker);
             if (!w1 && !w2) return true;
             return w1 === w2;
         }
@@ -1711,8 +1712,10 @@ const Violations = {
         const info = modal && modal.querySelector ? modal.querySelector('#violation-sequence-info') : null;
         if (!info) return;
         const personType = document.getElementById('violation-person-type')?.value;
-        const violationDate = document.getElementById('violation-date')?.value;
-        if (!personType || !violationDate) {
+        const rawDate = document.getElementById('violation-date')?.value;
+        const violationDate = rawDate || new Date().toISOString().slice(0, 10);
+        if (!personType) {
+            info.innerHTML = '';
             info.classList.add('hidden');
             return;
         }
@@ -1721,6 +1724,7 @@ const Violations = {
             draft.employeeCode = document.getElementById('violation-employee-code')?.value.trim() || '';
             draft.employeeName = document.getElementById('violation-person-name')?.value.trim() || '';
             if (!draft.employeeCode && !draft.employeeName) {
+                info.innerHTML = '';
                 info.classList.add('hidden');
                 return;
             }
@@ -1728,7 +1732,8 @@ const Violations = {
             const sel = document.getElementById('violation-contractor-select');
             draft.contractorName = (sel?.value || '').trim();
             draft.contractorWorker = document.getElementById('violation-contractor-worker')?.value.trim() || '';
-            if (!draft.contractorName) {
+            if (!draft.contractorName && !draft.contractorWorker) {
+                info.innerHTML = '';
                 info.classList.add('hidden');
                 return;
             }
@@ -1741,7 +1746,7 @@ const Violations = {
 
         let badgeHtml = '';
         if (history.strikeLevel === 1) {
-            info.className = 'mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900';
+            info.className = 'mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900';
             badgeHtml = `
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1755,7 +1760,7 @@ const Violations = {
                 </div>
             `;
         } else if (history.strikeLevel === 2) {
-            info.className = 'mb-3 p-3 rounded-xl bg-amber-50 border border-amber-300 text-sm text-amber-950 shadow-sm';
+            info.className = 'mt-3 p-3 rounded-xl bg-amber-50 border border-amber-300 text-sm text-amber-950 shadow-sm';
             badgeHtml = `
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -1779,7 +1784,7 @@ const Violations = {
                 </div>
             `;
         } else {
-            info.className = 'mb-3 p-3 rounded-xl bg-red-50 border-2 border-red-400 text-sm text-red-950 shadow-sm';
+            info.className = 'mt-3 p-3 rounded-xl bg-red-50 border-2 border-red-400 text-sm text-red-950 shadow-sm';
             badgeHtml = `
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -1806,6 +1811,198 @@ const Violations = {
 
         info.innerHTML = badgeHtml;
         info.classList.remove('hidden');
+    },
+
+    /**
+     * الحصول على قائمة إدارات النظام المعتمدة
+     */
+    getSystemDepartmentOptions() {
+        const departments = new Set();
+        (AppState.appData?.departments || []).forEach(d => {
+            const val = typeof d === 'string' ? d : (d.name || d.departmentName || d.title || '');
+            if (val && typeof val === 'string' && val.trim()) departments.add(val.trim());
+        });
+        (AppState.appData?.employees || []).forEach(e => {
+            const val = (e.department || e.section || '').trim();
+            if (val) departments.add(val);
+        });
+        (AppState.appData?.violations || []).forEach(v => {
+            const val = (v.employeeDepartment || v.contractorDepartment || '').trim();
+            if (val) departments.add(val);
+        });
+        if (departments.size === 0) {
+            [
+                'السلامة والصحة المهنية والبيئة',
+                'الإدارة الهندسية والمشروعات',
+                'إدارة الإنتاج والعمليات',
+                'إدارة الصيانة الميكانيكية',
+                'إدارة الصيانة الكهربائية',
+                'إدارة الجودة ومراقبة العمليات',
+                'إدارة المخازن واللوجستيات',
+                'إدارة الموارد البشرية والشؤون الإدارية',
+                'إدارة الأمن الإداري والحراسات',
+                'إدارة المرافق والخدمات العامة'
+            ].forEach(d => departments.add(d));
+        }
+        return Array.from(departments).sort((a, b) => a.localeCompare(b, 'ar'));
+    },
+
+    /**
+     * فحص المخالفات السابقة في نفس المنطقة / المكان (Area Hotspot Checker)
+     */
+    checkLocationAreaViolations(location, place, excludeViolationId = null) {
+        if (!location && !place) return null;
+        const list = AppState.appData?.violations || [];
+        const normLoc = String(location || '').trim().toLowerCase();
+        const normPlc = String(place || '').trim().toLowerCase();
+
+        const matched = list.filter(v => {
+            if (!v || (excludeViolationId && String(v.id) === String(excludeViolationId))) return false;
+            const vLoc = String(v.violationLocation || '').trim().toLowerCase();
+            const vPlc = String(v.violationPlace || '').trim().toLowerCase();
+
+            if (normPlc && normPlc !== '-- اختر مكان المخالفة --' && normPlc !== '__custom__') {
+                if (vPlc === normPlc || (vPlc && (vPlc.includes(normPlc) || normPlc.includes(vPlc)))) {
+                    return true;
+                }
+            }
+            if (!normPlc && normLoc && normLoc !== '-- اختر الموقع --') {
+                if (vLoc === normLoc || (vLoc && (vLoc.includes(normLoc) || normLoc.includes(vLoc)))) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (matched.length === 0) return null;
+
+        matched.sort((a, b) => new Date(b.violationDate || 0) - new Date(a.violationDate || 0));
+        return {
+            count: matched.length,
+            lastViolation: matched[0],
+            list: matched
+        };
+    },
+
+    /**
+     * تحديث بطاقة تنبيه بؤرة الخطر وتكرار المخالفات في المنطقة
+     */
+    refreshAreaHotspotInModal(modal, excludeViolationId = null) {
+        if (!modal) return;
+        const container = modal.querySelector('#violation-area-hotspot-container');
+        if (!container) return;
+
+        const personType = modal.querySelector('#violation-person-type')?.value;
+        const locationSelect = personType === 'contractor' 
+            ? modal.querySelector('#violation-contractor-location') 
+            : modal.querySelector('#violation-employee-location');
+        const placeSelect = personType === 'contractor' 
+            ? modal.querySelector('#violation-contractor-place') 
+            : modal.querySelector('#violation-employee-place');
+
+        const location = locationSelect?.options[locationSelect?.selectedIndex]?.text || locationSelect?.value || '';
+        const place = placeSelect?.options[placeSelect?.selectedIndex]?.text || placeSelect?.value || '';
+
+        if (!location || location.includes('-- اختر') || !place || place.includes('-- اختر') || place === '__custom__') {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            return;
+        }
+
+        const hotspot = this.checkLocationAreaViolations(location, place, excludeViolationId);
+        if (!hotspot || hotspot.count === 0) {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+            return;
+        }
+
+        const lastV = hotspot.lastViolation;
+        const lastDate = lastV?.violationDate ? Utils.formatDate(lastV.violationDate) : '';
+        const lastType = lastV?.violationType || '';
+        const lastSev = lastV?.severity || '';
+        const sevColor = lastSev === 'عالية' ? '#dc2626' : (lastSev === 'متوسطة' ? '#d97706' : '#2563eb');
+
+        container.className = 'mt-3 p-3 rounded-xl border border-amber-300 shadow-sm';
+        container.style.background = 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)';
+        container.innerHTML = `
+            <div style="display: flex; align-items: start; gap: 10px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: #fde68a; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
+                    <i class="fas fa-map-marked-alt text-amber-800 text-base"></i>
+                </div>
+                <div style="flex: 1; min-width: 0;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                        <strong style="color: #92400e; font-size: 0.9rem;">
+                            ⚠️ تنبيه بؤرة خطر: رُصد سابقاً (${hotspot.count}) مخالفات في منطقة "${Utils.escapeHTML(place)}"
+                        </strong>
+                        <span class="badge" style="background: #fef08a; color: #854d0e; font-size: 11px; padding: 2px 8px; border-radius: 9999px; font-weight: 800; border: 1px solid #fcd34d;">
+                            تكرار مكاني
+                        </span>
+                    </div>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #78350f; line-height: 1.45;">
+                        آخر مخالفة مسجلة في هذا المكان: <strong style="color: ${sevColor};">${Utils.escapeHTML(lastType)}</strong> بتاريخ <strong>${lastDate}</strong> (${lastV.status || 'محلول'}).
+                        <br><span style="color: #b45309; font-weight: 600;">💡 توجيه السلامة: يرجى التحقق من أسباب تكرار المخالفات في هذه المنطقة المحددة والتوصية بإجراء تصحيحي جذري.</span>
+                    </p>
+                </div>
+            </div>
+        `;
+        container.classList.remove('hidden');
+    },
+
+    /**
+     * مقترحات تفاصيل المخالفة والإجراء المتخذ التفاعلية
+     */
+    getViolationSuggestionChips(type = '') {
+        const normType = String(type || '').toLowerCase();
+        
+        let detailsChips = [];
+        const actionChips = [
+            'توجيه إنذار وتنبيه شفهي فوري وتوعية العامل باشتراطات السلامة المهنية',
+            'إصدار إنذار كتابي رسمي أول والتنبيه بعدم التكرار',
+            'إنذار كتابي نهائي مع التوصية بتطبيق خصم مالي وفق اللائحة',
+            'إيقاف العمل فوراً وتصحيح الوضع المخالف وإزالة الخطر قبل الاستئناف',
+            'سحب تصريح العمل وإلزام المقاول بتقديم خطة عمل آمنة معتمدة',
+            'استبعاد فوري للعامل المخالف من الموقع وسحب تصريح الدخول الخاص به',
+            'إلزام العامل بحضور تدريب تنشيطي للسلامة والصحة المهنية (Toolbox Talk)'
+        ];
+
+        if (normType.includes('مهمات') || normType.includes('وقاية') || normType.includes('ppe')) {
+            detailsChips = [
+                'عدم الالتزام بارتداء الخوذة وحذاء السلامة في منطقة العمليات والإنتاج',
+                'العمل بالصاروخ / التجليخ بدون نظارات حماية العين أو واقي الوجه الشفاف',
+                'عدم ارتداء كمامة التنفس الواقية المناسبة في بيئة بها أتربة وأبخرة',
+                'استخدام قفازات تالفة أو غير ملائمة لطبيعة الأنشطة الحرارية والميكانيكية'
+            ];
+        } else if (normType.includes('ارتفاع') || normType.includes('سقالة') || normType.includes('سقالات')) {
+            detailsChips = [
+                'العمل على ارتفاع يتجاوز 1.8 متر بدون ربط حزام الأمان بنقطة تثبيت معتمدة',
+                'استخدام سقالة غير مكتملة وخالية من كارت الاعتماد الأخضر (Scaffold Tag)',
+                'عدم توفير حبل نجاة (Life Line) أثناء حركة الفنيين على الارتفاعات',
+                'الصعود على هياكل غير مخصصة بدلاً من السلالم المطابقة للمواصفات'
+            ];
+        } else if (normType.includes('تدخين') || normType.includes('حريق') || normType.includes('اشتعال')) {
+            detailsChips = [
+                'التدخين داخل منطقة محظورة تحوي مواد كيميائية / بترولية قابلة للاشتعال',
+                'تنفيذ أعمال قطع ولحام ساخن بدون مراقب حريق (Fire Watcher) وطفاية',
+                'وضع عوائق ومواد خام أمام طفاية الحريق ولوحة الطوارئ تعيق الوصول',
+                'عدم فحص صلاحية طفاية الحريق قبل بدء الأعمال الساخنة'
+            ];
+        } else if (normType.includes('تصريح') || normType.includes('ptw') || normType.includes('عزل') || normType.includes('loto')) {
+            detailsChips = [
+                'بدء العمل الميداني بدون استخراج وتوقيع تصريح العمل (PTW) المطلوب',
+                'تجاوز وقت انتهاء تصريح العمل دون طلب تمديد رسمي من مسؤول السلامة',
+                'عدم تطبيق إجراءات عزل الطاقة وتأمين مصادر الخطر بالقفل والبطاقة (LOTO)',
+                'دخول مكان مغلق (Confined Space) بدون قياس نسبة الغازات والأكسجين'
+            ];
+        } else {
+            detailsChips = [
+                'سوء الترتيب والنظافة وتراكم المخلفات مما يعيق ممرات المشاة ومخارج الطوارئ',
+                'قيادة المعدة / الرافعة الشوكية بسرعة زائدة أو بدون تفويض رسمي معتمد',
+                'تخزين مواد كيميائية في عبوات غير مخصصة وبدون ملصقات التحذير (GHS)',
+                'استخدام معدة أو أداة كهربائية بها أسلاك مكشوفة ودون تأريض مناسب'
+            ];
+        }
+
+        return { detailsChips, actionChips };
     },
 
     _violationsImportNormalizeHeaderKey(h) {
@@ -5636,22 +5833,72 @@ const Violations = {
                 </option>
             `
             : '';
+        // تجهيز قوائم الإكمال التلقائي لعمالة المقاولين
+        const contractorWorkerNames = Array.from(new Set(
+            (AppState.appData?.violations || [])
+                .map(v => (v.contractorWorker || '').trim())
+                .filter(w => w && w !== 'غير محدد')
+        )).sort((a, b) => a.localeCompare(b, 'ar'));
+        const workerDatalistHtml = contractorWorkerNames.map(w => `<option value="${Utils.escapeHTML(w)}"></option>`).join('');
+
+        // المسميات الوظيفية القياسية والتاريخية للعمالة
+        const standardPositions = [
+            'عامل عادي',
+            'فني كهرباء',
+            'فني ميكانيكا',
+            'لحام / براد',
+            'فني سقالات',
+            'مشرف سقالات',
+            'مشغل رافعة شوكية',
+            'سائق معدات ثقيلة',
+            'مشرف سلامة وصحة مهنية',
+            'مراقب حريق (Fire Watcher)',
+            'فني دهان وعزل',
+            'فني مدني وبناء',
+            'مساعد فني / شيال'
+        ];
+        const pastPositions = (AppState.appData?.violations || [])
+            .map(v => (v.contractorPosition || '').trim())
+            .filter(Boolean);
+        const allPositions = Array.from(new Set([...standardPositions, ...pastPositions]))
+            .sort((a, b) => a.localeCompare(b, 'ar'));
+        const positionDatalistHtml = allPositions.map(p => `<option value="${Utils.escapeHTML(p)}"></option>`).join('');
+
+        // إدارات النظام المعتمدة لمخالفة المقاول
+        const systemDepts = this.getSystemDepartmentOptions();
+        const contractorDeptOptions = systemDepts.map(d => {
+            const isSel = violationData?.contractorDepartment === d;
+            return `<option value="${Utils.escapeHTML(d)}" ${isSel ? 'selected' : ''}>${Utils.escapeHTML(d)}</option>`;
+        }).join('');
+        const hasCurrentContractorDept = !violationData?.contractorDepartment || systemDepts.includes(violationData.contractorDepartment);
+        const legacyContractorDeptOption = (!hasCurrentContractorDept && violationData?.contractorDepartment)
+            ? `<option value="${Utils.escapeHTML(violationData.contractorDepartment)}" selected>${Utils.escapeHTML(violationData.contractorDepartment)}</option>`
+            : '';
+
+        // افتراضات التاريخ والوقت (تاريخ اليوم والوقت الحالي للمخالفة الجديدة)
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const currentTimeStr = new Date().toTimeString().slice(0, 5);
+        const formDateValue = violationData?.violationDate 
+            ? new Date(violationData.violationDate).toISOString().slice(0, 10) 
+            : todayStr;
+        const formTimeValue = violationData?.violationTime || currentTimeStr;
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 800px;">
-                <div class="modal-header">
-                    <h2 class="modal-title">
-                        <i class="fas fa-exclamation-triangle ml-2 text-yellow-600"></i>
+            <div class="modal-content" style="max-width: 860px; max-height: 92vh; display: flex; flex-direction: column;">
+                <div class="modal-header border-b pb-3 mb-2">
+                    <h2 class="modal-title flex items-center gap-2 text-lg font-bold text-gray-800">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
                         ${isEdit ? 'تعديل مخالفة' : 'تسجيل مخالفة جديدة'}
                     </h2>
                     <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="modal-body">
-                    <!-- ✅ شريط تنبيه داخل النموذج (يظهر أعلى الحقول) -->
-                    <div id="violation-form-banner" class="hidden mb-4 rounded-lg border p-3 flex items-start gap-2.5" role="alert" style="font-size: 0.9rem;">
+                <div class="modal-body overflow-y-auto px-1" style="flex: 1;">
+                    <!-- ✅ شريط تنبيه داخل النموذج -->
+                    <div id="violation-form-banner" class="hidden mb-4 rounded-xl border p-3.5 flex items-start gap-3" role="alert" style="font-size: 0.9rem;">
                         <i id="violation-form-banner-icon" class="fas fa-circle-info text-lg mt-0.5"></i>
                         <div class="flex-1 min-w-0">
                             <div id="violation-form-banner-title" class="font-bold mb-0.5"></div>
@@ -5663,243 +5910,333 @@ const Violations = {
                     </div>
 
                     <form id="violation-form" class="space-y-4">
-                        <!-- الصف الأول: نوع المخالفة والكود الوظيفي -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-user-tag ml-2 text-blue-600"></i>
-                                    نوع الشخص *
-                                </label>
-                                <select id="violation-person-type" required class="form-input">
-                                    <option value="">اختر النوع</option>
-                                    <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف</option>
-                                    <option value="contractor" ${isContractorRecord ? 'selected' : ''}>مقاول</option>
-                                </select>
+                        <!-- البطاقة 1: بيانات الشخص المخالف -->
+                        <div class="card p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-black">1</span>
+                                    <i class="fas fa-user-shield text-blue-600"></i>
+                                    بيانات الشخص المخالف (الموظف / المقاول)
+                                </h3>
+                                <span class="text-xs text-gray-500 font-medium">التحقق الذكي من تكرار الجزاءات</span>
                             </div>
-                            <div id="violation-employee-code-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                <label for="violation-employee-code" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-id-card ml-2"></i>
-                                    الكود الوظيفي المخالف *
-                                </label>
-                                <input type="text" id="violation-employee-code" class="form-input"
-                                    value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
-                                    placeholder="أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)"
-                                    ${isEmployeeRecord ? 'required' : ''}>
-                            </div>
-                        </div>
-                        
-                        <!-- الصف الثاني: اسم الموظف والوظيفة -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="violation-person-name" class="block text-sm font-semibold text-gray-700 mb-2" id="violation-person-name-label">اسم المخالف *</label>
-                                <input type="text" id="violation-person-name" required class="form-input"
-                                    value="${violationData?.employeeName || violationData?.contractorName || ''}" 
-                                    placeholder="${isEmployeeRecord ? 'سيتم التعبئة تلقائياً' : 'اسم المقاول'}"
-                                    ${isEmployeeRecord ? 'readonly' : ''}
-                                    style="display: ${isContractorRecord ? 'none' : 'block'};">
-                                <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-2" style="display: ${isContractorRecord ? 'block' : 'none'};">المقاول *</label>
-                                <select id="violation-contractor-select" class="form-input"
-                                    style="display: ${isContractorRecord ? 'block' : 'none'};"
-                                    ${isContractorRecord ? 'required' : ''}>
-                                    <option value="">-- اختر المقاول --</option>
-                                </select>
-                            </div>
-                            <div id="violation-employee-position-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                <label for="violation-employee-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
-                                <input type="text" id="violation-employee-position" class="form-input"
-                                    value="${violationData?.employeePosition || ''}" 
-                                    placeholder="سيتم التعبئة تلقائياً" readonly>
-                            </div>
-                        </div>
-                        
-                        <!-- الصف الثالث: الإدارة وتاريخ المخالفة -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div id="violation-employee-department-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                <label for="violation-employee-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
-                                <input type="text" id="violation-employee-department" class="form-input"
-                                    value="${violationData?.employeeDepartment || ''}" 
-                                    placeholder="سيتم التعبئة تلقائياً" readonly>
-                            </div>
-                            <div>
-                                <label for="violation-date" class="block text-sm font-semibold text-gray-700 mb-2">تاريخ المخالفة *</label>
-                                <input type="date" id="violation-date" required class="form-input"
-                                    value="${violationData?.violationDate ? new Date(violationData.violationDate).toISOString().slice(0, 10) : ''}">
-                            </div>
-                        </div>
-                        <div id="violation-sequence-info" class="hidden mb-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
-                            <i class="fas fa-layer-group ml-2 text-amber-700"></i><span id="violation-sequence-text"></span>
-                        </div>
-                        
-                        <!-- الصف الرابع: وقت المخالفة ونوع المخالفة -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="violation-time" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-clock ml-2 text-purple-600"></i>
-                                    وقت المخالفة *
-                                </label>
-                                <input type="time" id="violation-time" required class="form-input"
-                                    value="${violationData?.violationTime || ''}">
-                            </div>
-                            <div>
-                                <label for="violation-type" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-exclamation-circle ml-2 text-red-600"></i>
-                                    نوع المخالفة *
-                                </label>
-                                <select id="violation-type" required class="form-input">
-                                    <option value="">اختر النوع</option>
-                                    ${legacyTypeOption}
-                                    ${typeOptions}
-                                </select>
-                            </div>
-                            <div>
-                                <label for="violation-fine-amount" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-money-bill-wave ml-2 text-green-600"></i>
-                                    القيمة المالية (ج.م)
-                                </label>
-                                <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
-                                    value="${Number(effectiveFineForForm)}"
-                                    placeholder="القيمة المالية">
-                                <p class="text-xs text-gray-500 mt-1">
-                                    ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً ويمكنك التعديل لأنك مدير.' : 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير فقط.'}
-                                </p>
-                            </div>
-                        </div>
-                        <!-- حقول المقاول (تظهر فقط عند اختيار مقاول) -->
-                        <div id="violation-contractor-fields-container" style="display: ${isContractorRecord ? 'block' : 'none'};">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div id="violation-contractor-worker-container">
-                                    <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-2">اسم العامل التابع للمقاول</label>
-                                    <input type="text" id="violation-contractor-worker" class="form-input"
-                                        value="${violationData?.contractorWorker || ''}" 
-                                        placeholder="اسم العامل">
-                                </div>
-                                <div id="violation-contractor-position-container">
-                                    <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-2">الوظيفة</label>
-                                    <input type="text" id="violation-contractor-position" class="form-input"
-                                        value="${violationData?.contractorPosition || ''}" 
-                                        placeholder="وظيفة العامل">
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mt-4">
-                                <div id="violation-contractor-department-container">
-                                    <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-2">الإدارة</label>
-                                    <input type="text" id="violation-contractor-department" class="form-input"
-                                        value="${violationData?.contractorDepartment || ''}" 
-                                        placeholder="الإدارة التابعة له">
-                            </div>
-                            <div>
-                                    <label for="violation-contractor-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع *</label>
-                                    <select id="violation-contractor-location" required class="form-input">
-                                        <option value="">-- اختر الموقع --</option>
-                                    </select>
-                            </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4 mt-4">
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label for="violation-contractor-place" class="block text-sm font-semibold text-gray-700 mb-2">مكان المخالفة *</label>
-                                    <select id="violation-contractor-place" required class="form-input">
-                                        <option value="">-- اختر مكان المخالفة --</option>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-user-tag ml-1 text-blue-600"></i> نوع الشخص *
+                                    </label>
+                                    <select id="violation-person-type" required class="form-input">
+                                        <option value="">اختر النوع</option>
+                                        <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف بالشركة</option>
+                                        <option value="contractor" ${isContractorRecord ? 'selected' : ''}>عمالة مقاول</option>
+                                    </select>
+                                </div>
+
+                                <!-- للموظف: الكود الوظيفي -->
+                                <div id="violation-employee-code-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
+                                    <label for="violation-employee-code" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-id-card ml-1 text-indigo-600"></i> الكود الوظيفي المخالف *
+                                    </label>
+                                    <input type="text" id="violation-employee-code" class="form-input"
+                                        value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
+                                        placeholder="أدخل الكود (جلب تلقائي للاسم والإدارة)"
+                                        ${isEmployeeRecord ? 'required' : ''}>
+                                </div>
+
+                                <!-- للمقاول: شركة المقاول -->
+                                <div id="violation-contractor-company-container" style="display: ${isContractorRecord ? 'block' : 'none'};">
+                                    <label for="violation-contractor-select" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-building ml-1 text-amber-600"></i> شركة المقاول *
+                                    </label>
+                                    <select id="violation-contractor-select" class="form-input"
+                                        ${isContractorRecord ? 'required' : ''}>
+                                        <option value="">-- اختر شركة المقاول --</option>
                                     </select>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- حقول الموقع ومكان المخالفة (للموظف) -->
-                        <div id="violation-location-fields-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                            <div class="grid grid-cols-2 gap-4">
+
+                            <!-- تفاصيل الموظف التلقائية -->
+                            <div id="violation-employee-details-grid" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3" style="display: ${isEmployeeRecord ? 'grid' : 'none'};">
                                 <div>
-                                    <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-2">الموقع *</label>
-                                    <select id="violation-employee-location" required class="form-input">
-                                        <option value="">-- اختر الموقع --</option>
-                                    </select>
+                                    <label for="violation-person-name" class="block text-xs font-semibold text-gray-600 mb-1" id="violation-person-name-label">اسم الموظف</label>
+                                    <input type="text" id="violation-person-name" class="form-input bg-gray-50 text-gray-700 font-medium"
+                                        value="${violationData?.employeeName || ''}" 
+                                        placeholder="سيتم التعبئة تلقائياً" readonly>
+                                </div>
+                                <div id="violation-employee-position-container">
+                                    <label for="violation-employee-position" class="block text-xs font-semibold text-gray-600 mb-1">الوظيفة</label>
+                                    <input type="text" id="violation-employee-position" class="form-input bg-gray-50 text-gray-700"
+                                        value="${violationData?.employeePosition || ''}" 
+                                        placeholder="سيتم التعبئة تلقائياً" readonly>
+                                </div>
+                                <div id="violation-employee-department-container">
+                                    <label for="violation-employee-department" class="block text-xs font-semibold text-gray-600 mb-1">الإدارة</label>
+                                    <input type="text" id="violation-employee-department" class="form-input bg-gray-50 text-gray-700"
+                                        value="${violationData?.employeeDepartment || ''}" 
+                                        placeholder="سيتم التعبئة تلقائياً" readonly>
+                                </div>
+                            </div>
+
+                            <!-- تفاصيل عمالة المقاول الذكية -->
+                            <div id="violation-contractor-fields-container" class="mt-3" style="display: ${isContractorRecord ? 'block' : 'none'};">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div id="violation-contractor-worker-container">
+                                        <label for="violation-contractor-worker" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-user-hard-hat ml-1 text-amber-600"></i> اسم العامل التابع للمقاول
+                                        </label>
+                                        <input type="text" id="violation-contractor-worker" list="violation-contractor-workers-list" class="form-input"
+                                            value="${violationData?.contractorWorker || ''}" 
+                                            placeholder="اختر أو اكتب اسم العامل...">
+                                        <datalist id="violation-contractor-workers-list">
+                                            ${workerDatalistHtml}
+                                        </datalist>
+                                    </div>
+                                    <div id="violation-contractor-position-container">
+                                        <label for="violation-contractor-position" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-briefcase ml-1 text-slate-600"></i> الوظيفة (قائمة أو كتابة حرة)
+                                        </label>
+                                        <input type="text" id="violation-contractor-position" list="violation-contractor-positions-list" class="form-input"
+                                            value="${violationData?.contractorPosition || ''}" 
+                                            placeholder="اختر أو اكتب المهنة...">
+                                        <datalist id="violation-contractor-positions-list">
+                                            ${positionDatalistHtml}
+                                        </datalist>
+                                    </div>
+                                    <div id="violation-contractor-department-container">
+                                        <label for="violation-contractor-department" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-sitemap ml-1 text-teal-600"></i> الإدارة التابعة في النظام
+                                        </label>
+                                        <select id="violation-contractor-department" class="form-input">
+                                            <option value="">-- اختر الإدارة في النظام --</option>
+                                            ${legacyContractorDeptOption}
+                                            ${contractorDeptOptions}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ✅ بطاقة رصد تكرار الجزاءات الذكية (Strike Alert Card) -->
+                            <div id="violation-sequence-info" class="hidden"></div>
+                        </div>
+
+                        <!-- البطاقة 2: الموقع وتوقيت الرصد الميداني -->
+                        <div class="card p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-black">2</span>
+                                    <i class="fas fa-map-marker-alt text-emerald-600"></i>
+                                    الموقع وتوقيت الرصد الميداني
+                                </h3>
+                                <span class="text-xs text-gray-500 font-medium">رصد وتنبيه تلقائي لبؤر الخطر بالمنطقة</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <!-- للموظف: الموقع والمكان -->
+                                <div id="violation-location-fields-container" class="contents" style="display: ${isEmployeeRecord ? 'contents' : 'none'};">
+                                    <div>
+                                        <label for="violation-employee-location" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع *
+                                        </label>
+                                        <select id="violation-employee-location" class="form-input" ${isEmployeeRecord ? 'required' : ''}>
+                                            <option value="">-- اختر الموقع --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="violation-employee-place" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان المخالفة *
+                                        </label>
+                                        <select id="violation-employee-place" class="form-input" ${isEmployeeRecord ? 'required' : ''}>
+                                            <option value="">-- اختر مكان المخالفة --</option>
+                                        </select>
+                                        <div id="violation-employee-custom-place-box" class="hidden mt-2">
+                                            <input type="text" id="violation-employee-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد...">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- للمقاول: الموقع والمكان -->
+                                <div id="violation-contractor-location-fields-container" class="contents" style="display: ${isContractorRecord ? 'contents' : 'none'};">
+                                    <div>
+                                        <label for="violation-contractor-location" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع *
+                                        </label>
+                                        <select id="violation-contractor-location" class="form-input" ${isContractorRecord ? 'required' : ''}>
+                                            <option value="">-- اختر الموقع --</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="violation-contractor-place" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                            <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان المخالفة *
+                                        </label>
+                                        <select id="violation-contractor-place" class="form-input" ${isContractorRecord ? 'required' : ''}>
+                                            <option value="">-- اختر مكان المخالفة --</option>
+                                        </select>
+                                        <div id="violation-contractor-custom-place-box" class="hidden mt-2">
+                                            <input type="text" id="violation-contractor-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد...">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- التاريخ والوقت -->
+                                <div>
+                                    <label for="violation-date" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-calendar-alt ml-1 text-blue-600"></i> تاريخ المخالفة *
+                                    </label>
+                                    <input type="date" id="violation-date" required class="form-input"
+                                        value="${formDateValue}">
                                 </div>
                                 <div>
-                                    <label for="violation-employee-place" class="block text-sm font-semibold text-gray-700 mb-2">مكان المخالفة *</label>
-                                    <select id="violation-employee-place" required class="form-input">
-                                        <option value="">-- اختر مكان المخالفة --</option>
+                                    <label for="violation-time" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-clock ml-1 text-purple-600"></i> وقت المخالفة *
+                                    </label>
+                                    <input type="time" id="violation-time" required class="form-input"
+                                        value="${formTimeValue}">
+                                </div>
+                            </div>
+
+                            <!-- ✅ بطاقة تنبيه بؤرة الخطر في المنطقة المحددة -->
+                            <div id="violation-area-hotspot-container" class="hidden"></div>
+                        </div>
+
+                        <!-- البطاقة 3: تصنيف المخالفة والغرامة والتحليل الجذري -->
+                        <div class="card p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-md bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black">3</span>
+                                    <i class="fas fa-gavel text-amber-600"></i>
+                                    تصنيف المخالفة والغرامة والسبب الجذري
+                                </h3>
+                                <span class="text-xs text-gray-500 font-medium">تحديد النوع يضبط الغرامة والمقترحات تلقائياً</span>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="violation-type" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-exclamation-circle ml-1 text-red-600"></i> نوع المخالفة *
+                                    </label>
+                                    <select id="violation-type" required class="form-input">
+                                        <option value="">اختر نوع المخالفة</option>
+                                        ${legacyTypeOption}
+                                        ${typeOptions}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="violation-fine-amount" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-money-bill-wave ml-1 text-green-600"></i> القيمة المالية (ج.م)
+                                    </label>
+                                    <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
+                                        value="${Number(effectiveFineForForm)}"
+                                        placeholder="القيمة المالية">
+                                    <p class="text-xs text-gray-500 mt-1">
+                                        ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير.' : 'يتم التحديد تلقائياً حسب اللائحة، وتعديلها متاح للمدير فقط.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                                <div>
+                                    <label for="violation-severity" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-signal ml-1 text-orange-600"></i> مستوى الشدة *
+                                    </label>
+                                    <select id="violation-severity" required class="form-input">
+                                        <option value="">اختر الشدة</option>
+                                        <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>🔴 عالية</option>
+                                        <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>🟡 متوسطة</option>
+                                        <option value="منخفضة" ${violationData?.severity === 'منخفضة' || violationData?.severity === 'منخضة' ? 'selected' : ''}>🟢 منخفضة</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="violation-status" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-info-circle ml-1 text-blue-600"></i> حالة المعالجة *
+                                    </label>
+                                    <select id="violation-status" required class="form-input">
+                                        <option value="">اختر الحالة</option>
+                                        <option value="قيد المراجعة" ${!violationData?.status || violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة</option>
+                                        <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>✅ تم المعالجة (محلول)</option>
+                                        <option value="غير محلول" ${violationData?.status === 'غير محلول' ? 'selected' : ''}>❌ غير محلول</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="violation-root-cause" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                        <i class="fas fa-search-plus ml-1 text-teal-600"></i> السبب الجذري (RCA)
+                                    </label>
+                                    <select id="violation-root-cause" class="form-input">
+                                        <option value="">اختر السبب الجذري</option>
+                                        <option value="سلوك غير آمن (Unsafe Act)" ${violationData?.rootCause === 'سلوك غير آمن (Unsafe Act)' ? 'selected' : ''}>سلوك غير آمن (Unsafe Act)</option>
+                                        <option value="ظرف عمل غير آمن (Unsafe Condition)" ${violationData?.rootCause === 'ظرف عمل غير آمن (Unsafe Condition)' ? 'selected' : ''}>ظرف عمل غير آمن (Unsafe Condition)</option>
+                                        <option value="قصور تدريبي وتوعوي (Training Gap)" ${violationData?.rootCause === 'قصور تدريبي وتوعوي (Training Gap)' ? 'selected' : ''}>قصور تدريبي وتوعوي (Training Gap)</option>
+                                        <option value="قصور إشرافي وإجرائي (Supervisory Defect)" ${violationData?.rootCause === 'قصور إشرافي وإجرائي (Supervisory Defect)' ? 'selected' : ''}>قصور إشرافي وإجرائي (Supervisory Defect)</option>
+                                        <option value="خلل في المعدات ومهمات الوقاية" ${violationData?.rootCause === 'خلل في المعدات ومهمات الوقاية' ? 'selected' : ''}>خلل في المعدات ومهمات الوقاية</option>
+                                        <option value="عوامل خارجية وبيئية" ${violationData?.rootCause === 'عوامل خارجية وبيئية' ? 'selected' : ''}>عوامل خارجية وبيئية</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- الصف الخامس: الشدة والحالة والسبب الجذري -->
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-signal ml-2 text-orange-600"></i>
-                                    الشدة *
-                                </label>
-                                <select id="violation-severity" required class="form-input">
-                                    <option value="">اختر الشدة</option>
-                                    <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>عالية</option>
-                                    <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                                    <option value="منخفضة" ${violationData?.severity === 'منخفضة' || violationData?.severity === 'منخضة' ? 'selected' : ''}>منخفضة</option>
-                                </select>
+
+                        <!-- البطاقة 4: الوصف التفصيلي والإجراءات والمقترحات والمرفقات -->
+                        <div class="card p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
+                            <div class="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+                                <h3 class="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-md bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-black">4</span>
+                                    <i class="fas fa-file-signature text-purple-600"></i>
+                                    الوصف التفصيلي والإجراءات المتخذة والمرفقات
+                                </h3>
+                                <span class="text-xs text-gray-500 font-medium">انقر على أي مقترح لإضافته بنقرة واحدة</span>
                             </div>
-                            <div>
-                                <label for="violation-status" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-info-circle ml-2 text-blue-600"></i>
-                                    الحالة *
-                                </label>
-                                <select id="violation-status" required class="form-input">
-                                    <option value="">اختر الحالة</option>
-                                    <option value="قيد المراجعة" ${violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
-                                    <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>محلول</option>
-                                    <option value="غير محلول" ${violationData?.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
-                                </select>
+
+                            <!-- تفاصيل المخالفة والمقترحات -->
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                                    <label for="violation-details" class="block text-sm font-semibold text-gray-700">
+                                        <i class="fas fa-file-alt ml-1 text-amber-600"></i> تفاصيل المخالفة
+                                    </label>
+                                    <span class="text-xs text-amber-800 font-semibold">💡 مقترحات سريعة حسب نوع المخالفة:</span>
+                                </div>
+                                <div id="violation-details-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[28px]"></div>
+                                <textarea id="violation-details" class="form-input" rows="3"
+                                    placeholder="اكتب تفاصيل المخالفة ووصفها الكامل، أو اختر من المقترحات الذكية أعلاه...">${violationData?.violationDetails || ''}</textarea>
                             </div>
-                            <div>
-                                <label for="violation-root-cause" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-search-plus ml-2 text-teal-600"></i>
-                                    السبب الجذري (RCA)
-                                </label>
-                                <select id="violation-root-cause" class="form-input">
-                                    <option value="">اختر السبب الجذري</option>
-                                    <option value="سلوك غير آمن (Unsafe Act)" ${violationData?.rootCause === 'سلوك غير آمن (Unsafe Act)' ? 'selected' : ''}>سلوك غير آمن (Unsafe Act)</option>
-                                    <option value="ظرف عمل غير آمن (Unsafe Condition)" ${violationData?.rootCause === 'ظرف عمل غير آمن (Unsafe Condition)' ? 'selected' : ''}>ظرف عمل غير آمن (Unsafe Condition)</option>
-                                    <option value="قصور تدريبي وتوعوي (Training Gap)" ${violationData?.rootCause === 'قصور تدريبي وتوعوي (Training Gap)' ? 'selected' : ''}>قصور تدريبي وتوعوي (Training Gap)</option>
-                                    <option value="قصور إشرافي وإجرائي (Supervisory Defect)" ${violationData?.rootCause === 'قصور إشرافي وإجرائي (Supervisory Defect)' ? 'selected' : ''}>قصور إشرافي وإجرائي (Supervisory Defect)</option>
-                                    <option value="خلل في المعدات ومهمات الوقاية" ${violationData?.rootCause === 'خلل في المعدات ومهمات الوقاية' ? 'selected' : ''}>خلل في المعدات ومهمات الوقاية</option>
-                                    <option value="عوامل خارجية وبيئية" ${violationData?.rootCause === 'عوامل خارجية وبيئية' ? 'selected' : ''}>عوامل خارجية وبيئية</option>
-                                </select>
+
+                            <!-- الإجراء المتخذ والمقترحات -->
+                            <div class="mb-4">
+                                <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                                    <label for="violation-action" class="block text-sm font-semibold text-gray-700">
+                                        <i class="fas fa-tasks ml-1 text-indigo-600"></i> الإجراء المتخذ
+                                    </label>
+                                    <span class="text-xs text-indigo-800 font-semibold">⚡ مقترحات الإجراءات النظامية المعتمدة:</span>
+                                </div>
+                                <div id="violation-action-chips" class="flex flex-wrap gap-1.5 mb-2 min-h-[28px]"></div>
+                                <textarea id="violation-action" class="form-input" rows="3"
+                                    placeholder="وصف الإجراء المتخذ فوراً أو الإجراء التصحيحي، أو اختر من المقترحات السريعة...">${violationData?.actionTaken || ''}</textarea>
                             </div>
-                        </div>
-                        
-                        <!-- الصورة وتفاصيل المخالفة والإجراء المتخذ -->
-                            <div class="col-span-2">
-                                <label for="violation-photo-input" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-image ml-2"></i>
-                                    صورة المخالفة (غير إلزامي)
+
+                            <!-- صورة المخالفة الميدانية -->
+                            <div>
+                                <label for="violation-photo-input" class="block text-sm font-semibold text-gray-700 mb-1.5">
+                                    <i class="fas fa-camera ml-1 text-blue-600"></i> صورة توثيق المخالفة (مرفق اختياري)
                                 </label>
                                 <input type="file" id="violation-photo-input" accept="image/*" class="form-input">
                                 <div id="violation-photo-preview" class="mt-2 ${violationData?.photo ? '' : 'hidden'}">
-                                    <img src="${violationData?.photo || ''}" alt="صورة المخالفة" class="w-48 h-48 object-cover rounded border" id="violation-photo-img">
-                                <button type="button" onclick="const photoInput = document.getElementById('violation-photo-input'); if (photoInput) photoInput.value=''; const photoPreview = document.getElementById('violation-photo-preview'); if (photoPreview) photoPreview.classList.add('hidden');" class="mt-1 text-xs text-red-600">حذف الصورة</button>
+                                    <div class="relative inline-block">
+                                        <img src="${violationData?.photo || ''}" alt="صورة المخالفة" class="w-48 h-36 object-cover rounded-lg border shadow-sm" id="violation-photo-img">
+                                        <button type="button" onclick="const p=document.getElementById('violation-photo-input'); if(p) p.value=''; const prev=document.getElementById('violation-photo-preview'); if(prev) prev.classList.add('hidden');" class="mt-1 block text-xs text-red-600 hover:text-red-800 font-bold">
+                                            <i class="fas fa-trash ml-1"></i>حذف الصورة المرفقة
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-span-2">
-                                <label for="violation-details" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-file-alt ml-2 text-amber-600"></i>
-                                    تفاصيل المخالفة
-                                </label>
-                                <textarea id="violation-details" class="form-input" rows="3"
-                                    placeholder="اكتب تفاصيل المخالفة ووصفها الكامل...">${violationData?.violationDetails || ''}</textarea>
-                            </div>
-                            <div class="col-span-2">
-                                <label for="violation-action" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    <i class="fas fa-tasks ml-2 text-indigo-600"></i>
-                                    الإجراء المتخذ
-                                </label>
-                                <textarea id="violation-action" class="form-input" rows="3"
-                                    placeholder="وصف الإجراء المتخذ بشأن المخالفة...">${violationData?.actionTaken || ''}</textarea>
-                            </div>
                         </div>
-                        <div class="flex items-center justify-end gap-4 pt-4 border-t">
+
+                        <div class="flex items-center justify-end gap-3 pt-3 border-t">
                             <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">
-                                <i class="fas fa-times ml-2"></i>إلغاء
+                                <i class="fas fa-times ml-1.5"></i>إلغاء
                             </button>
                             <button type="submit" id="violation-submit-btn" class="btn-primary">
-                                <i class="fas fa-save ml-2"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل المخالفة'}
+                                <i class="fas fa-save ml-1.5"></i>${isEdit ? 'حفظ التعديلات' : 'تسجيل المخالفة'}
                             </button>
                         </div>
                     </form>
@@ -5914,6 +6251,8 @@ const Violations = {
         const employeeCodeInput = document.getElementById('violation-employee-code');
         const personNameInput = document.getElementById('violation-person-name');
         const personNameLabel = document.getElementById('violation-person-name-label');
+        const employeeDetailsGrid = document.getElementById('violation-employee-details-grid');
+        const contractorCompanyContainer = document.getElementById('violation-contractor-company-container');
 
         const contractorSelect = document.getElementById('violation-contractor-select');
 
@@ -5939,6 +6278,7 @@ const Violations = {
         const contractorDepartmentInput = document.getElementById('violation-contractor-department');
 
         const locationFieldsContainer = document.getElementById('violation-location-fields-container');
+        const contractorLocationFieldsContainer = document.getElementById('violation-contractor-location-fields-container');
         const violationTypeSelect = document.getElementById('violation-type');
         const fineAmountInput = document.getElementById('violation-fine-amount');
         const typeById = new Map((violationTypes || []).map(type => [String(type.id || '').trim(), type]));
@@ -5962,13 +6302,66 @@ const Violations = {
             }
         };
 
+        // دالة توليد مقترحات تفاصيل المخالفة والإجراء المتخذ
+        const renderSuggestionChips = () => {
+            const selectedType = violationTypeSelect?.value || '';
+            const { detailsChips, actionChips } = this.getViolationSuggestionChips(selectedType);
+
+            const detailsContainer = modal.querySelector('#violation-details-chips');
+            const actionContainer = modal.querySelector('#violation-action-chips');
+            const detailsInput = modal.querySelector('#violation-details');
+            const actionInput = modal.querySelector('#violation-action');
+
+            if (detailsContainer) {
+                detailsContainer.innerHTML = '';
+                detailsChips.forEach(chipText => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 transition flex items-center gap-1.5 cursor-pointer shadow-sm';
+                    btn.innerHTML = `<i class="fas fa-plus text-amber-600 text-[10px]"></i><span>${Utils.escapeHTML(chipText)}</span>`;
+                    btn.addEventListener('click', () => {
+                        if (!detailsInput) return;
+                        const current = detailsInput.value.trim();
+                        if (!current) {
+                            detailsInput.value = chipText;
+                        } else if (!current.includes(chipText)) {
+                            detailsInput.value = current + ' - ' + chipText;
+                        }
+                        detailsInput.focus();
+                    });
+                    detailsContainer.appendChild(btn);
+                });
+            }
+
+            if (actionContainer) {
+                actionContainer.innerHTML = '';
+                actionChips.forEach(chipText => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-xs px-2.5 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 transition flex items-center gap-1.5 cursor-pointer shadow-sm';
+                    btn.innerHTML = `<i class="fas fa-bolt text-indigo-600 text-[10px]"></i><span>${Utils.escapeHTML(chipText)}</span>`;
+                    btn.addEventListener('click', () => {
+                        if (!actionInput) return;
+                        actionInput.value = chipText;
+                        actionInput.focus();
+                    });
+                    actionContainer.appendChild(btn);
+                });
+            }
+        };
+
         if (fineAmountInput) {
             fineAmountInput.readOnly = !canManagerEditFineAmount;
         }
         if (violationTypeSelect) {
-            violationTypeSelect.addEventListener('change', () => applyFineAmountFromType({ force: true }));
-            // دعم تحديث فوري إضافي على بعض المتصفحات التي تُطلق input أثناء التنقل
-            violationTypeSelect.addEventListener('input', () => applyFineAmountFromType({ force: true }));
+            violationTypeSelect.addEventListener('change', () => {
+                applyFineAmountFromType({ force: true });
+                renderSuggestionChips();
+            });
+            violationTypeSelect.addEventListener('input', () => {
+                applyFineAmountFromType({ force: true });
+                renderSuggestionChips();
+            });
         }
         if (fineAmountInput && canManagerEditFineAmount && violationData && violationData.fineAmount !== undefined && violationData.fineAmount !== null) {
             fineAmountInput.value = String(Number(effectiveFineForForm));
@@ -5976,63 +6369,49 @@ const Violations = {
             applyFineAmountFromType({ force: true });
         }
 
+        // تشغيل المقترحات لأول مرة
+        renderSuggestionChips();
+
+        // التبديل بين نوع الشخص (موظف / مقاول)
         personTypeSelect.addEventListener('change', (e) => {
             const personType = e.target.value;
             if (personType === 'employee') {
-                // إظهار حقل الكود الوظيفي
-                employeeCodeContainer.style.display = 'block';
-                employeeCodeInput.required = true;
-                employeeCodeInput.placeholder = 'أدخل الكود الوظيفي (سيتم تعبئة البيانات تلقائياً)';
+                if (employeeCodeContainer) employeeCodeContainer.style.display = 'block';
+                if (employeeCodeInput) {
+                    employeeCodeInput.required = true;
+                    employeeCodeInput.placeholder = 'أدخل الكود الوظيفي (سيتم جلب البيانات تلقائياً)';
+                }
+                if (employeeDetailsGrid) employeeDetailsGrid.style.display = 'grid';
 
-                // إظهار حقل الاسم وإخفاء قائمة المقاولين
-                personNameInput.style.display = 'block';
-                personNameInput.readOnly = true;
-                personNameInput.placeholder = 'سيتم التعبئة تلقائياً';
-                personNameInput.value = '';
-                personNameInput.required = true;
+                if (contractorCompanyContainer) contractorCompanyContainer.style.display = 'none';
                 if (contractorSelect) {
-                    contractorSelect.style.display = 'none';
                     contractorSelect.required = false;
                 }
 
-                // إظهار حقول الموظف
-                if (employeePositionContainer) employeePositionContainer.style.display = 'block';
-                if (employeeDepartmentContainer) employeeDepartmentContainer.style.display = 'block';
-
-                // إخفاء حقول المقاول
                 if (contractorFieldsContainer) contractorFieldsContainer.style.display = 'none';
+                if (locationFieldsContainer) locationFieldsContainer.style.display = 'contents';
+                if (contractorLocationFieldsContainer) contractorLocationFieldsContainer.style.display = 'none';
 
-                // إظهار حقول الموقع للموظف
-                if (locationFieldsContainer) locationFieldsContainer.style.display = 'block';
-
-                // تحميل خيارات الموقع للموظف
                 this.loadLocationOptions('employee').then(() => {
                     const employeeLocationSelect = document.getElementById('violation-employee-location');
                     if (employeeLocationSelect) {
-                        // إزالة المعالجات القديمة إن وجدت
                         const newSelect = employeeLocationSelect.cloneNode(true);
                         employeeLocationSelect.parentNode.replaceChild(newSelect, employeeLocationSelect);
                         const updatedSelect = document.getElementById('violation-employee-location');
                         if (updatedSelect) {
-                            updatedSelect.addEventListener('change', (e) => {
-                                const selectedSiteId = e.target.value;
+                            updatedSelect.addEventListener('change', (ev) => {
+                                const selectedSiteId = ev.target.value;
                                 this.loadPlaceOptions(selectedSiteId, '', 'employee');
+                                this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
                             });
                         }
                     }
                 });
 
-                // تحديث التسمية
-                if (personNameLabel) personNameLabel.textContent = 'اسم الموظف *';
-
-                // تعيل البحث بالكود الوظيي
                 if (typeof EmployeeHelper !== 'undefined' && employeeCodeInput && employeeCodeInput.parentNode) {
                     try {
-                        // إزالة المعالجات القديمة
                         const newCodeInput = employeeCodeInput.cloneNode(true);
                         employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
-
-                        // الحصول على العنصر الجديد
                         const updatedCodeInput = document.getElementById('violation-employee-code');
                         if (updatedCodeInput) {
                             EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
@@ -6044,95 +6423,93 @@ const Violations = {
                                     if (positionField) positionField.value = employee.position || employee.jobTitle || '';
                                     if (departmentField) departmentField.value = employee.department || employee.section || '';
                                 }
+                                scheduleViolationSeqBadge();
                             });
                         }
                     } catch (error) {
                         Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                        // محاولة بدون replaceChild
-                        if (employeeCodeInput) {
-                            EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                                if (employee) {
-                                    const nameField = document.getElementById('violation-person-name');
-                                    const positionField = document.getElementById('violation-employee-position');
-                                    const departmentField = document.getElementById('violation-employee-department');
-                                    if (nameField) nameField.value = employee.name || '';
-                                    if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                                    if (departmentField) departmentField.value = employee.department || employee.section || '';
-                                }
-                            });
-                        }
                     }
                 }
             } else {
                 applyFineAmountFromType({ force: true });
-                // إخاء حقل الكود الوظيي
-                employeeCodeContainer.style.display = 'none';
-                employeeCodeInput.required = false;
-                employeeCodeInput.value = '';
+                if (employeeCodeContainer) employeeCodeContainer.style.display = 'none';
+                if (employeeCodeInput) {
+                    employeeCodeInput.required = false;
+                    employeeCodeInput.value = '';
+                }
+                if (employeeDetailsGrid) employeeDetailsGrid.style.display = 'none';
 
-                // إظهار قائمة المقاولين وإخفاء حقل الاسم
-                personNameInput.style.display = 'none';
-                personNameInput.required = false;
-                personNameInput.value = '';
+                if (contractorCompanyContainer) contractorCompanyContainer.style.display = 'block';
                 if (contractorSelect) {
-                    contractorSelect.style.display = 'block';
                     contractorSelect.required = true;
-
-                    // إعادة تحميل قائمة المقاولين عند التبديل إلى نوع مقاول
                     this.loadContractorsIntoSelect(contractorSelect);
                 }
 
-                // إخفاء حقول الموظف
-                if (employeePositionContainer) employeePositionContainer.style.display = 'none';
-                if (employeeDepartmentContainer) employeeDepartmentContainer.style.display = 'none';
-
-                // إظهار حقول المقاول
                 if (contractorFieldsContainer) contractorFieldsContainer.style.display = 'block';
+                if (locationFieldsContainer) locationFieldsContainer.style.display = 'none';
+                if (contractorLocationFieldsContainer) contractorLocationFieldsContainer.style.display = 'contents';
 
-                // تحميل خيارات الموقع للمقاول
                 this.loadLocationOptions('contractor').then(() => {
                     const contractorLocationSelect = document.getElementById('violation-contractor-location');
                     if (contractorLocationSelect) {
-                        // إزالة المعالجات القديمة إن وجدت
                         const newSelect = contractorLocationSelect.cloneNode(true);
                         contractorLocationSelect.parentNode.replaceChild(newSelect, contractorLocationSelect);
                         const updatedSelect = document.getElementById('violation-contractor-location');
                         if (updatedSelect) {
-                            updatedSelect.addEventListener('change', (e) => {
-                                const selectedSiteId = e.target.value;
+                            updatedSelect.addEventListener('change', (ev) => {
+                                const selectedSiteId = ev.target.value;
                                 this.loadPlaceOptions(selectedSiteId, '', 'contractor');
+                                this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
                             });
                         }
                     }
                 });
-
-                // إخفاء حقول الموقع للموظف (لأن المقاول له حقول موقع خاصة به)
-                if (locationFieldsContainer) locationFieldsContainer.style.display = 'none';
-
-                // تحديث التسمية
-                if (personNameLabel) personNameLabel.textContent = 'اسم المقاول *';
             }
             scheduleViolationSeqBadge();
+            this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
         });
+
+        // الاستماع لتغيير اسم عامل المقاول لملء بياناته ومقاوله تلقائياً وتفعيل تنبيه التكرار فوراً
+        const onContractorWorkerInput = () => {
+            const workerVal = (contractorWorkerInput?.value || '').trim().toLowerCase();
+            if (workerVal) {
+                const past = (AppState.appData?.violations || []).find(v => 
+                    v && (v.contractorWorker || '').trim().toLowerCase() === workerVal
+                );
+                if (past) {
+                    if (contractorPositionInput && !contractorPositionInput.value && past.contractorPosition) {
+                        contractorPositionInput.value = past.contractorPosition;
+                    }
+                    if (contractorSelect && !contractorSelect.value && past.contractorName) {
+                        contractorSelect.value = past.contractorName;
+                    }
+                    if (contractorDepartmentInput && !contractorDepartmentInput.value && past.contractorDepartment) {
+                        contractorDepartmentInput.value = past.contractorDepartment;
+                    }
+                }
+            }
+            scheduleViolationSeqBadge();
+        };
+        if (contractorWorkerInput) {
+            contractorWorkerInput.addEventListener('input', onContractorWorkerInput);
+            contractorWorkerInput.addEventListener('change', onContractorWorkerInput);
+        }
 
         const scheduleViolationSeqBadge = () => {
             clearTimeout(this._violationSeqBadgeTimer);
             this._violationSeqBadgeTimer = setTimeout(() => {
                 this.refreshViolationSequenceBadgeInModal(modal, isEdit ? violationData?.id : null);
-            }, 200);
+            }, 180);
         };
         modal.addEventListener('input', scheduleViolationSeqBadge);
         modal.addEventListener('change', scheduleViolationSeqBadge);
-        setTimeout(scheduleViolationSeqBadge, 350);
+        setTimeout(scheduleViolationSeqBadge, 300);
 
         // تفعيل البحث عند تحديث النموذج إذا كان موظف
         if (typeof EmployeeHelper !== 'undefined' && violationData?.employeeName && employeeCodeInput && employeeCodeInput.parentNode) {
             try {
-                // إزالة المعالجات القديمة
                 const newCodeInput = employeeCodeInput.cloneNode(true);
                 employeeCodeInput.parentNode.replaceChild(newCodeInput, employeeCodeInput);
-
-                // الحصول على العنصر الجديد
                 const updatedCodeInput = document.getElementById('violation-employee-code');
                 if (updatedCodeInput) {
                     EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
@@ -6144,78 +6521,86 @@ const Violations = {
                             if (positionField) positionField.value = employee.position || employee.jobTitle || '';
                             if (departmentField) departmentField.value = employee.department || employee.section || '';
                         }
+                        scheduleViolationSeqBadge();
                     });
                 }
             } catch (error) {
                 Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
-                // محاولة بدون replaceChild
-                if (employeeCodeInput) {
-                    EmployeeHelper.setupEmployeeCodeSearch('violation-employee-code', 'violation-person-name', (employee) => {
-                        if (employee) {
-                            const nameField = document.getElementById('violation-person-name');
-                            const positionField = document.getElementById('violation-employee-position');
-                            const departmentField = document.getElementById('violation-employee-department');
-                            if (nameField) nameField.value = employee.name || '';
-                            if (positionField) positionField.value = employee.position || employee.jobTitle || '';
-                            if (departmentField) departmentField.value = employee.department || employee.section || '';
-                        }
-                    });
-                }
             }
         }
 
-        // تحميل قائمة المواقع حسب نوع الشخص (افتراضي: موظف)
+        // تحميل قائمة المواقع وإعداد listeners للأماكن وبؤر الخطر
         const initialPersonType = isContractorRecord ? 'contractor' : 'employee';
-        // تحميل خيارات الموقع للموظف (الافتراضي) والمقاول
         setTimeout(async () => {
             await this.loadLocationOptions('employee');
             await this.loadLocationOptions('contractor');
 
-            // إعداد event listeners للموقع والأماكن للموظف
+            // إعداد event listeners للموظف
             const employeeLocationSelect = document.getElementById('violation-employee-location');
             const employeePlaceSelect = document.getElementById('violation-employee-place');
+            const employeeCustomPlaceBox = document.getElementById('violation-employee-custom-place-box');
             if (employeeLocationSelect && employeePlaceSelect) {
-                // إزالة المعالجات القديمة إن وجدت
-                const newLocationSelect = employeeLocationSelect.cloneNode(true);
-                employeeLocationSelect.parentNode.replaceChild(newLocationSelect, employeeLocationSelect);
-                const newPlaceSelect = employeePlaceSelect.cloneNode(true);
-                employeePlaceSelect.parentNode.replaceChild(newPlaceSelect, employeePlaceSelect);
+                const newLocSelect = employeeLocationSelect.cloneNode(true);
+                employeeLocationSelect.parentNode.replaceChild(newLocSelect, employeeLocationSelect);
+                const newPlcSelect = employeePlaceSelect.cloneNode(true);
+                employeePlaceSelect.parentNode.replaceChild(newPlcSelect, employeePlaceSelect);
 
-                // إعادة الحصول على العناصر
-                const updatedLocationSelect = document.getElementById('violation-employee-location');
-                const updatedPlaceSelect = document.getElementById('violation-employee-place');
-                if (updatedLocationSelect) {
-                    updatedLocationSelect.addEventListener('change', (e) => {
+                const updatedLoc = document.getElementById('violation-employee-location');
+                const updatedPlc = document.getElementById('violation-employee-place');
+                if (updatedLoc) {
+                    updatedLoc.addEventListener('change', (e) => {
                         const selectedSiteId = e.target.value;
                         this.loadPlaceOptions(selectedSiteId, '', 'employee');
+                        this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
+                    });
+                }
+                if (updatedPlc) {
+                    updatedPlc.addEventListener('change', (e) => {
+                        if (employeeCustomPlaceBox) {
+                            employeeCustomPlaceBox.classList.toggle('hidden', e.target.value !== '__custom__');
+                            if (e.target.value === '__custom__') {
+                                document.getElementById('violation-employee-custom-place')?.focus();
+                            }
+                        }
+                        this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
                     });
                 }
             }
 
-            // إعداد event listeners للموقع والأماكن للمقاول
+            // إعداد event listeners للمقاول
             const contractorLocationSelect = document.getElementById('violation-contractor-location');
             const contractorPlaceSelect = document.getElementById('violation-contractor-place');
+            const contractorCustomPlaceBox = document.getElementById('violation-contractor-custom-place-box');
             if (contractorLocationSelect && contractorPlaceSelect) {
-                // إزالة المعالجات القديمة إن وجدت
-                const newLocationSelect = contractorLocationSelect.cloneNode(true);
-                contractorLocationSelect.parentNode.replaceChild(newLocationSelect, contractorLocationSelect);
-                const newPlaceSelect = contractorPlaceSelect.cloneNode(true);
-                contractorPlaceSelect.parentNode.replaceChild(newPlaceSelect, contractorPlaceSelect);
+                const newLocSelect = contractorLocationSelect.cloneNode(true);
+                contractorLocationSelect.parentNode.replaceChild(newLocSelect, contractorLocationSelect);
+                const newPlcSelect = contractorPlaceSelect.cloneNode(true);
+                contractorPlaceSelect.parentNode.replaceChild(newPlcSelect, contractorPlaceSelect);
 
-                // إعادة الحصول على العناصر
-                const updatedLocationSelect = document.getElementById('violation-contractor-location');
-                const updatedPlaceSelect = document.getElementById('violation-contractor-place');
-                if (updatedLocationSelect) {
-                    updatedLocationSelect.addEventListener('change', (e) => {
+                const updatedLoc = document.getElementById('violation-contractor-location');
+                const updatedPlc = document.getElementById('violation-contractor-place');
+                if (updatedLoc) {
+                    updatedLoc.addEventListener('change', (e) => {
                         const selectedSiteId = e.target.value;
                         this.loadPlaceOptions(selectedSiteId, '', 'contractor');
+                        this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
+                    });
+                }
+                if (updatedPlc) {
+                    updatedPlc.addEventListener('change', (e) => {
+                        if (contractorCustomPlaceBox) {
+                            contractorCustomPlaceBox.classList.toggle('hidden', e.target.value !== '__custom__');
+                            if (e.target.value === '__custom__') {
+                                document.getElementById('violation-contractor-custom-place')?.focus();
+                            }
+                        }
+                        this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
                     });
                 }
             }
 
-            // إذا كان النوع الافتراضي هو موظف، تأكد من إعداد حقول الموظف
+            // إعداد البحث بالكود الوظيفي للموظف الافتراضي
             if (initialPersonType === 'employee' && personTypeSelect.value === 'employee') {
-                // إعداد البحث بالكود الوظيفي للموظف
                 if (typeof EmployeeHelper !== 'undefined') {
                     const codeInput = document.getElementById('violation-employee-code');
                     if (codeInput) {
@@ -6229,6 +6614,7 @@ const Violations = {
                                     if (positionField) positionField.value = employee.position || employee.jobTitle || '';
                                     if (departmentField) departmentField.value = employee.department || employee.section || '';
                                 }
+                                scheduleViolationSeqBadge();
                             });
                         } catch (error) {
                             Utils.safeError('خطأ في إعداد البحث بالكود الوظيفي:', error);
@@ -6238,7 +6624,7 @@ const Violations = {
             }
         }, 100);
 
-        // تعيين القيم إذا كان التعديل (سيتم إعداد event listeners في setTimeout)
+        // تعيين قيم التعديل إذا كانت موجودة
         if (selectedLocationValue) {
             setTimeout(() => {
                 if (initialPersonType === 'employee') {
@@ -6258,6 +6644,9 @@ const Violations = {
                         }
                     }
                 }
+                setTimeout(() => {
+                    this.refreshAreaHotspotInModal(modal, isEdit ? violationData?.id : null);
+                }, 250);
             }, 200);
         }
 
@@ -6448,6 +6837,11 @@ const Violations = {
                     locationName = locationSelect?.options[locationSelect?.selectedIndex]?.text || '';
                     place = placeSelect?.value || '';
                     placeName = placeSelect?.options[placeSelect?.selectedIndex]?.text || '';
+                    if (place === '__custom__') {
+                        const customVal = document.getElementById('violation-employee-custom-place')?.value.trim() || '';
+                        place = customVal;
+                        placeName = customVal;
+                    }
                 } else if (personType === 'contractor') {
                     const locationSelect = document.getElementById('violation-contractor-location');
                     const placeSelect = document.getElementById('violation-contractor-place');
@@ -6455,6 +6849,11 @@ const Violations = {
                     locationName = locationSelect?.options[locationSelect?.selectedIndex]?.text || '';
                     place = placeSelect?.value || '';
                     placeName = placeSelect?.options[placeSelect?.selectedIndex]?.text || '';
+                    if (place === '__custom__') {
+                        const customVal = document.getElementById('violation-contractor-custom-place')?.value.trim() || '';
+                        place = customVal;
+                        placeName = customVal;
+                    }
                 }
                 if (!location) missing.push('الموقع');
                 if (!place) missing.push('مكان المخالفة');
@@ -6906,45 +7305,75 @@ const Violations = {
     getPlaceOptions(siteId) {
         try {
             if (!siteId) return [];
+            const placesMap = new Map();
+            const addP = (id, name) => {
+                const clean = String(name || '').trim();
+                if (!clean || clean.includes('-- اختر') || clean === 'مكان غير محدد') return;
+                const key = clean.toLowerCase();
+                if (!placesMap.has(key)) {
+                    placesMap.set(key, { id: id || Utils.generateId('PLACE'), name: clean });
+                }
+            };
 
             const sites = this.getSiteOptions();
-            const selectedSite = sites.find(s => s.id === siteId);
-            if (!selectedSite) return [];
+            const normSiteId = String(siteId).trim().toLowerCase();
+            const selectedSite = sites.find(s => 
+                String(s.id).trim().toLowerCase() === normSiteId || 
+                String(s.name).trim().toLowerCase() === normSiteId
+            );
+            const targetSiteName = selectedSite ? selectedSite.name : siteId;
 
-            // محاولة الحصول من Permissions.formSettingsState
+            // 1. من Permissions.formSettingsState
             if (typeof Permissions !== 'undefined' && Permissions.formSettingsState && Permissions.formSettingsState.sites) {
-                const site = Permissions.formSettingsState.sites.find(s => s.id === siteId);
+                const site = Permissions.formSettingsState.sites.find(s => 
+                    String(s.id).toLowerCase() === normSiteId || String(s.name).toLowerCase() === normSiteId
+                );
                 if (site && Array.isArray(site.places)) {
-                    return site.places.map(place => ({
-                        id: place.id || place.placeId || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || 'مكان غير محدد'
-                    }));
+                    site.places.forEach(p => addP(p.id || p.placeId, p.name || p.placeName));
                 }
             }
 
-            // محاولة الحصول من AppState.appData.observationSites
+            // 2. من AppState.appData.observationSites
             if (Array.isArray(AppState.appData?.observationSites)) {
                 const site = AppState.appData.observationSites.find(s =>
-                    (s.id === siteId) || (s.siteId === siteId) || (s.name === siteId)
+                    String(s.id).toLowerCase() === normSiteId || String(s.siteId).toLowerCase() === normSiteId || String(s.name).toLowerCase() === normSiteId
                 );
                 if (site) {
-                    const placesSource = Array.isArray(site.places)
-                        ? site.places
-                        : Array.isArray(site.locations)
-                            ? site.locations
-                            : Array.isArray(site.children)
-                                ? site.children
-                                : Array.isArray(site.areas)
-                                    ? site.areas
-                                    : [];
-                    return placesSource.map((place, idx) => ({
-                        id: place.id || place.placeId || place.value || Utils.generateId('PLACE'),
-                        name: place.name || place.placeName || place.title || place.label || place.locationName || `مكان ${idx + 1}`
-                    }));
+                    const list = site.places || site.locations || site.children || site.areas || [];
+                    list.forEach(p => addP(p.id || p.placeId, p.name || p.placeName || p.title || p.label));
                 }
             }
 
-            return [];
+            // 3. استخراج الأماكن المسجلة مسبقاً في سجل المخالفات لنفس هذا الموقع
+            (AppState.appData?.violations || []).forEach(v => {
+                if (!v) return;
+                const vLoc = String(v.violationLocation || '').trim().toLowerCase();
+                const vLocId = String(v.violationLocationId || '').trim().toLowerCase();
+                if (vLoc === normSiteId || vLocId === normSiteId || (targetSiteName && vLoc === String(targetSiteName).toLowerCase())) {
+                    if (v.violationPlace) addP(v.violationPlaceId, v.violationPlace);
+                }
+            });
+
+            // 4. أماكن قياسية للمصانع والمواقع لضمان عدم خلو القائمة نهائياً
+            const defaultPlantAreas = [
+                'عنبر الإنتاج الرئيسي',
+                'منطقة التعبئة والتغليف',
+                'مستودع المواد الخام',
+                'مستودع المنتج التام',
+                'غرفة الغاز الطبيعي',
+                'محطة المحولات الكهربائية',
+                'ورشة الصيانة الميكانيكية',
+                'ورشة الصيانة الكهربائية',
+                'منطقة الشحن والتفريغ (Ramps)',
+                'مبنى الإدارة والمكاتب',
+                'معمل الجودة ومراقبة العمليات',
+                'منطقة تخريد النفايات والمخلفات',
+                'ممر الطوارئ والهروب الرئيسي',
+                'منطقة الخزانات والمضخات'
+            ];
+            defaultPlantAreas.forEach(p => addP(null, p));
+
+            return Array.from(placesMap.values());
         } catch (error) {
             Utils.safeWarn('⚠️ خطأ في الحصول على قائمة الأماكن:', error);
             return [];
@@ -6969,8 +7398,8 @@ const Violations = {
             if (sites && sites.length > 0) {
                 sites.forEach(site => {
                     const option = document.createElement('option');
-                    option.value = site.id;
-                    option.textContent = site.name;
+                    option.value = site.name || site.id;
+                    option.textContent = site.name || site.id;
                     locationSelect.appendChild(option);
                 });
             }
@@ -6987,21 +7416,41 @@ const Violations = {
 
             placeSelect.innerHTML = '<option value="">-- اختر مكان المخالفة --</option>';
 
-            if (!siteId) {
-                return;
-            }
-
             const places = this.getPlaceOptions(siteId);
+            let hasSelected = false;
+
             if (places && places.length > 0) {
                 places.forEach(place => {
                     const option = document.createElement('option');
-                    option.value = place.id;
+                    option.value = place.name;
                     option.textContent = place.name;
                     if (selectedPlaceId && (place.id === selectedPlaceId || place.name === selectedPlaceId)) {
                         option.selected = true;
+                        hasSelected = true;
                     }
                     placeSelect.appendChild(option);
                 });
+            }
+
+            // إذا كانت القيمة المحددة مسبقاً غير موجودة بالقائمة، نضيفها مباشرة
+            if (selectedPlaceId && !hasSelected && selectedPlaceId !== '__custom__') {
+                const customOpt = document.createElement('option');
+                customOpt.value = selectedPlaceId;
+                customOpt.textContent = selectedPlaceId;
+                customOpt.selected = true;
+                placeSelect.appendChild(customOpt);
+            }
+
+            // خيار إدخال مكان مخصص يدوياً
+            const addCustomOpt = document.createElement('option');
+            addCustomOpt.value = '__custom__';
+            addCustomOpt.textContent = '➕ مكان آخر (إدخال يدوي مخصص)...';
+            placeSelect.appendChild(addCustomOpt);
+
+            // تفعيل فحص بؤرة الخطر فور تعبئة الأماكن
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) {
+                this.refreshAreaHotspotInModal(modal);
             }
         } catch (error) {
             Utils.safeError('❌ خطأ في تحميل الأماكن:', error);

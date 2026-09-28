@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1788",
+  "version": "1.0.1789",
   "highlights": {
     "ar": [
-      "رصد التكرار الذكي للجزاءات (Three-Strike / Repeat Offender Alert): تتبع فوري لسجل مخالفات الشخص مع احتساب التكرار واقتراح الإجراء المتدرج الموصى به تلقائياً.",
-      "تحليل الأسباب الجذرية (Root Cause Analysis - RCA): دمج تصنيف السبب الجذري في النماذج وقاعدة البيانات والتقارير المعتمدة ومخططات لوحة التحليل البيانية.",
-      "تصدير سجل المخالفات المفلتر إلى Excel منسق متعدد الأوراق: 3 صفحات تشمل السجل التفصيلي، ملخص المقاولين مع تصنيف الخطورة، وتحليل الأسباب الجذرية RCA."
+      "تصميم تنفيذي مطور لنموذج تسجيل المخالفات: تقسيم النموذج إلى 4 بطاقات بصرية منظمة (بيانات المخالف، الموقع وتوقيت الرصد، تصنيف المخالفة والغرامة، الوصف والإجراءات والمرفقات).",
+      "مقترحات ذكية تفاعلية لتفاصيل المخالفة والإجراء المتخذ: رقائق سريعة تتكيف تلقائياً حسب نوع المخالفة، مع إدراج مباشر بنقرة واحدة.",
+      "تكامل ذكي لبيانات المقاول والأماكن وبؤر الخطر: قائمة منسدلة لإدارات النظام، إكمال تلقائي لأسماء ووظائف العمالة، قائمة غنية لأماكن المواقع مع خيار إدخال مخصص، وتنبيه فوري لبؤر تكرار الخطر في المنطقة."
     ],
     "en": [
-      "Three-Strike & Repeat Offender Alert: automatic violation history tracking with graduated disciplinary actions and one-click auto-fill.",
-      "Root Cause Analysis (RCA): standardized root cause classification across entry forms, data normalization, approved reports, and analytics dashboards.",
-      "Multi-Sheet Filtered Excel Export: 3-sheet workbook with detailed violation logs, contractor risk evaluation summary, and RCA distribution breakdown."
+      "Executive 4-Card Redesign for New Violation Modal: structured sections for Person Details, Field Location & Time, Violation Type & Fine, and Details & Disciplinary Actions.",
+      "Smart Suggestion Chips for Descriptions & Disciplinary Actions: dynamic chips adapting to violation type with one-click insertion and Strike-based graduated penalties.",
+      "Contractor & Area Intelligence: system department dropdown, worker & job title autocomplete with manual entry, rich place options with custom entry, and area hotspot repeat alerts."
     ]
   },
-  "releaseName": "v1.0.1788 - Violations Repeat Offender Alert, RCA Classification & Multi-Sheet Excel Export",
-  "lastUpdate": "2026-09-28T22:58:00.000Z"
+  "releaseName": "v1.0.1789 - New Violation Modal Executive Redesign, Smart Suggestions & Area Hotspot Alerts",
+  "lastUpdate": "2026-09-28T23:20:00.000Z"
 }

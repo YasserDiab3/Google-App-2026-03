@@ -1,17 +1,19 @@
 {
-  "version": "1.0.1780",
+  "version": "1.0.1772",
   "highlights": {
     "ar": [
-      "معالجة جذرية لمشكلة ظهور صفحات بيضاء فارغة عند تصدير التقارير الضخمة ومتعددة الصفحات (مثل سجل تدريبات المقاولين لأكثر من 100 صفحة).",
-      "تطوير محرك تصدير PDF (Utils.downloadHtmlAsPdf) بنظام التقسيم التلقائي للجداول (Auto Table Pagination) والتجزئة الآمنة للشرائح (Chunked Capture) لمنع تجاوز حدود ذاكرة Canvas في المتصفحات.",
-      "تكرار ترويسة الأعمدة وعناوين الجداول الرسمية في بداية كل صفحة مع ترقيم دقيق (صفحة X من Y) وتوقيعات معتمدة في الصفحة الأخيرة دون اقتطاع للأسطر."
+      "توحيد نظام التصدير والتحميل المباشر لجميع ملفات PDF في كامل النظام دون فتح شاشة الطباعة (window.print) أو النوافذ المنبثقة.",
+      "التحميل التلقائي المباشر لتقرير تدريبات المقاولين فور اختياره واختيار الفترة المحددة كملف PDF إلى جهاز المستخدم.",
+      "تطبيق التصدير والتحميل المباشر في تصاريح العمل (PTW) وسجل حصر التصاريح ونماذج التصاريح.",
+      "تحديث محرك التصدير المركزي Utils.downloadHtmlAsPdf لدعم تقارير الحوادث، الإجراءات التصحيحية، المواد الكيميائية، وتقييم المقاولين."
     ],
     "en": [
-      "Resolved blank white page export failures on large multi-page reports (e.g. Contractor Training Registry exceeding 100+ pages).",
-      "Upgraded PDF rendering engine (Utils.downloadHtmlAsPdf) with Auto Table Pagination and safe chunked capturing to prevent browser canvas buffer memory overflow (>32,767px).",
-      "Ensured table headers are repeated cleanly across every page with dynamic page numbering (Page X of Y) and official signature blocks on the final page."
+      "Unified direct export and download system for all PDF files across the entire platform without opening print preview dialogs or popup windows.",
+      "Direct automatic download of Contractor Training Reports to user device immediately upon selection and filter criteria.",
+      "Direct PDF download implemented for Work Permits (PTW), PTW registry logs, and permit issuance forms.",
+      "Centralized Utils.downloadHtmlAsPdf engine powering instant downloads for Incidents, Action Tracking, Chemical Safety SDS, and Contractor evaluations."
     ]
   },
-  "releaseName": "v1.0.1780 - PDF Multi-Page Export Engine & Auto Table Pagination Fix",
-  "lastUpdate": "2026-09-28T20:45:00.000Z"
+  "releaseName": "v1.0.1772 - Direct PDF Download and Unified Export Across All Modules",
+  "lastUpdate": "2026-09-27T20:20:59.916Z"
 }
