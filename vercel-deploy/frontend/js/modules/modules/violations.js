@@ -5896,9 +5896,67 @@ const Violations = {
             : todayStr;
         const formTimeValue = violationData?.violationTime || currentTimeStr;
 
+        const initialPhoto1 = violationData?.photo || (Array.isArray(violationData?.photos) && violationData.photos.length > 0 ? violationData.photos[0] : '') || '';
+        const initialPhoto2 = violationData?.photo2 || (Array.isArray(violationData?.photos) && violationData.photos.length > 1 ? violationData.photos[1] : '') || '';
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
+        modal.id = 'violation-modal-overlay';
         modal.innerHTML = `
+            <style>
+                #violation-modal-overlay .form-input,
+                #violation-modal-overlay select.form-input,
+                #violation-modal-overlay input[type="text"].form-input,
+                #violation-modal-overlay input[type="date"].form-input,
+                #violation-modal-overlay input[type="time"].form-input,
+                #violation-modal-overlay input[type="number"].form-input {
+                    box-sizing: border-box !important;
+                    min-height: 44px !important;
+                    height: 44px !important;
+                    padding-top: 6px !important;
+                    padding-bottom: 6px !important;
+                    padding-right: 12px !important;
+                    padding-left: 12px !important;
+                    font-size: 0.92rem !important;
+                    line-height: 1.5 !important;
+                    border-radius: 9px !important;
+                    border: 1.5px solid #cbd5e1 !important;
+                    background-color: #ffffff !important;
+                    color: #0f172a !important;
+                    display: block !important;
+                    width: 100% !important;
+                    outline: none !important;
+                    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+                }
+                #violation-modal-overlay select.form-input {
+                    padding-right: 10px !important;
+                    padding-left: 28px !important;
+                    appearance: auto !important;
+                    -webkit-appearance: menulist !important;
+                    -moz-appearance: menulist !important;
+                    cursor: pointer !important;
+                }
+                #violation-modal-overlay textarea.form-input {
+                    box-sizing: border-box !important;
+                    min-height: 80px !important;
+                    height: auto !important;
+                    padding: 9px 12px !important;
+                    font-size: 0.90rem !important;
+                    line-height: 1.55 !important;
+                    border-radius: 9px !important;
+                    border: 1.5px solid #cbd5e1 !important;
+                    background-color: #ffffff !important;
+                    color: #0f172a !important;
+                    display: block !important;
+                    width: 100% !important;
+                    resize: vertical !important;
+                    outline: none !important;
+                }
+                #violation-modal-overlay .form-input:focus {
+                    border-color: #2563eb !important;
+                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+                }
+            </style>
             <div class="modal-content" style="max-width: 880px; max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid #cbd5e1;">
                 <!-- رأس النموذج التنفيذي -->
                 <div class="modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 16px 22px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
@@ -5953,7 +6011,7 @@ const Violations = {
                                         <label class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-user-tag text-blue-600 ml-1"></i> نوع الشخص المخالف *
                                         </label>
-                                        <select id="violation-person-type" required class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-person-type" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
                                             <option value="">-- اختر صفة المخالف --</option>
                                             <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف بالشركة (ICAPP)</option>
                                             <option value="contractor" ${isContractorRecord ? 'selected' : ''}>عمالة تابعة لمقاول</option>
@@ -5968,7 +6026,7 @@ const Violations = {
                                         <input type="text" id="violation-employee-code" class="form-input"
                                             value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
                                             placeholder="أدخل الكود (جلب فوري للاسم والإدارة)"
-                                            style="height: 42px; border-radius: 9px; font-weight: 600;"
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;"
                                             ${isEmployeeRecord ? 'required' : ''}>
                                     </div>
 
@@ -5977,7 +6035,7 @@ const Violations = {
                                         <label for="violation-contractor-select" class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-building text-amber-600 ml-1"></i> شركة المقاول المعتمدة *
                                         </label>
-                                        <select id="violation-contractor-select" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;"
+                                        <select id="violation-contractor-select" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;"
                                             ${isContractorRecord ? 'required' : ''}>
                                             <option value="">-- اختر شركة المقاول --</option>
                                         </select>
@@ -5993,7 +6051,7 @@ const Violations = {
                                         <input type="text" id="violation-person-name" class="form-input"
                                             value="${violationData?.employeeName || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="height: 40px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 700; color: #0f172a;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 700; color: #0f172a;">
                                     </div>
                                     <div id="violation-employee-position-container">
                                         <label for="violation-employee-position" class="block text-xs font-bold text-gray-600 mb-1">
@@ -6002,7 +6060,7 @@ const Violations = {
                                         <input type="text" id="violation-employee-position" class="form-input"
                                             value="${violationData?.employeePosition || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="height: 40px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
                                     </div>
                                     <div id="violation-employee-department-container">
                                         <label for="violation-employee-department" class="block text-xs font-bold text-gray-600 mb-1">
@@ -6011,7 +6069,7 @@ const Violations = {
                                         <input type="text" id="violation-employee-department" class="form-input"
                                             value="${violationData?.employeeDepartment || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="height: 40px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
                                     </div>
                                 </div>
 
@@ -6025,7 +6083,7 @@ const Violations = {
                                             <input type="text" id="violation-contractor-worker" list="violation-contractor-workers-list" class="form-input"
                                                 value="${violationData?.contractorWorker || ''}" 
                                                 placeholder="اختر أو اكتب اسم العامل..."
-                                                style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                                style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
                                             <datalist id="violation-contractor-workers-list">
                                                 ${workerDatalistHtml}
                                             </datalist>
@@ -6037,7 +6095,7 @@ const Violations = {
                                             <input type="text" id="violation-contractor-position" list="violation-contractor-positions-list" class="form-input"
                                                 value="${violationData?.contractorPosition || ''}" 
                                                 placeholder="اختر أو اكتب المهنة الميدانية..."
-                                                style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                                style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
                                             <datalist id="violation-contractor-positions-list">
                                                 ${positionDatalistHtml}
                                             </datalist>
@@ -6046,7 +6104,7 @@ const Violations = {
                                             <label for="violation-contractor-department" class="block text-xs font-bold text-gray-700 mb-1.5">
                                                 <i class="fas fa-sitemap ml-1 text-teal-600"></i> الإدارة المشرفة في النظام
                                             </label>
-                                            <select id="violation-contractor-department" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                            <select id="violation-contractor-department" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
                                                 <option value="">-- اختر الإدارة في النظام --</option>
                                                 ${legacyContractorDeptOption}
                                                 ${contractorDeptOptions}
@@ -6080,7 +6138,7 @@ const Violations = {
                                             <label for="violation-employee-location" class="block text-xs font-bold text-gray-700 mb-1.5">
                                                 <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع الرئيسي *
                                             </label>
-                                            <select id="violation-employee-location" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
+                                            <select id="violation-employee-location" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
                                                 <option value="">-- اختر الموقع --</option>
                                             </select>
                                         </div>
@@ -6088,11 +6146,11 @@ const Violations = {
                                             <label for="violation-employee-place" class="block text-xs font-bold text-gray-700 mb-1.5">
                                                 <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان / منطقة المخالفة *
                                             </label>
-                                            <select id="violation-employee-place" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
+                                            <select id="violation-employee-place" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
                                                 <option value="">-- اختر مكان المخالفة --</option>
                                             </select>
                                             <div id="violation-employee-custom-place-box" class="hidden mt-2">
-                                                <input type="text" id="violation-employee-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="height: 40px; border-radius: 8px;">
+                                                <input type="text" id="violation-employee-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px;">
                                             </div>
                                         </div>
                                     </div>
@@ -6103,7 +6161,7 @@ const Violations = {
                                             <label for="violation-contractor-location" class="block text-xs font-bold text-gray-700 mb-1.5">
                                                 <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع الرئيسي *
                                             </label>
-                                            <select id="violation-contractor-location" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
+                                            <select id="violation-contractor-location" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
                                                 <option value="">-- اختر الموقع --</option>
                                             </select>
                                         </div>
@@ -6111,11 +6169,11 @@ const Violations = {
                                             <label for="violation-contractor-place" class="block text-xs font-bold text-gray-700 mb-1.5">
                                                 <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان / منطقة المخالفة *
                                             </label>
-                                            <select id="violation-contractor-place" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
+                                            <select id="violation-contractor-place" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
                                                 <option value="">-- اختر مكان المخالفة --</option>
                                             </select>
                                             <div id="violation-contractor-custom-place-box" class="hidden mt-2">
-                                                <input type="text" id="violation-contractor-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="height: 40px; border-radius: 8px;">
+                                                <input type="text" id="violation-contractor-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px;">
                                             </div>
                                         </div>
                                     </div>
@@ -6127,7 +6185,7 @@ const Violations = {
                                         </label>
                                         <input type="date" id="violation-date" required class="form-input"
                                             value="${formDateValue}"
-                                            style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
                                     </div>
                                     <div>
                                         <label for="violation-time" class="block text-xs font-bold text-gray-700 mb-1.5">
@@ -6135,7 +6193,7 @@ const Violations = {
                                         </label>
                                         <input type="time" id="violation-time" required class="form-input"
                                             value="${formTimeValue}"
-                                            style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
                                     </div>
                                 </div>
 
@@ -6162,7 +6220,7 @@ const Violations = {
                                         <label for="violation-type" class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-exclamation-circle ml-1 text-red-600"></i> نوع وتوصيف المخالفة *
                                         </label>
-                                        <select id="violation-type" required class="form-input" style="height: 42px; border-radius: 9px; font-weight: 700;">
+                                        <select id="violation-type" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 700;">
                                             <option value="">-- اختر نوع المخالفة --</option>
                                             ${legacyTypeOption}
                                             ${typeOptions}
@@ -6176,7 +6234,7 @@ const Violations = {
                                         <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
                                             value="${Number(effectiveFineForForm)}"
                                             placeholder="القيمة المالية"
-                                            style="height: 42px; border-radius: 9px; font-weight: 700;">
+                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 700;">
                                         <p style="font-size: 0.74rem; color: #64748b; margin: 4px 0 0 0;">
                                             ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير.' : 'يتم التحديد تلقائياً حسب اللائحة، وتعديلها متاح للمدير فقط.'}
                                         </p>
@@ -6188,7 +6246,7 @@ const Violations = {
                                         <label for="violation-severity" class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-signal ml-1 text-orange-600"></i> مستوى الشدة والخطورة *
                                         </label>
-                                        <select id="violation-severity" required class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-severity" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
                                             <option value="">اختر الشدة</option>
                                             <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>🔴 عالية الخطورة</option>
                                             <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>🟡 متوسطة</option>
@@ -6200,7 +6258,7 @@ const Violations = {
                                         <label for="violation-status" class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-info-circle ml-1 text-blue-600"></i> حالة المعالجة والمتابعة *
                                         </label>
-                                        <select id="violation-status" required class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-status" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
                                             <option value="">اختر الحالة</option>
                                             <option value="قيد المراجعة" ${!violationData?.status || violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة والمتابعة</option>
                                             <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>✅ تم المعالجة والتصحيح (محلول)</option>
@@ -6212,7 +6270,7 @@ const Violations = {
                                         <label for="violation-root-cause" class="block text-xs font-bold text-gray-700 mb-1.5">
                                             <i class="fas fa-search-plus ml-1 text-teal-600"></i> تصنيف السبب الجذري (RCA)
                                         </label>
-                                        <select id="violation-root-cause" class="form-input" style="height: 42px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-root-cause" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
                                             <option value="">اختر السبب الجذري</option>
                                             <option value="سلوك غير آمن (Unsafe Act)" ${violationData?.rootCause === 'سلوك غير آمن (Unsafe Act)' ? 'selected' : ''}>سلوك غير آمن (Unsafe Act)</option>
                                             <option value="ظرف عمل غير آمن (Unsafe Condition)" ${violationData?.rootCause === 'ظرف عمل غير آمن (Unsafe Condition)' ? 'selected' : ''}>ظرف عمل غير آمن (Unsafe Condition)</option>
@@ -6231,7 +6289,7 @@ const Violations = {
                             <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
                                 <div style="display: flex; align-items: center; gap: 9px;">
                                     <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: #7c3aed; color: #ffffff; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(124,58,237,0.25);">4</span>
-                                    <span style="font-size: 0.92rem; font-weight: 800; color: #1e293b;">الوصف التفصيلي والإجراءات المتخذة والمرفقات</span>
+                                    <span style="font-size: 0.92rem; font-weight: 800; color: #1e293b;">الوصف التفصيلي والإجراءات المتخذة وتوثيق الصورتين</span>
                                 </div>
                                 <span style="font-size: 0.76rem; font-weight: 700; color: #7c3aed; background: #f5f3ff; border: 1px solid #ddd6fe; padding: 2px 10px; border-radius: 20px;">
                                     انقر على أي مقترح ذكي لإضافته بنقرة واحدة
@@ -6271,18 +6329,108 @@ const Violations = {
                                         style="width: 100%; min-height: 75px; border-radius: 9px; padding: 10px 12px; font-size: 0.88rem; line-height: 1.55; resize: vertical;">${violationData?.actionTaken || ''}</textarea>
                                 </div>
 
-                                <!-- صورة المخالفة الميدانية -->
-                                <div style="padding: 12px 14px; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px;">
-                                    <label for="violation-photo-input" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                        <i class="fas fa-camera ml-1 text-blue-600"></i> صورة توثيق المخالفة ميدانياً (مرفق اختياري)
-                                    </label>
-                                    <input type="file" id="violation-photo-input" accept="image/*" class="form-input" style="height: 38px; border-radius: 8px; background: #fff;">
-                                    <div id="violation-photo-preview" class="mt-3 ${violationData?.photo ? '' : 'hidden'}">
-                                        <div class="relative inline-block">
-                                            <img src="${violationData?.photo || ''}" alt="صورة المخالفة" class="w-48 h-36 object-cover rounded-lg border shadow-sm" id="violation-photo-img">
-                                            <button type="button" onclick="const p=document.getElementById('violation-photo-input'); if(p) p.value=''; const prev=document.getElementById('violation-photo-preview'); if(prev) prev.classList.add('hidden');" class="mt-1.5 block text-xs text-red-600 hover:text-red-800 font-bold">
-                                                <i class="fas fa-trash ml-1"></i>حذف الصورة المرفقة
+                                <!-- توثيق المخالفة بالصور الميدانية (صورتين احترافيتين مع خيارات كاملة) -->
+                                <div style="margin-top: 18px; padding: 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 7px; background: #e0e7ff; color: #4338ca; font-size: 13px;">
+                                                <i class="fas fa-camera-retro"></i>
+                                            </span>
+                                            <div>
+                                                <h4 style="margin: 0; font-size: 0.88rem; font-weight: 800; color: #1e293b;">
+                                                    توثيق المخالفة بالصور الميدانية (صورتين)
+                                                </h4>
+                                                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: #64748b;">
+                                                    صورة لمشهد المخالفة الأساسي (قبل) + صورة إضافية توثيقية أو بعد الإجراء التصحيحي (بعد)
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <button type="button" id="violation-photos-swap-btn" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer" title="تبديل ترتيب الصورتين">
+                                                <i class="fas fa-right-left text-indigo-600"></i>
+                                                <span>تبديل الصورتين (⇄)</span>
                                             </button>
+                                            <span style="font-size: 0.72rem; color: #94a3b8; font-weight: 600;">الحد الأقصى: 2MB</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <!-- كارت الصورة 1 -->
+                                        <div id="violation-photo-card-1" style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 12px; transition: all 0.2s;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                                <span style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: #2563eb; color: #ffffff; font-size: 11px; font-weight: 800;">1</span>
+                                                    مشهد المخالفة (قبل المعالجة)
+                                                </span>
+                                                <span id="violation-photo-badge-1" style="font-size: 0.72rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
+                                                    ${initialPhoto1 ? 'مرفقة ✓' : 'فارغ'}
+                                                </span>
+                                            </div>
+
+                                            <!-- منطقة الرفع 1 -->
+                                            <div id="violation-photo-dropzone-1" style="border: 2px dashed #93c5fd; border-radius: 8px; background: #f8fafc; padding: 18px 10px; text-align: center; cursor: pointer; transition: all 0.2s; display: ${initialPhoto1 ? 'none' : 'block'};">
+                                                <i class="fas fa-cloud-arrow-up text-2xl text-blue-500 mb-1.5" style="display: block;"></i>
+                                                <p style="margin: 0 0 3px 0; font-size: 0.8rem; font-weight: 700; color: #1e293b;">انقر للاختيار أو اسحب الصورة هنا</p>
+                                                <p style="margin: 0; font-size: 0.7rem; color: #64748b;">JPG, PNG حتى 2 ميجابايت</p>
+                                                <input type="file" id="violation-photo-input-1" accept="image/*" style="display: none;">
+                                            </div>
+
+                                            <!-- معاينة الصورة 1 -->
+                                            <div id="violation-photo-preview-box-1" style="display: ${initialPhoto1 ? 'block' : 'none'};">
+                                                <div style="position: relative; height: 160px; border-radius: 8px; overflow: hidden; background: #0f172a; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
+                                                    <img id="violation-photo-img-1" src="${initialPhoto1 || ''}" alt="صورة المخالفة 1" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                                    <button type="button" id="violation-photo-zoom-btn-1" title="تكبير الصورة" style="position: absolute; top: 6px; left: 6px; width: 28px; height: 28px; border-radius: 6px; background: rgba(0,0,0,0.65); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
+                                                        <i class="fas fa-magnifying-glass-plus" style="font-size: 12px;"></i>
+                                                    </button>
+                                                </div>
+                                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                                    <button type="button" id="violation-photo-change-btn-1" style="flex: 1; height: 32px; border-radius: 7px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                                        <i class="fas fa-sync text-blue-600"></i> تغيير الصورة
+                                                    </button>
+                                                    <button type="button" id="violation-photo-del-btn-1" style="height: 32px; padding: 0 12px; border-radius: 7px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                                        <i class="fas fa-trash-alt"></i> حذف
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- كارت الصورة 2 -->
+                                        <div id="violation-photo-card-2" style="background: #ffffff; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 12px; transition: all 0.2s;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                                <span style="font-size: 0.78rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: #059669; color: #ffffff; font-size: 11px; font-weight: 800;">2</span>
+                                                    توثيق إضافي / بعد التصحيح
+                                                </span>
+                                                <span id="violation-photo-badge-2" style="font-size: 0.72rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 6px;">
+                                                    ${initialPhoto2 ? 'مرفقة ✓' : 'فارغ'}
+                                                </span>
+                                            </div>
+
+                                            <!-- منطقة الرفع 2 -->
+                                            <div id="violation-photo-dropzone-2" style="border: 2px dashed #a7f3d0; border-radius: 8px; background: #f8fafc; padding: 18px 10px; text-align: center; cursor: pointer; transition: all 0.2s; display: ${initialPhoto2 ? 'none' : 'block'};">
+                                                <i class="fas fa-cloud-arrow-up text-2xl text-emerald-500 mb-1.5" style="display: block;"></i>
+                                                <p style="margin: 0 0 3px 0; font-size: 0.8rem; font-weight: 700; color: #1e293b;">انقر للاختيار أو اسحب الصورة هنا</p>
+                                                <p style="margin: 0; font-size: 0.7rem; color: #64748b;">JPG, PNG حتى 2 ميجابايت</p>
+                                                <input type="file" id="violation-photo-input-2" accept="image/*" style="display: none;">
+                                            </div>
+
+                                            <!-- معاينة الصورة 2 -->
+                                            <div id="violation-photo-preview-box-2" style="display: ${initialPhoto2 ? 'block' : 'none'};">
+                                                <div style="position: relative; height: 160px; border-radius: 8px; overflow: hidden; background: #0f172a; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
+                                                    <img id="violation-photo-img-2" src="${initialPhoto2 || ''}" alt="صورة المخالفة 2" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                                                    <button type="button" id="violation-photo-zoom-btn-2" title="تكبير الصورة" style="position: absolute; top: 6px; left: 6px; width: 28px; height: 28px; border-radius: 6px; background: rgba(0,0,0,0.65); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
+                                                        <i class="fas fa-magnifying-glass-plus" style="font-size: 12px;"></i>
+                                                    </button>
+                                                </div>
+                                                <div style="display: flex; gap: 8px; margin-top: 8px;">
+                                                    <button type="button" id="violation-photo-change-btn-2" style="flex: 1; height: 32px; border-radius: 7px; background: #f1f5f9; border: 1px solid #cbd5e1; color: #334155; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                                                        <i class="fas fa-sync text-emerald-600"></i> تغيير الصورة
+                                                    </button>
+                                                    <button type="button" id="violation-photo-del-btn-2" style="height: 32px; padding: 0 12px; border-radius: 7px; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                                        <i class="fas fa-trash-alt"></i> حذف
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -6777,28 +6925,191 @@ const Violations = {
             }, 200);
         }
 
-        // Setup photo preview
-        const photoInput = document.getElementById('violation-photo-input');
-        const photoPreview = document.getElementById('violation-photo-preview');
-        const photoImg = document.getElementById('violation-photo-img');
-        if (photoInput && photoPreview && photoImg) {
-            photoInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    if (file.size > 2 * 1024 * 1024) {
-                        Notification.error('حجم الصورة كبير جداً. الحد الأقصى 2MB');
-                        photoInput.value = '';
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        photoImg.src = e.target.result;
-                        photoPreview.classList.remove('hidden');
-                    };
-                    reader.readAsDataURL(file);
+        // ========== إدارة الصورتين التوثيقيتين باحترافية كاملة ==========
+        let currentPhoto1 = initialPhoto1;
+        let currentPhoto2 = initialPhoto2;
+
+        const syncPhotoCards = () => {
+            const dropzone1 = modal.querySelector('#violation-photo-dropzone-1');
+            const previewBox1 = modal.querySelector('#violation-photo-preview-box-1');
+            const img1 = modal.querySelector('#violation-photo-img-1');
+            const badge1 = modal.querySelector('#violation-photo-badge-1');
+            const card1 = modal.querySelector('#violation-photo-card-1');
+
+            if (currentPhoto1) {
+                if (dropzone1) dropzone1.style.display = 'none';
+                if (previewBox1) previewBox1.style.display = 'block';
+                if (img1) img1.src = currentPhoto1;
+                if (badge1) {
+                    badge1.textContent = 'مرفقة ✓';
+                    badge1.style.color = '#15803d';
+                    badge1.style.background = '#dcfce7';
                 }
+                if (card1) card1.style.borderStyle = 'solid';
+            } else {
+                if (dropzone1) dropzone1.style.display = 'block';
+                if (previewBox1) previewBox1.style.display = 'none';
+                if (img1) img1.src = '';
+                if (badge1) {
+                    badge1.textContent = 'فارغ';
+                    badge1.style.color = '#64748b';
+                    badge1.style.background = '#f1f5f9';
+                }
+                if (card1) card1.style.borderStyle = 'dashed';
+            }
+
+            const dropzone2 = modal.querySelector('#violation-photo-dropzone-2');
+            const previewBox2 = modal.querySelector('#violation-photo-preview-box-2');
+            const img2 = modal.querySelector('#violation-photo-img-2');
+            const badge2 = modal.querySelector('#violation-photo-badge-2');
+            const card2 = modal.querySelector('#violation-photo-card-2');
+
+            if (currentPhoto2) {
+                if (dropzone2) dropzone2.style.display = 'none';
+                if (previewBox2) previewBox2.style.display = 'block';
+                if (img2) img2.src = currentPhoto2;
+                if (badge2) {
+                    badge2.textContent = 'مرفقة ✓';
+                    badge2.style.color = '#15803d';
+                    badge2.style.background = '#dcfce7';
+                }
+                if (card2) card2.style.borderStyle = 'solid';
+            } else {
+                if (dropzone2) dropzone2.style.display = 'block';
+                if (previewBox2) previewBox2.style.display = 'none';
+                if (img2) img2.src = '';
+                if (badge2) {
+                    badge2.textContent = 'فارغ';
+                    badge2.style.color = '#64748b';
+                    badge2.style.background = '#f1f5f9';
+                }
+                if (card2) card2.style.borderStyle = 'dashed';
+            }
+        };
+
+        const processPhotoFile = async (file, slot) => {
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                if (typeof Notification !== 'undefined') {
+                    Notification.warning('حجم الصورة كبير جداً. الحد الأقصى 2MB');
+                }
+                showFormBanner('warning', 'حجم الصورة كبير جداً', 'الحد الأقصى المسموح به هو 2 ميجابايت.');
+                return;
+            }
+            try {
+                const base64 = await Violations.convertImageToBase64(file);
+                if (slot === 1) currentPhoto1 = base64;
+                else currentPhoto2 = base64;
+                syncPhotoCards();
+            } catch (err) {
+                Utils.safeError('خطأ في معالجة الصورة:', err);
+            }
+        };
+
+        // أحداث الصورة 1
+        const inputPhoto1 = modal.querySelector('#violation-photo-input-1');
+        const dropzonePhoto1 = modal.querySelector('#violation-photo-dropzone-1');
+        const changePhoto1 = modal.querySelector('#violation-photo-change-btn-1');
+        const delPhoto1 = modal.querySelector('#violation-photo-del-btn-1');
+        const zoomPhoto1 = modal.querySelector('#violation-photo-zoom-btn-1');
+        const imgPhoto1 = modal.querySelector('#violation-photo-img-1');
+
+        if (dropzonePhoto1 && inputPhoto1) {
+            dropzonePhoto1.addEventListener('click', () => inputPhoto1.click());
+            dropzonePhoto1.addEventListener('dragover', (e) => { e.preventDefault(); dropzonePhoto1.style.background = '#dbeafe'; });
+            dropzonePhoto1.addEventListener('dragleave', () => { dropzonePhoto1.style.background = '#f8fafc'; });
+            dropzonePhoto1.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzonePhoto1.style.background = '#f8fafc';
+                if (e.dataTransfer?.files?.[0]) processPhotoFile(e.dataTransfer.files[0], 1);
+            });
+            inputPhoto1.addEventListener('change', (e) => {
+                if (e.target.files?.[0]) processPhotoFile(e.target.files[0], 1);
             });
         }
+        if (changePhoto1 && inputPhoto1) {
+            changePhoto1.addEventListener('click', () => inputPhoto1.click());
+        }
+        if (delPhoto1) {
+            delPhoto1.addEventListener('click', () => {
+                currentPhoto1 = '';
+                if (inputPhoto1) inputPhoto1.value = '';
+                syncPhotoCards();
+            });
+        }
+        if (zoomPhoto1) {
+            zoomPhoto1.addEventListener('click', () => {
+                if (currentPhoto1) Violations.openPhotoLightbox(currentPhoto1, 'مشهد المخالفة الميدانية (قبل المعالجة)');
+            });
+        }
+        if (imgPhoto1) {
+            imgPhoto1.style.cursor = 'pointer';
+            imgPhoto1.addEventListener('click', () => {
+                if (currentPhoto1) Violations.openPhotoLightbox(currentPhoto1, 'مشهد المخالفة الميدانية (قبل المعالجة)');
+            });
+        }
+
+        // أحداث الصورة 2
+        const inputPhoto2 = modal.querySelector('#violation-photo-input-2');
+        const dropzonePhoto2 = modal.querySelector('#violation-photo-dropzone-2');
+        const changePhoto2 = modal.querySelector('#violation-photo-change-btn-2');
+        const delPhoto2 = modal.querySelector('#violation-photo-del-btn-2');
+        const zoomPhoto2 = modal.querySelector('#violation-photo-zoom-btn-2');
+        const imgPhoto2 = modal.querySelector('#violation-photo-img-2');
+
+        if (dropzonePhoto2 && inputPhoto2) {
+            dropzonePhoto2.addEventListener('click', () => inputPhoto2.click());
+            dropzonePhoto2.addEventListener('dragover', (e) => { e.preventDefault(); dropzonePhoto2.style.background = '#d1fae5'; });
+            dropzonePhoto2.addEventListener('dragleave', () => { dropzonePhoto2.style.background = '#f8fafc'; });
+            dropzonePhoto2.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzonePhoto2.style.background = '#f8fafc';
+                if (e.dataTransfer?.files?.[0]) processPhotoFile(e.dataTransfer.files[0], 2);
+            });
+            inputPhoto2.addEventListener('change', (e) => {
+                if (e.target.files?.[0]) processPhotoFile(e.target.files[0], 2);
+            });
+        }
+        if (changePhoto2 && inputPhoto2) {
+            changePhoto2.addEventListener('click', () => inputPhoto2.click());
+        }
+        if (delPhoto2) {
+            delPhoto2.addEventListener('click', () => {
+                currentPhoto2 = '';
+                if (inputPhoto2) inputPhoto2.value = '';
+                syncPhotoCards();
+            });
+        }
+        if (zoomPhoto2) {
+            zoomPhoto2.addEventListener('click', () => {
+                if (currentPhoto2) Violations.openPhotoLightbox(currentPhoto2, 'صورة إضافية / بعد الإجراء التصحيحي');
+            });
+        }
+        if (imgPhoto2) {
+            imgPhoto2.style.cursor = 'pointer';
+            imgPhoto2.addEventListener('click', () => {
+                if (currentPhoto2) Violations.openPhotoLightbox(currentPhoto2, 'صورة إضافية / بعد الإجراء التصحيحي');
+            });
+        }
+
+        // زر تبديل الصورتين (⇄)
+        const swapPhotosBtn = modal.querySelector('#violation-photos-swap-btn');
+        if (swapPhotosBtn) {
+            swapPhotosBtn.addEventListener('click', () => {
+                if (!currentPhoto1 && !currentPhoto2) {
+                    if (typeof Notification !== 'undefined') Notification.info('يرجى إرفاق صورة واحدة على الأقل لتبديل مكانها');
+                    return;
+                }
+                const temp = currentPhoto1;
+                currentPhoto1 = currentPhoto2;
+                currentPhoto2 = temp;
+                syncPhotoCards();
+                if (typeof Notification !== 'undefined') Notification.success('تم تبديل مكان الصورتين (⇄)');
+            });
+        }
+
+        // تشغيل المزامنة الأولية لكروت الصور
+        syncPhotoCards();
 
         // الحصول على النموذج وزر الإرسال
         const form = modal.querySelector('#violation-form');
@@ -7023,22 +7334,10 @@ const Violations = {
                     return;
                 }
 
-                // معالجة الصورة
-                let photo = violationData?.photo || '';
-                const photoInput = document.getElementById('violation-photo-input');
-                if (photoInput?.files.length > 0) {
-                    const file = photoInput.files[0];
-                    if (file.size > 2 * 1024 * 1024) {
-                        showFormBanner('error', 'الصورة كبيرة جداً', 'الحد الأقصى للحجم 2MB. اختر صورة أصغر.');
-                        restoreSubmitBtn();
-                        return;
-                    }
-                    try {
-                        photo = await Violations.convertImageToBase64(file);
-                    } catch (err) {
-                        if (AppState.debugMode) Utils.safeWarn('خطأ في تحويل الصورة:', err);
-                    }
-                }
+                // معالجة الصورتين
+                const photo1 = currentPhoto1 || '';
+                const photo2 = currentPhoto2 || '';
+                const photos = [photo1, photo2].filter(Boolean);
 
                 // ✅ مسح أي تنبيه سابق قبل المتابعة
                 hideFormBanner();
@@ -7082,7 +7381,9 @@ const Violations = {
                     actionTaken: actionTaken,
                     status: status,
                     rootCause: rootCause || violationData?.rootCause || 'سلوك غير آمن (Unsafe Act)',
-                    photo: photo,
+                    photo: photo1,
+                    photo2: photo2,
+                    photos: photos,
                     createdAt: violationData?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
                     violationDateKey: '',
@@ -7264,35 +7565,58 @@ const Violations = {
                 } catch (e) { /* ignore */ }
 
                 // 5. المزامنة والرفع في الخلفية دون تعطيل واجهة المستخدم
-                const performBackgroundSync = async (localPhoto) => {
-                    let finalPhoto = localPhoto;
+                const performBackgroundSync = async (localPhoto1, localPhoto2) => {
+                    let finalPhoto1 = localPhoto1;
+                    let finalPhoto2 = localPhoto2;
                     let hasUpdatedPhoto = false;
 
-                    // رفع الصورة إلى الخادم في الخلفية إذا كانت base64
-                    if (localPhoto && localPhoto.startsWith('data:')) {
+                    // رفع الصورة 1 في الخلفية إذا كانت base64
+                    if (localPhoto1 && localPhoto1.startsWith('data:')) {
                         try {
                             const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
-                                localPhoto,
-                                `violation_${formData.id}_${Date.now()}.jpg`,
+                                localPhoto1,
+                                `violation_${formData.id}_photo1_${Date.now()}.jpg`,
                                 'image/jpeg',
                                 'Violations'
                             );
                             if (uploadResult?.success) {
-                                finalPhoto = uploadResult.directLink || uploadResult.shareableLink || localPhoto;
+                                finalPhoto1 = uploadResult.directLink || uploadResult.shareableLink || localPhoto1;
                                 hasUpdatedPhoto = true;
                             }
                         } catch (err) {
-                            if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة في الخلفية:', err);
+                            if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة 1 في الخلفية:', err);
                         }
                     }
 
-                    // إذا تم تحديث الصورة البعيدة، نحدث السجل المحلي
+                    // رفع الصورة 2 في الخلفية إذا كانت base64
+                    if (localPhoto2 && localPhoto2.startsWith('data:')) {
+                        try {
+                            const uploadResult = await GoogleIntegration.uploadFileToDrive?.(
+                                localPhoto2,
+                                `violation_${formData.id}_photo2_${Date.now()}.jpg`,
+                                'image/jpeg',
+                                'Violations'
+                            );
+                            if (uploadResult?.success) {
+                                finalPhoto2 = uploadResult.directLink || uploadResult.shareableLink || localPhoto2;
+                                hasUpdatedPhoto = true;
+                            }
+                        } catch (err) {
+                            if (AppState.debugMode) Utils.safeWarn('خطأ في رفع الصورة 2 في الخلفية:', err);
+                        }
+                    }
+
+                    // إذا تم تحديث أي صورة بعيدة، نحدث السجل المحلي
                     if (hasUpdatedPhoto) {
                         const currentViolations = AppState.appData.violations || [];
                         const index = currentViolations.findIndex(v => v.id === formData.id);
                         if (index !== -1) {
-                            currentViolations[index].photo = finalPhoto;
-                            formData.photo = finalPhoto;
+                            currentViolations[index].photo = finalPhoto1;
+                            currentViolations[index].photo2 = finalPhoto2;
+                            currentViolations[index].photos = [finalPhoto1, finalPhoto2].filter(Boolean);
+                            formData.photo = finalPhoto1;
+                            formData.photo2 = finalPhoto2;
+                            formData.photos = [finalPhoto1, finalPhoto2].filter(Boolean);
                             if (typeof window.DataManager !== 'undefined' && window.DataManager.save) {
                                 window.DataManager.save();
                             }
@@ -7304,11 +7628,14 @@ const Violations = {
                     }
 
                     // المزامنة مع قاعدة SQL في الخلفية — استخدام addViolation/updateViolation
-                    // (بدل saveToSheet الذي يستبدل الجدول كاملاً ويسبب race conditions)
                     try {
                         if (typeof GoogleIntegration !== 'undefined' && GoogleIntegration.sendRequest) {
-                            // تحضير نسخة من البيانات مع الصورة النهائية (إن رُفعت)
-                            const payload = Object.assign({}, formData, { photo: finalPhoto });
+                            // تحضير نسخة من البيانات مع الصور النهائية (إن رُفعت)
+                            const payload = Object.assign({}, formData, {
+                                photo: finalPhoto1,
+                                photo2: finalPhoto2,
+                                photos: [finalPhoto1, finalPhoto2].filter(Boolean)
+                            });
                             let saveRes;
                             if (isEdit) {
                                 saveRes = await GoogleIntegration.sendRequest({
@@ -7346,7 +7673,7 @@ const Violations = {
                 };
 
                 // إطلاق المهمة في الخلفية دون await
-                performBackgroundSync(photo).catch(err => {
+                performBackgroundSync(photo1, photo2).catch(err => {
                     Utils.safeError('خطأ غير متوقع في مزامنة الخلفية للمخالفة:', err);
                 });
 
@@ -7593,6 +7920,37 @@ const Violations = {
         });
     },
 
+    openPhotoLightbox(photoUrl, title = 'صورة المخالفة') {
+        if (!photoUrl) return;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(4px);';
+        modal.innerHTML = `
+            <div style="position:relative;max-width:92vw;max-height:92vh;display:flex;flex-direction:column;background:#1e293b;border-radius:12px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.1);">
+                <div style="padding:10px 16px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #334155;">
+                    <span style="font-size:0.9rem;font-weight:700;"><i class="fas fa-image text-blue-400 ml-2"></i>${Utils.escapeHTML(title)}</span>
+                    <button type="button" class="lightbox-close-btn" style="color:#94a3b8;background:none;border:none;font-size:1.1rem;cursor:pointer;padding:4px 8px;border-radius:6px;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div style="padding:10px;display:flex;align-items:center;justify-content:center;background:#020617;overflow:auto;">
+                    <img src="${Utils.escapeHTML(photoUrl)}" alt="عرض الصورة" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:6px;">
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.lightbox-close-btn')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+        const escListener = (e) => {
+            if (e.key === 'Escape') {
+                close();
+                document.removeEventListener('keydown', escListener);
+            }
+        };
+        document.addEventListener('keydown', escListener);
+    },
+
     async viewViolation(id) {
         const raw = AppState.appData?.violations?.find(v => v.id === id);
         if (!raw) {
@@ -7745,23 +8103,60 @@ const Violations = {
                         </div>
                         ` : ''}
 
-                        <!-- صورة المخالفة -->
+                        <!-- صور المخالفة (صورة أساسية وصورة إضافية/بعد التصحيح) -->
                         ${(() => {
-                            const photoUrl = this.processPhoto(violation.photo);
-                            if (!photoUrl) return '';
-                            const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-                                ? Utils.resolveDriveAwareImgDisplay(photoUrl)
-                                : { canonical: photoUrl, displaySrc: photoUrl, needsProxy: false, proxyFileId: '' };
-                            const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                            const p1Raw = violation.photo || (Array.isArray(violation.photos) && violation.photos.length > 0 ? violation.photos[0] : '');
+                            const p2Raw = violation.photo2 || (Array.isArray(violation.photos) && violation.photos.length > 1 ? violation.photos[1] : '');
+                            const photoUrl1 = this.processPhoto(p1Raw);
+                            const photoUrl2 = this.processPhoto(p2Raw);
+                            if (!photoUrl1 && !photoUrl2) return '';
+
+                            const renderCard = (pUrl, slotNum, title, sub) => {
+                                if (!pUrl) return '';
+                                const disp = typeof Utils.resolveDriveAwareImgDisplay === 'function'
+                                    ? Utils.resolveDriveAwareImgDisplay(pUrl)
+                                    : { canonical: pUrl, displaySrc: pUrl, needsProxy: false, proxyFileId: '' };
+                                const proxyAttr = typeof Utils.driveProxyImgAttrs === 'function' ? Utils.driveProxyImgAttrs(disp) : '';
+                                return `
+                                    <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; flex-direction: column;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                            <span style="font-size: 0.8rem; font-weight: 800; color: #1e293b; display: flex; align-items: center; gap: 6px;">
+                                                <span style="display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; background: ${slotNum === 1 ? '#2563eb' : '#059669'}; color: #fff; font-size: 11px; font-weight: 800;">${slotNum}</span>
+                                                ${Utils.escapeHTML(title)}
+                                            </span>
+                                            <span style="font-size: 0.72rem; color: #64748b; font-weight: 600;">${Utils.escapeHTML(sub)}</span>
+                                        </div>
+                                        <div style="position: relative; height: 200px; border-radius: 8px; overflow: hidden; background: #0f172a; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; cursor: pointer;"
+                                             onclick="Violations.openPhotoLightbox('${Utils.escapeHTML(disp.displaySrc)}', '${Utils.escapeHTML(title)}')">
+                                            <img src="${Utils.escapeHTML(disp.displaySrc)}"${proxyAttr} alt="${Utils.escapeHTML(title)}" class="violation-detail-photo"
+                                                 style="max-height: 100%; max-width: 100%; object-fit: contain;"
+                                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
+                                            <div style="position: absolute; bottom: 8px; left: 8px; background: rgba(0,0,0,0.65); color: #fff; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; gap: 5px;">
+                                                <i class="fas fa-search-plus"></i> تكبير
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            };
+
+                            const hasBoth = Boolean(photoUrl1 && photoUrl2);
                             return `
-                        <div style="background: #f8fafc; border-radius: 12px; padding: 16px;">
-                            <h3 style="font-weight: 600; color: #475569; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-image"></i> صورة المخالفة
-                            </h3>
-                            <img src="${Utils.escapeHTML(disp.displaySrc)}" alt="صورة المخالفة"${proxyAttr} class="violation-detail-photo w-full max-w-md h-64 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                 onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eلا توجد صورة%3C/text%3E%3C/svg%3E';">
-                        </div>
-                        `;})()}
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                                <h3 style="font-weight: 700; color: #334155; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem;">
+                                    <span style="display: flex; align-items: center; gap: 8px;">
+                                        <i class="fas fa-camera-retro text-indigo-600"></i> توثيق المخالفة بالصور الميدانية
+                                    </span>
+                                    <span style="font-size: 0.75rem; font-weight: 600; color: #64748b;">
+                                        ${hasBoth ? 'صورتان موثقتان (قبل / بعد)' : 'صورة واحدة موثقة'}
+                                    </span>
+                                </h3>
+                                <div class="grid grid-cols-1 ${hasBoth ? 'md:grid-cols-2' : ''} gap-4">
+                                    ${renderCard(photoUrl1, 1, 'مشهد المخالفة الميدانية', 'قبل المعالجة')}
+                                    ${renderCard(photoUrl2, 2, 'التوثيق الإضافي / التصحيحي', 'بعد الإجراء')}
+                                </div>
+                            </div>
+                            `;
+                        })()}
 
                         <div class="violation-view-quick-edit" style="border: 2px dashed #cbd5e1; border-radius: 12px; padding: 16px; margin-top: 8px; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
                             <h4 style="font-weight: 700; color: #334155; margin: 0 0 12px 0; display: flex; align-items: center; gap: 8px; font-size: 1rem;">

@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1790",
+  "version": "1.0.1791",
   "highlights": {
     "ar": [
-      "تصميم تنفيذي فائق الأناقة لنموذج تسجيل المخالفات: هيدر داكن احترافي، بطاقات بصرية مقسمة بألوان دلالية، تباعد مريح وتأثيرات حركة وتفاعل سلسة.",
-      "إعادة تصميم رقائق المقترحات السريعة (Interactive Suggestion Chips): تصميم كبسولات ملونة أنيقة متباعدة ومريحة للعين مع تأثيرات تحويم وتفاعل فوري بدون تداخل.",
-      "تحسين تجربة بطاقات رصد الجزاءات وبؤر الخطر: بطاقات بتنسيقات تنفيذية واضحة، محاذاة منسجمة مع اللغة العربية، وتنسيق موحد للتواريخ بدون أي التباس في الاتجاهات."
+      "معالجة جذرية لقص وانكماش نصوص الحقول والقوائم المنسدلة بنموذج المخالفات مع ضبط أبعاد مريحة وارتفاع قياسي (44px) ومحاذاة خطوط متقنة تمنع أي تشويه بصري.",
+      "دعم توثيق المخالفة بصورتين ميدانيتين احترافيتين (مشهد المخالفة قبل المعالجة + توثيق إضافي أو بعد التصحيح) مع السحب والإفلات، الحذف، التغيير، والتكبير المضيء.",
+      "زر التبديل السريع بين الصورتين (⇄) بنقرة واحدة، ومعرض صور احترافي متكامل داخل شاشة عرض تفاصيل المخالفة مع التكبير المباشر والمزامنة السحابية بالخلفية."
     ],
     "en": [
-      "Sleek Executive Redesign of Violation Form: dark executive header, colored section badges, spacious card layout, and smooth interactive micro-animations.",
-      "Redesigned Suggestion Chips & Action Pills: distinct, responsive badge pills with comfortable spacing, gentle color themes, and hover transitions.",
-      "Refined Disciplinary Strike & Hotspot Widgets: executive accent borders, RTL-optimized alignment, and standardized date presentation."
+      "Fixed dropdown and input field text vertical clipping and shrinking in the violation modal with standard 44px min-height, comfortable padding, and crisp typography.",
+      "Dual Photo Documentation support for violations (Before scene + After/Additional photo) with drag-and-drop, delete, replace, and fullscreen lightbox zoom.",
+      "Smart Photo Swap feature (⇄) with one click, along with dual-photo gallery presentation in violation details view and background cloud synchronization."
     ]
   },
-  "releaseName": "v1.0.1790 - Sleek Executive Violation Form Redesign & Refined Interactive Chips",
-  "lastUpdate": "2026-09-28T23:25:00.000Z"
+  "releaseName": "v1.0.1791 - Dual Photo Documentation & Anti-Clipping Form Inputs Refinement",
+  "lastUpdate": "2026-09-28T23:55:00.000Z"
 }
