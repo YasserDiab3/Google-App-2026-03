@@ -1,19 +1,19 @@
 {
-  "version": "1.0.1781",
+  "version": "1.0.1782",
   "highlights": {
     "ar": [
-      "توحيد وتطوير جميع نماذج وتقارير مديول المخالفات طبقاً للمعايير المؤسسية الدولية ISO 45001:2018 و ISO 9001:2015.",
-      "تطبيق نظام التصدير المزدوج (تحميل PDF مباشر فوري + معاينة وطباعة تفاعلية مع شريط تحكم علوي) لتقرير المخالفة الفردي (DOC-HSE-VIO-REC-01).",
-      "ترقية تقرير مخالفات المقاولين (DOC-HSE-VIO-CON-01) وسجل الممنوعين من الدخول (DOC-HSE-VIO-BLK-REG-01) بنظام الصفحات المتعددة (A4 Landscape) مع كروت المؤشرات والتوقيعات الثلاثية المعتمدة.",
-      "إضافة نموذج أمر المنع الإداري (DOC-HSE-VIO-BLK-01) ونموذج السجل العام للمخالفات (DOC-HSE-VIO-REG-01) مع فلاتر كاملة للموظفين والمقاولين وتصدير تحليلات الأداء (DOC-HSE-VIO-KPI-01)."
+      "تصحيح التفاف النصوص وانسياب الخط العربي في عمود 'الإجراء المتخذ' عبر إلغاء التقطيع الجبري (nowrap & ellipsis) وإتاحة الالتفاف التلقائي السليم للكلمات لجميع التقارير والجداول.",
+      "معالجة جذرية لظهور الصور الميدانية في تقرير رصد المخالفة (DOC-HSE-VIO-REC-01) عبر جلبها المباشر بصيغة Base64 Data URI من Google Drive لتخطي قيود CORS في الـ Canvas والطباعة.",
+      "تصحيح وضبط توقيت وتاريخ المخالفة وإزالة التواريخ الافتراضية القديمة (مثل 1899-12-30) وعرض الوقت بنظام 12 ساعة معزول Bidi بدون تداخل للأقواس أو الأرقام.",
+      "ضبط اتجاه نصوص المواصفات والمعايير الإنجليزية (dir='ltr') في تذييل ISO 45001 لمنع انعكاس الأقواس والبنود."
     ],
     "en": [
-      "Standardized all Violations module forms and reports according to ISO 45001:2018 and ISO 9001:2015 international corporate standards.",
-      "Implemented dual export mode (Direct instant PDF download + interactive preview & print with sticky control bar) for Individual Violation Record (DOC-HSE-VIO-REC-01).",
-      "Upgraded Contractor Violations Dossier (DOC-HSE-VIO-CON-01) and Master Blacklist Register (DOC-HSE-VIO-BLK-REG-01) with multi-page landscape pagination, KPI metric cards, and 3-box signatures.",
-      "Added official Blacklist Ban Order (DOC-HSE-VIO-BLK-01) and Master Violations Register (DOC-HSE-VIO-REG-01) with comprehensive employee/contractor filters and KPI Canvas Export (DOC-HSE-VIO-KPI-01)."
+      "Fixed Arabic typography and text-wrap in 'Action Taken' column across all reports by removing restrictive nowrap/ellipsis and enabling smooth natural word wrapping.",
+      "Resolved field violation photo display in report (DOC-HSE-VIO-REC-01) by fetching images as Base64 Data URIs to bypass CORS and origin restrictions in canvas/print.",
+      "Corrected violation date & time formatting, purifying legacy default epoch timestamps (e.g. 1899-12-30) and rendering 12-hour AM/PM with clean isolated Bidi layout.",
+      "Enforced dir='ltr' on ISO 45001 standard clauses in footers to prevent parenthesis flipping in RTL environments."
     ]
   },
-  "releaseName": "v1.0.1781 - ISO 45001 Unified Violations Forms & Master Registers",
-  "lastUpdate": "2026-09-28T21:00:00.000Z"
+  "releaseName": "v1.0.1782 - Violations Arabic Typography, Photo Resolution & Time Formatting Fix",
+  "lastUpdate": "2026-09-28T21:15:00.000Z"
 }

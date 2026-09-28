@@ -141,10 +141,21 @@ const Violations = {
             0;
         const fineAmount = this.parseFineAmount(fineAmountRaw);
         const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
+
+        // تنقية وتصحيح صيغة الوقت المسجل (لمنع ظهور 1899-12-30 أو تواريخ Google Sheets غير المقصودة)
+        let cleanedTime = String(record.violationTime || record['وقت المخالفة'] || '').trim();
+        if (cleanedTime) {
+            const tm = cleanedTime.match(/(?:T|\s|^)(\d{1,2}:\d{2})/);
+            if (tm) {
+                cleanedTime = tm[1];
+            }
+        }
+
         return {
             ...record,
             personType,
-            fineAmount
+            fineAmount,
+            violationTime: cleanedTime || record.violationTime
         };
     },
 
@@ -258,6 +269,21 @@ const Violations = {
         }
         const isoDay = s.match(/^(\d{4}-\d{2}-\d{2})/);
         return isoDay ? isoDay[1] : '';
+    },
+
+    /**
+     * تنسيق وقت المخالفة بشكل سليم باللغة العربية (12 ساعة ص/م) وتطهيره من أي تواريخ Google Sheets افتراضية
+     */
+    formatViolationTime(timeVal) {
+        if (!timeVal) return '';
+        const str = String(timeVal).trim();
+        const tm = str.match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
+        if (!tm) return str;
+        const h24 = parseInt(tm[1], 10);
+        const mm = tm[2];
+        const period = h24 >= 12 ? 'م' : 'ص';
+        const h12 = (h24 % 12) || 12;
+        return `${h12}:${mm} ${period}`;
     },
 
     _violationTimeKey(v) {
@@ -3227,7 +3253,7 @@ const Violations = {
                                 </span>
                             </td>
                             <td style="font-weight: 800; color: #166534;">${this.formatFineAmount(fineVal)}</td>
-                            <td style="text-align: right; font-size: 9.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                            <td style="text-align: right; font-size: 9.5px; line-height: 1.35; white-space: normal; word-break: break-word;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
                             <td>
                                 <span style="font-weight: 800; color: ${v.status === 'محلول' ? '#047857' : '#b91c1c'};">
                                     ${Utils.escapeHTML(v.status || '-')}
@@ -6852,12 +6878,21 @@ const Violations = {
         const v = this.normalizeViolationRecord(violation) || violation;
         const esc = (value, fallback = '—') => Utils.escapeHTML(String(value == null || value === '' ? fallback : value));
         const isContractor = v.personType === 'contractor' || !!v.contractorName;
-        const photoUrl = this.processPhoto(v.photo);
-        const resolvedPhoto = photoUrl ? this.convertGoogleDriveLinkToPrintable(photoUrl) : '';
 
         const title = isContractor ? 'تقرير رصد وتوثيق مخالفة مقاول' : 'تقرير رصد وتوثيق مخالفة موظف';
         const subtitle = 'نموذج رسمي لتوثيق المخالفات الميدانية والإجراءات التصحيحية المتخذة';
         const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
+
+        const formattedDate = v.violationDate ? Utils.formatDate(v.violationDate) : '—';
+        const formattedTime = this.formatViolationTime(v.violationTime);
+
+        let resolvedPhoto = '';
+        if (v.photo && typeof v.photo === 'string' && v.photo.startsWith('data:image/')) {
+            resolvedPhoto = v.photo;
+        } else if (v.photo) {
+            const pUrl = this.processPhoto(v.photo);
+            resolvedPhoto = pUrl ? this.convertGoogleDriveLinkToPrintable(pUrl) : '';
+        }
 
         return `
             ${this.getIsoPrintHeaderHtml(title, subtitle, 'DOC-HSE-VIO-REC-01', 'Rev. 03', 'سري وداخلي')}
@@ -6870,7 +6905,8 @@ const Violations = {
                 <div class="kpi-stat-card accent-amber">
                     <div class="kpi-card-label">تاريخ وتوقيت المخالفة</div>
                     <div class="kpi-card-value" style="color: #92400e; font-size: 13px;">
-                        ${v.violationDate ? Utils.formatDate(v.violationDate) : '—'} ${v.violationTime ? `(${esc(v.violationTime)})` : ''}
+                        <span>${formattedDate}</span>
+                        ${formattedTime ? `<div style="font-size: 11.5px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>${formattedTime}</div>` : ''}
                     </div>
                 </div>
                 <div class="kpi-stat-card ${v.severity === 'عالية' ? 'accent-red' : v.severity === 'متوسطة' ? 'accent-amber' : 'accent-blue'}">
@@ -7088,25 +7124,30 @@ const Violations = {
     },
 
     async _resolveViolationReportPhoto_(photo) {
-        const source = this.processPhoto(photo);
-        if (!source) return '';
+        if (!photo) return '';
+        const raw = typeof photo === 'object' ? (this.getPhotoSource(photo) || photo.photo || photo.url || photo.image || '') : photo;
+        if (!raw) return '';
+        if (typeof raw === 'string' && raw.startsWith('data:image/')) return raw;
+
+        const source = this.processPhoto(raw) || String(raw).trim();
         if (/^data:image\//i.test(source)) return source;
 
-        const printableUrl = this.convertGoogleDriveLinkToPrintable(source);
-        if (printableUrl !== source) return printableUrl;
+        // استخراج معرّف Google Drive لتحويله فوراً إلى Base64 Data URI لضمان ظهوره في PDF والطباعة
+        const fileId = (typeof Utils !== 'undefined' && typeof Utils.extractDriveFileId === 'function')
+            ? Utils.extractDriveFileId(source)
+            : (source.match(/\/d\/([a-zA-Z0-9_-]+)/) || source.match(/id=([a-zA-Z0-9_-]+)/))?.[1];
 
-        const display = typeof Utils.resolveDriveAwareImgDisplay === 'function'
-            ? Utils.resolveDriveAwareImgDisplay(source)
-            : { canonical: source, displaySrc: source, needsProxy: false, proxyFileId: '' };
-
-        if (display.needsProxy && display.proxyFileId && typeof Utils.fetchDriveImageDataUri === 'function') {
+        if (fileId && typeof Utils !== 'undefined' && typeof Utils.fetchDriveImageDataUri === 'function') {
             try {
-                const dataUri = await Utils.fetchDriveImageDataUri(display.proxyFileId);
-                if (dataUri && /^data:image\//i.test(dataUri)) return dataUri;
-            } catch (_error) { /* fallback to direct fetch below */ }
+                const dataUri = await Utils.fetchDriveImageDataUri(fileId, { force: true, requireDataUri: true });
+                if (dataUri && /^data:image\//i.test(dataUri)) {
+                    return dataUri;
+                }
+            } catch (_err) { /* fallback to fetch below */ }
         }
 
-        const fetchSource = display.canonical || source;
+        // محاولة جلب الصورة مباشرة وتحويلها إلى Base64 Data URI
+        const fetchSource = source.startsWith('//') ? ('https:' + source) : source;
         if (/^(https?:|blob:)/i.test(fetchSource) && typeof fetch === 'function') {
             try {
                 const response = await fetch(fetchSource, { method: 'GET', credentials: 'omit', mode: 'cors' });
@@ -7114,10 +7155,10 @@ const Violations = {
                     const dataUri = await this._readViolationReportImageBlob_(await response.blob());
                     if (dataUri) return dataUri;
                 }
-            } catch (_error) { /* retain canonical source */ }
+            } catch (_error) { /* fallback below */ }
         }
 
-        return fetchSource;
+        return this.convertGoogleDriveLinkToPrintable(source);
     },
 
     async downloadViolationReport(id, triggerButton = null) {
@@ -8705,8 +8746,8 @@ const Violations = {
         try {
             Loading.show('جاري إعداد وثيقة أمر المنع (ISO 45001)...');
 
-            const photoUrl = this.processPhoto(record);
-            const resolvedPhoto = photoUrl ? this.convertGoogleDriveLinkToPrintable(photoUrl) : '';
+            const photoSource = record.photo || record.image || record.photoUrl || '';
+            const resolvedPhoto = await this._resolveViolationReportPhoto_(photoSource);
             const title = 'أمر منع إداري من دخول المنشأة ومواقع العمل';
             const subtitle = 'Blacklist Ban Order — إجراء أمني وسلامة مهنية مشدد';
 
@@ -8888,7 +8929,7 @@ const Violations = {
                             <td style="font-size: 9.5px;">${Utils.escapeHTML(r.contractor || '-')}</td>
                             <td style="font-size: 9.5px;">${Utils.escapeHTML(r.department || '-')}</td>
                             <td style="font-size: 9.5px;">${Utils.escapeHTML(r.bannedBy || '-')}</td>
-                            <td style="text-align: right; font-size: 9.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML((r.banReason || '-').substring(0, 80))}</td>
+                            <td style="text-align: right; font-size: 9.5px; line-height: 1.35; white-space: normal; word-break: break-word;">${Utils.escapeHTML(r.banReason || '-')}</td>
                         </tr>
                     `;
                 }).join('');
@@ -9596,7 +9637,7 @@ const Violations = {
             <div class="iso-footer-strip">
                 <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
                 <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
-                <span>مرجعية التوثيق: <strong>${Utils.escapeHTML(standard)}</strong></span>
+                <span>مرجعية التوثيق: <strong dir="ltr" style="display: inline-block;">${Utils.escapeHTML(standard)}</strong></span>
                 <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
             </div>
             <footer class="portal-unified-footer">
@@ -10068,7 +10109,7 @@ const Violations = {
                                 </span>
                             </td>
                             <td style="font-weight: 800; color: #166534;">${this.formatFineAmount(fineVal)}</td>
-                            <td style="text-align: right; font-size: 9.5px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                            <td style="text-align: right; font-size: 9.5px; line-height: 1.35; white-space: normal; word-break: break-word;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
                             <td>
                                 <span style="font-weight: 800; color: ${v.status === 'محلول' ? '#047857' : '#b91c1c'};">
                                     ${Utils.escapeHTML(v.status || '-')}
