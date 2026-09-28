@@ -1,19 +1,17 @@
 {
-  "version": "1.0.1776",
+  "version": "1.0.1777",
   "highlights": {
     "ar": [
-      "إصلاح شامل لمحرك تصدير مستندات PDF لتصاريح العمل (PTW) وتقارير تدريب المقاولين وتفتيشات السلامة لمنع ظهور صفحات بيضاء فارغة عند التحميل في متصفح Microsoft Edge وChrome.",
-      "ضبط شفافية وتهيئة إطار العرض وتحديد المقاسات والأبعاد ومنع تجاوز الذاكرة الرسومية للكانفاس لضمان طباعة وتصدير جميع الصفحات بوضوح كامل.",
-      "توحيد إصدارات النظام في جميع البوابات والنماذج وشاشات النظام لتكون موحدة برقم V.1.0.1775.",
-      "تحديث تخزين الذاكرة المؤقتة (Service Worker Cache) لتسريع وصول التحديث لجميع المستخدمين فوراً."
+      "ترقية وتطوير نماذج التصدير والطباعة في مديول قاعدة بيانات الموظفين لتتوافق بدقة مع معيار تصميم نموذج تسليم الوردية ونماذج السلامة المعتمدة طبقاً للمواصفة ISO 45001:2018.",
+      "تطبيق ترويسة ISO ثلاثية الصناديق والشريط العلوي الثابت للطباعة، وشبكات البيانات وبطاقات الاعتماد الرسمية لبطاقة الموظف وسجل القوى العاملة والتحليل الإحصائي والعمالة الخارجية.",
+      "إضافة تصدير سجل الموظفين إلى Excel مع الترويسة المعتمدة وطباعة السجل المعتمد وطباعة بطاقة الموظف من صفوف الجدول مباشرة."
     ],
     "en": [
-      "Comprehensive fix for PDF export engine across Work Permits (PTW), Contractor Training Reports, and Safety Inspections to eliminate blank white pages in Microsoft Edge and Chrome.",
-      "Optimized rendering frame visibility, dynamic canvas dimensions, and scaling limits to ensure all document pages export cleanly.",
-      "Unified system version numbers across all portals, public forms, and main system views to V.1.0.1775.",
-      "Invalidated Service Worker Cache to deliver updates immediately to all users."
+      "Upgraded all export and print layouts in the Employees module to match the Shift Handover corporate ISO 45001 template.",
+      "Implemented the certified 3-box ISO header, sticky no-print control bar, structured data cards, and approval blocks across Employee Dossiers, Workforce Master Registry, Analytics, and Contractor Reports.",
+      "Added direct Excel export and certified PDF registry printing from the main employees list toolbar and table actions."
     ]
   },
-  "releaseName": "v1.0.1775 - Comprehensive PDF Blank Page Fix and System Version Alignment",
-  "lastUpdate": "2026-09-28T00:20:00.000Z"
+  "releaseName": "v1.0.1777 - Employees Module ISO 45001 Export & Print Redesign",
+  "lastUpdate": "2026-09-28T18:45:00.000Z"
 }

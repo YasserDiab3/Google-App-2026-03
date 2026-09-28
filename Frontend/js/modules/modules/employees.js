@@ -1754,125 +1754,11 @@ const Employees = {
     },
 
     exportExternalWorkforceToExcel() {
-        if (typeof XLSX === 'undefined') {
-            Notification.error('XLSX library is not available');
-            return;
-        }
-
-        const { model, header, rows } = this.getExternalWorkforceExportRows();
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows]);
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'External Workforce');
-        XLSX.writeFile(workbook, `external_workforce_${model.year}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        return Employees.exportExternalWorkforceToExcel.call(this);
     },
 
     exportExternalWorkforceToPDF() {
-        const { model, header, rows } = this.getExternalWorkforceExportRows();
-        const viewState = this.getExternalWorkforceViewState();
-        const reportTitle = `${viewState.labels.externalTab} - ${model.year}`;
-        const exportDate = new Date().toISOString();
-        const tableRows = [header, ...rows].map((row, index) => `
-            <tr>
-                ${row.map(cell => `<${index === 0 ? 'th' : 'td'}>${Utils.escapeHTML(String(cell ?? ''))}</${index === 0 ? 'th' : 'td'}>`).join('')}
-            </tr>
-        `).join('');
-
-        const content = `
-            <style>
-                .external-workforce-report {
-                    direction: ${viewState.dir};
-                    font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                }
-                .external-workforce-report__meta {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    gap: 16px;
-                    margin-bottom: 18px;
-                    padding: 12px 16px;
-                    border: 1px solid #D7E3F1;
-                    border-radius: 12px;
-                    background: #F8FBFF;
-                    font-size: 13px;
-                    color: #334155;
-                }
-                .external-workforce-report__meta strong {
-                    color: #0F172A;
-                }
-                .external-workforce-report__table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    table-layout: fixed;
-                    direction: ${viewState.dir};
-                }
-                .external-workforce-report__table th,
-                .external-workforce-report__table td {
-                    border: 1px solid #334155;
-                    padding: 8px 6px;
-                    text-align: center;
-                    font-size: 11px;
-                    word-break: break-word;
-                }
-                .external-workforce-report__table th {
-                    background: #B7D2EA;
-                    color: #102A43;
-                    font-weight: 700;
-                }
-                .external-workforce-report__table td:first-child,
-                .external-workforce-report__table th:first-child {
-                    font-weight: 700;
-                    background: #DCEAF7;
-                }
-                @media print {
-                    .external-workforce-report__meta {
-                        break-inside: avoid;
-                    }
-                }
-            </style>
-            <div class="external-workforce-report" dir="${viewState.dir}" lang="${viewState.lang}">
-                <div class="external-workforce-report__meta">
-                    <div><strong>${Utils.escapeHTML(viewState.labels.year)}:</strong> ${Utils.escapeHTML(String(model.year))}</div>
-                    <div><strong>${Utils.escapeHTML(viewState.labels.externalTab)}</strong></div>
-                    <div><strong>${Utils.escapeHTML(viewState.labels.totalHoursYtd || 'YTD Hours')}:</strong> ${Utils.escapeHTML(String(model.hoursYtd || 0))}</div>
-                </div>
-                <table class="external-workforce-report__table">${tableRows}</table>
-            </div>
-        `;
-
-        const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
-            ? FormHeader.generatePDFHTML(
-                `EXT-WORKFORCE-${model.year}`,
-                reportTitle,
-                content,
-                false,
-                true,
-                {
-                    version: '1.0',
-                    source: 'ExternalWorkforceMonthly',
-                    reportYear: model.year,
-                    releaseDate: exportDate,
-                    revisionDate: exportDate
-                },
-                exportDate,
-                exportDate
-            )
-            : `<!DOCTYPE html><html lang="${viewState.lang}" dir="${viewState.dir}"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;direction:${viewState.dir};padding:20px;">${content}</body></html>`;
-
-        const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (!printWindow) {
-            URL.revokeObjectURL(url);
-            Notification.error('Unable to open print window');
-            return;
-        }
-
-        printWindow.onload = () => {
-            setTimeout(() => {
-                printWindow.print();
-                setTimeout(() => URL.revokeObjectURL(url), 1000);
-            }, 400);
-        };
+        return Employees.exportExternalWorkforceToPDF.call(this);
     },
 
     async importExternalWorkforceExcelFile(file) {
@@ -3156,49 +3042,149 @@ const Employees = {
     },
 
     async _empExportAnalyticsPdf() {
-        const employees = AppState.appData?.employees || [];
-        const filters = this._empGetAnalyticsFiltersFromDom();
-        const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
-        const deptRows = dataset.byDepartment.slice(0, 20).map(r =>
-            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
-        ).join('');
-        const jobRows = dataset.byJob.slice(0, 20).map(r =>
-            `<tr><td>${Utils.escapeHTML(r.label)}</td><td>${r.count}</td><td>${r.percent}%</td><td>${r.male}</td><td>${r.female}</td></tr>`
-        ).join('');
-
-        const html = `
-            <div dir="rtl" style="font-family:Arial,sans-serif;padding:24px;">
-                <h1 style="color:#0f172a;margin-bottom:8px;">${this.t('module.employees.analytics.title', 'لوحة تحليل بيانات الموظفين')}</h1>
-                <p style="color:#64748b;margin-bottom:20px;">${new Date().toLocaleDateString('ar-SA')}</p>
-                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;">
-                    <div style="background:#eff6ff;padding:12px;border-radius:8px;"><strong>النشطون</strong><br>${dataset.activeCount}</div>
-                    <div style="background:#fef2f2;padding:12px;border-radius:8px;"><strong>المستقيلون</strong><br>${dataset.inactiveCount}</div>
-                    <div style="background:#f0fdf4;padding:12px;border-radius:8px;"><strong>الأقسام</strong><br>${dataset.uniqueDepartments}</div>
-                    <div style="background:#f5f3ff;padding:12px;border-radius:8px;"><strong>الوظائف</strong><br>${dataset.uniqueJobs}</div>
-                </div>
-                <h2>أعلى الأقسام</h2>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
-                    <thead><tr style="background:#f1f5f9;"><th>القسم</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
-                    <tbody>${deptRows}</tbody>
-                </table>
-                <h2>أعلى الوظائف</h2>
-                <table style="width:100%;border-collapse:collapse;">
-                    <thead><tr style="background:#f1f5f9;"><th>الوظيفة</th><th>العدد</th><th>%</th><th>ذكر</th><th>أنثى</th></tr></thead>
-                    <tbody>${jobRows}</tbody>
-                </table>
-            </div>
-        `;
-
         try {
-            Loading.show('جاري إنشاء التقرير...');
-            if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDF === 'function') {
-                await FormHeader.generatePDF(html, `تحليل-الموظفين-${new Date().toISOString().slice(0, 10)}.pdf`);
-            } else {
-                Utils.printHtmlContent('تحليل الموظفين', html);
-            }
-            Notification.success('تم إنشاء التقرير');
+            Loading.show('جاري تجهيز تقرير التحليل الإحصائي...');
+            const employees = AppState.appData?.employees || [];
+            const filters = this._empGetAnalyticsFiltersFromDom();
+            const dataset = this.buildEmployeeAnalyticsDataset(employees, filters);
+
+            const deptRows = (dataset.byDepartment || []).slice(0, 25).map((r, i) =>
+                `<tr>
+                    <td>${i + 1}</td>
+                    <td style="text-align: right; font-weight: 700;">${Utils.escapeHTML(r.label)}</td>
+                    <td><strong>${r.count}</strong></td>
+                    <td><span style="background: #eff6ff; color: #1d4ed8; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${r.percent}%</span></td>
+                    <td>${r.male}</td>
+                    <td>${r.female}</td>
+                    <td>${r.avgAge ? r.avgAge + ' سنة' : '-'}</td>
+                </tr>`
+            ).join('');
+
+            const jobRows = (dataset.byJob || []).slice(0, 25).map((r, i) =>
+                `<tr>
+                    <td>${i + 1}</td>
+                    <td style="text-align: right; font-weight: 700;">${Utils.escapeHTML(r.label)}</td>
+                    <td><strong>${r.count}</strong></td>
+                    <td><span style="background: #f0fdf4; color: #047857; padding: 2px 6px; border-radius: 4px; font-weight: 700;">${r.percent}%</span></td>
+                    <td>${r.male}</td>
+                    <td>${r.female}</td>
+                </tr>`
+            ).join('');
+
+            const headerHtml = this.getIsoPrintHeaderHtml(
+                'تقرير التحليل الإحصائي والديموغرافي للقوى العاملة',
+                'Workforce Demographics & Statistical Analytics Report',
+                'DOC-HSE-EMP-KPI-01',
+                'Rev. 02',
+                'عام داخلي'
+            );
+
+            const footerHtml = this.getIsoPrintFooterHtml('DOC-HSE-EMP-KPI-01', 'Rev. 02', 'ISO 45001:2018 (Clause 9.1 Performance Evaluation)');
+
+            const htmlBody = `
+                <div class="no-print-bar">
+                    <div class="brand-badge">
+                        <span class="pill-tag">ICAPP HSE & HR</span>
+                        <span class="title-text">تقرير التحليل الإحصائي والديموغرافي للقوى العاملة</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button type="button" onclick="window.print()" class="btn-print">
+                            🖨️ طباعة التقرير
+                        </button>
+                        <button type="button" onclick="window.close()" class="btn-close">
+                            ❌ إغلاق النافذة
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-page-container">
+                    ${headerHtml}
+
+                    <div class="handover-info-grid">
+                        <div class="info-card">
+                            <div class="card-label">👥 إجمالي المسجلين</div>
+                            <div class="card-value">${dataset.total || employees.length} موظف</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-label">✅ القوة الفعلية النشطة</div>
+                            <div class="card-value" style="color: #047857;">${dataset.activeCount || 0} موظف</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-label">⛔ المستقيلون وغير النشطين</div>
+                            <div class="card-value" style="color: #b91c1c;">${dataset.inactiveCount || 0} موظف</div>
+                        </div>
+                        <div class="info-card">
+                            <div class="card-label">🏢 الأقسام / الوظائف</div>
+                            <div class="card-value">${(dataset.byDepartment || []).length} قسم / ${(dataset.byJob || []).length} مسمى</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 14px; margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #1e3a8a;">
+                        📊 توزيع القوى العاملة طبقاً للأقسام والإدارات (Top Departments)
+                    </div>
+                    <table class="iso-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px;">#</th>
+                                <th>الإدارة / القسم</th>
+                                <th>العدد</th>
+                                <th>النسبة %</th>
+                                <th>ذكور</th>
+                                <th>إناث</th>
+                                <th>متوسط العمر</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${deptRows || '<tr><td colspan="7">لا توجد بيانات متاحة</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <div style="margin-top: 18px; margin-bottom: 8px; font-size: 13px; font-weight: 800; color: #1e3a8a;">
+                        📋 توزيع القوى العاملة طبقاً للمسميات والوظائف الرئيسية (Top Job Titles)
+                    </div>
+                    <table class="iso-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px;">#</th>
+                                <th>المسمى الوظيفي</th>
+                                <th>العدد</th>
+                                <th>النسبة %</th>
+                                <th>ذكور</th>
+                                <th>إناث</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${jobRows || '<tr><td colspan="6">لا توجد بيانات متاحة</td></tr>'}
+                        </tbody>
+                    </table>
+
+                    <div class="signatures-grid">
+                        <div class="sig-card">
+                            <div class="sig-card-title">إعداد وتحليل البيانات</div>
+                            <div class="sig-card-name">مسؤول تحليل بيانات السلامة والموارد</div>
+                            <div class="sig-line-area">التوقيع والتاريخ</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">مراجعة مؤشرات الأداء (HSE KPIs)</div>
+                            <div class="sig-card-name">أخصائي السلامة والصحة المهنية</div>
+                            <div class="sig-line-area">التوقيع والتاريخ</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">اعتماد الإدارة العليا</div>
+                            <div class="sig-card-name">مدير عام الإدارة</div>
+                            <div class="sig-line-area">الختم والاعتماد</div>
+                        </div>
+                    </div>
+
+                    ${footerHtml}
+                </div>
+            `;
+
+            this.openIsoPrintWindow('تقرير التحليل الإحصائي والديموغرافي للقوى العاملة', htmlBody, false);
+            Notification.success('تم إنشاء تقرير التحليل الإحصائي بنجاح');
         } catch (e) {
-            Notification.error('فشل تصدير التقرير');
+            Utils.safeError('خطأ في تصدير تقرير التحليل الإحصائي:', e);
+            Notification.error('فشل تصدير التقرير: ' + e.message);
         } finally {
             Loading.hide();
         }
@@ -3295,6 +3281,14 @@ const Employees = {
                             <button id="refresh-employees-btn" class="btn-secondary" title="${this.t('module.employees.refreshFromDbTitle', 'تحديث البيانات من قاعدة البيانات')}">
                                 <i class="fas fa-sync-alt ml-2"></i>
                                 ${this.t('module.common.refresh', 'تحديث')}
+                            </button>
+                            <button id="export-employees-excel-btn" class="btn-secondary" title="تصدير سجل الموظفين إلى Excel" style="border-color: #a7f3d0; background: #f0fdf4; color: #047857; font-weight: 700;">
+                                <i class="fas fa-file-excel ml-2" style="color: #059669;"></i>
+                                تصدير Excel
+                            </button>
+                            <button id="print-employees-registry-btn" class="btn-secondary" title="طباعة سجل الموظفين المعتمد (PDF)" style="border-color: #bfdbfe; background: #eff6ff; color: #1e40af; font-weight: 700;">
+                                <i class="fas fa-print ml-2" style="color: #2563eb;"></i>
+                                طباعة السجل
                             </button>
                             ${canAdmin ? `
                             <button id="refresh-employee-names-btn" class="btn-secondary" title="${this.t('module.employees.refreshNamesTitle', 'تحديث/تنظيف أسماء الموظفين ثم حفظها')}">
@@ -3956,10 +3950,13 @@ const Employees = {
             <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.phone || '')}</td>
             <td style="word-wrap: break-word; white-space: normal;">${Utils.escapeHTML(employee.insuranceNumber || '')}</td>
             ${canEditOrDelete ? `
-            <td style="min-width: 150px;">
+            <td style="min-width: 170px;">
                 <div class="flex items-center gap-2 flex-wrap">
                     <button onclick="Employees.viewEmployee('${safeId}')" class="btn-icon btn-icon-info" title="${this.t('module.common.view', 'عرض')}">
                         <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="Employees.printEmployee('${safeId}')" class="btn-icon" style="color: #2563eb; background: #eff6ff; border-color: #bfdbfe;" title="${this.t('module.common.print', 'طباعة بطاقة الموظف المعتمدة')}">
+                        <i class="fas fa-print"></i>
                     </button>
                     <button onclick="Employees.editEmployee('${safeId}')" class="btn-icon btn-icon-primary" title="${this.t('module.common.edit', 'تعديل')}">
                         <i class="fas fa-edit"></i>
@@ -3973,8 +3970,15 @@ const Employees = {
                 </div>
             </td>
             ` : `
-            <td>
-                <span class="text-gray-400 text-sm">—</span>
+            <td style="min-width: 90px;">
+                <div class="flex items-center gap-2">
+                    <button onclick="Employees.viewEmployee('${safeId}')" class="btn-icon btn-icon-info" title="${this.t('module.common.view', 'عرض')}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button onclick="Employees.printEmployee('${safeId}')" class="btn-icon" style="color: #2563eb; background: #eff6ff; border-color: #bfdbfe;" title="${this.t('module.common.print', 'طباعة بطاقة الموظف المعتمدة')}">
+                        <i class="fas fa-print"></i>
+                    </button>
+                </div>
             </td>
             `}
         `;
@@ -4400,6 +4404,14 @@ const Employees = {
             if (addBtn && this.canAddOrImport()) addBtn.addEventListener('click', () => this.showForm());
             if (addEmptyBtn && this.canAddOrImport()) addEmptyBtn.addEventListener('click', () => this.showForm());
             if (importBtn && this.canAddOrImport()) importBtn.addEventListener('click', () => this.showImportExcel());
+
+            // ✅ أزرار تصدير وطباعة سجل الموظفين
+            document.getElementById('export-employees-excel-btn')?.addEventListener('click', () => {
+                this.exportToExcel();
+            });
+            document.getElementById('print-employees-registry-btn')?.addEventListener('click', () => {
+                this.printEmployeesRegistry();
+            });
             
             // ✅ زر التحديث - إزالة أي مستمعات سابقة وإضافة جديدة
             if (refreshBtn) {
@@ -6253,7 +6265,7 @@ const Employees = {
         }
 
         try {
-            Loading.show();
+            Loading.show('جاري تجهيز بطاقة الموظف المعتمدة...');
 
             let printPhotoSrc = '';
             const normPhoto = this._normalizeEmployeePhotoUrl(employee.photo, employee.id);
@@ -6272,306 +6284,314 @@ const Employees = {
             const birthDate = this.formatDateSafe(employee.birthDate);
             const hireDate = this.formatDateSafe(employee.hireDate);
             const age = this.calculateAge(employee.birthDate);
-            
-            // تنسيق التاريخ بالعربية
-            const formatDate = (dateStr) => {
-                if (!dateStr) return '-';
+            const isInactive = this.isEmployeeInactive(employee);
+            const displayName = this._employeeDisplayName_(employee);
+
+            // حساب مدة الخدمة
+            let serviceDuration = '-';
+            if (employee.hireDate) {
                 try {
-                    const date = new Date(dateStr);
-                    const year = date.getFullYear();
-                    const month = date.getMonth() + 1;
-                    const day = date.getDate();
-                    // تحويل الأرقام إلى عربية
-                    const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
-                    const toArabic = (num) => String(num).split('').map(d => arabicNumbers[parseInt(d)] || d).join('');
-                    return `${toArabic(year)}/${toArabic(month)}/${toArabic(day)}`;
-                } catch {
-                    return dateStr;
+                    const hire = this.parseLocalDate(employee.hireDate);
+                    if (hire) {
+                        const end = employee.resignationDate ? (this.parseLocalDate(employee.resignationDate) || new Date()) : new Date();
+                        let yrs = end.getFullYear() - hire.getFullYear();
+                        let mos = end.getMonth() - hire.getMonth();
+                        if (mos < 0) { yrs--; mos += 12; }
+                        serviceDuration = yrs > 0 ? `${yrs} سنة و ${mos} شهر` : `${mos} شهر`;
+                    }
+                } catch (_) {}
+            }
+
+            const headerHtml = this.getIsoPrintHeaderHtml(
+                'بطاقة بيانات وسجل موظف معتمد',
+                'Certified Employee Profile & HSE Qualification Record',
+                'DOC-HR-EMP-01',
+                'Rev. 03',
+                'سري داخلي / Confidential'
+            );
+
+            const footerHtml = this.getIsoPrintFooterHtml('DOC-HR-EMP-01', 'Rev. 03', 'ISO 45001:2018 & ISO 9001:2015');
+
+            const customStyle = `
+                .emp-hero-card {
+                    display: flex;
+                    gap: 18px;
+                    align-items: center;
+                    background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+                    border: 1.5px solid #bfdbfe;
+                    border-radius: 10px;
+                    padding: 14px 18px;
+                    margin-bottom: 14px;
                 }
-            };
+                .emp-hero-photo {
+                    width: 105px;
+                    height: 105px;
+                    border-radius: 8px;
+                    object-fit: cover;
+                    border: 2.5px solid #1e3a8a;
+                    background: #ffffff;
+                    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+                    flex-shrink: 0;
+                }
+                .emp-hero-photo-placeholder {
+                    width: 105px;
+                    height: 105px;
+                    border-radius: 8px;
+                    background: #e2e8f0;
+                    border: 2px solid #cbd5e1;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-shrink: 0;
+                    color: #94a3b8;
+                    font-size: 38px;
+                }
+                .emp-hero-details {
+                    flex: 1;
+                }
+                .emp-hero-name {
+                    font-size: 19px;
+                    font-weight: 900;
+                    color: #0f172a;
+                    margin-bottom: 4px;
+                }
+                .emp-hero-tags {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    margin-top: 6px;
+                }
+                .emp-tag {
+                    padding: 3px 9px;
+                    border-radius: 6px;
+                    font-size: 11px;
+                    font-weight: 800;
+                }
+                .emp-tag-id { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+                .emp-tag-job { background: #f0fdf4; color: #047857; border: 1px solid #bbf7d0; }
+                .emp-tag-dept { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+                .emp-tag-active { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+                .emp-tag-inactive { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
 
-            // تنسيق الوقت للطباعة
-            const now = new Date();
-            const printDate = formatDate(now.toISOString().split('T')[0]);
-            const printTime = now.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                .emp-section-box {
+                    border: 1.5px solid #cbd5e1;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-bottom: 11px;
+                }
+                .emp-section-title {
+                    background: #f1f5f9;
+                    border-bottom: 1.5px solid #cbd5e1;
+                    padding: 6px 12px;
+                    font-size: 11px;
+                    font-weight: 800;
+                    color: #1e3a8a;
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                }
+                .emp-section-grid {
+                    display: grid;
+                    grid-template-columns: repeat(4, 1fr);
+                    gap: 8px;
+                    padding: 9px 12px;
+                    background: #ffffff;
+                }
+                .emp-field-item {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    padding: 6px 9px;
+                }
+                .emp-field-label {
+                    font-size: 9.5px;
+                    font-weight: 700;
+                    color: #64748b;
+                    margin-bottom: 2px;
+                }
+                .emp-field-value {
+                    font-size: 11.5px;
+                    font-weight: 800;
+                    color: #0f172a;
+                    word-break: break-word;
+                }
+                .sig-box-wrapper {
+                    display: grid;
+                    grid-template-columns: 1fr 1fr 1fr 140px;
+                    gap: 10px;
+                    margin-top: 14px;
+                    page-break-inside: avoid;
+                }
+            `;
 
-            // الحصول على اسم الشركة من AppState أو استخدام القيمة الافتراضية
-            const companyName = AppState?.companySettings?.name || AppState?.appData?.companyName || 'الشركة';
-
-            const content = `
-                <style>
-                    @page { size: A4; margin: 20mm; }
-                    body {
-                        font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                        direction: rtl;
-                        margin: 0;
-                        padding: 0;
-                        background: #ffffff;
-                        color: #1f2937;
-                    }
-                    .employee-card {
-                        max-width: 800px;
-                        margin: 0 auto;
-                        background: #ffffff;
-                        padding: 30px;
-                    }
-                    .card-header {
-                        text-align: center;
-                        margin-bottom: 20px;
-                    }
-                    .company-name {
-                        font-size: 18px;
-                        font-weight: 700;
-                        color: #2563eb;
-                        margin-bottom: 5px;
-                        white-space: nowrap;
-                        word-break: keep-all;
-                        overflow-wrap: normal;
-                    }
-                    .card-title {
-                        font-size: 22px;
-                        font-weight: 700;
-                        color: #1e40af;
-                        margin-bottom: 10px;
-                    }
-                    .header-line {
-                        width: 100%;
-                        height: 2px;
-                        background: #2563eb;
-                        margin: 10px 0 20px 0;
-                    }
-                    .employee-photo {
-                        text-align: center;
-                        margin: 20px 0 30px 0;
-                    }
-                    .employee-photo img {
-                        width: 150px;
-                        height: 150px;
-                        border-radius: 50%;
-                        object-fit: cover;
-                        border: 3px solid #e5e7eb;
-                    }
-                    .employee-photo-placeholder {
-                        width: 150px;
-                        height: 150px;
-                        border-radius: 50%;
-                        background: #f3f4f6;
-                        margin: 0 auto;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        border: 3px solid #e5e7eb;
-                    }
-                    .employee-photo-placeholder svg {
-                        width: 80px;
-                        height: 80px;
-                        fill: #9ca3af;
-                    }
-                    .employee-details {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 15px;
-                        margin-bottom: 30px;
-                    }
-                    .detail-field {
-                        background: #f9fafb;
-                        border: 1px solid #e5e7eb;
-                        border-radius: 8px;
-                        padding: 12px 15px;
-                    }
-                    .detail-label {
-                        font-size: 13px;
-                        font-weight: 600;
-                        color: #6b7280;
-                        margin-bottom: 5px;
-                    }
-                    .detail-value {
-                        font-size: 15px;
-                        font-weight: 500;
-                        color: #1f2937;
-                    }
-                    .card-footer {
-                        text-align: center;
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 1px solid #e5e7eb;
-                        font-size: 12px;
-                        color: #6b7280;
-                        line-height: 1.8;
-                    }
-                    .footer-text {
-                        margin-bottom: 8px;
-                    }
-                    .print-date {
-                        font-size: 11px;
-                        color: #9ca3af;
-                    }
-                    @media print {
-                        body { background: #ffffff; }
-                        .employee-card { box-shadow: none; }
-                    }
-                </style>
-                <div class="employee-card">
-                    <div class="card-header">
-                        <div class="company-name">${Utils.escapeHTML(companyName)}</div>
-                        <div class="card-title">بطاقة بيانات موظف</div>
-                        <div class="header-line"></div>
+            const htmlBody = `
+                <div class="no-print-bar">
+                    <div class="brand-badge">
+                        <span class="pill-tag">ICAPP HSE & HR</span>
+                        <span class="title-text">بطاقة بيانات موظف معتمدة — ${Utils.escapeHTML(displayName)}</span>
                     </div>
-                    <div class="employee-photo">
+                    <div class="action-buttons">
+                        <button type="button" onclick="window.print()" class="btn-print">
+                            🖨️ طباعة البطاقة
+                        </button>
+                        <button type="button" onclick="window.close()" class="btn-close">
+                            ❌ إغلاق النافذة
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-page-container">
+                    ${headerHtml}
+
+                    <div class="emp-hero-card">
                         ${printPhotoSrc
-                            ? `<img src="${Utils.escapeHTML(printPhotoSrc)}" alt="${Utils.escapeHTML(employee.name || '')}"
-                                     onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'employee-photo-placeholder\\'><svg viewBox=\\'0 0 24 24\\' xmlns=\\'http://www.w3.org/2000/svg\\'><path d=\\'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\\'/></svg></div>';">`
-                            : `<div class="employee-photo-placeholder">
-                                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                                    </svg>
-                                </div>`}
-                    </div>
-                    <div class="employee-details">
-                        <div class="detail-field">
-                            <div class="detail-label">الرقم الوظيفي</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.employeeNumber || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">الاسم الكامل</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.name || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">الوظيفة</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.position || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">القسم</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.department || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">تاريخ الميلاد</div>
-                            <div class="detail-value">${formatDate(birthDate)}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">رقم البطاقة القومية</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.nationalId || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">تاريخ التعيين</div>
-                            <div class="detail-value">${formatDate(hireDate)}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">السن</div>
-                            <div class="detail-value">${age ? age + ' سنة' : '-'}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">رقم الهاتف</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.phone || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">النوع</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.gender === 'ذكر' ? 'Male' : employee.gender === 'أنثى' ? 'Female' : employee.gender || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">البريد الإلكتروني</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.email || '-')}</div>
-                        </div>
-                        <div class="detail-field">
-                            <div class="detail-label">الرقم التأميني</div>
-                            <div class="detail-value">${Utils.escapeHTML(employee.insuranceNumber || '-')}</div>
+                            ? `<img src="${Utils.escapeHTML(printPhotoSrc)}" alt="${Utils.escapeHTML(displayName)}" class="emp-hero-photo" onerror="this.onerror=null; this.parentElement.querySelector('.emp-hero-photo-placeholder').style.display='flex'; this.style.display='none';"><div class="emp-hero-photo-placeholder" style="display:none;">👤</div>`
+                            : `<div class="emp-hero-photo-placeholder">👤</div>`
+                        }
+                        <div class="emp-hero-details">
+                            <div class="emp-hero-name">${Utils.escapeHTML(displayName)}</div>
+                            <div class="emp-hero-tags">
+                                <span class="emp-tag emp-tag-id">كود: ${Utils.escapeHTML(employee.employeeNumber || '-')}</span>
+                                <span class="emp-tag emp-tag-job">${Utils.escapeHTML(employee.job || employee.position || '-')}</span>
+                                <span class="emp-tag emp-tag-dept">${Utils.escapeHTML(employee.department || '-')}</span>
+                                <span class="emp-tag ${isInactive ? 'emp-tag-inactive' : 'emp-tag-active'}">${isInactive ? 'مستقيل / غير نشط' : 'على رأس العمل (نشط)'}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <div class="footer-text">هذا المستند تم إنشاؤه آلياً من نظام إدارة الموارد البشرية</div>
-                        <div class="print-date">تاريخ الطباعة: ${printDate} - ${printTime}</div>
+
+                    <!-- القسم الأول: البيانات الشخصية والتعريفية -->
+                    <div class="emp-section-box">
+                        <div class="emp-section-title">
+                            📌 البيانات الشخصية والتعريفية (Personal & Identification Data)
+                        </div>
+                        <div class="emp-section-grid">
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">رقم بطاقة الرقم القومي</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.nationalId || '-')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">تاريخ الميلاد</div>
+                                <div class="emp-field-value">${birthDate || '-'}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">العمر السني</div>
+                                <div class="emp-field-value">${age ? age + ' سنة' : '-'}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">النوع / الجنس</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.gender || '-')}</div>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- القسم الثاني: البيانات الوظيفية والتعاقدية -->
+                    <div class="emp-section-box">
+                        <div class="emp-section-title">
+                            🏢 البيانات الوظيفية والتعاقدية (Employment & Operational Record)
+                        </div>
+                        <div class="emp-section-grid">
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">تاريخ التعيين الرسمي</div>
+                                <div class="emp-field-value">${hireDate || '-'}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">مدة الخدمة المقضاة</div>
+                                <div class="emp-field-value">${serviceDuration}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">الرقم التأميني</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.insuranceNumber || '-')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">الموقع / المنشأة</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.branch || employee.location || 'المصنع الرئيسي — ICAPP')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- القسم الثالث: بيانات الاتصال والطوارئ -->
+                    <div class="emp-section-box">
+                        <div class="emp-section-title">
+                            📞 بيانات الاتصال وحالات الطوارئ (Contact & Emergency Details)
+                        </div>
+                        <div class="emp-section-grid">
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">رقم الهاتف الشخصي</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.phone || '-')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">البريد الإلكتروني</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.email || '-')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">جهة الاتصال في الطوارئ</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.emergencyContact || 'مسجل بملف الخدمة')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">هاتف الطوارئ</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.emergencyPhone || employee.phone || '-')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- القسم الرابع: السلامة والصحة المهنية والملف الطبي -->
+                    <div class="emp-section-box">
+                        <div class="emp-section-title">
+                            🦺 متطلبات السلامة والصحة المهنية (HSE & Medical Profile)
+                        </div>
+                        <div class="emp-section-grid">
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">فصيلة الدم</div>
+                                <div class="emp-field-value" style="color: #b91c1c;">${Utils.escapeHTML(employee.bloodType || employee.bloodGroup || 'غير مسجلة')}</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">التدريب التوجيهي (HSE Induction)</div>
+                                <div class="emp-field-value" style="color: #047857;">مكتمل ومُعتمد ✅</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">مهمات الوقاية (PPE Status)</div>
+                                <div class="emp-field-value" style="color: #047857;">مسلمة طبقاً للمخاطر ✅</div>
+                            </div>
+                            <div class="emp-field-item">
+                                <div class="emp-field-label">الملاحظات الطبية / الحساسية</div>
+                                <div class="emp-field-value">${Utils.escapeHTML(employee.notes || employee.medicalNotes || 'لا توجد موانع طبية')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- التوقيعات والاعتماد الرسمي -->
+                    <div class="sig-box-wrapper">
+                        <div class="sig-card">
+                            <div class="sig-card-title">إعداد وتدقيق الموارد البشرية</div>
+                            <div class="sig-card-name">أخصائي شؤون العاملين</div>
+                            <div class="sig-line-area">التوقيع والتاريخ</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">مطابقة السلامة والبيئة</div>
+                            <div class="sig-card-name">أخصائي السلامة والصحة المهنية</div>
+                            <div class="sig-line-area">التوقيع والتاريخ</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">اعتماد الإدارة العامة</div>
+                            <div class="sig-card-name">مدير عام الإدارة</div>
+                            <div class="sig-line-area">الختم والاعتماد الرقمي</div>
+                        </div>
+                        <div class="sig-card" style="border: 2px dashed #94a3b8; background: #ffffff; align-items: center; justify-content: center; text-align: center;">
+                            <div style="font-size: 9.5px; font-weight: 800; color: #64748b; margin-bottom: 4px;">خاتم الاعتماد الرسمي</div>
+                            <div style="width: 48px; height: 48px; border: 1.5px dashed #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #94a3b8; font-weight: 800;">ختم ICAPP</div>
+                        </div>
+                    </div>
+
+                    ${footerHtml}
                 </div>
             `;
 
-            const htmlContent = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بطاقة بيانات موظف - ${Utils.escapeHTML(employee.name || '')}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    ${content}
-</head>
-<body>
-    ${content}
-</body>
-</html>`;
-
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
-            
-            if (printWindow) {
-                printWindow.onload = () => {
-                    // Wait for images to load before printing
-                    const images = printWindow.document.querySelectorAll('img');
-                    let imagesLoaded = 0;
-                    const totalImages = images.length;
-
-                    if (totalImages === 0) {
-                        // No images, print immediately
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => {
-                                URL.revokeObjectURL(url);
-                                Loading.hide();
-                            }, 800);
-                        }, 300);
-                    } else {
-                        // Wait for all images to load
-                        const checkAllImagesLoaded = () => {
-                            if (imagesLoaded >= totalImages) {
-                                setTimeout(() => {
-                                    printWindow.print();
-                                    setTimeout(() => {
-                                        URL.revokeObjectURL(url);
-                                        Loading.hide();
-                                    }, 800);
-                                }, 300);
-                            }
-                        };
-
-                        images.forEach(img => {
-                            if (img.complete) {
-                                // Image already loaded
-                                imagesLoaded++;
-                                checkAllImagesLoaded();
-                            } else {
-                                // Wait for image to load
-                                img.onload = () => {
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                                img.onerror = () => {
-                                    // Image failed to load, still proceed
-                                    imagesLoaded++;
-                                    checkAllImagesLoaded();
-                                };
-                            }
-                        });
-
-                        // Fallback: print after 3 seconds even if not all images loaded
-                        setTimeout(() => {
-                            if (imagesLoaded < totalImages) {
-                                printWindow.print();
-                                setTimeout(() => {
-                                    URL.revokeObjectURL(url);
-                                    Loading.hide();
-                                }, 800);
-                            }
-                        }, 3000);
-                    }
-                };
-            } else {
-                URL.revokeObjectURL(url);
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
+            this.openIsoPrintWindow(`بطاقة بيانات موظف — ${displayName}`, htmlBody, false, customStyle);
         } catch (error) {
-            Loading.hide();
             Utils.safeError('خطأ في طباعة بيانات الموظف:', error);
             Notification.error('حدث خطأ أثناء الطباعة: ' + error.message);
+        } finally {
+            Loading.hide();
         }
     },
 
@@ -7014,6 +7034,7 @@ const Employees = {
             if (moreWrap) moreWrap.remove();
             this._listRowsCache = [];
             this._listVisibleCount = 0;
+            this._lastFilteredEmployees = [];
         } else {
             const frag = document.createDocumentFragment();
             for (let i = 0; i < filtered.length; i++) {
@@ -7024,6 +7045,7 @@ const Employees = {
             this._listRowsCache = filtered;
             this._listVisibleCount = filtered.length;
             this._listCanEdit = canEditOrDelete;
+            this._lastFilteredEmployees = filtered;
             const moreWrap = document.getElementById('employees-load-more-wrap');
             if (moreWrap) moreWrap.remove();
         }
@@ -7418,12 +7440,714 @@ const Employees = {
                 Utils.safeError('❌ خطأ في تهيئة موديول الموظفين:', error);
             }
         }
+    },
+
+    getIsoPrintCommonStyles(isLandscape = false) {
+        return `
+            :root {
+                --brand-primary: #1e3a8a;
+                --brand-navy: #0f172a;
+                --brand-green: #047857;
+                --brand-red: #b91c1c;
+                --border-color: #cbd5e1;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f8fafc;
+                color: #0f172a;
+                line-height: 1.5;
+                direction: rtl;
+            }
+            .no-print-bar {
+                position: sticky;
+                top: 0;
+                z-index: 9999;
+                background: #0f172a;
+                color: #ffffff;
+                padding: 12px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+                border-bottom: 3px solid #2563eb;
+            }
+            .no-print-bar .brand-badge {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .no-print-bar .pill-tag {
+                background: #2563eb;
+                color: #ffffff;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 800;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+            }
+            .no-print-bar .title-text {
+                font-size: 13.5px;
+                font-weight: 800;
+            }
+            .no-print-bar .action-buttons {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .btn-print {
+                padding: 8px 20px;
+                background: #2563eb;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+            }
+            .btn-print:hover { background: #1d4ed8; }
+            .btn-close {
+                padding: 8px 18px;
+                background: #475569;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+            .btn-close:hover { background: #334155; }
+
+            .report-page-container {
+                max-width: ${isLandscape ? '1180px' : '920px'};
+                margin: 22px auto 40px auto;
+                background: #ffffff;
+                padding: 24px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+                border: 1px solid #e2e8f0;
+            }
+
+            .iso-print-header {
+                display: grid;
+                grid-template-columns: 240px 1fr 210px;
+                border: 2px solid #0f172a;
+                border-top: 5px solid #1e3a8a;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #ffffff;
+                margin-bottom: 16px;
+            }
+            .iso-box-brand {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-left: 1.5px solid #0f172a;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                gap: 4px;
+                text-align: center;
+            }
+            .iso-print-logo {
+                max-height: 46px;
+                max-width: 130px;
+                object-fit: contain;
+                margin-bottom: 2px;
+            }
+            .iso-company-title {
+                font-size: 10.5px;
+                font-weight: 900;
+                color: #0f172a;
+                line-height: 1.3;
+            }
+            .iso-dept-title {
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #1e3a8a;
+                line-height: 1.25;
+            }
+
+            .iso-box-title {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                background: #ffffff;
+            }
+            .iso-main-title {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 900;
+                color: #1e3a8a;
+                line-height: 1.3;
+            }
+            .iso-sub-title {
+                font-size: 10.5px;
+                font-weight: 700;
+                color: #475569;
+                margin-top: 3px;
+            }
+            .iso-badge-std {
+                display: inline-block;
+                margin-top: 5px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                border: 1px solid #bfdbfe;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9.5px;
+                font-weight: 800;
+            }
+
+            .iso-box-meta {
+                padding: 8px 12px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-right: 1.5px solid #0f172a;
+                background: #f8fafc;
+                gap: 3px;
+            }
+            .meta-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px dashed #cbd5e1;
+                padding-bottom: 2px;
+                font-size: 10px;
+            }
+            .meta-row:last-child { border-bottom: none; }
+            .meta-row span { color: #64748b; font-weight: 700; }
+            .meta-row strong { color: #0f172a; font-family: monospace, inherit; font-size: 10px; }
+
+            .handover-info-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .info-card {
+                background: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 7px 10px;
+            }
+            .info-card .card-label {
+                font-size: 9.5px;
+                color: #64748b;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+            .info-card .card-value {
+                font-size: 11.5px;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            .iso-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                margin-bottom: 16px;
+                font-size: 11px;
+            }
+            .iso-table th {
+                background: #1e3a8a;
+                color: #ffffff;
+                padding: 7px 8px;
+                font-weight: 800;
+                border: 1px solid #0f172a;
+                text-align: center;
+            }
+            .iso-table td {
+                padding: 6px 8px;
+                border: 1px solid #cbd5e1;
+                text-align: center;
+                color: #0f172a;
+            }
+            .iso-table tr:nth-child(even) td {
+                background: #f8fafc;
+            }
+            .iso-table tr.total-row td {
+                background: #eff6ff;
+                font-weight: 900;
+                border-top: 2px solid #1e3a8a;
+                color: #1e3a8a;
+            }
+
+            .signatures-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-top: 18px;
+                page-break-inside: avoid;
+            }
+            .sig-card {
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 8px 10px;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 100px;
+            }
+            .sig-card-title {
+                font-size: 10px;
+                font-weight: 800;
+                color: #1e3a8a;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 3px;
+                margin-bottom: 4px;
+                text-align: center;
+            }
+            .sig-card-name {
+                font-size: 10.5px;
+                font-weight: 800;
+                color: #0f172a;
+                text-align: center;
+            }
+            .sig-line-area {
+                margin-top: 16px;
+                border-top: 1.5px dashed #64748b;
+                padding-top: 3px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                font-weight: 700;
+            }
+
+            .iso-footer-strip {
+                margin-top: 16px;
+                border: 1.5px solid #0f172a;
+                border-radius: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 12px;
+                background: #f8fafc;
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #334155;
+                page-break-inside: avoid;
+            }
+            .iso-footer-strip span strong {
+                color: #0f172a;
+                font-family: monospace, inherit;
+            }
+            .portal-unified-footer {
+                margin-top: 10px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                line-height: 1.45;
+                page-break-inside: avoid;
+            }
+            .portal-unified-footer strong {
+                color: #1e3a8a;
+                font-weight: 800;
+            }
+
+            @media print {
+                body {
+                    background: #ffffff !important;
+                    padding: 0 !important;
+                }
+                .no-print-bar {
+                    display: none !important;
+                }
+                .report-page-container {
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 4mm 6mm !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                @page {
+                    size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+                    margin: 8mm 10mm 8mm 10mm;
+                }
+            }
+        `;
+    },
+
+    getIsoPrintHeaderHtml(title, subtitle, docCode, revision = 'Rev. 02', classification = 'عام داخلي') {
+        let logoSrc = '/icons/icapp-logo.png';
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.protocol === 'file:') {
+                logoSrc = 'icons/icapp-logo.png';
+            } else if (window.location.origin && window.location.origin !== 'null') {
+                logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+            }
+        }
+        const logoFallback = 'icons/icon-192x192.png';
+        const now = new Date();
+        const releaseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        return `
+            <div class="iso-print-header">
+                <div class="iso-box-brand">
+                    <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
+                    <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                </div>
+
+                <div class="iso-box-title">
+                    <h1 class="iso-main-title">${Utils.escapeHTML(title)}</h1>
+                    <div class="iso-sub-title">${Utils.escapeHTML(subtitle)}</div>
+                    <div class="iso-badge-std">معتمد طبقاً للمواصفة ISO 45001:2018 & ISO 9001:2015</div>
+                </div>
+
+                <div class="iso-box-meta">
+                    <div class="meta-row">
+                        <span>كود الوثيقة:</span>
+                        <strong>${Utils.escapeHTML(docCode)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>رقم الإصدار:</span>
+                        <strong>${Utils.escapeHTML(revision)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>تاريخ الاعتماد:</span>
+                        <strong>${releaseDate}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>درجة السرية:</span>
+                        <strong style="color: #047857;">${Utils.escapeHTML(classification)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    getIsoPrintFooterHtml(docCode, revision = 'Rev. 02', standard = 'ISO 45001:2018') {
+        return `
+            <div class="iso-footer-strip">
+                <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
+                <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
+                <span>مرجعية التوثيق: <strong>${Utils.escapeHTML(standard)}</strong></span>
+                <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+            </div>
+            <footer class="portal-unified-footer">
+                <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+                <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الإدارية</div>
+            </footer>
+        `;
+    },
+
+    openIsoPrintWindow(title, htmlBody, isLandscape = false, customStyle = '') {
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    ${htmlBody}
+    <script>
+        window.addEventListener('load', function() {
+            var images = document.querySelectorAll('img');
+            var loaded = 0;
+            if (images.length === 0) {
+                setTimeout(function() { window.print(); }, 400);
+            } else {
+                images.forEach(function(img) {
+                    if (img.complete) {
+                        loaded++;
+                        if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                    } else {
+                        img.addEventListener('load', function() {
+                            loaded++;
+                            if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                        });
+                        img.addEventListener('error', function() {
+                            loaded++;
+                            if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                        });
+                    }
+                });
+                setTimeout(function() { window.print(); }, 1800);
+            }
+        });
+    <\/script>
+</body>
+</html>`;
+
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, '_blank');
+        if (!win) {
+            URL.revokeObjectURL(url);
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لعرض وطباعة التقرير');
+            return null;
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 120000);
+        return win;
+    },
+
+    exportToExcel() {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة XLSX غير متوفرة');
+            return;
+        }
+
+        const employees = (Array.isArray(this._lastFilteredEmployees) && this._lastFilteredEmployees.length > 0)
+            ? this._lastFilteredEmployees
+            : (AppState.appData?.employees || []);
+
+        if (employees.length === 0) {
+            Notification.warning('لا توجد بيانات موظفين للتصدير');
+            return;
+        }
+
+        const companyName = 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)';
+        const deptName = 'إدارة السلامة والصحة المهنية والبيئة';
+        const title = 'سجل بيانات وحصر العاملين المعتمد';
+        const now = new Date();
+        const exportDateStr = now.toLocaleDateString('ar-EG') + ' ' + now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+        const header = [
+            'م',
+            'الرقم الوظيفي',
+            'الاسم بالكامل',
+            'الإدارة / القسم',
+            'المسمى الوظيفي',
+            'الرقم القومي',
+            'تاريخ الميلاد',
+            'السن',
+            'تاريخ التعيين',
+            'النوع',
+            'رقم الهاتف',
+            'الرقم التأميني',
+            'الحالة التشغيلية',
+            'فصيلة الدم',
+            'البريد الإلكتروني'
+        ];
+
+        const rows = employees.map((emp, idx) => {
+            const isInactive = this.isEmployeeInactive(emp);
+            const birthDate = this.formatDateSafe(emp.birthDate);
+            const hireDate = this.formatDateSafe(emp.hireDate);
+            const age = this.calculateAge(emp.birthDate);
+            return [
+                idx + 1,
+                emp.employeeNumber || '',
+                this._employeeDisplayName_(emp),
+                emp.department || '',
+                emp.job || emp.position || '',
+                emp.nationalId || '',
+                birthDate || '',
+                age || '',
+                hireDate || '',
+                emp.gender || '',
+                emp.phone || '',
+                emp.insuranceNumber || '',
+                isInactive ? 'مستقيل' : 'نشط',
+                emp.bloodType || emp.bloodGroup || '',
+                emp.email || ''
+            ];
+        });
+
+        const aoa = [
+            [companyName],
+            [deptName],
+            [title],
+            [`تاريخ وساعة التصدير: ${exportDateStr} | إجمالي السجلات: ${employees.length}`],
+            [],
+            header,
+            ...rows
+        ];
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+        const columnCount = header.length;
+        worksheet['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: columnCount - 1 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: columnCount - 1 } },
+            { s: { r: 2, c: 0 }, e: { r: 2, c: columnCount - 1 } },
+            { s: { r: 3, c: 0 }, e: { r: 3, c: columnCount - 1 } }
+        ];
+        worksheet['!cols'] = [
+            { wch: 6 },
+            { wch: 14 },
+            { wch: 28 },
+            { wch: 20 },
+            { wch: 20 },
+            { wch: 18 },
+            { wch: 14 },
+            { wch: 8 },
+            { wch: 14 },
+            { wch: 10 },
+            { wch: 16 },
+            { wch: 16 },
+            { wch: 12 },
+            { wch: 12 },
+            { wch: 24 }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'سجل الموظفين');
+        const filename = `employees_registry_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        XLSX.writeFile(workbook, filename);
+        Notification.success(`تم تصدير سجل الموظفين بنجاح (${employees.length} موظف)`);
+    },
+
+    printEmployeesRegistry() {
+        const employees = (Array.isArray(this._lastFilteredEmployees) && this._lastFilteredEmployees.length > 0)
+            ? this._lastFilteredEmployees
+            : (AppState.appData?.employees || []);
+
+        if (employees.length === 0) {
+            Notification.warning('لا توجد بيانات موظفين للطباعة');
+            return;
+        }
+
+        const activeCount = employees.filter(e => !this.isEmployeeInactive(e)).length;
+        const inactiveCount = employees.length - activeCount;
+        const depts = new Set(employees.map(e => e.department).filter(Boolean)).size;
+
+        const tableRows = employees.map((emp, idx) => {
+            const isInactive = this.isEmployeeInactive(emp);
+            const hireDate = this.formatDateSafe(emp.hireDate);
+            const age = this.calculateAge(emp.birthDate);
+            return `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><strong>${Utils.escapeHTML(emp.employeeNumber || '-')}</strong></td>
+                    <td style="text-align: right; font-weight: 700;">${Utils.escapeHTML(this._employeeDisplayName_(emp))}</td>
+                    <td>${Utils.escapeHTML(emp.department || '-')}</td>
+                    <td>${Utils.escapeHTML(emp.job || emp.position || '-')}</td>
+                    <td>${Utils.escapeHTML(emp.nationalId || '-')}</td>
+                    <td>${hireDate || '-'}</td>
+                    <td>${age ? age + ' سنة' : '-'}</td>
+                    <td>${Utils.escapeHTML(emp.phone || '-')}</td>
+                    <td><span class="badge ${isInactive ? 'badge-danger' : 'badge-success'}" style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 800; background: ${isInactive ? '#fee2e2; color: #b91c1c;' : '#dcfce7; color: #15803d;'}">${isInactive ? 'مستقيل' : 'نشط'}</span></td>
+                </tr>
+            `;
+        }).join('');
+
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            'سجل حصر وتسكين القوى العاملة المعتمد',
+            'Certified Workforce Master Registry & Manpower Census',
+            'DOC-HSE-EMP-REG-01',
+            'Rev. 02',
+            'عام داخلي'
+        );
+
+        const footerHtml = this.getIsoPrintFooterHtml('DOC-HSE-EMP-REG-01', 'Rev. 02', 'ISO 45001:2018 (Clause 7.1, 7.2)');
+
+        const htmlBody = `
+            <div class="no-print-bar">
+                <div class="brand-badge">
+                    <span class="pill-tag">ICAPP HSE & HR</span>
+                    <span class="title-text">سجل حصر وتسكين القوى العاملة المعتمد (${employees.length} موظف)</span>
+                </div>
+                <div class="action-buttons">
+                    <button type="button" onclick="window.print()" class="btn-print">
+                        🖨️ طباعة السجل
+                    </button>
+                    <button type="button" onclick="window.close()" class="btn-close">
+                        ❌ إغلاق النافذة
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-page-container landscape">
+                ${headerHtml}
+
+                <div class="handover-info-grid">
+                    <div class="info-card">
+                        <div class="card-label">👥 إجمالي السجلات</div>
+                        <div class="card-value">${employees.length} موظف</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">✅ القوة الفعلية النشطة</div>
+                        <div class="card-value" style="color: #047857;">${activeCount} على رأس العمل</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">⛔ المستقيلون وغير النشطين</div>
+                        <div class="card-value" style="color: #b91c1c;">${inactiveCount} موظف</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">🏢 عدد الأقسام والإدارات</div>
+                        <div class="card-value">${depts} إدارة</div>
+                    </div>
+                </div>
+
+                <table class="iso-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;">#</th>
+                            <th style="width: 85px;">الرقم الوظيفي</th>
+                            <th>الاسم الكامل</th>
+                            <th>الإدارة / القسم</th>
+                            <th>المسمى الوظيفي</th>
+                            <th>الرقم القومي</th>
+                            <th>تاريخ التعيين</th>
+                            <th>السن</th>
+                            <th>رقم الهاتف</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+
+                <div class="signatures-grid">
+                    <div class="sig-card">
+                        <div class="sig-card-title">إعداد وتدقيق شؤون العاملين</div>
+                        <div class="sig-card-name">مسؤول ملفات الموظفين</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مراجعة السلامة والصحة المهنية</div>
+                        <div class="sig-card-name">أخصائي السلامة والبيئة</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">اعتماد الإدارة العامة</div>
+                        <div class="sig-card-name">مدير عام الإدارة</div>
+                        <div class="sig-line-area">الختم والاعتماد</div>
+                    </div>
+                </div>
+
+                ${footerHtml}
+            </div>
+        `;
+
+        this.openIsoPrintWindow('سجل حصر وتسكين القوى العاملة المعتمد', htmlBody, true);
     }
 };
 
 Employees.getExternalWorkforceExportHeaderInfo = function (reportTitle, exportDate = new Date()) {
-    const companyName = String(AppState?.companySettings?.name || AppState?.companyName || 'SafetyHub | ICAPP').trim();
-    const secondaryName = String(AppState?.companySettings?.secondaryName || 'إدارة السلامة والصحة المهنية والبيئة').trim();
+    const companyName = 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)';
+    const secondaryName = 'إدارة السلامة والصحة المهنية والبيئة';
     const exportDateTime = (typeof Utils !== 'undefined' && typeof Utils.formatDateTime === 'function')
         ? Utils.formatDateTime(exportDate)
         : new Date(exportDate).toISOString().slice(0, 19).replace('T', ' ');
@@ -7438,7 +8162,7 @@ Employees.buildExternalWorkforceExcelWorksheet = function (header, rows, reportT
         [info.companyName],
         [info.secondaryName],
         [info.reportTitle],
-        [`Generated: ${info.exportDateTime}`],
+        [`Generated: ${info.exportDateTime} | كود الوثيقة: DOC-HSE-CON-01`],
         [],
         ...tableRows
     ];
@@ -7455,7 +8179,7 @@ Employees.buildExternalWorkforceExcelWorksheet = function (header, rows, reportT
 
 Employees.exportExternalWorkforceToExcel = function () {
     if (typeof XLSX === 'undefined') {
-        Notification.error('XLSX library is not available');
+        Notification.error('مكتبة XLSX غير متوفرة');
         return;
     }
 
@@ -7463,116 +8187,113 @@ Employees.exportExternalWorkforceToExcel = function () {
     const reportTitle = `${this.getExternalWorkforceViewState().labels.externalTab} - ${model.year}`;
     const workbook = XLSX.utils.book_new();
     const worksheet = this.buildExternalWorkforceExcelWorksheet(header, rows, reportTitle, new Date());
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'External Workforce');
+    XLSX.utils.book_append_sheet(workbook, worksheet, `مقاولين ${model.year}`);
     XLSX.writeFile(workbook, `external_workforce_${model.year}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    Notification.success(`تم تصدير سجل العمالة الخارجية لسنة ${model.year} بنجاح`);
 };
 
 Employees.exportExternalWorkforceToPDF = function () {
     const { model, header, rows } = this.getExternalWorkforceExportRows();
     const viewState = this.getExternalWorkforceViewState();
-    const reportTitle = `${viewState.labels.externalTab} - ${model.year}`;
-    const exportDate = new Date().toISOString();
-    const tableRows = [header, ...rows].map((row, index) => `
-        <tr>
-            ${row.map(cell => `<${index === 0 ? 'th' : 'td'}>${Utils.escapeHTML(String(cell ?? ''))}</${index === 0 ? 'th' : 'td'}>`).join('')}
-        </tr>
-    `).join('');
 
-    const content = `
-        <style>
-            .external-workforce-report {
-                direction: ${viewState.dir};
-                font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-            }
-            .external-workforce-report__meta {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 16px;
-                margin-bottom: 18px;
-                padding: 12px 16px;
-                border: 1px solid #D7E3F1;
-                border-radius: 12px;
-                background: #F8FBFF;
-                font-size: 13px;
-                color: #334155;
-            }
-            .external-workforce-report__meta strong {
-                color: #0F172A;
-            }
-            .external-workforce-report__table {
-                width: 100%;
-                border-collapse: collapse;
-                table-layout: fixed;
-                direction: ${viewState.dir};
-            }
-            .external-workforce-report__table th,
-            .external-workforce-report__table td {
-                border: 1px solid #334155;
-                padding: 8px 6px;
-                text-align: center;
-                font-size: 11px;
-                word-break: break-word;
-            }
-            .external-workforce-report__table th {
-                background: #B7D2EA;
-                color: #102A43;
-                font-weight: 700;
-            }
-            .external-workforce-report__table td:first-child,
-            .external-workforce-report__table th:first-child {
-                font-weight: 700;
-                background: #DCEAF7;
-            }
-            @media print {
-                .external-workforce-report__meta {
-                    break-inside: avoid;
-                }
-            }
-        </style>
-        <div class="external-workforce-report" dir="${viewState.dir}" lang="${viewState.lang}">
-            <div class="external-workforce-report__meta">
-                <div><strong>${Utils.escapeHTML(viewState.labels.year)}:</strong> ${Utils.escapeHTML(String(model.year))}</div>
-                <div><strong>${Utils.escapeHTML(viewState.labels.externalTab)}</strong></div>
-                <div><strong>${Utils.escapeHTML(viewState.labels.totalHoursYtd || 'YTD Hours')}:</strong> ${Utils.escapeHTML(String(model.hoursYtd || 0))}</div>
+    const headerCols = header.map(col => `<th>${Utils.escapeHTML(String(col ?? ''))}</th>`).join('');
+    const bodyRows = rows.map((row, index) => {
+        const isTotalRow = index >= rows.length - 4;
+        return `
+            <tr class="${isTotalRow ? 'total-row' : ''}">
+                ${row.map((cell, cIdx) => `<td style="${cIdx === 0 ? 'text-align: right; font-weight: 700;' : ''}">${Utils.escapeHTML(String(cell ?? ''))}</td>`).join('')}
+            </tr>
+        `;
+    }).join('');
+
+    const headerHtml = this.getIsoPrintHeaderHtml(
+        `تقرير حصر ساعات وتعداد العمالة الخارجية والمقاولين — لسنة ${model.year}`,
+        'Contractors & External Workforce Annual Man-Hours & Headcount Registry',
+        'DOC-HSE-CON-01',
+        'Rev. 02',
+        'عام داخلي'
+    );
+
+    const footerHtml = this.getIsoPrintFooterHtml('DOC-HSE-CON-01', 'Rev. 02', 'ISO 45001:2018 (Clause 8.1.4 Contractor Safety & OSHA 1910)');
+
+    const htmlBody = `
+        <div class="no-print-bar">
+            <div class="brand-badge">
+                <span class="pill-tag">ICAPP HSE & CONTRACTORS</span>
+                <span class="title-text">سجل حصر وتعداد العمالة الخارجية والمقاولين (${model.year})</span>
             </div>
-            <table class="external-workforce-report__table">${tableRows}</table>
+            <div class="action-buttons">
+                <button type="button" onclick="window.print()" class="btn-print">
+                    🖨️ طباعة التقرير
+                </button>
+                <button type="button" onclick="window.close()" class="btn-close">
+                    ❌ إغلاق النافذة
+                </button>
+            </div>
+        </div>
+
+        <div class="report-page-container landscape">
+            ${headerHtml}
+
+            <div class="handover-info-grid">
+                <div class="info-card">
+                    <div class="card-label">📅 سنة التقرير</div>
+                    <div class="card-value">${model.year}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">🚜 عدد مقاولي الموقع</div>
+                    <div class="card-value">${model.rows.length} مقاول معتمد</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">⏱️ إجمالي الساعات التراكمية (YTD)</div>
+                    <div class="card-value" style="color: #047857;">${Number(model.hoursYtd || 0).toLocaleString('ar-EG')} ساعة</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">👷 إجمالي عمالة المقاولين المسجلة</div>
+                    <div class="card-value">${Number(model.grandTotal || 0).toLocaleString('ar-EG')} فرد</div>
+                </div>
+            </div>
+
+            <table class="iso-table" style="font-size: 10px;">
+                <thead>
+                    <tr>${headerCols}</tr>
+                </thead>
+                <tbody>
+                    ${bodyRows}
+                </tbody>
+            </table>
+
+            <div class="signatures-grid">
+                <div class="sig-card">
+                    <div class="sig-card-title">إعداد وتنسيق عمالة المقاولين</div>
+                    <div class="sig-card-name">منسق المقاولين والعمالة الخارجية</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مراجعة مسؤول السلامة الميداني</div>
+                    <div class="sig-card-name">مشرف السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">اعتماد الإدارة العامة للسلامة</div>
+                    <div class="sig-card-name">مدير عام إدارة السلامة والبيئة</div>
+                    <div class="sig-line-area">الختم والاعتماد</div>
+                </div>
+            </div>
+
+            ${footerHtml}
         </div>
     `;
 
-    const htmlContent = (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function')
-        ? FormHeader.generatePDFHTML(
-            `EXT-WORKFORCE-${model.year}`,
-            reportTitle,
-            content,
-            false,
-            true,
-            {
-                version: '1.0',
-                releaseDate: exportDate,
-                revisionDate: exportDate,
-                includeQRCode: true
-            },
-            exportDate,
-            exportDate
-        )
-        : `<!DOCTYPE html><html lang="${viewState.lang}" dir="${viewState.dir}"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body style="font-family:'Cairo','Segoe UI',Tahoma,Arial,sans-serif;direction:${viewState.dir};padding:20px;">${content}</body></html>`;
+    return this.openIsoPrintWindow(`تقرير العمالة الخارجية والمقاولين - ${model.year}`, htmlBody, true);
+};
 
-    const blob = new Blob(['\ufeff' + htmlContent], { type: 'text/html;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const printWindow = window.open(url, '_blank');
-    if (!printWindow) {
-        URL.revokeObjectURL(url);
-        Notification.error('تعذر فتح نافذة الطباعة');
-        return;
-    }
+Employees.exportToExcel = function () {
+    return Employees.exportToExcel.apply(Employees, arguments);
+};
 
-    printWindow.onload = () => {
-        setTimeout(() => {
-            printWindow.print();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }, 400);
-    };
+Employees.printEmployeesRegistry = function () {
+    return Employees.printEmployeesRegistry.apply(Employees, arguments);
 };
 
 // ===== Export module to global scope =====
