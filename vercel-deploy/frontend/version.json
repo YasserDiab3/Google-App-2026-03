@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1784",
+  "version": "1.0.1785",
   "highlights": {
     "ar": [
-      "استعادة وإظهار توقيت المخالفة الميداني الفعلي بدقة عبر محرك الاستخلاص متعدد المصادر (violationTime, violationDate, createdAt)، مع إدراج حقول الوقت في قائمة المعالجة بالخلفية السحابية (Backend/Utils.gs).",
-      "تنقية وتصحيح حقل 'معرف نوع المخالفة' وتحويله إلى 'كود نوع المخالفة المعتمد' (مثل VT-01) مع الفئة المعيارية، وحجب المعرفات البرمجية الداخلية (VTYPE_...) نهائياً عن التقارير الرسمية.",
-      "مراجعة شاملة وتدقيق كامل لبيانات بطاقات وخلايا تقرير رصد وتوثيق المخالفة الفردي (DOC-HSE-VIO-REC-01) لضمان جودة وتكامل جميع المخرجات."
+      "معالجة جذرية للخطأ الاستثنائي في استخلاص توقيت المخالفة (padStart regex fix) الذي كان يمنع ظهور وتحميل بيانات المخالفات في الواجهة الأمامية.",
+      "إعادة ضبط وتصفية نوع الشخص تلقائياً عند التبديل بين التبويبات (جميع المخالفات، مخالفات الموظفين، مخالفات المقاولين) لمنع تعليق الفلتر وإخفاء السجلات.",
+      "إعادة ربط أحداث الفلاتر تلقائياً بعد اكتمال المزامنة بالخلفية لضمان استجابة وتحديث الواجهة والبطاقات الإحصائية فوراً."
     ],
     "en": [
-      "Restored and guaranteed violation time rendering via multi-source fallback resolver (violationTime, violationDate, createdAt), and updated Google Sheets backend parser (Backend/Utils.gs).",
-      "Refactored violation type identifier into ISO-standardized code (e.g. VT-01 with category), permanently shielding internal raw UUIDs (VTYPE_...) from official reports.",
-      "Conducted thorough audit across individual violation report cards and data fields (DOC-HSE-VIO-REC-01) ensuring flawless ISO 45001 compliance."
+      "Resolved regex capturing group issue in violation time resolver that previously caused runtime exception and prevented frontend violations list loading.",
+      "Fixed automatic person-type filter reset when switching between tabs (All, Employees, Contractors) preventing stuck filters and hidden records.",
+      "Ensured proper re-binding of filter event handlers after background sync completion for instant reactivity."
     ]
   },
-  "releaseName": "v1.0.1784 - Violation Time Multi-Source Resolution, ISO Type Code & Full Audit",
-  "lastUpdate": "2026-09-28T22:00:00.000Z"
+  "releaseName": "v1.0.1785 - Fix Violations Frontend Loading, Regex Parser & Tab Filter Reset",
+  "lastUpdate": "2026-09-28T22:21:00.000Z"
 }
