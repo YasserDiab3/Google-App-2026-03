@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1789",
+  "version": "1.0.1790",
   "highlights": {
     "ar": [
-      "تصميم تنفيذي مطور لنموذج تسجيل المخالفات: تقسيم النموذج إلى 4 بطاقات بصرية منظمة (بيانات المخالف، الموقع وتوقيت الرصد، تصنيف المخالفة والغرامة، الوصف والإجراءات والمرفقات).",
-      "مقترحات ذكية تفاعلية لتفاصيل المخالفة والإجراء المتخذ: رقائق سريعة تتكيف تلقائياً حسب نوع المخالفة، مع إدراج مباشر بنقرة واحدة.",
-      "تكامل ذكي لبيانات المقاول والأماكن وبؤر الخطر: قائمة منسدلة لإدارات النظام، إكمال تلقائي لأسماء ووظائف العمالة، قائمة غنية لأماكن المواقع مع خيار إدخال مخصص، وتنبيه فوري لبؤر تكرار الخطر في المنطقة."
+      "تصميم تنفيذي فائق الأناقة لنموذج تسجيل المخالفات: هيدر داكن احترافي، بطاقات بصرية مقسمة بألوان دلالية، تباعد مريح وتأثيرات حركة وتفاعل سلسة.",
+      "إعادة تصميم رقائق المقترحات السريعة (Interactive Suggestion Chips): تصميم كبسولات ملونة أنيقة متباعدة ومريحة للعين مع تأثيرات تحويم وتفاعل فوري بدون تداخل.",
+      "تحسين تجربة بطاقات رصد الجزاءات وبؤر الخطر: بطاقات بتنسيقات تنفيذية واضحة، محاذاة منسجمة مع اللغة العربية، وتنسيق موحد للتواريخ بدون أي التباس في الاتجاهات."
     ],
     "en": [
-      "Executive 4-Card Redesign for New Violation Modal: structured sections for Person Details, Field Location & Time, Violation Type & Fine, and Details & Disciplinary Actions.",
-      "Smart Suggestion Chips for Descriptions & Disciplinary Actions: dynamic chips adapting to violation type with one-click insertion and Strike-based graduated penalties.",
-      "Contractor & Area Intelligence: system department dropdown, worker & job title autocomplete with manual entry, rich place options with custom entry, and area hotspot repeat alerts."
+      "Sleek Executive Redesign of Violation Form: dark executive header, colored section badges, spacious card layout, and smooth interactive micro-animations.",
+      "Redesigned Suggestion Chips & Action Pills: distinct, responsive badge pills with comfortable spacing, gentle color themes, and hover transitions.",
+      "Refined Disciplinary Strike & Hotspot Widgets: executive accent borders, RTL-optimized alignment, and standardized date presentation."
     ]
   },
-  "releaseName": "v1.0.1789 - New Violation Modal Executive Redesign, Smart Suggestions & Area Hotspot Alerts",
-  "lastUpdate": "2026-09-28T23:20:00.000Z"
+  "releaseName": "v1.0.1790 - Sleek Executive Violation Form Redesign & Refined Interactive Chips",
+  "lastUpdate": "2026-09-28T23:25:00.000Z"
 }
