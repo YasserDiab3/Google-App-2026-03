@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1785",
+  "version": "1.0.1786",
   "highlights": {
     "ar": [
-      "معالجة جذرية للخطأ الاستثنائي في استخلاص توقيت المخالفة (padStart regex fix) الذي كان يمنع ظهور وتحميل بيانات المخالفات في الواجهة الأمامية.",
-      "إعادة ضبط وتصفية نوع الشخص تلقائياً عند التبديل بين التبويبات (جميع المخالفات، مخالفات الموظفين، مخالفات المقاولين) لمنع تعليق الفلتر وإخفاء السجلات.",
-      "إعادة ربط أحداث الفلاتر تلقائياً بعد اكتمال المزامنة بالخلفية لضمان استجابة وتحديث الواجهة والبطاقات الإحصائية فوراً."
+      "جعل التاريخ والوقت في بطاقة تقرير المخالفة في سطر واحد متناسق (التاريخ | الوقت) مع دعم التنسيق ثنائي الاتجاه LTR/RTL.",
+      "معالجة ثبات الوقت على 02:00 من خلال تجاهل أزمنة منتصف الليل الافتراضية واستخراج التوقيت الفعلي الدقيق من المعرف الزمني للسجل أو حقل التوقيت المباشر.",
+      "تأمين حفظ حقول التوقيت في السيرفر لضمان تسجيل التوقيت الفعلي بصيغة نصية معزولة عن إزاحة المناطق الزمنية."
     ],
     "en": [
-      "Resolved regex capturing group issue in violation time resolver that previously caused runtime exception and prevented frontend violations list loading.",
-      "Fixed automatic person-type filter reset when switching between tabs (All, Employees, Contractors) preventing stuck filters and hidden records.",
-      "Ensured proper re-binding of filter event handlers after background sync completion for instant reactivity."
+      "Displayed violation date and time on a single unified horizontal line (Date | Time) with clean bidirectional LTR/RTL rendering.",
+      "Fixed static 02:00 time bug by filtering out Google Sheets midnight timezone artifacts and extracting the actual recording time from the record timestamp.",
+      "Secured server-side time-only fields to prevent timezone shifts during sheet writes."
     ]
   },
-  "releaseName": "v1.0.1785 - Fix Violations Frontend Loading, Regex Parser & Tab Filter Reset",
-  "lastUpdate": "2026-09-28T22:21:00.000Z"
+  "releaseName": "v1.0.1786 - Single-Line Violation Date/Time Display & Real Timestamp Resolution",
+  "lastUpdate": "2026-09-28T22:32:00.000Z"
 }

@@ -161,7 +161,8 @@ const Violations = {
                     if (tm) {
                         const hNum = parseInt(tm[1], 10);
                         const mNum = parseInt(tm[2], 10);
-                        if (!(isEpoch && hNum === 0 && mNum === 0)) {
+                        const isMidnightEpoch = isEpoch && (hNum === 0 || hNum === 2 || hNum === 3) && mNum === 0;
+                        if (!isMidnightEpoch) {
                             cleanedTime = `${String(hNum).padStart(2, '0')}:${String(mNum).padStart(2, '0')}`;
                         }
                     }
@@ -409,33 +410,53 @@ const Violations = {
                     } else if (marker === 'AM' || marker === 'ص') {
                         if (h === 12) h = 0;
                     }
-                    if (!(isEpoch && h === 0 && (m === '00' || m === '0'))) {
+                    const isMidnightEpoch = isEpoch && (h === 0 || h === 2 || h === 3) && (m === '00' || m === '0');
+                    if (!isMidnightEpoch) {
                         return `${String(h).padStart(2, '0')}:${m}`;
                     }
                 }
             }
 
-            // 2. فحص تاريخ المخالفة إذا كان يحوي طابعاً زمنياً
+            // 2. فحص تاريخ المخالفة إذا كان يحوي طابعاً زمنياً حقيقياً (استبعاد منتصف الليل المنزاح بتوقيت القاهرة 00:00, 02:00, 03:00)
             const rawDate = record.violationDate ?? record['تاريخ المخالفة'] ?? record.date;
             if (rawDate && typeof rawDate === 'string' && (rawDate.includes('T') || rawDate.includes(' '))) {
                 const d = new Date(rawDate);
                 if (!isNaN(d.getTime())) {
                     const h = d.getHours();
                     const m = d.getMinutes();
-                    if (h !== 0 || m !== 0) {
+                    const s = d.getSeconds();
+                    const isMidnightArtifact = (h === 0 || h === 2 || h === 3) && m === 0 && s === 0;
+                    if (!isMidnightArtifact && (h !== 0 || m !== 0)) {
                         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     }
                 }
             }
 
-            // 3. فحص وقت إنشاء السجل في النظام الميداني
+            // 3. فحص معرّف المخالفة إذا كان يحمل طابعاً زمنياً حقيقياً لحظة التسجيل الميداني (VIOLATION_<timestamp>_...)
+            const rawId = String(record.id || '').trim();
+            const idTimestampMatch = rawId.match(/VIOLATION_(\d{13})_/);
+            if (idTimestampMatch) {
+                const ts = parseInt(idTimestampMatch[1], 10);
+                if (!isNaN(ts) && ts > 1600000000000) {
+                    const d = new Date(ts);
+                    if (!isNaN(d.getTime())) {
+                        const h = d.getHours();
+                        const m = d.getMinutes();
+                        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    }
+                }
+            }
+
+            // 4. فحص وقت إنشاء السجل في النظام الميداني
             const rawCreated = record.createdAt ?? record['تاريخ الإنشاء'] ?? record.timestamp;
-            if (rawCreated) {
+            if (rawCreated && typeof rawCreated === 'string' && (rawCreated.includes('T') || rawCreated.includes(' '))) {
                 const d = new Date(rawCreated);
                 if (!isNaN(d.getTime())) {
                     const h = d.getHours();
                     const m = d.getMinutes();
-                    if (h !== 0 || m !== 0) {
+                    const s = d.getSeconds();
+                    const isMidnight = (h === 0 || h === 2 || h === 3) && m === 0 && s === 0;
+                    if (!isMidnight && (h !== 0 || m !== 0)) {
                         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                     }
                 }
@@ -7144,9 +7165,27 @@ const Violations = {
                 </div>
                 <div class="kpi-stat-card accent-amber">
                     <div class="kpi-card-label">تاريخ وتوقيت المخالفة</div>
-                    <div class="kpi-card-value" style="color: #92400e; font-size: 13px;">
-                        <span>${formattedDate}</span>
-                        ${formattedTime ? `<div style="font-size: 11.5px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>${formattedTime}</div>` : (v.shift ? `<div style="font-size: 11px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="fas fa-sun ml-1"></i>الوردية: ${esc(v.shift)}</div>` : `<div style="font-size: 11px; color: #92400e; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>أثناء جولة التفتيش</div>`)}
+                    <div class="kpi-card-value" style="color: #92400e; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 4px; white-space: nowrap;">
+                        <bdi dir="ltr" style="font-weight: 700; color: #92400e;">${formattedDate}</bdi>
+                        ${formattedTime ? `
+                            <span style="color: #d97706; margin: 0 4px; opacity: 0.7; font-weight: bold;">|</span>
+                            <span style="display: inline-flex; align-items: center; color: #b45309; font-weight: 700; font-size: 12px;">
+                                <i class="far fa-clock ml-1" style="font-size: 11px;"></i>
+                                <bdi dir="rtl">${formattedTime}</bdi>
+                            </span>
+                        ` : (v.shift ? `
+                            <span style="color: #d97706; margin: 0 4px; opacity: 0.7; font-weight: bold;">|</span>
+                            <span style="display: inline-flex; align-items: center; color: #b45309; font-weight: 700; font-size: 11.5px;">
+                                <i class="fas fa-sun ml-1" style="font-size: 11px;"></i>
+                                <bdi>${esc(v.shift)}</bdi>
+                            </span>
+                        ` : `
+                            <span style="color: #d97706; margin: 0 4px; opacity: 0.7; font-weight: bold;">|</span>
+                            <span style="display: inline-flex; align-items: center; color: #92400e; font-weight: 600; font-size: 11px;">
+                                <i class="far fa-clock ml-1" style="font-size: 11px;"></i>
+                                <bdi>جولة تفتيش</bdi>
+                            </span>
+                        `)}
                     </div>
                 </div>
                 <div class="kpi-stat-card ${v.severity === 'عالية' ? 'accent-red' : v.severity === 'متوسطة' ? 'accent-amber' : 'accent-blue'}">

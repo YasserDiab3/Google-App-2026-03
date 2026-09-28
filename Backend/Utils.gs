@@ -1750,7 +1750,7 @@ function toSheetCellValue_(header, value, sheetName) {
     // الـ apostrophe يخبر Sheets أن القيمة text-override، فيخزّنها كنص بدون تفسير
     // زمني أو timezone، ويُجرّد من الـ apostrophe في الإخراج لما يقرأها أي client.
     // النتيجة: round-trip 100% بدون انزياح، بغض النظر عن timezone الجدول.
-    const timeOnlyFieldsForWrite_ = ['startTime', 'endTime', 'fromTime', 'toTime', 'timeFrom', 'timeTo'];
+    const timeOnlyFieldsForWrite_ = ['startTime', 'endTime', 'fromTime', 'toTime', 'timeFrom', 'timeTo', 'violationTime', 'incidentTime'];
     if (timeOnlyFieldsForWrite_.includes(h)) {
         // قبول string أو number (fraction قديم) أو Date object للتطبيع
         var hh = -1, mm = -1;
