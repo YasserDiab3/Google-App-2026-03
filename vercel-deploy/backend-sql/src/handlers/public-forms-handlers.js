@@ -243,6 +243,8 @@ const publicFormsHandlers = {
         return {
             success: true,
             id: isoCode || id,
+            isoCode: isoCode || id,
+            refCode: isoCode || id,
             message: 'تم تسجيل الملاحظة اليومية بنجاح، شكراً لمشاركتكم في حماية بيئة العمل.'
         };
     },
@@ -386,6 +388,161 @@ const publicFormsHandlers = {
 
         db.insertRow('DailySafetyCheckList', record);
         return { success: true, id, reportNumber, message: 'تم إرسال تقرير المرور اليومي بنجاح' };
+    },
+
+    async submitObservationClosure(payload, postData) {
+        const data = extractPayload(payload, postData);
+        const obsId = String(data.id || data.isoCode || data.refCode || '').trim();
+        if (!obsId) return { success: false, message: 'كود الملاحظة مطلوب' };
+
+        const db = getDatabase();
+        const rows = db.readSheet('DailyObservations') || [];
+        const cleanTarget = obsId.toLowerCase();
+        const targetRow = rows.find(r => {
+            const rId = String(r.id || '').trim().toLowerCase();
+            const rIso = String(r.isoCode || '').trim().toLowerCase();
+            if (rId === cleanTarget || rIso === cleanTarget) return true;
+            if (cleanTarget.length >= 5 && (rId.includes(cleanTarget) || rIso.includes(cleanTarget) || cleanTarget.includes(rId) || cleanTarget.includes(rIso))) {
+                return true;
+            }
+            return false;
+        });
+
+        let afterImageUrls = [];
+        if (data.afterPhoto || (Array.isArray(data.afterPhotos) && data.afterPhotos.length > 0)) {
+            const photos = data.afterPhotos || [data.afterPhoto];
+            afterImageUrls = await uploadFormPhotos(obsId, photos, 'ObsClosure');
+        }
+
+        const nowIso = new Date().toISOString();
+        const closureNotes = String(data.closureNotes || data.notes || data.correctiveAction || '').trim();
+        const closedBy = String(data.closedBy || data.inspectorName || 'مشرف السلامة').trim();
+
+        let timeLog = [];
+        if (targetRow && targetRow.timeLog) {
+            try {
+                timeLog = Array.isArray(targetRow.timeLog) ? targetRow.timeLog : JSON.parse(targetRow.timeLog);
+            } catch (_) {
+                timeLog = [];
+            }
+        }
+        timeLog.push({
+            action: 'closed',
+            user: closedBy,
+            timestamp: nowIso,
+            roleLabel: 'توثيق وإغلاق الملاحظة',
+            actionDetail: 'تم إغلاق الملاحظة وتوثيق المعالجة ميدانياً',
+            note: closureNotes
+        });
+
+        const updateData = {
+            status: 'مغلق (Closed)',
+            workflowStage: 'closed',
+            closedBy: closedBy,
+            closedAt: nowIso,
+            closureNotes: closureNotes,
+            actionClosureNotes: closureNotes,
+            correctiveAction: closureNotes,
+            remarks: closureNotes,
+            reviewedBy: closedBy,
+            afterExecutionImages: JSON.stringify(afterImageUrls),
+            timeLog: JSON.stringify(timeLog),
+            updatedAt: nowIso
+        };
+
+        if (targetRow) {
+            const keyCol = targetRow.id ? 'id' : 'isoCode';
+            const keyVal = targetRow.id || targetRow.isoCode;
+            db.updateRow('DailyObservations', keyCol, keyVal, updateData);
+        } else {
+            // حفظ الملاحظة مغلقة في قاعدة البيانات في حال تم تسجيلها خارج المحرك المحلي
+            const newRecord = {
+                id: obsId,
+                isoCode: obsId,
+                date: nowIso.slice(0, 10),
+                siteName: data.siteName || data.site || 'مصنع ICAPP',
+                locationName: data.locationName || data.place || 'الموقع الميداني',
+                observationType: data.observationType || 'ملاحظة عامة',
+                details: data.details || closureNotes || 'ملاحظة تم إغلاقها وتوثيق معالجتها ميدانياً',
+                ...updateData,
+                createdAt: nowIso
+            };
+            db.insertRow('DailyObservations', newRecord);
+        }
+
+        return {
+            success: true,
+            id: targetRow ? (targetRow.id || obsId) : obsId,
+            isoCode: targetRow ? (targetRow.isoCode || obsId) : obsId,
+            status: 'مغلق (Closed)',
+            closedBy: closedBy,
+            closedAt: nowIso,
+            closureNotes: closureNotes,
+            message: 'تم توثيق معالجة وإغلاق الملاحظة بنجاح'
+        };
+    },
+
+    async trackObservation(payload, postData) {
+        const data = extractPayload(payload, postData);
+        const rawCode = String(data.refCode || data.code || data.id || data.isoCode || '').trim();
+        const cleanCode = rawCode.toLowerCase();
+        if (!cleanCode) return { success: false, message: 'كود الملاحظة مطلوب للاستعلام' };
+
+        const db = getDatabase();
+        const rows = db.readSheet('DailyObservations') || [];
+        const found = rows.find(r => {
+            const rId = String(r.id || '').trim().toLowerCase();
+            const rIso = String(r.isoCode || '').trim().toLowerCase();
+            if (rId === cleanCode || rIso === cleanCode) return true;
+            if (cleanCode.length >= 5 && (rId.includes(cleanCode) || rIso.includes(cleanCode) || cleanCode.includes(rId) || cleanCode.includes(rIso))) {
+                return true;
+            }
+            return false;
+        });
+
+        if (!found) {
+            return { success: false, message: `لم يتم العثور على ملاحظة بالرقم (${rawCode})` };
+        }
+
+        let attachments = [];
+        try {
+            if (Array.isArray(found.attachments)) attachments = found.attachments;
+            else if (typeof found.attachments === 'string' && found.attachments) attachments = JSON.parse(found.attachments);
+        } catch (_) {}
+
+        let afterExecutionImages = [];
+        try {
+            if (Array.isArray(found.afterExecutionImages)) afterExecutionImages = found.afterExecutionImages;
+            else if (typeof found.afterExecutionImages === 'string' && found.afterExecutionImages) afterExecutionImages = JSON.parse(found.afterExecutionImages);
+        } catch (_) {}
+
+        return {
+            success: true,
+            observation: {
+                id: found.id || '',
+                isoCode: found.isoCode || found.id || '',
+                siteName: found.siteName || found.siteId || found.site || '',
+                locationName: found.locationName || found.placeId || found.place || '',
+                observationType: found.observationType || 'سلوك غير آمن',
+                subCategory: found.subCategory || '',
+                date: found.date || found.createdAt || '',
+                shift: found.shift || '',
+                details: found.details || found.description || '',
+                correctiveAction: found.correctiveAction || found.closureNotes || '',
+                responsibleDepartment: found.responsibleDepartment || found.department || 'إدارة السلامة والصحة المهنية',
+                riskLevel: found.riskLevel || 'متوسط',
+                observerName: found.observerName || found.reporterName || 'فني السلامة',
+                status: found.status || 'مفتوح',
+                closedBy: found.closedBy || '',
+                closedAt: found.closedAt || '',
+                closureNotes: found.closureNotes || found.actionClosureNotes || '',
+                workflowStage: found.workflowStage || 'closed',
+                attachments,
+                afterExecutionImages,
+                createdAt: found.createdAt || '',
+                updatedAt: found.updatedAt || ''
+            }
+        };
     }
 };
 

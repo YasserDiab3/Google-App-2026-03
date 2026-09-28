@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1791",
+  "version": "1.0.1793",
   "highlights": {
     "ar": [
-      "معالجة جذرية لقص وانكماش نصوص الحقول والقوائم المنسدلة بنموذج المخالفات مع ضبط أبعاد مريحة وارتفاع قياسي (44px) ومحاذاة خطوط متقنة تمنع أي تشويه بصري.",
-      "دعم توثيق المخالفة بصورتين ميدانيتين احترافيتين (مشهد المخالفة قبل المعالجة + توثيق إضافي أو بعد التصحيح) مع السحب والإفلات، الحذف، التغيير، والتكبير المضيء.",
-      "زر التبديل السريع بين الصورتين (⇄) بنقرة واحدة، ومعرض صور احترافي متكامل داخل شاشة عرض تفاصيل المخالفة مع التكبير المباشر والمزامنة السحابية بالخلفية."
+      "إضافة الهوية المؤسسية العليا المعتمدة لقطاع السلامة والصحة المهنية (ICAPP QHSE) وشريط الترويسة الرسمي مع كود الوثيقة المعتمد ICAPP-HSE-VIO-01.",
+      "تعديل مسمى حقل الإدارة التابع لمخالفة المقاول رسمياً إلى «الإدارة التابع له المقاول» وتوحيد عرضه حصراً مع الإدارات الرسمية المعتمدة بالنظام.",
+      "تنميق فاخر للجزء الأول وأزرار الحفظ والإلغاء التنفيذية مع تدقيق التحقق الإلزامي وتأكيد التوثيق الميداني."
     ],
     "en": [
-      "Fixed dropdown and input field text vertical clipping and shrinking in the violation modal with standard 44px min-height, comfortable padding, and crisp typography.",
-      "Dual Photo Documentation support for violations (Before scene + After/Additional photo) with drag-and-drop, delete, replace, and fullscreen lightbox zoom.",
-      "Smart Photo Swap feature (⇄) with one click, along with dual-photo gallery presentation in violation details view and background cloud synchronization."
+      "Added official ICAPP QHSE top corporate identity header, branded ribbon, and quality document code ICAPP-HSE-VIO-01.",
+      "Renamed contractor department field to 'Contractor Department' and strictly restricted its options to official system departments only.",
+      "Executive visual polish for Section 1 and action buttons with enhanced validation and styling."
     ]
   },
-  "releaseName": "v1.0.1791 - Dual Photo Documentation & Anti-Clipping Form Inputs Refinement",
-  "lastUpdate": "2026-09-28T23:55:00.000Z"
+  "releaseName": "v1.0.1793 - ICAPP HSE Violation Form Branding & Department Standardization",
+  "lastUpdate": "2026-09-28T21:16:00.000Z"
 }

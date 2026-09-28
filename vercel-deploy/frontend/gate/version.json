@@ -1,19 +1,17 @@
 {
-  "version": "1.0.1772",
+  "version": "1.0.1792",
   "highlights": {
     "ar": [
-      "توحيد نظام التصدير والتحميل المباشر لجميع ملفات PDF في كامل النظام دون فتح شاشة الطباعة (window.print) أو النوافذ المنبثقة.",
-      "التحميل التلقائي المباشر لتقرير تدريبات المقاولين فور اختياره واختيار الفترة المحددة كملف PDF إلى جهاز المستخدم.",
-      "تطبيق التصدير والتحميل المباشر في تصاريح العمل (PTW) وسجل حصر التصاريح ونماذج التصاريح.",
-      "تحديث محرك التصدير المركزي Utils.downloadHtmlAsPdf لدعم تقارير الحوادث، الإجراءات التصحيحية، المواد الكيميائية، وتقييم المقاولين."
+      "إصلاح ثغرات أمنية حرجة: إزالة رموز PIN المكشوفة واستبدالها بتشفير SHA-256، وإزالة صلاحيات Admin الثابتة من الكود المصدري.",
+      "إصلاح كسر التنقل في الخريطة الحرارية والمساعد الصوتي عبر استخدام محرك التوجيه الموحد (executeActualNavigation).",
+      "إصلاح عداد البحث المزدوج ودالة escapeHtml وإضافة نموذج TBT لجداول التوجيه والتحميل المسبق."
     ],
     "en": [
-      "Unified direct export and download system for all PDF files across the entire platform without opening print preview dialogs or popup windows.",
-      "Direct automatic download of Contractor Training Reports to user device immediately upon selection and filter criteria.",
-      "Direct PDF download implemented for Work Permits (PTW), PTW registry logs, and permit issuance forms.",
-      "Centralized Utils.downloadHtmlAsPdf engine powering instant downloads for Incidents, Action Tracking, Chemical Safety SDS, and Contractor evaluations."
+      "Critical security fix: Removed hardcoded backdoor PINs, replaced plaintext broadcast PINs with SHA-256 hashing, and removed hardcoded admin privileges from source code.",
+      "Fixed broken navigation in Plant Risk Heatmap and Voice Assistant by routing through the unified executeActualNavigation engine.",
+      "Fixed duplicate search counter, escapeHtml zero-handling bug, and added TBT form to route maps and prefetch list."
     ]
   },
-  "releaseName": "v1.0.1772 - Direct PDF Download and Unified Export Across All Modules",
-  "lastUpdate": "2026-09-27T20:20:59.901Z"
+  "releaseName": "v1.0.1792 - Critical Security Hardening & Navigation Bug Fixes",
+  "lastUpdate": "2026-09-28T21:04:00.000Z"
 }

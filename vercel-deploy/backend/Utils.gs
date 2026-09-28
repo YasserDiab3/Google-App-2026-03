@@ -1750,7 +1750,7 @@ function toSheetCellValue_(header, value, sheetName) {
     // الـ apostrophe يخبر Sheets أن القيمة text-override، فيخزّنها كنص بدون تفسير
     // زمني أو timezone، ويُجرّد من الـ apostrophe في الإخراج لما يقرأها أي client.
     // النتيجة: round-trip 100% بدون انزياح، بغض النظر عن timezone الجدول.
-    const timeOnlyFieldsForWrite_ = ['startTime', 'endTime', 'fromTime', 'toTime', 'timeFrom', 'timeTo'];
+    const timeOnlyFieldsForWrite_ = ['startTime', 'endTime', 'fromTime', 'toTime', 'timeFrom', 'timeTo', 'violationTime', 'incidentTime'];
     if (timeOnlyFieldsForWrite_.includes(h)) {
         // قبول string أو number (fraction قديم) أو Date object للتطبيع
         var hh = -1, mm = -1;
@@ -3979,8 +3979,8 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                         try {
                             if (Object.prototype.toString.call(processedValue) === '[object Date]' && !isNaN(processedValue.getTime())) {
                                 // للحقول التي تحتاج وقت (visitDate, exitDate, checkIn, checkOut, etc.)
-                                const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date'];
-                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo'];
+                                const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date', 'violationDate'];
+                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo', 'violationTime', 'incidentTime'];
                                 if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
                                     processedValue = normalizeSheetDateTimeText_(processedValue, sheetTz);
                                 } else if (timeOnlyFields.includes(cleanHeader)) {

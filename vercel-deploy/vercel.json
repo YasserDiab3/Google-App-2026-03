@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install --prefix Frontend --no-audit --no-fund --prefer-offline --loglevel=error",
+  "installCommand": "npm install --no-audit --no-fund --prefer-offline --loglevel=error && npm install --prefix Frontend --no-audit --no-fund --prefer-offline --loglevel=error",
   "functions": {
     "api/exec.js": {
       "maxDuration": 60,

@@ -20,6 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="js/modules/hse-print-engine.js"></script>
 
     <style>
         :root {
@@ -166,13 +167,81 @@
             object-fit: contain;
         }
 
+        .iso-company-name {
+            font-size: 0.65rem;
+            font-weight: 900;
+            color: #0f172a;
+            text-align: center;
+            line-height: 1.15;
+            margin-top: 2px;
+        }
+
         .iso-dept-name {
-            font-size: 0.68rem;
+            font-size: 0.60rem;
             font-weight: 800;
             color: #312e81;
             text-align: center;
             line-height: 1.2;
+            margin-top: 1px;
+            white-space: normal;
+        }
+
+        /* شريط بيانات ضبط وتوثيق الوثيقة أسفل النموذج */
+        .iso-footer-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            border: 1.5px solid #dbeafe;
+            border-radius: 12px;
+            padding: 10px 20px;
+            margin-top: 18px;
+            margin-bottom: 14px;
+            box-shadow: 0 3px 10px rgba(37, 99, 235, 0.05);
+        }
+        [data-theme="dark"] .iso-footer-meta-strip {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        .iso-footer-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
             white-space: nowrap;
+        }
+
+        .iso-footer-meta-key {
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .iso-footer-meta-val {
+            font-weight: 800;
+            padding: 2px 10px;
+            border-radius: 6px;
+            font-family: monospace, system-ui;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        .iso-footer-meta-val.val-doc {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
+        .iso-footer-meta-val.val-rev {
+            background: #fdf2f8;
+            color: #9d174d;
+            border: 1px solid #fbcfe8;
+        }
+
+        .iso-footer-meta-val.val-date {
+            background: #fefce8;
+            color: #854d0e;
+            border: 1px solid #fef08a;
         }
 
         .iso-col-title {
@@ -256,9 +325,32 @@
                 max-height: 30px;
                 max-width: 55px;
             }
+            .iso-company-name {
+                font-size: 0.54rem;
+                line-height: 1.1;
+                text-align: center;
+            }
             .iso-dept-name {
-                font-size: 0.5rem;
+                font-size: 0.48rem;
                 white-space: normal;
+                line-height: 1.1;
+            }
+            .iso-footer-meta-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 8px 10px;
+                gap: 4px;
+                margin-top: 14px;
+                margin-bottom: 10px;
+            }
+            .iso-footer-meta-item {
+                font-size: 0.58rem;
+                gap: 3px;
+            }
+            .iso-footer-meta-val {
+                font-size: 0.58rem;
+                padding: 1px 5px;
             }
             .iso-col-title {
                 padding: 6px 4px;
@@ -989,12 +1081,14 @@
                 <div class="iso-logo-wrap">
                     <img id="companyLogoImg" src="icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
                 </div>
-                <div class="iso-dept-name">إدارة السلامة والصحة المهنية</div>
+                <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
 
             <div class="iso-col-title">
                 <h1 class="iso-doc-title" id="isoDocTitle">نموذج الإبلاغ عن حادث وشيك</h1>
                 <div class="iso-doc-subtitle" id="isoDocSubtitle">Near Miss Incident Report</div>
+                <span class="iso-platform-tag" style="margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; padding: 2px 10px; border-radius: 20px; font-size: 0.65rem; font-weight: 800;"><i class="fas fa-certificate text-amber-500"></i> معتمد طبقاً للمواصفة ISO 45001:2018 (Clause 10.2) & OSHA 1904</span>
             </div>
 
             <div class="iso-col-meta">
@@ -1028,13 +1122,18 @@
             <a id="whatsappShareBtn" href="#" target="_blank" style="text-decoration:none; background:#22c55e; color:#fff; padding:10px; border-radius:10px; font-weight:700; font-size:0.82rem; display:flex; align-items:center; justify-content:center; gap:6px;">
                 <i class="fab fa-whatsapp"></i> مشاركة عبر واتساب
             </a>
-            <button onclick="location.reload()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:10px; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer;">
-                <i class="fas fa-plus"></i> بلاغ وشيك آخر
+            <button type="button" onclick="printNearMissReport()" style="background:#1e40af; border:none; color:#fff; padding:10px; border-radius:10px; font-weight:800; font-size:0.82rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow: 0 2px 8px rgba(30,64,175,0.3);">
+                <i class="fas fa-print"></i> طباعة البلاغ (ISO)
             </button>
         </div>
-        <a href="/forms-hub" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 10px; border-radius: 10px; background: #e0e7ff; color: #3730a3; font-weight: 800; text-decoration: none; font-size: 0.85rem; transition: all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
-            <i class="fas fa-layer-group"></i> <span id="hubBtnText">الرجوع إلى بوابة النماذج</span>
-        </a>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <button type="button" onclick="location.reload()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#334155; padding:10px; border-radius:10px; font-weight:700; font-size:0.82rem; cursor:pointer;">
+                <i class="fas fa-plus"></i> بلاغ وشيك آخر
+            </button>
+            <a href="/forms-hub" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border-radius: 10px; background: #e0e7ff; color: #3730a3; font-weight: 800; text-decoration: none; font-size: 0.85rem; transition: all 0.2s;" onmouseover="this.style.background='#c7d2fe'" onmouseout="this.style.background='#e0e7ff'">
+                <i class="fas fa-layer-group"></i> <span id="hubBtnText">بوابة النماذج</span>
+            </a>
+        </div>
     </div>
 
     <!-- Main Simple Form -->
@@ -1176,14 +1275,30 @@
         </button>
     </form>
 
+    <!-- شريط بيانات ضبط وتوثيق الوثيقة المعتمدة (Document Control) -->
+    <div class="iso-footer-meta-strip">
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">كود الوثيقة:</span>
+            <span class="iso-footer-meta-val val-doc">DOC-HSE-NRM-01</span>
+        </div>
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">رقم الإصدار:</span>
+            <span class="iso-footer-meta-val val-rev">Rev. 02</span>
+        </div>
+        <div class="iso-footer-meta-item">
+            <span class="iso-footer-meta-key">تاريخ الاعتماد:</span>
+            <span class="iso-footer-meta-val val-date">2026-08</span>
+        </div>
+    </div>
+
     <!-- Unified Portal Footer -->
     <footer class="portal-unified-footer">
-        <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
+        <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</p>
         <p class="footer-subtitle">نموذج الإبلاغ الفوري عن الحوادث والظروف الوشيكة PWA • معتمد طبقاً لمعايير ISO 45001: 10.2 & OSHA 1904</p>
         <div class="footer-meta-strip">
             <i class="fas fa-code-branch text-amber-600"></i>
             <span>إصدار النموذج:</span>
-            <span class="footer-version-pill" id="lblNearMissVersion">v1.0.1756</span>
+            <span class="footer-version-pill" id="lblNearMissVersion">v1.0.1791</span>
             <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                 <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
             </button>
@@ -1371,7 +1486,8 @@
             dir: 'rtl',
             langBtn: 'EN',
             pageTitle: 'SafetyHub | نموذج الإبلاغ عن حادث وشيك (Near Miss)',
-            deptName: 'إدارة السلامة والصحة المهنية',
+            companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
+            deptName: 'إدارة السلامة والصحة المهنية والبيئة',
             docTitle: 'نموذج الإبلاغ عن حادث وشيك',
             docSubtitle: 'Near Miss Report',
             hubBtn: 'بوابة النماذج',
@@ -1433,7 +1549,8 @@
             dir: 'ltr',
             langBtn: 'AR',
             pageTitle: 'SafetyHub | Near Miss Incident Report',
-            deptName: 'HSE Department',
+            companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
+            deptName: 'Occupational Safety, Health & Environment Department',
             docTitle: 'Near Miss Incident Report',
             docSubtitle: 'Near Miss Incident Report',
             hubBtn: 'Forms Hub',
@@ -1506,8 +1623,10 @@
         if (langBtnText) langBtnText.textContent = t.langBtn;
 
         // ISO Header
-        const deptName = document.querySelector('.iso-dept-name');
-        if (deptName) deptName.textContent = t.deptName;
+        const compName = document.getElementById('isoCompanyName') || document.querySelector('.iso-company-name');
+        if (compName && t.companyName) compName.textContent = t.companyName;
+        const deptName = document.getElementById('isoDeptName') || document.querySelector('.iso-dept-name');
+        if (deptName && t.deptName) deptName.textContent = t.deptName;
         const docTitle = document.getElementById('isoDocTitle');
         if (docTitle) docTitle.textContent = t.docTitle;
         const docSubtitle = document.getElementById('isoDocSubtitle');
@@ -1961,6 +2080,8 @@
             gpsMapLink: userGps.mapLink
         };
 
+        lastSubmittedNearMiss = { payload: payload, refCode: instantRefCode };
+
         // عرض شاشة النجاح فوراً
         document.getElementById('resIsoCode').textContent = instantRefCode;
         const waText = encodeURIComponent(`🚨 *تقرير حادث وشيك — ICAPP*\n📌 *الرقم المرجعي:* ${instantRefCode}\n📍 *الموقع:* ${factory} — ${place}\n⚠️ *التصنيف:* ${type} (${severity})\n📝 *الوصف:* ${description}`);
@@ -1979,6 +2100,139 @@
         // مزامنة فورية في الخلفية مع قاعدة البيانات السحابية (NearMiss Sheet)
         syncNearMissToCloud(payload, instantRefCode);
     });
+
+    var lastSubmittedNearMiss = null;
+
+    function printNearMissReport() {
+        const data = lastSubmittedNearMiss || {};
+        const p = data.payload || {};
+        const refCode = (document.getElementById('resIsoCode') ? document.getElementById('resIsoCode').textContent.trim() : '') || data.refCode || 'NM-2026-0000';
+        const now = new Date();
+        const dateStr = p.date || now.toLocaleDateString('ar-EG');
+        const timeStr = p.time || now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+        const severityBadge = (p.severity === 'عالية' || p.severity === 'حرجة' || p.severity === 'High')
+            ? `<span style="background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 3px 10px; border-radius: 12px; font-weight: 800;">عالية الخطورة ⚠️</span>`
+            : ((p.severity === 'متوسطة' || p.severity === 'Medium')
+                ? `<span style="background: #fffbeb; color: #d97706; border: 1px solid #fde68a; padding: 3px 10px; border-radius: 12px; font-weight: 800;">متوسطة الخطورة ⚡</span>`
+                : `<span style="background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; padding: 3px 10px; border-radius: 12px; font-weight: 800;">بسيطة / منخفضة ℹ️</span>`);
+
+        const bodyHtml = `
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
+                    <div>
+                        <span style="font-size: 0.8rem; color: #64748b; font-weight: 700;">الرقم المرجعي للبلاغ:</span>
+                        <span style="font-size: 1.15rem; font-weight: 900; color: #1e1b4b; margin-right: 6px; font-family: monospace;">${refCode}</span>
+                    </div>
+                    <div>
+                        ${severityBadge}
+                    </div>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 20%;">المصنع / المنشأة:</td>
+                            <td style="padding: 6px 8px; font-weight: 900; color: #0f172a; width: 30%;">${p.factory || '-'}</td>
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700; width: 20%;">المكان المحدد:</td>
+                            <td style="padding: 6px 8px; font-weight: 800; color: #0f172a; width: 30%;">${p.place || '-'}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">تاريخ وتوقيت الحادث:</td>
+                            <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${dateStr} (${timeStr})</td>
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">تصنيف الحادث الوشيك:</td>
+                            <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${p.type || '-'}</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">مقدم البلاغ:</td>
+                            <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${p.reporterName || 'فاعل خير (سري)'}</td>
+                            <td style="padding: 6px 8px; color: #64748b; font-weight: 700;">الإدارة / القسم:</td>
+                            <td style="padding: 6px 8px; font-weight: 800; color: #0f172a;">${p.department || '-'}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #ffffff;">
+                <div style="font-weight: 900; color: #0f172a; font-size: 0.9rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                    <span>📋 وصف الواقعة وكيف كاد الحادث أن يقع:</span>
+                </div>
+                <div style="font-size: 0.86rem; color: #1e293b; line-height: 1.6; background: #f8fafc; padding: 8px 12px; border-radius: 6px; border: 1px dashed #cbd5e1;">
+                    ${p.description || '-'}
+                </div>
+            </div>
+
+            ${p.potentialHarm ? `
+            <div style="border: 1px solid #fecaca; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #fff5f5;">
+                <div style="font-weight: 900; color: #b91c1c; font-size: 0.9rem; margin-bottom: 4px;">
+                    ⚠️ الآثار والتبعات المحتملة في حال وقوع الحادث:
+                </div>
+                <div style="font-size: 0.85rem; color: #7f1d1d; line-height: 1.5;">
+                    ${p.potentialHarm}
+                </div>
+            </div>` : ''}
+
+            ${p.immediateAction ? `
+            <div style="border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: #f0fdf4;">
+                <div style="font-weight: 900; color: #166534; font-size: 0.9rem; margin-bottom: 4px;">
+                    ✅ الإجراء الفوري المتخذ لمنع الخطر:
+                </div>
+                <div style="font-size: 0.85rem; color: #14532d; line-height: 1.5;">
+                    ${p.immediateAction}
+                </div>
+            </div>` : ''}
+
+            ${p.recommendation ? `
+            <div style="border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; background: #eff6ff;">
+                <div style="font-weight: 900; color: #1e40af; font-size: 0.9rem; margin-bottom: 4px;">
+                    💡 التوصيات والإجراءات التصحيحية المقترحة لمنع التكرار:
+                </div>
+                <div style="font-size: 0.85rem; color: #1e3a8a; line-height: 1.5;">
+                    ${p.recommendation}
+                </div>
+            </div>` : ''}
+        `;
+
+        if (typeof HsePrintEngine !== 'undefined') {
+            HsePrintEngine.printDocument({
+                pageTitle: 'تقرير حادث وشيك كاد أن يقع - ' + refCode,
+                docTitle: 'نموذج وسجل الإبلاغ والتحقيق في الحوادث الوشيكة (كاد أن يقع)',
+                docSubtitle: 'Near-Miss Incident Report & Hazard Notification Record',
+                docCode: 'DOC-HSE-NRM-01',
+                rev: 'Rev. 02',
+                effectiveDate: dateStr,
+                confidentiality: 'عام داخلي',
+                standardRef: 'ISO 45001:2018 (Clause 10.2) & OSHA 1904',
+                metaItems: [
+                    { label: 'كود البلاغ', value: refCode },
+                    { label: 'المصنع', value: p.factory || '-' },
+                    { label: 'الموقع', value: p.place || '-' },
+                    { label: 'تاريخ البلاغ', value: dateStr },
+                    { label: 'وقت البلاغ', value: timeStr },
+                    { label: 'المُبلّغ', value: p.reporterName || 'سري' }
+                ],
+                kpis: {
+                    total: '1',
+                    totalLabel: 'عدد الوقائع المبلغة',
+                    high: (p.severity === 'عالية' || p.severity === 'حرجة') ? '1' : '0',
+                    highLabel: 'بلاغات عالية الخطورة ⚠️',
+                    closed: p.immediateAction ? '1' : '0',
+                    closedLabel: 'تم التدخل الفوري ✅',
+                    pending: '1',
+                    pendingLabel: 'قيد المتابعة والإغلاق ⏳'
+                },
+                bodyHtml: bodyHtml,
+                signatures: [
+                    { title: 'مقدم البلاغ / المبلغ', name: p.reporterName || 'مقدم البلاغ', line: 'التوقيع والتاريخ' },
+                    { title: 'مشرف الموقع / المنطقة', name: 'مشرف قطاع التشغيل', line: 'التوقيع والتاريخ' },
+                    { title: 'الإدارة العامة للسلامة والصحة المهنية', name: 'مدير إدارة السلامة وحماية البيئة', line: 'الختم والاعتماد' }
+                ]
+            });
+        } else {
+            window.print();
+        }
+    }
+    window.printNearMissReport = printNearMissReport;
 
     async function syncNearMissToCloud(payload, refCode) {
         if (!navigator.onLine) {

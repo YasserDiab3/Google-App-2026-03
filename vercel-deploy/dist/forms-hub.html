@@ -3753,7 +3753,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1756</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1773</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -4125,7 +4125,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1756</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1773</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -5595,14 +5595,24 @@
             window._pendingAdminAuthCallback = null;
         }
 
-        function submitHseAdminPin() {
+        async function submitHseAdminPin() {
             const inp = document.getElementById('inpAdminPin');
             const err = document.getElementById('adminPinError');
             const pin = inp ? String(inp.value || '').trim() : '';
 
-            // Master Valid Pins
-            const validPins = ['2026', 'HSE@2026', '1234'];
-            if (!validPins.includes(pin)) {
+            // Hashed Admin PINs (SHA-256) — لا تُخزن كنصوص واضحة في الكود
+            async function sha256(text) {
+                const data = new TextEncoder().encode(text);
+                const buf = await crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+            const validHashes = [
+                '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab', // hashed admin PIN
+                '6df02bafce55c6bb8a5137a77398ef2dafe24923bdc8eb7450cf87aea43fb9a4', // hashed admin PIN
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'  // hashed admin PIN
+            ];
+            const enteredHash = await sha256(pin);
+            if (!validHashes.includes(enteredHash)) {
                 if (err) {
                     err.textContent = '❌ رمز التحقق غير صحيح، يرجى المحاولة مرة أخرى.';
                     err.style.display = 'block';
@@ -5613,7 +5623,7 @@
 
             // Successfully authenticated
             sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
-            sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', pin);
+            sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', enteredHash);
             updateBroadcastEditButtonVisibility();
             closeHseAdminAuthModal();
 
@@ -6030,7 +6040,8 @@
                 'public-observation.html',
                 'public-near-miss.html',
                 'public-fire-inspection.html',
-                'gate-visitor-entry.html'
+                'gate-visitor-entry.html',
+                'public-tbt-record.html'
             ];
 
             const prefetch = () => {
@@ -7449,7 +7460,8 @@
             'observation': 'public-observation.html',
             'near-miss': 'public-near-miss.html',
             'fire-inspection': 'public-fire-inspection.html',
-            'gate-visitor-entry': 'gate-visitor-entry.html'
+            'gate-visitor-entry': 'gate-visitor-entry.html',
+            'tbt': 'public-tbt-record.html'
         };
         const FORM_CLEAN_ROUTES = {
             'daily-safety': 'daily-safety',
@@ -7459,7 +7471,9 @@
             'near-miss': 'near-miss',
             'fire-inspection': 'fire-inspection',
             'gate-visitor-entry': 'gate',
-            'gate-visitor': 'gate'
+            'gate-visitor': 'gate',
+            'tbt': 'tbt',
+            'public-tbt-record.html': 'tbt'
         };
 
         // Reliable dynamic navigation across all deployment paths & URL rewrites
@@ -7706,7 +7720,7 @@
         // Search / Filter
         function filterForms() {
             const query = (document.getElementById('formSearchInput').value || '').trim().toLowerCase();
-            const cards = document.querySelectorAll('.form-card');
+            const cards = document.querySelectorAll('#formsGrid .form-card');
             let visibleCount = 0;
             cards.forEach(card => {
                 const title = card.querySelector('.form-card-title')?.textContent || '';
@@ -8683,7 +8697,7 @@
 
                 if (feedbackEl) feedbackEl.style.display = 'none';
 
-                if (hasLocalPin || localEmp.code === '111594') {
+                if (hasLocalPin) {
                     if (pinWrap) pinWrap.style.display = 'block';
                     if (newPinWrap) newPinWrap.style.display = 'none';
                     const pInp = document.getElementById('sessionPinInput');
@@ -8853,9 +8867,9 @@
             // فحص محلي احتياطي (Offline / Fallback Auth) عند بطء أو انقطاع السيرفر
             if (!authRes || !authRes.success) {
                 const storedPin = localStorage.getItem('HSE_PIN_' + code) || localStorage.getItem('field_portal_pin_' + code);
-                if (isEmployeeHasPin && (storedPin || code === '111594')) {
+                if (isEmployeeHasPin && storedPin) {
                     const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
-                    if (storedPin === pin || (code === '111594' && (pin === '1234' || pin === storedPin))) {
+                    if (storedPin === pin) {
                         authRes = { success: true, offline: true, message: 'تم التحقق بنجاح' };
                     }
                 } else if (!isEmployeeHasPin) {
@@ -8879,7 +8893,7 @@
                 if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('pin_login', { employeeCode: code });
                 const selectedSite = (siteSel && siteSel.value) ? siteSel.value : 'ICAPP-1';
                 const selectedShift = (shiftSel && shiftSel.value) ? shiftSel.value : 'الأولى (صباحية)';
-                const isSystemAdmin = (code === '111594' || currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
+                const isSystemAdmin = (currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
                 const sessionData = {
                     inspector: currentVerifiedEmployee.name,
                     employeeCode: currentVerifiedEmployee.code,
@@ -8901,13 +8915,13 @@
                     sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
                     if (isSystemAdmin) {
                         localStorage.setItem('hse_remember_user', JSON.stringify({
-                            id: 'USR_111594',
+                            id: 'USR_' + currentVerifiedEmployee.code,
                             name: currentVerifiedEmployee.name,
-                            email: '111594',
+                            email: currentVerifiedEmployee.code,
                             role: 'admin',
                             isAdmin: true,
-                            employeeCode: '111594',
-                            employeeNumber: '111594'
+                            employeeCode: currentVerifiedEmployee.code,
+                            employeeNumber: currentVerifiedEmployee.code
                         }));
                         localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
                         sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
@@ -9362,7 +9376,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1756-20260926')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1773-20260929')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -11874,8 +11888,9 @@
     // 🛠️ Smart HSE Tools Suite (Voice Assistant, Heatmap, Shift Digest, Tracking)
     // ======================================================================
 
+    // Unified escapeHtml — يستخدم الدالة الأصلية escapeHTML مع معالجة صحيحة للصفر
     function escapeHtml(str) {
-        if (!str) return '';
+        if (str === null || str === undefined) return '';
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -12160,7 +12175,8 @@
 
     function filterByHeatmapLocation(site, place) {
         closePlantRiskHeatmapModal();
-        window.location.href = `/public-observation.html?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+        const target = `observation?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+        executeActualNavigation(target);
     }
 
     // --- 3. ملخص وتسليم الوردية الميداني عبر الواتساب (WhatsApp Shift Handover Digest) ---
@@ -12864,7 +12880,7 @@
     function fillObservationFromBot(query, topic) {
         closeHseVoiceAssistantModal();
         const text = encodeURIComponent(`استفسار وملاحظة ميدانية: ${query} (الموضوع: ${topic})`);
-        window.location.href = `/public-observation.html?details=${text}`;
+        executeActualNavigation(`observation?details=${text}`);
     }
 
     // =========================================================================

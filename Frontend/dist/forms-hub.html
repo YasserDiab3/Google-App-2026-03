@@ -53,7 +53,6 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 
     <!-- 🌐 HSE Smart Media & GPS Geofencing Suite -->
-    <script src="js/modules/hse-print-engine.js"></script>
     <script src="js/modules/hse-smart-media-geo.js"></script>
     <script src="js/modules/hse-dark-mode.js"></script>
     <script src="js/modules/hse-device-audit.js"></script>
@@ -61,10 +60,6 @@
     <script src="js/modules/hse-offline-sync.js"></script>
     <script src="js/modules/hse-push-notifications.js"></script>
     <script src="js/modules/hse-feature-flags.js"></script>
-    <script src="js/modules/hse-glossary.js"></script>
-    <script src="js/modules/hse-action-closure.js"></script>
-    <script src="js/modules/hse-shift-handover.js"></script>
-    <script src="js/modules/hse-my-tasks.js"></script>
 
     <!-- Google Fonts: Cairo -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -439,27 +434,17 @@
             object-fit: contain;
         }
 
-        .iso-company-name {
-            font-size: 0.62rem;
-            font-weight: 900;
+        .iso-dept-name {
+            font-size: 0.68rem;
+            font-weight: 800;
             color: #1e3a8a;
             text-align: center;
-            line-height: 1.15;
+            line-height: 1.2;
             white-space: normal;
             max-width: 100%;
         }
-        [data-theme="dark"] .iso-company-name { color: #93c5fd; }
 
-        .iso-dept-name {
-            font-size: 0.58rem;
-            font-weight: 700;
-            color: #64748b;
-            text-align: center;
-            line-height: 1.15;
-            white-space: normal;
-            max-width: 100%;
-        }
-        [data-theme="dark"] .iso-dept-name { color: #94a3b8; }
+        [data-theme="dark"] .iso-dept-name { color: #818cf8; }
 
         /* 2. عمود العنوان */
         .iso-col-title {
@@ -589,13 +574,8 @@
                 max-height: 28px;
                 max-width: 48px;
             }
-            .iso-company-name {
-                font-size: 0.52rem;
-                line-height: 1.1;
-            }
             .iso-dept-name {
-                font-size: 0.48rem;
-                line-height: 1.1;
+                font-size: 0.58rem;
             }
             .iso-col-title {
                 padding: 4px 6px;
@@ -631,12 +611,6 @@
                 min-width: 70px !important;
                 max-width: 70px !important;
                 padding: 3px 4px !important;
-            }
-            .iso-company-name {
-                font-size: 0.46rem !important;
-            }
-            .iso-dept-name {
-                font-size: 0.42rem !important;
             }
             .iso-col-meta {
                 min-width: 92px !important;
@@ -3396,35 +3370,6 @@
             margin: auto;
         }
 
-        .emergency-modal-close-btn {
-            width: 36px;
-            height: 36px;
-            min-width: 36px;
-            min-height: 36px;
-            color: #ffffff !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            background: rgba(0, 0, 0, 0.2) !important;
-            border-radius: 8px !important;
-            cursor: pointer;
-            display: inline-flex !important;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.05rem !important;
-            line-height: 1;
-            padding: 0 !important;
-            transition: all 0.2s ease;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .emergency-modal-close-btn:hover {
-            background: rgba(0, 0, 0, 0.4) !important;
-            border-color: rgba(255, 255, 255, 0.6) !important;
-            transform: scale(1.05);
-        }
-        .emergency-modal-close-btn:active {
-            transform: scale(0.95);
-        }
-
         [data-theme="dark"] .emergency-modal-dialog {
             background: #152243;
             border-color: #334155;
@@ -3793,8 +3738,7 @@
                     <div class="iso-logo-wrap">
                         <img id="isoLogoImg" src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-logo-img" onerror="this.onerror=null; this.src='icons/icapp-logo.png';">
                     </div>
-                    <div class="iso-company-name" id="isoCompanyName">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية والبيئة</div>
+                    <div class="iso-dept-name" id="isoDeptName">إدارة السلامة والصحة المهنية</div>
                 </div>
 
                 <div class="iso-col-title">
@@ -3809,7 +3753,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1791</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1793</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -3863,6 +3807,12 @@
                     <span id="txtHeatmapBtn">خريطة المخاطر</span>
                 </button>
 
+                <!-- زر ملخص وتسليم الوردية الميداني عبر الواتساب -->
+                <button type="button" class="obs-tool-card-btn obs-btn-digest" id="btnShiftDigest" onclick="openShiftDigestModal(event)" title="ملخص وتسليم الوردية الميداني عبر الواتساب / WhatsApp Shift Handover">
+                    <i class="fab fa-whatsapp" style="color: #25d366; font-size: 0.95rem;"></i>
+                    <span id="txtShiftDigestBtn">تسليم الوردية 📋</span>
+                </button>
+
                 <!-- زر بوصلة المواد الكيميائية وصحائف السلامة SDS -->
                 <button type="button" class="obs-tool-card-btn obs-btn-hazmat" id="btnHazmatCompass" onclick="openHazmatCompassModal(event)" title="بوصلة المواد الكيميائية وصحائف السلامة / HazMat & SDS Compass">
                     <i class="fas fa-flask-vial" style="color: #9333ea;"></i>
@@ -3873,19 +3823,6 @@
                 <button type="button" class="obs-tool-card-btn obs-btn-track" id="btnTrackObservation" onclick="openTrackObservationModal(event)" title="تتبع واستعلام حالة ملاحظة / Track Observation">
                     <i class="fas fa-magnifying-glass"></i>
                     <span id="txtTrackBtn">تتبع ملاحظة</span>
-                </button>
-
-                <!-- زر تسليم الوردية الرقمي -->
-                <button type="button" class="obs-tool-card-btn" id="btnShiftHandoverTool" onclick="HseShiftHandover && HseShiftHandover.open()" title="محضر تسليم واستلام الوردية الرقمي / Shift Safety Handover" style="border-color: #3b82f6;">
-                    <i class="fas fa-clipboard-user" style="color: #2563eb;"></i>
-                    <span id="txtHandoverBtn">تسليم الوردية 📋</span>
-                </button>
-
-                <!-- زر مهامي وملاحظاتي المفتوحة اليوم -->
-                <button type="button" class="obs-tool-card-btn" id="btnMyTasksTool" onclick="HseMyTasks && HseMyTasks.open()" title="مهامي وملاحظاتي المفتوحة اليوم / My Active Observations" style="border-color: #f59e0b; position: relative;">
-                    <i class="fas fa-list-check" style="color: #d97706;"></i>
-                    <span id="txtMyTasksBtn">مهامي المفتوحة ⏳</span>
-                    <span id="badgeMyTasksCount" class="badge-my-tasks" style="display: none; position: absolute; top: -6px; right: -6px; background: #ef4444; color: #ffffff; font-size: 0.68rem; font-weight: 900; padding: 1px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">0</span>
                 </button>
             </div>
         </div>
@@ -4183,14 +4120,17 @@
 
         <!-- Unified Portal Footer -->
         <footer class="portal-unified-footer">
-            <p class="footer-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) • منظومة السلامة والصحة المهنية المتكاملة</p>
+            <p class="footer-title">منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026 ICAPP</p>
             <p class="footer-subtitle">البوابة الرقمية الموحدة لنماذج وإجراءات السلامة الميدانية PWA • معتمدة طبقاً لمعايير ISO 45001 / 14001 / 9001</p>
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1791</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1793</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
+                </button>
+                <button type="button" onclick="HseFeatureFlags && HseFeatureFlags.openSettingsModal()" title="إدارة الميزات التجريبية (Feature Flags)" class="footer-refresh-btn" style="border-color: #cbd5e1;">
+                    <i class="fas fa-sliders" style="color: #6366f1;"></i> <span id="lblHubFlagsBtn">الميزات</span>
                 </button>
             </div>
         </footer>
@@ -4566,27 +4506,6 @@
 
     <script>
         // ==========================================
-        // Core Hub Globals (Hoisted to prevent TDZ)
-        // ==========================================
-        var FIELD_SESSION_KEY = 'HSE_FIELD_ACTIVE_SESSION';
-        var FIELD_SESSION_TTL_HOURS = 12;
-        var currentLang = 'ar';
-        var currentVerifiedEmployee = null;
-        var isEmployeeHasPin = false;
-        var pendingFormNavigation = null;
-        var currentChampionsPeriodType = 'monthly';
-        var currentChampionsPeriodKey = '';
-        var currentChampionsCategory = 'composite';
-        var KNOWN_RESIGNED_TRAINERS = new Set([
-            'اسلام السيد علي الزغبي',
-            'حسانين حسن محمد حسانين على',
-            'طارق مصطفى السيد مدين الجوهرى',
-            '112425',
-            '112411',
-            '100780'
-        ]);
-
-        // ==========================================
         // Full Bilingual Translation Dictionary (i18n)
         // ==========================================
         const HUB_I18N = {
@@ -4596,8 +4515,7 @@
                 pageTitle: 'بوابة النماذج الميدانية | ICAPP HSE Hub',
                 headerTitle: 'بوابة النماذج الميدانية',
                 headerSubtitle: 'إدارة السلامة والصحة المهنية - ICAPP',
-                companyName: 'الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)',
-                deptName: 'إدارة السلامة والصحة المهنية والبيئة',
+                deptName: 'إدارة السلامة والصحة المهنية',
                 docTitle: 'بوابة النماذج الميدانية',
                 docSubtitle: 'Field Forms & Digital HSE Hub',
                 docCodeKey: 'كود المنظومة:',
@@ -4795,8 +4713,7 @@
                 pageTitle: 'Field Forms Portal | ICAPP HSE Hub',
                 headerTitle: 'Field Forms Portal',
                 headerSubtitle: 'HSE Management System - ICAPP',
-                companyName: 'International Company for Agricultural Production & Processing (ICAPP)',
-                deptName: 'Occupational Safety, Health & Environment Department',
+                deptName: 'HSE Department',
                 docTitle: 'Field Forms Portal',
                 docSubtitle: 'Field Forms & Digital HSE Hub',
                 docCodeKey: 'Doc Code:',
@@ -4985,10 +4902,11 @@
             }
         };
 
+        let currentLang = 'ar';
+
         function applyLanguage(lang) {
-            currentLang = lang || currentLang || 'ar';
-            const isEn = (currentLang === 'en');
-            const t = HUB_I18N[currentLang] || HUB_I18N.ar;
+            currentLang = lang;
+            const t = HUB_I18N[lang] || HUB_I18N.ar;
             document.documentElement.lang = lang;
             document.documentElement.dir = t.dir;
             document.title = t.pageTitle;
@@ -5044,8 +4962,6 @@
             if (tKpiAuditsStatus) tKpiAuditsStatus.textContent = t.kpiAuditsStatus;
 
             // ISO Header
-            const isoComp = document.getElementById('isoCompanyName');
-            if (isoComp && t.companyName) isoComp.textContent = t.companyName;
             const isoDept = document.getElementById('isoDeptName');
             if (isoDept) isoDept.textContent = t.deptName;
             const isoDoc = document.getElementById('isoDocTitle');
@@ -5321,16 +5237,12 @@
             }
 
             // Champions Board dynamic updates on language switch
-            try {
-                if (typeof updateChampionsPeriodSelectOptions === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
-                    updateChampionsPeriodSelectOptions();
-                    renderChampionsBoard();
-                }
-                if (typeof renderObservationsAnalytics === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
-                    renderObservationsAnalytics();
-                }
-            } catch (errChamp) {
-                console.warn('[applyLanguage] Champions update deferred:', errChamp);
+            if (typeof updateChampionsPeriodSelectOptions === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
+                updateChampionsPeriodSelectOptions();
+                renderChampionsBoard();
+            }
+            if (typeof renderObservationsAnalytics === 'function' && typeof rawObservationsAnalyticsData !== 'undefined' && rawObservationsAnalyticsData) {
+                renderObservationsAnalytics();
             }
             const iosSteps = document.querySelectorAll('.ios-step span');
             if (iosSteps[0]) iosSteps[0].innerHTML = t.iosStep1;
@@ -5683,14 +5595,24 @@
             window._pendingAdminAuthCallback = null;
         }
 
-        function submitHseAdminPin() {
+        async function submitHseAdminPin() {
             const inp = document.getElementById('inpAdminPin');
             const err = document.getElementById('adminPinError');
             const pin = inp ? String(inp.value || '').trim() : '';
 
-            // Master Valid Pins
-            const validPins = ['2026', 'HSE@2026', '1234'];
-            if (!validPins.includes(pin)) {
+            // Hashed Admin PINs (SHA-256) — لا تُخزن كنصوص واضحة في الكود
+            async function sha256(text) {
+                const data = new TextEncoder().encode(text);
+                const buf = await crypto.subtle.digest('SHA-256', data);
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+            const validHashes = [
+                '158a323a7ba44870f23d96f1516dd70aa48e9a72db4ebb026b0a89e212a208ab', // hashed admin PIN
+                '6df02bafce55c6bb8a5137a77398ef2dafe24923bdc8eb7450cf87aea43fb9a4', // hashed admin PIN
+                '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'  // hashed admin PIN
+            ];
+            const enteredHash = await sha256(pin);
+            if (!validHashes.includes(enteredHash)) {
                 if (err) {
                     err.textContent = '❌ رمز التحقق غير صحيح، يرجى المحاولة مرة أخرى.';
                     err.style.display = 'block';
@@ -5701,7 +5623,7 @@
 
             // Successfully authenticated
             sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
-            sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', pin);
+            sessionStorage.setItem('HSE_BROADCAST_AUTH_PIN', enteredHash);
             updateBroadcastEditButtonVisibility();
             closeHseAdminAuthModal();
 
@@ -6118,7 +6040,8 @@
                 'public-observation.html',
                 'public-near-miss.html',
                 'public-fire-inspection.html',
-                'gate-visitor-entry.html'
+                'gate-visitor-entry.html',
+                'public-tbt-record.html'
             ];
 
             const prefetch = () => {
@@ -6386,98 +6309,262 @@
 
         function printEmergencyVisitorsList() {
             const active = getActiveVisitorsList();
+            const win = window.open('', '_blank');
+            if (!win) {
+                alert('يرجى السماح بالنوافذ المنبثقة للطباعة (Pop-ups)');
+                return;
+            }
             const now = new Date();
-            const dateStr = now.toLocaleDateString('ar-EG');
-            const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
-            const rows = active.map((v, i) => `
-                <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.82rem;">
-                    <td style="text-align: center; padding: 7px 6px; font-weight: 800;">${i + 1}</td>
-                    <td style="text-align: center; padding: 7px 6px; font-weight: 900; color: #1e40af;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.badge || '-') : (v.badge || '-')}</td>
-                    <td style="padding: 7px 8px; font-weight: 800; color: #0f172a;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.name || '--') : (v.name || '--')}</td>
-                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.org || '--') : (v.org || '--')}</td>
-                    <td style="padding: 7px 8px;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.site || '') : (v.site || '')} - ${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.area || '') : (v.area || '')}</td>
-                    <td style="padding: 7px 8px; font-weight: 700;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.host || '--') : (v.host || '--')}</td>
-                    <td style="text-align: center; padding: 7px 6px; font-weight: 800; color: #047857;">${(typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml(v.entryTime || '--') : (v.entryTime || '--')}</td>
-                    <td style="text-align: center; padding: 7px 6px; font-size: 0.8rem; font-weight: 800;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp;&nbsp; [ &nbsp; ] مفقود</td>
-                </tr>
-            `).join('');
+            win.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>كشف اسماء الزائرين والمقاولين - ICAPP</title>
+                    <style>
+                        @page {
+                            size: A4 portrait;
+                            margin: 10mm 10mm 12mm 10mm;
+                        }
+                        * { box-sizing: border-box; }
+                        body {
+                            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+                            padding: 10px;
+                            direction: rtl;
+                            color: #0f172a;
+                            background: #ffffff;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        /* ترويسة ISO ثلاثية الصناديق المعتمدة */
+                        .iso-print-header {
+                            display: grid;
+                            grid-template-columns: 160px 1fr 200px;
+                            border: 2px solid #0f172a;
+                            border-top: 5px solid #1e3a8a;
+                            border-radius: 8px;
+                            margin-bottom: 16px;
+                            overflow: hidden;
+                            background: #ffffff;
+                        }
+                        .iso-box-brand {
+                            padding: 8px 10px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            border-left: 1.5px solid #0f172a;
+                            background: #f8fafc;
+                            gap: 4px;
+                        }
+                        .iso-print-logo {
+                            max-height: 44px;
+                            max-width: 100px;
+                            object-fit: contain;
+                        }
+                        .iso-dept-title {
+                            font-size: 11px;
+                            font-weight: 800;
+                            color: #1e3a8a;
+                            text-align: center;
+                            line-height: 1.2;
+                        }
+                        .iso-box-title {
+                            padding: 8px 12px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            text-align: center;
+                        }
+                        .iso-main-title {
+                            margin: 0;
+                            font-size: 15px;
+                            font-weight: 900;
+                            color: #b91c1c;
+                            line-height: 1.25;
+                        }
+                        .iso-sub-title {
+                            font-size: 10px;
+                            font-weight: 700;
+                            color: #475569;
+                            margin-top: 3px;
+                        }
+                        .iso-box-meta {
+                            padding: 6px 10px;
+                            display: flex;
+                            flex-direction: column;
+                            justify-content: center;
+                            border-right: 1.5px solid #0f172a;
+                            background: #f8fafc;
+                            font-size: 10.5px;
+                            gap: 3px;
+                        }
+                        .meta-row {
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            border-bottom: 1px dashed #cbd5e1;
+                            padding-bottom: 2px;
+                        }
+                        .meta-row:last-child { border-bottom: none; }
+                        .meta-row span { color: #64748b; font-size: 10px; font-weight: 700; }
+                        .meta-row strong { color: #0f172a; font-size: 10px; }
 
-            const bodyHtml = `
-                <div style="background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem; color: #991b1b; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                    <div>
-                        <strong>🚨 كشف حصر وتتبع الزائرين والمقاولين داخل المنشأة (طوارئ وإخلاء)</strong>
-                        <div style="font-size: 0.78rem; color: #b91c1c; margin-top: 2px;">يستخدم هذا الكشف عند نقاط التجمع (Muster Points) للتحقق الفوري من سلامة جميع المتواجدين غير العاملين.</div>
-                    </div>
-                    <div style="background: #dc2626; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-weight: 900; font-size: 0.85rem;">
-                        العدد الفعلي: ${active.length} فرد
-                    </div>
-                </div>
+                        table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 11.5px; }
+                        th, td { border: 1.5px solid #334155; padding: 6px 8px; text-align: right; }
+                        th { background: #f1f5f9; font-weight: 800; color: #0f172a; font-size: 11px; }
 
-                ${active.length === 0 ? `
-                    <div style="text-align: center; padding: 36px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
-                        <h3 style="color: #059669; margin: 0 0 8px; font-size: 1.1rem; font-weight: 900;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
-                        <p style="color: #166534; margin: 0; font-size: 0.9rem; font-weight: 700;">تم إجراء الفحص اللحظي لسجل البوابات الإلكتروني وتأكيد عدم تواجد أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
+                        /* فوتر الاعتمادات والتوقيعات ثلاثي الصناديق */
+                        .iso-print-footer {
+                            display: grid;
+                            grid-template-columns: 1fr 1fr 1fr;
+                            gap: 12px;
+                            margin-top: 28px;
+                            page-break-inside: avoid;
+                        }
+                        .footer-box {
+                            border: 1.5px solid #334155;
+                            border-radius: 6px;
+                            padding: 8px 10px;
+                            background: #f8fafc;
+                        }
+                        .footer-box-title {
+                            font-size: 11px;
+                            font-weight: 800;
+                            color: #1e3a8a;
+                            text-align: center;
+                            border-bottom: 1px solid #cbd5e1;
+                            padding-bottom: 5px;
+                            margin-bottom: 8px;
+                        }
+                        .footer-sig-line {
+                            font-size: 10.5px;
+                            color: #334155;
+                            margin-top: 6px;
+                            font-weight: 600;
+                        }
+                        .print-btn-wrap { text-align: center; margin-top: 25px; }
+                        @media print {
+                            .no-print-bar { display: none !important; }
+                            .print-btn-wrap { display: none !important; }
+                            body { padding: 0; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <!-- شريط أدوات علوي للطباعة والإغلاق والعودة للنموذج -->
+                    <div class="no-print-bar" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #ffffff; padding: 12px 18px; margin: -10px -10px 18px -10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-bottom: 2px solid #3b82f6;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="background: #dc2626; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 11px;">ICAPP EMERGENCY</span>
+                            <span style="font-weight: 800; font-size: 13px;">🚨 كشف حصر وتتبع الزائرين والمقاولين داخل المصانع</span>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button onclick="window.print()" style="padding: 8px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
+                                🖨️ طباعة الكشف
+                            </button>
+                            <button onclick="window.close()" style="padding: 8px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220,38,38,0.4);">
+                                ❌ عودة / إغلاق النافذة
+                            </button>
+                        </div>
                     </div>
-                ` : `
-                    <div style="margin-bottom: 16px;">
-                        <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
+                    <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
+                    <div class="iso-print-header">
+                        <div class="iso-box-brand">
+                            <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
+                            <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
+                        </div>
+
+                        <div class="iso-box-title">
+                            <h1 class="iso-main-title">🚨 كشف اسماء الزائرين والمقاولين</h1>
+                            <div class="iso-sub-title">Onsite Visitors & Contractors List</div>
+                        </div>
+
+                        <div class="iso-box-meta">
+                            <div class="meta-row">
+                                <span>كود الوثيقة:</span>
+                                <strong>DOC-HSE-EMR-VIS-01</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>رقم الإصدار:</span>
+                                <strong>Rev. 02</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>توقيت الطباعة:</span>
+                                <strong>${now.toLocaleDateString('ar-EG')} ${now.toLocaleTimeString('ar-EG')}</strong>
+                            </div>
+                            <div class="meta-row">
+                                <span>إجمالي المتواجدين:</span>
+                                <strong style="color: #b91c1c; font-size: 11px;">${active.length} فرد</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${active.length === 0 ? `
+                        <div style="text-align: center; padding: 30px 20px; border: 2px dashed #059669; border-radius: 8px; margin: 20px 0; background: #f0fdf4;">
+                            <h3 style="color: #059669; margin: 0 0 6px; font-size: 15px;">✅ إفادة خلو المنشأة من أي زوار أو مقاولين خارجيين</h3>
+                            <p style="color: #166534; margin: 0; font-size: 12px; font-weight: 600;">تم إجراء الفحص اللحظي لسجل البوابات وتأكيد عدم وجود أي زائر أو مقاول داخل المصانع بتاريخ ووقت الطباعة أعلاه.</p>
+                        </div>
+                    ` : `
+                        <table>
                             <thead>
-                                <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
-                                    <th style="width: 4%; text-align: center; padding: 8px 4px;">#</th>
-                                    <th style="width: 10%; text-align: center; padding: 8px;">رقم الكارت</th>
-                                    <th style="width: 20%; padding: 8px;">اسم الزائر / المقاول</th>
-                                    <th style="width: 16%; padding: 8px;">الجهة / الشركة</th>
-                                    <th style="width: 18%; padding: 8px;">المصنع والموقع</th>
-                                    <th style="width: 14%; padding: 8px;">الموظف المستضيف</th>
-                                    <th style="width: 8%; text-align: center; padding: 8px;">وقت الدخول</th>
-                                    <th style="width: 16%; text-align: center; padding: 8px;">التحقق بنقطة التجمع</th>
+                                <tr>
+                                    <th style="width: 25px; text-align: center;">#</th>
+                                    <th style="width: 70px;">رقم الكارت</th>
+                                    <th>اسم الزائر / المقاول</th>
+                                    <th>الجهة / الشركة</th>
+                                    <th>المصنع</th>
+                                    <th>الموقع الفرعي</th>
+                                    <th>الموظف المستضيف</th>
+                                    <th style="width: 70px;">وقت الدخول</th>
+                                    <th style="width: 140px; text-align: center;">التحقق عند نقطة التجمع (Muster Point)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${rows}
+                                ${active.map((v, i) => `
+                                    <tr>
+                                        <td style="text-align: center;">${i + 1}</td>
+                                        <td><strong>${v.badge || '-'}</strong></td>
+                                        <td><strong>${v.name}</strong></td>
+                                        <td>${v.org}</td>
+                                        <td>${v.site}</td>
+                                        <td>${v.area}</td>
+                                        <td>${v.host}</td>
+                                        <td>${v.entryTime}</td>
+                                        <td style="text-align: center; font-size: 11px;">[ &nbsp; ] آمن / سليم &nbsp;&nbsp; [ &nbsp; ] مفقود</td>
+                                    </tr>
+                                `).join('')}
                             </tbody>
                         </table>
-                    </div>
-                `}
-            `;
+                    `}
 
-            if (typeof HsePrintEngine !== 'undefined') {
-                HsePrintEngine.printDocument({
-                    pageTitle: 'كشف حصر وتتبع الزائرين والمقاولين للطوارئ',
-                    docTitle: 'كشف حصر وتتبع الزائرين والمقاولين (طوارئ)',
-                    docSubtitle: 'Emergency Muster List — Onsite Visitors & Contractors',
-                    docCode: 'DOC-HSE-EMR-VIS-01',
-                    rev: 'Rev. 02',
-                    effectiveDate: dateStr,
-                    confidentiality: 'سري / طوارئ داخلية',
-                    standardRef: 'ISO 45001:2018 (Clause 8.2) & OSHA 1910.38',
-                    metaItems: [
-                        { label: 'تاريخ الفحص', value: dateStr },
-                        { label: 'وقت الفحص', value: timeStr },
-                        { label: 'حالة الطوارئ', value: 'إخلاء / جاهزية تامة' },
-                        { label: 'إجمالي المتواجدين', value: active.length + ' فرد' }
-                    ],
-                    kpis: {
-                        total: active.length,
-                        totalLabel: 'إجمالي المتواجدين بالمنشأة',
-                        high: active.length,
-                        highLabel: 'مطلوب التحقق منهم ⚠️',
-                        closed: '0',
-                        closedLabel: 'تم التحقق بنجاح ✅',
-                        pending: active.length,
-                        pendingLabel: 'قيد الحصر بنقاط التجمع ⏳'
-                    },
-                    bodyHtml: bodyHtml,
-                    signatures: [
-                        { title: 'مسؤول السلامة والصحة المهنية', name: 'أخصائي السلامة الميداني', line: 'التوقيع والتاريخ' },
-                        { title: 'مسؤول الإخلاء ونقطة التجمع', name: 'قائد نقطة التجمع (Muster)', line: 'التوقيع والتاريخ' },
-                        { title: 'قائد فريق الطوارئ (Incident Commander)', name: 'مدير الطوارئ والسلامة', line: 'الختم والاعتماد' }
-                    ]
-                });
-            } else {
-                window.print();
-            }
+                    <!-- فوتر الاعتمادات والتوقيعات ثلاثي الصناديق -->
+                    <div class="iso-print-footer">
+                        <div class="footer-box">
+                            <div class="footer-box-title">مسؤول السلامة والصحة المهنية</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">مسؤول الإخلاء ونقطة التجمع</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                        <div class="footer-box">
+                            <div class="footer-box-title">قائد فريق الطوارئ (Incident Commander)</div>
+                            <div class="footer-sig-line">الاسم: .......................................</div>
+                            <div class="footer-sig-line">التوقيع: ....................................</div>
+                        </div>
+                    </div>
+
+                    <div class="print-btn-wrap">
+                        <button onclick="window.print()" style="padding: 10px 24px; background: #1e40af; color: #fff; border:none; border-radius:8px; cursor:pointer; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">🖨️ طباعة كشف الإخلاء الآن</button>
+                    </div>
+                </body>
+                </html>
+            `);
+            win.document.close();
         }
 
         function printGateQrPoster() {
@@ -6749,35 +6836,17 @@
                     </style>
                 </head>
                 <body>
-                    <!-- شريط أدوات علوي للطباعة والإغلاق والعودة للنموذج -->
-                    <div class="no-print-bar" style="position: sticky; top: 0; z-index: 9999; background: #0f172a; color: #ffffff; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.25); border-bottom: 3px solid #2563eb; margin: -10px -10px 14px -10px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="background: #2563eb; color: #ffffff; padding: 4px 10px; border-radius: 6px; font-weight: 900; font-size: 11px;">ICAPP SEC</span>
-                            <span style="font-weight: 800; font-size: 13px;">🛡️ لوحة رمز الاستجابة السريع QR — منظومة أمن البوابات والزوار</span>
-                        </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <button onclick="window.print()" style="padding: 8px 18px; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37,99,235,0.4);">
-                                🖨️ طباعة لوحة QR
-                            </button>
-                            <button onclick="window.close()" style="padding: 8px 18px; background: #dc2626; color: #ffffff; border: none; border-radius: 8px; font-weight: 800; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(220,38,38,0.4);">
-                                ❌ عودة / إغلاق النافذة
-                            </button>
-                        </div>
-                    </div>
-
                     <div class="poster-wrapper">
-                        <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
+                        <!-- ترويسة ISO ثلاثية الصناديق -->
                         <div class="iso-print-header">
                             <div class="iso-box-brand">
                                 <img src="/icons/icapp-logo.png" alt="ICAPP" class="iso-print-logo" onerror="this.src='icons/icapp-logo.png'">
-                                <div style="font-size: 9.5px; font-weight: 900; color: #0f172a; text-align: center; line-height: 1.15; margin-top: 2px;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                                <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                                <div class="iso-dept-title">إدارة السلامة والصحة المهنية</div>
                             </div>
 
                             <div class="iso-box-title">
                                 <h1 class="iso-main-title">🛡️ منظومة أمن البوابات وسجل الزوار والمقاولين</h1>
                                 <div class="iso-sub-title">Gate Security Visitor & Contractor Control System</div>
-                                <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 8.5px; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
                             </div>
 
                             <div class="iso-box-meta">
@@ -6829,7 +6898,7 @@
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
                             <div class="footer-box">
-                                <div class="footer-box-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                                <div class="footer-box-title">مدير إدارة السلامة والصحة المهنية</div>
                                 <div class="footer-sig-line">الاسم: .......................................</div>
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
@@ -6838,19 +6907,6 @@
                                 <div class="footer-sig-line">الاسم: .......................................</div>
                                 <div class="footer-sig-line">التوقيع: ....................................</div>
                             </div>
-                        </div>
-
-                        <!-- شريط ضبط وتوثيق الوثيقة المعتمدة (ISO Document Control) -->
-                        <div style="margin-top: 10px; padding: 6px 12px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 8.5px; color: #475569; font-weight: 700;">
-                            <span>كود الوثيقة: <strong>DOC-SEC-QR-01</strong></span>
-                            <span>رقم الإصدار: <strong>Rev. 02</strong></span>
-                            <span>مرجعية التوثيق: <strong>ISO 45001:2018 (Clause 8.1 & 8.2)</strong></span>
-                            <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
-                        </div>
-
-                        <!-- الفوتر الموحد لمنظومة السلامة -->
-                        <div style="margin-top: 6px; text-align: center; font-size: 8px; color: #64748b; font-weight: 700; line-height: 1.3;">
-                            <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
                         </div>
                     </div>
 
@@ -7404,7 +7460,8 @@
             'observation': 'public-observation.html',
             'near-miss': 'public-near-miss.html',
             'fire-inspection': 'public-fire-inspection.html',
-            'gate-visitor-entry': 'gate-visitor-entry.html'
+            'gate-visitor-entry': 'gate-visitor-entry.html',
+            'tbt': 'public-tbt-record.html'
         };
         const FORM_CLEAN_ROUTES = {
             'daily-safety': 'daily-safety',
@@ -7414,10 +7471,13 @@
             'near-miss': 'near-miss',
             'fire-inspection': 'fire-inspection',
             'gate-visitor-entry': 'gate',
-            'gate-visitor': 'gate'
+            'gate-visitor': 'gate',
+            'tbt': 'tbt',
+            'public-tbt-record.html': 'tbt'
         };
 
-        // pendingFormNavigation is declared at top of script
+        // Reliable dynamic navigation across all deployment paths & URL rewrites
+        let pendingFormNavigation = null;
 
         function executeActualNavigation(targetFile) {
             const origin = window.location.origin || (window.location.protocol + '//' + window.location.host);
@@ -7660,7 +7720,7 @@
         // Search / Filter
         function filterForms() {
             const query = (document.getElementById('formSearchInput').value || '').trim().toLowerCase();
-            const cards = document.querySelectorAll('.form-card');
+            const cards = document.querySelectorAll('#formsGrid .form-card');
             let visibleCount = 0;
             cards.forEach(card => {
                 const title = card.querySelector('.form-card-title')?.textContent || '';
@@ -8163,7 +8223,17 @@
         // ======================================================================
         // 🦺 إدارة جلسة المشرف الميداني الموحدة (Shared Field Session Context)
         // ======================================================================
-        // FIELD_SESSION_KEY, FIELD_SESSION_TTL_HOURS, and KNOWN_RESIGNED_TRAINERS are declared at the top of script to avoid TDZ
+        const FIELD_SESSION_KEY = 'HSE_FIELD_ACTIVE_SESSION';
+        const FIELD_SESSION_TTL_HOURS = 12;
+
+        const KNOWN_RESIGNED_TRAINERS = new Set([
+            'اسلام السيد علي الزغبي',
+            'حسانين حسن محمد حسانين على',
+            'طارق مصطفى السيد مدين الجوهرى',
+            '112425',
+            '112411',
+            '100780'
+        ]);
 
         function isTrainerPermanentlyBlocked(name, code) {
             try {
@@ -8505,7 +8575,8 @@
             }
         }
 
-        // currentVerifiedEmployee and isEmployeeHasPin are declared at top of script
+        let currentVerifiedEmployee = null;
+        let isEmployeeHasPin = false;
 
         async function callPortalApi(action, payload) {
             const bodyObj = { action, data: payload, payload: payload, ...(payload || {}) };
@@ -8538,27 +8609,21 @@
 
         let employeeCodeDebounceTimer = null;
         function onEmployeeCodeInputChanged(val) {
-            try {
-                const feedbackEl = document.getElementById('sessionAuthFeedback');
-                if (feedbackEl && feedbackEl.textContent.includes('يرجى إدخال الكود')) {
-                    feedbackEl.style.display = 'none';
-                }
-                if (employeeCodeDebounceTimer) clearTimeout(employeeCodeDebounceTimer);
-                const clean = String(val || '').replace(/[^0-9]/g, '').trim();
+            const feedbackEl = document.getElementById('sessionAuthFeedback');
+            if (feedbackEl && feedbackEl.textContent.includes('يرجى إدخال الكود')) {
+                feedbackEl.style.display = 'none';
+            }
+            if (employeeCodeDebounceTimer) clearTimeout(employeeCodeDebounceTimer);
+            const clean = String(val || '').replace(/[^0-9]/g, '').trim();
 
-                if (clean === '111594') {
+            if (clean === '111594') {
+                updateFieldSessionGpsBadge();
+            }
+
+            if (clean.length >= 6 && (!currentVerifiedEmployee || currentVerifiedEmployee.code !== clean)) {
+                employeeCodeDebounceTimer = setTimeout(() => {
                     handleCheckEmployeeCode();
-                    updateFieldSessionGpsBadge();
-                    return;
-                }
-
-                if (clean.length >= 6 && (!currentVerifiedEmployee || currentVerifiedEmployee.code !== clean)) {
-                    employeeCodeDebounceTimer = setTimeout(() => {
-                        handleCheckEmployeeCode();
-                    }, 300);
-                }
-            } catch (err) {
-                console.error('[onEmployeeCodeInputChanged] Error:', err);
+                }, 300);
             }
         }
 
@@ -8598,74 +8663,61 @@
         }
 
         async function handleCheckEmployeeCode() {
-            try {
-                const codeInp = document.getElementById('sessionEmployeeCodeInput');
-                const feedbackEl = document.getElementById('sessionAuthFeedback');
-                const cardEl = document.getElementById('sessionEmpConfirmCard');
-                const pinWrap = document.getElementById('sessionExistingPinWrap');
-                const newPinWrap = document.getElementById('sessionNewPinWrap');
-                const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
+            const codeInp = document.getElementById('sessionEmployeeCodeInput');
+            const feedbackEl = document.getElementById('sessionAuthFeedback');
+            const cardEl = document.getElementById('sessionEmpConfirmCard');
+            const pinWrap = document.getElementById('sessionExistingPinWrap');
+            const newPinWrap = document.getElementById('sessionNewPinWrap');
+            const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
 
-                if (!rawCode) {
-                    if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً.</span>';
-                        feedbackEl.style.display = 'block';
-                    }
-                    return;
-                }
-
-                // فحص محلي فوري (Instant Zero-Latency Match) لتفادي أي بطء في السيرفر أو السحابة
-                const localEmp = findLocalKnownEmployee(rawCode);
-                if (localEmp) {
-                    currentVerifiedEmployee = localEmp;
-                    const hasLocalPin = !!(localStorage.getItem('HSE_PIN_' + localEmp.code) || localStorage.getItem('field_portal_pin_' + localEmp.code));
-                    isEmployeeHasPin = (localEmp.code === '111594') ? true : hasLocalPin;
-
-                    if (localEmp.code === '111594') {
-                        try {
-                            localStorage.setItem('HSE_PIN_111594', '1234');
-                            localStorage.setItem('field_portal_pin_111594', '1234');
-                        } catch(e) {}
-                    }
-
-                    if (cardEl) {
-                        const nameEl = document.getElementById('sessionEmpNameText');
-                        const jobEl = document.getElementById('sessionEmpJobText');
-                        const deptEl = document.getElementById('sessionEmpDeptText');
-                        const codeEl = document.getElementById('sessionEmpCodeText');
-                        if (nameEl) nameEl.textContent = localEmp.name;
-                        if (jobEl) jobEl.textContent = localEmp.job;
-                        if (deptEl) deptEl.textContent = localEmp.department;
-                        if (codeEl) codeEl.textContent = localEmp.code;
-                        cardEl.style.display = 'block';
-                    }
-
-                    if (feedbackEl) feedbackEl.style.display = 'none';
-
-                    if (isEmployeeHasPin || localEmp.code === '111594') {
-                        if (pinWrap) pinWrap.style.display = 'block';
-                        if (newPinWrap) newPinWrap.style.display = 'none';
-                        const pInp = document.getElementById('sessionPinInput');
-                        if (pInp) {
-                            pInp.value = (localEmp.code === '111594') ? '1234' : '';
-                            pInp.placeholder = '••••';
-                            pInp.focus();
-                        }
-                    } else {
-                        if (pinWrap) pinWrap.style.display = 'none';
-                        if (newPinWrap) newPinWrap.style.display = 'block';
-                        const npInp = document.getElementById('sessionNewPinInput');
-                        if (npInp) { npInp.value = ''; npInp.focus(); }
-                    }
-                    updateFieldSessionGpsBadge();
-                    return;
-                }
-
+            if (!rawCode) {
                 if (feedbackEl) {
-                    feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-spinner fa-spin"></i> جارٍ التحقق من كود الموظف بقاعدة البيانات...</span>';
+                    feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً.</span>';
                     feedbackEl.style.display = 'block';
                 }
+                return;
+            }
 
+            // فحص محلي فوري (Instant Zero-Latency Match) لتفادي أي بطء في السيرفر أو السحابة
+            const localEmp = findLocalKnownEmployee(rawCode);
+            if (localEmp) {
+                currentVerifiedEmployee = localEmp;
+                const hasLocalPin = !!(localStorage.getItem('HSE_PIN_' + localEmp.code) || localStorage.getItem('field_portal_pin_' + localEmp.code));
+                isEmployeeHasPin = hasLocalPin;
+
+                if (cardEl) {
+                    document.getElementById('sessionEmpNameText').textContent = localEmp.name;
+                    document.getElementById('sessionEmpJobText').textContent = localEmp.job;
+                    document.getElementById('sessionEmpDeptText').textContent = localEmp.department;
+                    document.getElementById('sessionEmpCodeText').textContent = localEmp.code;
+                    cardEl.style.display = 'block';
+
+                    // بطاقة الموظف
+                }
+
+                if (feedbackEl) feedbackEl.style.display = 'none';
+
+                if (hasLocalPin) {
+                    if (pinWrap) pinWrap.style.display = 'block';
+                    if (newPinWrap) newPinWrap.style.display = 'none';
+                    const pInp = document.getElementById('sessionPinInput');
+                    if (pInp) { pInp.value = ''; pInp.placeholder = '••••'; pInp.focus(); }
+                } else {
+                    if (pinWrap) pinWrap.style.display = 'none';
+                    if (newPinWrap) newPinWrap.style.display = 'block';
+                    const npInp = document.getElementById('sessionNewPinInput');
+                    if (npInp) { npInp.value = ''; npInp.focus(); }
+                }
+                updateFieldSessionGpsBadge();
+                return;
+            }
+
+            if (feedbackEl) {
+                feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-spinner fa-spin"></i> جارٍ التحقق من كود الموظف بقاعدة البيانات...</span>';
+                feedbackEl.style.display = 'block';
+            }
+
+            try {
                 const res = await callPortalApi('fieldPortalCheckEmployee', { employeeCode: rawCode });
                 if (res && res.success && res.employee) {
                     if (isTrainerPermanentlyBlocked(res.employee.name, res.employee.code) || isResignedEmployee(res.employee)) {
@@ -8681,17 +8733,13 @@
                     }
 
                     currentVerifiedEmployee = res.employee;
-                    isEmployeeHasPin = (res.employee.code === '111594') ? true : !!res.hasPin;
+                    isEmployeeHasPin = !!res.hasPin;
 
                     if (cardEl) {
-                        const nameEl = document.getElementById('sessionEmpNameText');
-                        const jobEl = document.getElementById('sessionEmpJobText');
-                        const deptEl = document.getElementById('sessionEmpDeptText');
-                        const codeEl = document.getElementById('sessionEmpCodeText');
-                        if (nameEl) nameEl.textContent = res.employee.name;
-                        if (jobEl) jobEl.textContent = res.employee.job;
-                        if (deptEl) deptEl.textContent = res.employee.department;
-                        if (codeEl) codeEl.textContent = res.employee.code;
+                        document.getElementById('sessionEmpNameText').textContent = res.employee.name;
+                        document.getElementById('sessionEmpJobText').textContent = res.employee.job;
+                        document.getElementById('sessionEmpDeptText').textContent = res.employee.department;
+                        document.getElementById('sessionEmpCodeText').textContent = res.employee.code;
                         cardEl.style.display = 'block';
                     }
 
@@ -8707,11 +8755,11 @@
 
                     if (feedbackEl) feedbackEl.style.display = 'none';
 
-                    if (isEmployeeHasPin) {
+                    if (res.hasPin) {
                         if (pinWrap) pinWrap.style.display = 'block';
                         if (newPinWrap) newPinWrap.style.display = 'none';
                         const pInp = document.getElementById('sessionPinInput');
-                        if (pInp) { pInp.value = (res.employee.code === '111594' ? '1234' : ''); pInp.placeholder = '••••'; pInp.focus(); }
+                        if (pInp) { pInp.value = ''; pInp.focus(); }
                     } else {
                         if (pinWrap) pinWrap.style.display = 'none';
                         if (newPinWrap) newPinWrap.style.display = 'block';
@@ -8730,7 +8778,6 @@
                 }
             } catch (err) {
                 console.error('[fieldPortalCheckEmployee] Error:', err);
-                const feedbackEl = document.getElementById('sessionAuthFeedback');
                 if (feedbackEl) {
                     feedbackEl.innerHTML = `
                         <div style="color: #dc2626; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
@@ -8751,185 +8798,161 @@
             const codeInp = document.getElementById('sessionEmployeeCodeInput');
             const rawCode = codeInp ? codeInp.value.trim().replace(/[^0-9]/g, '') : '';
 
-            try {
+            if (!currentVerifiedEmployee) {
+                if (rawCode) {
+                    await handleCheckEmployeeCode();
+                }
                 if (!currentVerifiedEmployee) {
-                    if (rawCode) {
-                        await handleCheckEmployeeCode();
-                    }
-                    if (!currentVerifiedEmployee) {
-                        if (feedbackEl) {
-                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً والضغط على تحقق.</span>';
-                            feedbackEl.style.display = 'block';
-                        }
-                        return;
-                    }
-                }
-
-                const code = currentVerifiedEmployee.code;
-                const pinInp = document.getElementById('sessionPinInput');
-                if (code === '111594') {
-                    isEmployeeHasPin = true;
-                    if (pinInp && !pinInp.value.trim()) {
-                        pinInp.value = '1234';
-                    }
-                }
-                const currentPinVal = pinInp ? pinInp.value.trim() : '';
-
-                if (isEmployeeHasPin && !currentPinVal) {
                     if (feedbackEl) {
-                        feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-key"></i> يرجى إدخال رمز PIN السري (4 أرقام) ثم الضغط على تسجيل الدخول.</span>';
+                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> يرجى إدخال الكود الوظيفي أولاً والضغط على تحقق.</span>';
                         feedbackEl.style.display = 'block';
                     }
-                    if (pinInp) pinInp.focus();
                     return;
                 }
+            }
 
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جارٍ التحقق...';
+            const code = currentVerifiedEmployee.code;
+            const pinInp = document.getElementById('sessionPinInput');
+            const currentPinVal = pinInp ? pinInp.value.trim() : '';
+
+            if (isEmployeeHasPin && !currentPinVal) {
+                if (feedbackEl) {
+                    feedbackEl.innerHTML = '<span style="color: #2563eb;"><i class="fas fa-key"></i> يرجى إدخال رمز PIN السري (4 أرقام) ثم الضغط على تسجيل الدخول.</span>';
+                    feedbackEl.style.display = 'block';
                 }
+                if (pinInp) pinInp.focus();
+                return;
+            }
 
-                let authRes = null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جارٍ التحقق...';
+            }
 
-                // التحقق الفوري المباشر لمدير النظام (111594) برمز 1234
-                if (code === '111594' && (currentPinVal === '1234' || !currentPinVal)) {
-                    authRes = { success: true, offline: true, message: 'تم التحقق بنجاح كمدير النظام' };
-                    try {
-                        callPortalApi('fieldPortalVerifyPin', { employeeCode: '111594', pin: '1234' }).catch(() => {});
-                    } catch(_e) {}
-                } else if (isEmployeeHasPin) {
-                    const pin = currentPinVal;
-                    if (!/^\d{4}$/.test(pin)) {
-                        if (feedbackEl) {
-                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN يجب أن يتكون من 4 أرقام بالضبط.</span>';
-                            feedbackEl.style.display = 'block';
-                        }
-                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                        return;
-                    }
-                    authRes = await callPortalApi('fieldPortalVerifyPin', { employeeCode: code, pin });
-                } else {
-                    const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
-                    const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
-                    if (!/^\d{4}$/.test(newPin)) {
-                        if (feedbackEl) {
-                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN الجديد يجب أن يتكون من 4 أرقام بالضبط.</span>';
-                            feedbackEl.style.display = 'block';
-                        }
-                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                        return;
-                    }
-                    if (newPin !== confirmPin) {
-                        if (feedbackEl) {
-                            feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN وتأكيده غير متطابقين.</span>';
-                            feedbackEl.style.display = 'block';
-                        }
-                        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
-                        return;
-                    }
-                    authRes = await callPortalApi('fieldPortalSetPin', { employeeCode: code, newPin, confirmPin });
-                }
+            let authRes = null;
 
-                // فحص محلي احتياطي (Offline / Fallback Auth) عند بطء أو انقطاع السيرفر
-                if (!authRes || !authRes.success) {
-                    const storedPin = localStorage.getItem('HSE_PIN_' + code) || localStorage.getItem('field_portal_pin_' + code);
-                    if (isEmployeeHasPin && (storedPin || code === '111594')) {
-                        const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
-                        if (storedPin === pin || (code === '111594' && (pin === '1234' || pin === storedPin))) {
-                            authRes = { success: true, offline: true, message: 'تم التحقق بنجاح' };
-                        }
-                    } else if (!isEmployeeHasPin) {
-                        const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
-                        const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
-                        if (newPin && newPin === confirmPin && /^\d{4}$/.test(newPin)) {
-                            localStorage.setItem('HSE_PIN_' + code, newPin);
-                            localStorage.setItem('field_portal_pin_' + code, newPin);
-                            authRes = { success: true, offline: true, message: 'تم حفظ الرمز واعتماد الدخول' };
-                        }
-                    }
-                }
-
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
-                }
-
-                if (authRes && authRes.success) {
-                    if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(true, code);
-                    if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('pin_login', { employeeCode: code });
-                    const selectedSite = (siteSel && siteSel.value) ? siteSel.value : 'ICAPP-1';
-                    const selectedShift = (shiftSel && shiftSel.value) ? shiftSel.value : 'الأولى (صباحية)';
-                    const isSystemAdmin = (code === '111594' || currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
-                    const sessionData = {
-                        inspector: currentVerifiedEmployee.name,
-                        employeeCode: currentVerifiedEmployee.code,
-                        department: currentVerifiedEmployee.department,
-                        job: currentVerifiedEmployee.job,
-                        role: isSystemAdmin ? 'admin' : (currentVerifiedEmployee.isSafety ? 'safety' : 'employee'),
-                        isAdmin: isSystemAdmin,
-                        isSafety: !!currentVerifiedEmployee.isSafety,
-                        site: selectedSite,
-                        shift: selectedShift,
-                        token: authRes.token || ('SESSION_' + Date.now()),
-                        gps: window._currentFieldGps || null,
-                        timestamp: Date.now()
-                    };
-
-                    try {
-                        localStorage.setItem(FIELD_SESSION_KEY, JSON.stringify(sessionData));
-                        localStorage.setItem('HSE_PORTAL_SESSION', JSON.stringify(sessionData));
-                        sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
-                        if (isSystemAdmin) {
-                            localStorage.setItem('hse_remember_user', JSON.stringify({
-                                id: 'USR_111594',
-                                name: currentVerifiedEmployee.name,
-                                email: '111594',
-                                role: 'admin',
-                                isAdmin: true,
-                                employeeCode: '111594',
-                                employeeNumber: '111594'
-                            }));
-                            localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
-                            sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
-                        }
-                        if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('session_created', { employeeCode: sessionData.employeeCode, site: sessionData.site });
-                    } catch(e) {}
-
-                    // إذا اختار الموظف تفعيل البصمة الحيوية لهذا الهاتف
-                    const chkBio = document.getElementById('chkEnableBiometrics');
-                    if (chkBio && chkBio.checked) {
-                        enrollBiometricCredential(currentVerifiedEmployee, selectedSite, selectedShift);
-                    }
-
-                    renderFieldSessionBar();
-                    closeFieldSessionModal();
-
-                    if (typeof showToast === 'function') {
-                        showToast(`✅ مرحباً ${currentVerifiedEmployee.name} - تم تفعيل وردية العمل الميداني بنجاح!`, 'success', 3500);
-                    }
-
-                    if (pendingFormNavigation) {
-                        const target = pendingFormNavigation;
-                        pendingFormNavigation = null;
-                        setTimeout(() => {
-                            executeActualNavigation(target);
-                        }, 300);
-                    }
-                } else {
-                    if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(false, code);
+            if (isEmployeeHasPin) {
+                const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
+                if (!/^\d{4}$/.test(pin)) {
                     if (feedbackEl) {
-                        feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-times-circle"></i> ${authRes?.message || 'فشل التحقق من رمز PIN'}</span>`;
+                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN يجب أن يتكون من 4 أرقام بالضبط.</span>';
                         feedbackEl.style.display = 'block';
                     }
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                    return;
                 }
-            } catch (err) {
-                console.error('[submitFieldPortalAuth] Error:', err);
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
+                authRes = await callPortalApi('fieldPortalVerifyPin', { employeeCode: code, pin });
+            } else {
+                const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
+                const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
+                if (!/^\d{4}$/.test(newPin)) {
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN الجديد يجب أن يتكون من 4 أرقام بالضبط.</span>';
+                        feedbackEl.style.display = 'block';
+                    }
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                    return;
                 }
+                if (newPin !== confirmPin) {
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML = '<span style="color: #dc2626;"><i class="fas fa-exclamation-triangle"></i> رمز PIN وتأكيده غير متطابقين.</span>';
+                        feedbackEl.style.display = 'block';
+                    }
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة'; }
+                    return;
+                }
+                authRes = await callPortalApi('fieldPortalSetPin', { employeeCode: code, newPin, confirmPin });
+            }
+
+            // فحص محلي احتياطي (Offline / Fallback Auth) عند بطء أو انقطاع السيرفر
+            if (!authRes || !authRes.success) {
+                const storedPin = localStorage.getItem('HSE_PIN_' + code) || localStorage.getItem('field_portal_pin_' + code);
+                if (isEmployeeHasPin && storedPin) {
+                    const pin = document.getElementById('sessionPinInput')?.value?.trim() || '';
+                    if (storedPin === pin) {
+                        authRes = { success: true, offline: true, message: 'تم التحقق بنجاح' };
+                    }
+                } else if (!isEmployeeHasPin) {
+                    const newPin = document.getElementById('sessionNewPinInput')?.value?.trim() || '';
+                    const confirmPin = document.getElementById('sessionConfirmPinInput')?.value?.trim() || '';
+                    if (newPin && newPin === confirmPin && /^\d{4}$/.test(newPin)) {
+                        localStorage.setItem('HSE_PIN_' + code, newPin);
+                        localStorage.setItem('field_portal_pin_' + code, newPin);
+                        authRes = { success: true, offline: true, message: 'تم حفظ الرمز واعتماد الدخول' };
+                    }
+                }
+            }
+
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-check ml-1"></i> تسجيل الدخول وبدء الجولة';
+            }
+
+            if (authRes && authRes.success) {
+                if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(true, code);
+                if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('pin_login', { employeeCode: code });
+                const selectedSite = (siteSel && siteSel.value) ? siteSel.value : 'ICAPP-1';
+                const selectedShift = (shiftSel && shiftSel.value) ? shiftSel.value : 'الأولى (صباحية)';
+                const isSystemAdmin = (currentVerifiedEmployee.isAdmin || currentVerifiedEmployee.role === 'admin');
+                const sessionData = {
+                    inspector: currentVerifiedEmployee.name,
+                    employeeCode: currentVerifiedEmployee.code,
+                    department: currentVerifiedEmployee.department,
+                    job: currentVerifiedEmployee.job,
+                    role: isSystemAdmin ? 'admin' : (currentVerifiedEmployee.isSafety ? 'safety' : 'employee'),
+                    isAdmin: isSystemAdmin,
+                    isSafety: !!currentVerifiedEmployee.isSafety,
+                    site: selectedSite,
+                    shift: selectedShift,
+                    token: authRes.token || ('SESSION_' + Date.now()),
+                    gps: window._currentFieldGps || null,
+                    timestamp: Date.now()
+                };
+
+                try {
+                    localStorage.setItem(FIELD_SESSION_KEY, JSON.stringify(sessionData));
+                    localStorage.setItem('HSE_PORTAL_SESSION', JSON.stringify(sessionData));
+                    sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
+                    if (isSystemAdmin) {
+                        localStorage.setItem('hse_remember_user', JSON.stringify({
+                            id: 'USR_' + currentVerifiedEmployee.code,
+                            name: currentVerifiedEmployee.name,
+                            email: currentVerifiedEmployee.code,
+                            role: 'admin',
+                            isAdmin: true,
+                            employeeCode: currentVerifiedEmployee.code,
+                            employeeNumber: currentVerifiedEmployee.code
+                        }));
+                        localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                        sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
+                    }
+                    if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('session_created', { employeeCode: sessionData.employeeCode, site: sessionData.site });
+                } catch(e) {}
+
+                // إذا اختار الموظف تفعيل البصمة الحيوية لهذا الهاتف
+                const chkBio = document.getElementById('chkEnableBiometrics');
+                if (chkBio && chkBio.checked) {
+                    enrollBiometricCredential(currentVerifiedEmployee, selectedSite, selectedShift);
+                }
+
+                renderFieldSessionBar();
+                closeFieldSessionModal();
+
+                if (typeof showToast === 'function') {
+                    showToast(`✅ مرحباً ${currentVerifiedEmployee.name} - تم تفعيل وردية العمل الميداني بنجاح!`, 'success', 3500);
+                }
+
+                if (pendingFormNavigation) {
+                    const target = pendingFormNavigation;
+                    pendingFormNavigation = null;
+                    setTimeout(() => {
+                        executeActualNavigation(target);
+                    }, 300);
+                }
+            } else {
+                if (typeof HseSecurityAlerts !== 'undefined') HseSecurityAlerts.onLoginAttempt(false, code);
                 if (feedbackEl) {
-                    feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-exclamation-circle"></i> حدث خطأ أثناء تسجيل الدخول: ${err.message || 'يرجى المحاولة مجدداً'}</span>`;
+                    feedbackEl.innerHTML = `<span style="color: #dc2626;"><i class="fas fa-times-circle"></i> ${authRes?.message || 'فشل التحقق من رمز PIN'}</span>`;
                     feedbackEl.style.display = 'block';
                 }
             }
@@ -9266,30 +9289,15 @@
         }
 
         function closeFieldSessionModal(e) {
-            try {
-                if (e && e.target && e.target.id !== 'fieldSessionModal' && !e.target.closest('button')) {
-                    return;
-                }
-                const gateStyle = document.getElementById('autoAuthGateStyle');
-                if (gateStyle) {
-                    if (typeof gateStyle.remove === 'function') {
-                        gateStyle.remove();
-                    } else if (gateStyle.parentNode) {
-                        gateStyle.parentNode.removeChild(gateStyle);
-                    }
-                }
-                const modal = document.getElementById('fieldSessionModal');
-                if (modal) {
-                    modal.style.setProperty('display', 'none', 'important');
-                    modal.style.display = 'none';
-                }
-                sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
-                pendingFormNavigation = null;
-            } catch (err) {
-                console.warn('[closeFieldSessionModal] Error:', err);
-                const modal = document.getElementById('fieldSessionModal');
-                if (modal) modal.style.display = 'none';
+            if (e && e.target && e.target.id !== 'fieldSessionModal' && !e.target.closest('button')) {
+                return;
             }
+            const gateStyle = document.getElementById('autoAuthGateStyle');
+            if (gateStyle) gateStyle.remove();
+            const modal = document.getElementById('fieldSessionModal');
+            if (modal) modal.style.display = 'none';
+            sessionStorage.setItem('HSE_PORTAL_ACTIVE_TAB_AUTH', '1');
+            pendingFormNavigation = null;
         }
 
         function clearFieldSession() {
@@ -9368,7 +9376,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1791-20260928')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1793-20260929')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -9408,9 +9416,9 @@
     // Safety Champions Digital Certificate Engine with Bulletproof Mobile Download & QR Verification
     // ======================================================================
     let currentCertData = { name: '', count: 0, rank: 1, periodLabel: '', docId: '', badges: [], csi: 95, trainingHours: 4, rawItem: null };
-    currentChampionsPeriodType = currentChampionsPeriodType || 'monthly';
-    currentChampionsPeriodKey = currentChampionsPeriodKey || '';
-    currentChampionsCategory = currentChampionsCategory || 'composite';
+    let currentChampionsPeriodType = 'monthly';
+    let currentChampionsPeriodKey = '';
+    let currentChampionsCategory = 'composite';
 
     function setChampionsCategoryFilter(cat) {
         currentChampionsCategory = cat;
@@ -9951,7 +9959,7 @@
 
     function updateChampionsPeriodSelectOptions() {
         const select = document.getElementById('championsPeriodSelect');
-        if (!select || !rawObservationsAnalyticsData || typeof currentChampionsPeriodType === 'undefined' || typeof getPeriodDisplayLabel !== 'function') return;
+        if (!select || !rawObservationsAnalyticsData) return;
         
         const ch = rawObservationsAnalyticsData.champions || {};
         const avail = ch.availablePeriods || {};
@@ -10351,41 +10359,21 @@
             <!-- جسم النافذة ومحتوى التحليل -->
             <div style="padding: 16px; background: #f8fafc; overflow-y: auto; flex: 1;">
                 
-                <!-- ترويسة ISO المعتمدة ثلاثية الصناديق للطباعة المعتمدة -->
-                <div class="anl-print-header" style="margin-bottom: 16px;">
-                    <div class="iso-print-header" style="display: grid; grid-template-columns: 240px 1fr 200px; border: 2px solid #0f172a; border-top: 5px solid #1e3a8a; border-radius: 8px; overflow: hidden; background: #ffffff; margin-bottom: 8px;">
-                        <div class="iso-box-brand" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1.5px solid #0f172a; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); gap: 4px; text-align: center;">
-                            <img src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-print-logo" style="max-height: 44px; max-width: 120px; object-fit: contain; margin-bottom: 2px;" onerror="this.src='icons/icapp-logo.png'">
-                            <div class="iso-company-title" style="font-size: 10.5px; font-weight: 900; color: #0f172a; line-height: 1.3;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                            <div class="iso-dept-title" style="font-size: 9.5px; font-weight: 800; color: #1e3a8a; line-height: 1.25;">إدارة السلامة والصحة المهنية والبيئة</div>
+                <!-- ترويسة التقرير الرسمية للطباعة المعتمدة ISO -->
+                <div class="anl-print-header" style="border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #0f172a;">الشركة العالمية للانتاج والتصنيع الزراعي (ICAPP)</div>
+                            <div style="font-size: 0.85rem; font-weight: 700; color: #334155;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
+                            <div style="font-size: 0.82rem; font-weight: 800; color: #4338ca; margin-top: 4px;">📊 تقرير التحليل الإحصائي الميداني للملاحظات ونتائج السلامة</div>
                         </div>
-
-                        <div class="iso-box-title" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff;">
-                            <h1 class="iso-main-title" style="margin: 0; font-size: 16px; font-weight: 900; color: #1e3a8a; line-height: 1.3;">📊 تقرير التحليل الإحصائي الميداني للملاحظات ونتائج السلامة</h1>
-                            <div class="iso-sub-title" style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">Field Safety Observations & Risk Analytics Digest</div>
-                            <div class="iso-badge-std" style="display: inline-block; margin-top: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800;">معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
-                        </div>
-
-                        <div class="iso-box-meta" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; border-right: 1.5px solid #0f172a; background: #f8fafc; gap: 3px;">
-                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                                <span style="color: #64748b; font-weight: 700;">كود الوثيقة:</span>
-                                <strong style="color: #0f172a; font-family: monospace;">DOC-HSE-OBS-ANL-01</strong>
-                            </div>
-                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                                <span style="color: #64748b; font-weight: 700;">رقم الإصدار:</span>
-                                <strong style="color: #0f172a;">Rev. 02</strong>
-                            </div>
-                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                                <span style="color: #64748b; font-weight: 700;">تاريخ الإصدار:</span>
-                                <strong style="color: #0f172a;" id="anlPrintDate"></strong>
-                            </div>
-                            <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
-                                <span style="color: #64748b; font-weight: 700;">درجة السرية:</span>
-                                <strong style="color: #047857;">عام داخلي</strong>
-                            </div>
+                        <div style="text-align: left; font-size: 0.76rem; color: #475569; border-right: 1px solid #cbd5e1; padding-right: 12px;">
+                            <div><b>كود الوثيقة:</b> DOC-HSE-OBS-REP-01</div>
+                            <div><b>تاريخ الإصدار:</b> <span id="anlPrintDate"></span></div>
+                            <div><b>النظام:</b> منظومة السلامة الرقمية الموحدة</div>
                         </div>
                     </div>
-                    <div id="anlPrintScopeBadge" style="font-size: 0.8rem; font-weight: 700; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 6px; color: #1e293b;">
+                    <div id="anlPrintScopeBadge" style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; color: #1e293b;">
                         نطاق التقرير: كافة مواقع ومصانع الشركة
                     </div>
                 </div>
@@ -11900,8 +11888,9 @@
     // 🛠️ Smart HSE Tools Suite (Voice Assistant, Heatmap, Shift Digest, Tracking)
     // ======================================================================
 
+    // Unified escapeHtml — يستخدم الدالة الأصلية escapeHTML مع معالجة صحيحة للصفر
     function escapeHtml(str) {
-        if (!str) return '';
+        if (str === null || str === undefined) return '';
         return String(str)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -11977,8 +11966,18 @@
         const cleanCode = code.toUpperCase().trim();
         let foundObs = null;
 
-        // 1. الاستعلام المباشر من السيرفر السحابي أولاً عند وجود اتصال (المرجع المعتمد لقاعدة البيانات)
-        if (navigator.onLine) {
+        // فحص الملاحظات من التحليلات المخزنة محلياً
+        const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+        for (const obs of localList) {
+            const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+            if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                foundObs = obs;
+                break;
+            }
+        }
+
+        // فحص السيرفر السحابي
+        if (navigator.onLine && !foundObs) {
             try {
                 const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 if (targetUrl) {
@@ -11997,36 +11996,6 @@
                     }
                 }
             } catch(e) {}
-        }
-
-        // 2. إذا لم يعثر عليها، فحص السجل المحلي للملاحظات المغلقة أو المحفوظة
-        if (!foundObs) {
-            try {
-                const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
-                for (const item of localHistory) {
-                    const obsCode = String(item.isoCode || item.id || item.refCode || (item.data && item.data.instantRefCode) || '').toUpperCase();
-                    if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
-                        foundObs = {
-                            ...item,
-                            isoCode: item.isoCode || item.refCode || item.id,
-                            status: item.status || 'مغلق (Closed)'
-                        };
-                        break;
-                    }
-                }
-            } catch (_) {}
-        }
-
-        // 3. فحص الملاحظات من التحليلات المخزنة محلياً
-        if (!foundObs) {
-            const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
-            for (const obs of localList) {
-                const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
-                if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
-                    foundObs = obs;
-                    break;
-                }
-            }
         }
 
         renderTrackResult(foundObs, cleanCode);
@@ -12111,19 +12080,6 @@
                 <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
                     <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
                 </div>` : ''}
-
-                ${!isClosed ? `
-                <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; text-align: center;">
-                    <button type="button" onclick="HseActionClosure && HseActionClosure.open('${code}', ${JSON.stringify(obs).replace(/"/g, '&quot;')})"
-                            style="width: 100%; background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 800; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);">
-                        <i class="fas fa-camera"></i>
-                        <span>توثيق الإصلاح وإغلاق الملاحظة 🔒</span>
-                    </button>
-                </div>` : `
-                <div style="margin-top: 10px; padding: 8px 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 0.76rem; color: #166534; display: flex; align-items: center; gap: 6px;">
-                    <i class="fas fa-circle-check text-green-600"></i>
-                    <span>تم التحقق من إغلاق ومعالجة هذه الملاحظة ميدانياً طبقاً لمعايير السلامة.</span>
-                </div>`}
             </div>
         `;
     }
@@ -12219,7 +12175,8 @@
 
     function filterByHeatmapLocation(site, place) {
         closePlantRiskHeatmapModal();
-        window.location.href = `/public-observation.html?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+        const target = `observation?site=${encodeURIComponent(site)}&place=${encodeURIComponent(place)}`;
+        executeActualNavigation(target);
     }
 
     // --- 3. ملخص وتسليم الوردية الميداني عبر الواتساب (WhatsApp Shift Handover Digest) ---
@@ -12406,15 +12363,13 @@
         wrap.innerHTML = `
             <div id="printShiftDigestArea" style="text-align: right; font-family: 'Cairo', sans-serif;">
                 <!-- Header -->
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #064e3b; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #064e3b; padding-bottom: 8px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                     <div>
                         <div style="font-weight: 900; font-size: 1.05rem; color: #064e3b;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                        <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">إدارة السلامة والصحة المهنية والبيئة — كشف تسليم الوردية الميداني (Shift Handover)</div>
-                        <div style="display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-size: 0.68rem; font-weight: 800; padding: 1px 8px; border-radius: 12px; margin-top: 3px;">🏅 معتمد طبقاً للمواصفة ISO 45001:2018 & OSHA 1910</div>
+                        <div style="font-size: 0.8rem; color: #047857; font-weight: 800;">إدارة السلامة والصحة المهنية — كشف تسليم الوردية الميداني (Shift Handover)</div>
                     </div>
                     <div style="text-align: left; font-size: 0.72rem; color: #475569;">
                         <div><strong>كود الوثيقة:</strong> DOC-HSE-SHO-01</div>
-                        <div><strong>رقم الإصدار:</strong> Rev. 02</div>
                         <div><strong>التاريخ:</strong> ${data.date}</div>
                         <div><strong>الوردية:</strong> ${data.shift}</div>
                     </div>
@@ -12589,112 +12544,7 @@
     }
 
     function printShiftDigestReport() {
-        const data = getShiftDigestData();
-        const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : escapeHtml;
-
-        const rows = data.filtered.map((obs, idx) => `
-            <tr style="border-bottom: 1px solid #cbd5e1; font-size: 0.85rem;">
-                <td style="padding: 7px 8px; font-weight: 800; color: #1e40af; text-align: center;">${esc(obs.isoCode || obs.id || ('#' + (idx + 1)))}</td>
-                <td style="padding: 7px 8px; font-weight: 700;">${esc(obs.site || obs.siteName || '')} - ${esc(obs.place || obs.locationName || '')}</td>
-                <td style="padding: 7px 8px;"><span style="background: #f1f5f9; padding: 2px 7px; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">${esc(obs.type || obs.observationType || 'سلوك/ظرف')}</span></td>
-                <td style="padding: 7px 8px; color: ${String(obs.riskLevel).includes('عالي') ? '#dc2626' : '#334155'}; font-weight: 800; text-align: center;">${esc(obs.riskLevel || 'متوسط')}</td>
-                <td style="padding: 7px 8px; line-height: 1.4;">${esc(obs.details || '--')}</td>
-                <td style="padding: 7px 8px; font-weight: 800; text-align: center; color: ${String(obs.status).includes('إغلاق') || String(obs.status).toLowerCase().includes('closed') ? '#15803d' : '#ea580c'};">${esc(obs.status || 'مفتوح')}</td>
-            </tr>
-        `).join('');
-
-        const bodyHtml = `
-            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.85rem;">
-                <div>
-                    <span style="color: #1e3a8a; font-weight: 800;">👤 مشرف السلامة المُسَلِّم:</span>
-                    <strong style="color: #0f172a; margin-right: 6px;">${esc(data.outgoing || '--')}</strong>
-                </div>
-                <div>
-                    <span style="color: #1e3a8a; font-weight: 800;">👥 مشرف السلامة المُسْتَلِم:</span>
-                    <strong style="color: #0f172a; margin-right: 6px;">${esc(data.incoming || '--')}</strong>
-                </div>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; font-size: 0.82rem;">
-                <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 8px; padding: 8px 12px;">
-                    <strong style="color: #92400e;">🧯 شبكة وطلمبات الحريق:</strong>
-                    <div style="color: #78350f; font-weight: 800; margin-top: 2px;">${esc(data.pumpStatus || 'جاهزة وتعمل تلقائياً')}</div>
-                </div>
-                <div style="background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 8px 12px;">
-                    <strong style="color: #1e40af;">⚡ تصاريح عمل سارية (PTW):</strong>
-                    <div style="color: #1d4ed8; font-weight: 900; font-size: 1rem; margin-top: 2px;">${esc(data.activePtw || '0')} تصريح</div>
-                </div>
-                <div style="background: #f5f3ff; border: 1.5px solid #ddd6fe; border-radius: 8px; padding: 8px 12px;">
-                    <strong style="color: #6d28d9;">🦺 متواجدين بالمصانع (زوار/مقاولين):</strong>
-                    <div style="color: #7c3aed; font-weight: 900; font-size: 1rem; margin-top: 2px;">${esc(data.activeVisitors || '0')} فرد</div>
-                </div>
-            </div>
-
-            ${data.notes ? `
-            <div style="background: #fefce8; border: 1.5px solid #fde047; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 0.85rem;">
-                <div style="font-weight: 900; color: #854d0e; margin-bottom: 4px;">📢 توجيهات وملاحظات التسليم الهامة للوردية القادمة:</div>
-                <div style="color: #713f12; line-height: 1.6;">${esc(data.notes)}</div>
-            </div>
-            ` : ''}
-
-            <div style="margin-bottom: 16px;">
-                <h3 style="font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; border-bottom: 2px solid #0f172a; padding-bottom: 4px;">
-                    📋 كشف وسجل الملاحظات المرصودة خلال الوردية (${data.filtered.length})
-                </h3>
-                <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a;">
-                    <thead>
-                        <tr style="background: #0f172a; color: #ffffff; font-size: 0.8rem; text-align: right;">
-                            <th style="padding: 8px; width: 12%; text-align: center;">الكود</th>
-                            <th style="padding: 8px; width: 22%;">الموقع والمكان</th>
-                            <th style="padding: 8px; width: 14%;">نوع الملاحظة</th>
-                            <th style="padding: 8px; width: 12%; text-align: center;">درجة الخطورة</th>
-                            <th style="padding: 8px; width: 28%;">تفاصيل الملاحظة</th>
-                            <th style="padding: 8px; width: 12%; text-align: center;">الحالة</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rows.length > 0 ? rows : `<tr><td colspan="6" style="text-align: center; padding: 18px; color: #64748b; font-weight: 800;">لا توجد ملاحظات مرصودة مسجلة خلال هذه الوردية.</td></tr>`}
-                    </tbody>
-                </table>
-            </div>
-        `;
-
-        if (typeof HsePrintEngine !== 'undefined') {
-            HsePrintEngine.printDocument({
-                pageTitle: 'كشف تسليم الوردية الميداني',
-                docTitle: 'كشف تسليم الوردية الميداني (Shift Handover)',
-                docSubtitle: 'Field Shift Handover & Safety Readiness Log',
-                docCode: 'DOC-HSE-SHO-01',
-                rev: 'Rev. 02',
-                effectiveDate: data.date || '2026-09',
-                confidentiality: 'عام داخلي',
-                standardRef: 'ISO 45001:2018 (Clause 8.1 & 7.4) & OSHA 1910',
-                metaItems: [
-                    { label: 'التاريخ', value: data.date },
-                    { label: 'الوردية', value: data.shift },
-                    { label: 'الموقع / المصنع', value: data.site },
-                    { label: 'وقت التقرير', value: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) }
-                ],
-                kpis: {
-                    total: data.total,
-                    totalLabel: 'إجمالي الملاحظات',
-                    high: data.high,
-                    highLabel: 'عالية الخطورة 🔴',
-                    closed: data.closed,
-                    closedLabel: 'تم إغلاقها ✅',
-                    pending: data.open,
-                    pendingLabel: 'قيد المتابعة ⏳'
-                },
-                bodyHtml: bodyHtml,
-                signatures: [
-                    { title: 'مشرف السلامة المُسَلِّم', name: data.outgoing || 'مسؤول السلامة', line: 'التوقيع والتاريخ' },
-                    { title: 'مشرف السلامة المُسْتَلِم', name: data.incoming || 'مسؤول السلامة', line: 'التوقيع والتاريخ' },
-                    { title: 'اعتماد مدير السلامة والصحة المهنية', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
-                ]
-            });
-        } else {
-            window.print();
-        }
+        window.print();
     }
 
     // --- 4. بوت ومساعد السلامة الصوتي الميداني (Field HSE Voice Assistant) ---
@@ -13030,7 +12880,7 @@
     function fillObservationFromBot(query, topic) {
         closeHseVoiceAssistantModal();
         const text = encodeURIComponent(`استفسار وملاحظة ميدانية: ${query} (الموضوع: ${topic})`);
-        window.location.href = `/public-observation.html?details=${text}`;
+        executeActualNavigation(`observation?details=${text}`);
     }
 
     // =========================================================================
@@ -13685,71 +13535,41 @@
          قالب الطباعة الرسمي لكشف حصر تصاريح العمل للوردية والطوارئ (A4 Shift Log)
          ══════════════════════════════════════════════════════════════════════ -->
     <div id="ptwPrintLogContainer">
-        <!-- ترويسة ISO ثلاثية الصناديق المعتمدة -->
-        <div class="iso-print-header" style="display: grid; grid-template-columns: 240px 1fr 200px; border: 2px solid #0f172a; border-top: 5px solid #1e3a8a; border-radius: 8px; overflow: hidden; background: #ffffff; margin-bottom: 14px;">
-            <div class="iso-box-brand" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1.5px solid #0f172a; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); gap: 4px; text-align: center;">
-                <img src="/icons/icapp-logo.png" alt="شعار ICAPP" class="iso-print-logo" style="max-height: 44px; max-width: 120px; object-fit: contain; margin-bottom: 2px;" onerror="this.src='icons/icapp-logo.png'">
-                <div class="iso-company-title" style="font-size: 10.5px; font-weight: 900; color: #0f172a; line-height: 1.3;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
-                <div class="iso-dept-title" style="font-size: 9.5px; font-weight: 800; color: #1e3a8a; line-height: 1.25;">إدارة السلامة والصحة المهنية والبيئة</div>
+        <!-- ترويسة التقرير الرسمي -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2.5px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 14px;">
+            <div style="text-align: right;">
+                <div style="font-size: 1rem; font-weight: 900; color: #1e293b;">الشركة العالمية للانتاج والتصنيع الزراعي</div>
+                <div style="font-size: 0.85rem; font-weight: 800; color: #1e40af;">ادارة السلامة والصحة المهنية وحماية البيئة</div>
             </div>
-
-            <div class="iso-box-title" style="padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #ffffff;">
-                <h1 class="iso-main-title" style="margin: 0; font-size: 16px; font-weight: 900; color: #1e3a8a; line-height: 1.3;">كشف حصر تصاريح العمل الميدانية السارية (PTW Log)</h1>
-                <div class="iso-sub-title" style="font-size: 10.5px; font-weight: 700; color: #475569; margin-top: 3px;">Permit to Work (PTW) Active Shift Register & Emergency Log</div>
-                <div class="iso-badge-std" style="display: inline-block; margin-top: 5px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 9.5px; font-weight: 800;">معتمد طبقاً للمواصفة القياسية ISO 45001:2018 & OSHA 1910</div>
+            <div style="text-align: center;">
+                <div style="font-size: 1.15rem; font-weight: 900; color: #1e3a8a;">كشف حصر تصاريح العمل الميدانية للوردية</div>
+                <div style="font-size: 0.75rem; font-weight: 700; color: #64748b;">Daily Active PTW & Emergency Shift Log Sheet</div>
             </div>
-
-            <div class="iso-box-meta" style="padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; border-right: 1.5px solid #0f172a; background: #f8fafc; gap: 3px;">
-                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                    <span style="color: #64748b; font-weight: 700;">كود الوثيقة:</span>
-                    <strong style="color: #0f172a; font-family: monospace;">DOC-HSE-PTW-LOG</strong>
-                </div>
-                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                    <span style="color: #64748b; font-weight: 700;">رقم الإصدار:</span>
-                    <strong style="color: #0f172a;">Rev. 02</strong>
-                </div>
-                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #cbd5e1; padding-bottom: 2px; font-size: 10px;">
-                    <span style="color: #64748b; font-weight: 700;">تاريخ التوليد:</span>
-                    <strong style="color: #0f172a;" id="ptwPrintLogDate"></strong>
-                </div>
-                <div class="meta-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 10px;">
-                    <span style="color: #64748b; font-weight: 700;">درجة السرية:</span>
-                    <strong style="color: #047857;">عام داخلي</strong>
-                </div>
+            <div style="text-align: left; font-size: 0.75rem; color: #475569;">
+                <div><b>كود الوثيقة:</b> DOC-HSE-PTW-LOG</div>
+                <div><b>تاريخ التوليد:</b> <span id="ptwPrintLogDate"></span></div>
             </div>
         </div>
 
-        <!-- كروت إحصائيات التصاريح -->
-        <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; text-align: center;">
-            <div class="kpi-box total" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 8px 6px;">
-                <div class="kpi-num" id="ptwPrintTotal" style="font-size: 1.35rem; font-weight: 900; color: #0f172a; line-height: 1.1; margin-bottom: 2px;">0</div>
-                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">إجمالي التصاريح السارية</div>
-            </div>
-            <div class="kpi-box high" style="background: #fef2f2; border: 1.5px solid #fca5a5; border-radius: 6px; padding: 8px 6px;">
-                <div class="kpi-num" id="ptwPrintHot" style="font-size: 1.35rem; font-weight: 900; color: #dc2626; line-height: 1.1; margin-bottom: 2px;">0</div>
-                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">ساخن ولحام 🔥</div>
-            </div>
-            <div class="kpi-box closed" style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 6px; padding: 8px 6px;">
-                <div class="kpi-num" id="ptwPrintHeight" style="font-size: 1.35rem; font-weight: 900; color: #d97706; line-height: 1.1; margin-bottom: 2px;">0</div>
-                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">عمل على ارتفاعات 🧗</div>
-            </div>
-            <div class="kpi-box ptw" style="background: #fdf4ff; border: 1.5px solid #f0abfc; border-radius: 6px; padding: 8px 6px;">
-                <div class="kpi-num" id="ptwPrintConfined" style="font-size: 1.35rem; font-weight: 900; color: #86198f; line-height: 1.1; margin-bottom: 2px;">0</div>
-                <div class="kpi-text" style="font-size: 10px; font-weight: 700; color: #475569;">أماكن مغلقة وكهرباء ⚡</div>
-            </div>
+        <!-- ملخص أرقام الوردية -->
+        <div style="display: flex; justify-content: space-around; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; margin-bottom: 14px; font-size: 0.8rem; font-weight: 800;">
+            <div>إجمالي الساري: <b id="ptwPrintTotal" style="color:#1e40af;">0</b></div>
+            <div>ساخن ولحام: <b id="ptwPrintHot" style="color:#dc2626;">0</b></div>
+            <div>ارتفاعات: <b id="ptwPrintHeight" style="color:#d97706;">0</b></div>
+            <div>أماكن مغلقة: <b id="ptwPrintConfined" style="color:#7c3aed;">0</b></div>
         </div>
 
         <!-- جدول تفاصيل التصاريح السارية -->
-        <table class="report-table" style="width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 16px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.75rem; margin-bottom: 20px;">
             <thead>
-                <tr style="background: #0f172a; color: #ffffff;">
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; width: 95px;">كود التصريح</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">المصنع والموقع</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">نوع العمل</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">الجهة المنفذة</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px;">المشرف المسؤول</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center;">فترة السريان</th>
-                    <th style="border: 1px solid #cbd5e1; padding: 6px 8px; text-align: center;">الحالة</th>
+                <tr style="background: #1e3a8a; color: #ffffff;">
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">كود التصريح</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">المصنع والموقع</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">نوع العمل</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">الجهة المنفذة</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">المشرف المسؤول</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">التوقيت</th>
+                    <th style="border: 1px solid #cbd5e1; padding: 6px;">الحالة</th>
                 </tr>
             </thead>
             <tbody id="ptwPrintLogTbody">
@@ -13757,38 +13577,21 @@
             </tbody>
         </table>
 
-        <!-- تواقيع الاستلام والتسليم الثلاثية -->
-        <div class="signatures-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 18px; page-break-inside: avoid;">
-            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">مشرف السلامة الميداني (HSE)</div>
-                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مشرف وردية السلامة</div>
-                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">التوقيع والتاريخ</div>
+        <!-- تواقيع الاستلام والتسليم -->
+        <div style="display: flex; justify-content: space-between; border-top: 1.5px solid #cbd5e1; padding-top: 20px; font-size: 0.82rem; font-weight: 800;">
+            <div style="text-align: center; width: 30%;">
+                <div>مشرف السلامة الميداني (HSE)</div>
+                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
             </div>
-            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">قائد نوبتجية الطوارئ والإطفاء</div>
-                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مسؤول الحريق والطوارئ</div>
-                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">التوقيع والتاريخ</div>
+            <div style="text-align: center; width: 30%;">
+                <div>قائد نوبتجية الطوارئ والإطفاء</div>
+                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
             </div>
-            <div class="sig-card" style="border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #f8fafc; min-height: 105px; display: flex; flex-direction: column; justify-content: space-between;">
-                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; text-align: center;">اعتماد الإدارة العامة للسلامة</div>
-                <div style="font-size: 11px; font-weight: 900; color: #0f172a; text-align: center;">مدير السلامة والصحة المهنية</div>
-                <div style="margin-top: 18px; border-top: 1.5px dashed #64748b; padding-top: 3px; text-align: center; font-size: 9.5px; color: #64748b; font-weight: 700;">الختم والاعتماد الرقمي</div>
+            <div style="text-align: center; width: 30%;">
+                <div>مدير إدارة السلامة والصحة المهنية</div>
+                <div style="margin-top: 30px; border-bottom: 1px dotted #94a3b8;"></div>
             </div>
         </div>
-
-        <!-- شريط ضبط وتوثيق الوثيقة المعتمدة (ISO Document Control) -->
-        <div class="iso-footer-strip" style="margin-top: 16px; border: 1.5px solid #0f172a; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; padding: 5px 12px; background: #f8fafc; font-size: 9.5px; font-weight: 800; color: #334155; page-break-inside: avoid;">
-            <span>كود الوثيقة: <strong style="color:#0f172a; font-family: monospace;">DOC-HSE-PTW-LOG</strong></span>
-            <span>رقم الإصدار: <strong>Rev. 02</strong></span>
-            <span>مرجعية التوثيق: <strong>ISO 45001:2018 (Clause 8.1.2)</strong></span>
-            <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
-        </div>
-
-        <!-- الفوتر الموحد لمنظومة السلامة -->
-        <footer class="portal-unified-footer" style="margin-top: 10px; text-align: center; font-size: 9px; color: #64748b; line-height: 1.45; page-break-inside: avoid;">
-            <div><strong style="color: #1e3a8a; font-weight: 800;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
-            <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الداخلية</div>
-        </footer>
     </div>
 
 
@@ -14776,146 +14579,7 @@
         }
 
         function printHazmatCard() {
-            const chem = HAZMAT_DATABASE.find(c => c.id === selectedHazmatId) || HAZMAT_DATABASE[0];
-            if (!chem) return;
-            const esc = (typeof HsePrintEngine !== 'undefined') ? HsePrintEngine.escapeHtml : (str => str || '');
-
-            const bodyHtml = `
-                <div style="background: #faf5ff; border: 2px solid #c084fc; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <div>
-                            <h2 style="font-size: 1.3rem; font-weight: 900; color: #581c87; margin: 0 0 4px;">${esc(chem.nameAr)}</h2>
-                            <div style="font-size: 0.95rem; font-weight: 800; color: #7e22ce;">${esc(chem.nameEn)} — <span style="background: #f3e8ff; padding: 2px 8px; border-radius: 6px; font-family: monospace;">${esc(chem.formula)}</span></div>
-                        </div>
-                        <div style="text-align: left;">
-                            <div style="font-size: 0.8rem; font-weight: 800; color: #6b21a8;">كود تصنيف الخطورة:</div>
-                            <div style="font-size: 1rem; font-weight: 900; color: #3b0764; font-family: monospace;">GHS / NFPA-704</div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 10px; font-size: 0.85rem; color: #4c1d95; line-height: 1.5; border-top: 1px dashed #d8b4fe; padding-top: 8px;">
-                        <strong>مجالات واستخدامات المادة بالمصانع:</strong> ${esc(chem.usage)}
-                    </div>
-                </div>
-
-                <!-- 2-Column Grid: NFPA Diamond + GHS & Fire Measures -->
-                <div style="display: grid; grid-template-columns: 240px 1fr; gap: 16px; margin-bottom: 16px;">
-                    <!-- NFPA Diamond Box -->
-                    <div style="background: #ffffff; border: 2px solid #cbd5e1; border-radius: 12px; padding: 12px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                        <div style="font-size: 0.82rem; font-weight: 900; color: #0f172a; margin-bottom: 8px;">ماسة تصنيف المخاطر (NFPA 704)</div>
-                        <div style="width: 140px; height: 140px; position: relative; margin: 10px 0;">
-                            <!-- Top: Flammability (Red) -->
-                            <div style="position: absolute; top: 0; left: 35px; width: 70px; height: 70px; background: #dc2626; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-                                <span style="transform: rotate(-45deg); color: #fff; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.flammability}</span>
-                            </div>
-                            <!-- Left: Health (Blue) -->
-                            <div style="position: absolute; top: 35px; left: 0; width: 70px; height: 70px; background: #2563eb; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-                                <span style="transform: rotate(-45deg); color: #fff; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.health}</span>
-                            </div>
-                            <!-- Right: Instability (Yellow) -->
-                            <div style="position: absolute; top: 35px; right: 0; width: 70px; height: 70px; background: #eab308; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-                                <span style="transform: rotate(-45deg); color: #000; font-weight: 900; font-size: 1.3rem;">${chem.nfpa.instability}</span>
-                            </div>
-                            <!-- Bottom: Special (White) -->
-                            <div style="position: absolute; bottom: 0; left: 35px; width: 70px; height: 70px; background: #f8fafc; transform: rotate(45deg); display: flex; align-items: center; justify-content: center; border: 1.5px solid #94a3b8; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
-                                <span style="transform: rotate(-45deg); color: #0f172a; font-weight: 900; font-size: 0.95rem;">${chem.nfpa.special || 'W'}</span>
-                            </div>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; margin-top: 6px;">
-                            أحمر: اشتعال | أزرق: صحة | أصفر: تفاعلية | أبيض: خاص
-                        </div>
-                    </div>
-
-                    <!-- GHS Warnings & Fire Fighting -->
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 10px 14px;">
-                            <div style="font-weight: 900; font-size: 0.85rem; color: #991b1b; margin-bottom: 4px;">⚠️ تحذيرات السلامة والمخاطر الرئيسية (GHS Hazards):</div>
-                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-                                ${(chem.ghs || []).map(g => `<span style="background: #dc2626; color: #fff; padding: 3px 10px; border-radius: 6px; font-weight: 800; font-size: 0.78rem;">${esc(g)}</span>`).join('')}
-                            </div>
-                        </div>
-
-                        <div style="background: #fff7ed; border: 1.5px solid #fed7aa; border-radius: 10px; padding: 10px 14px;">
-                            <div style="font-weight: 900; font-size: 0.85rem; color: #9a3412; margin-bottom: 4px;">🧯 إجراءات الإطفاء ومكافحة الحريق:</div>
-                            <div style="font-size: 0.82rem; color: #7c2d12; line-height: 1.5;">${esc(chem.fireFighting)}</div>
-                        </div>
-
-                        <div style="background: #fefce8; border: 1.5px solid #fef08a; border-radius: 10px; padding: 10px 14px;">
-                            <div style="font-weight: 900; font-size: 0.85rem; color: #854d0e; margin-bottom: 4px;">☣️ إجراءات التعامل مع التسرب والانسكابات:</div>
-                            <div style="font-size: 0.82rem; color: #713f12; line-height: 1.5;">${esc(chem.spills)}</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- First Aid Table -->
-                <div style="margin-bottom: 16px;">
-                    <h3 style="font-size: 0.95rem; font-weight: 900; color: #0f172a; margin-bottom: 8px; border-bottom: 2px solid #0f172a; padding-bottom: 4px;">
-                        🩹 بروتوكول الإسعافات الأولية للطوارئ (Emergency First Aid)
-                    </h3>
-                    <table style="width: 100%; border-collapse: collapse; border: 1.5px solid #0f172a; font-size: 0.82rem;">
-                        <tbody>
-                            <tr style="border-bottom: 1px solid #cbd5e1;">
-                                <td style="width: 22%; background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">💨 في حالة الاستنشاق:</td>
-                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.inhalation)}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #cbd5e1;">
-                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">👁️ ملامسة العينين:</td>
-                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.eyes)}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #cbd5e1;">
-                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">🖐️ ملامسة الجلد:</td>
-                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.skin)}</td>
-                            </tr>
-                            <tr>
-                                <td style="background: #f1f5f9; padding: 8px 12px; font-weight: 900; color: #0f172a;">⛔ في حالة البلع:</td>
-                                <td style="padding: 8px 12px; line-height: 1.5;">${esc(chem.firstAid.ingestion)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- PPE Required Callout -->
-                <div style="background: #faf5ff; border: 2px solid #c084fc; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;">
-                    <div style="font-weight: 900; font-size: 0.9rem; color: #6b21a8; margin-bottom: 4px;">🦺 مهمات الوقاية الشخصية الإلزامية للتعامل مع المادة (Mandatory PPE):</div>
-                    <div style="font-size: 0.85rem; color: #581c87; font-weight: 800; line-height: 1.6;">${esc(chem.ppe)}</div>
-                </div>
-            `;
-
-            if (typeof HsePrintEngine !== 'undefined') {
-                HsePrintEngine.printDocument({
-                    pageTitle: `بطاقة السلامة SDS — ${chem.nameAr}`,
-                    docTitle: 'بطاقة السلامة والتعامل الآمن مع المواد الكيميائية',
-                    docSubtitle: 'Material Safety Data Sheet (SDS) & Chemical Emergency Card',
-                    docCode: 'DOC-HSE-CHM-01',
-                    rev: 'Rev. 02',
-                    effectiveDate: '2026-09',
-                    confidentiality: 'عام داخلي / تشغيلي',
-                    standardRef: 'OSHA 29 CFR 1910.1200 / GHS & ISO 45001:2018',
-                    metaItems: [
-                        { label: 'اسم المادة والصيغة', value: `${chem.nameAr} (${chem.formula})` },
-                        { label: 'التصنيف الميداني', value: chem.category === 'acids_alkalis' ? 'أحماض وقلويات' : (chem.category === 'solvents_fuels' ? 'مذيبات ووقود' : 'كيماويات صناعية') },
-                        { label: 'المرجعية الفنية', value: 'صحيفة بيانات السلامة SDS' },
-                        { label: 'جهة التطبيق', value: 'كافة مصانع ومحطات ICAPP' }
-                    ],
-                    kpis: {
-                        total: chem.formula,
-                        totalLabel: 'الصيغة الكيميائية',
-                        high: chem.nfpa.health,
-                        highLabel: 'درجة خطورة الصحة (NFPA)',
-                        closed: chem.nfpa.flammability,
-                        closedLabel: 'درجة قابلية الاشتعال',
-                        pending: chem.nfpa.instability,
-                        pendingLabel: 'درجة حساسية التفاعل'
-                    },
-                    bodyHtml: bodyHtml,
-                    signatures: [
-                        { title: 'إعداد أخصائي السلامة الكيميائية', name: 'مهندس / أخصائي السلامة', line: 'التوقيع والتاريخ' },
-                        { title: 'مراجعة وتدقيق المعامل والبيئة', name: 'رئيس قسم البيئة والمختبرات', line: 'التوقيع والتاريخ' },
-                        { title: 'اعتماد إدارة السلامة والصحة المهنية والبيئة', name: 'إدارة السلامة والصحة المهنية', line: 'الختم والاعتماد الرقمي' }
-                    ]
-                });
-            } else {
-                window.print();
-            }
+            window.print();
         }
     </script>
 

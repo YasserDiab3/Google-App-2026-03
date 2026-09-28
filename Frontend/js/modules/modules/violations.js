@@ -1827,22 +1827,35 @@ const Violations = {
     },
 
     /**
-     * الحصول على قائمة إدارات النظام المعتمدة
+     * الحصول على قائمة إدارات النظام المعتمدة رسمياً فقط (مطابقة لقائمة الإدارات الرسمية)
      */
     getSystemDepartmentOptions() {
+        try {
+            if (typeof DailyObservations !== 'undefined' && typeof DailyObservations.getDepartments === 'function') {
+                const depts = DailyObservations.getDepartments();
+                if (Array.isArray(depts) && depts.length > 0) {
+                    return depts;
+                }
+            }
+        } catch (e) { /* ignore */ }
+
         const departments = new Set();
+        const compSettings = AppState.companySettings || {};
+        const formDepts = Array.isArray(compSettings.formDepartments)
+            ? compSettings.formDepartments
+            : (typeof compSettings.formDepartments === 'string' ? compSettings.formDepartments.split(/\n|,/) : []);
+        formDepts.forEach(d => { if (d && String(d).trim()) departments.add(String(d).trim()); });
+
+        const legacyDepts = Array.isArray(compSettings.departments)
+            ? compSettings.departments
+            : (typeof compSettings.departments === 'string' ? compSettings.departments.split(/\n|,/) : []);
+        legacyDepts.forEach(d => { if (d && String(d).trim()) departments.add(String(d).trim()); });
+
         (AppState.appData?.departments || []).forEach(d => {
             const val = typeof d === 'string' ? d : (d.name || d.departmentName || d.title || '');
             if (val && typeof val === 'string' && val.trim()) departments.add(val.trim());
         });
-        (AppState.appData?.employees || []).forEach(e => {
-            const val = (e.department || e.section || '').trim();
-            if (val) departments.add(val);
-        });
-        (AppState.appData?.violations || []).forEach(v => {
-            const val = (v.employeeDepartment || v.contractorDepartment || '').trim();
-            if (val) departments.add(val);
-        });
+
         if (departments.size === 0) {
             [
                 'السلامة والصحة المهنية والبيئة',
@@ -5877,16 +5890,12 @@ const Violations = {
             .sort((a, b) => a.localeCompare(b, 'ar'));
         const positionDatalistHtml = allPositions.map(p => `<option value="${Utils.escapeHTML(p)}"></option>`).join('');
 
-        // إدارات النظام المعتمدة لمخالفة المقاول
+        // إدارات النظام المعتمدة لمخالفة المقاول (مطابقة حصراً لقائمة الإدارات الرسمية بالنظام)
         const systemDepts = this.getSystemDepartmentOptions();
         const contractorDeptOptions = systemDepts.map(d => {
             const isSel = violationData?.contractorDepartment === d;
             return `<option value="${Utils.escapeHTML(d)}" ${isSel ? 'selected' : ''}>${Utils.escapeHTML(d)}</option>`;
         }).join('');
-        const hasCurrentContractorDept = !violationData?.contractorDepartment || systemDepts.includes(violationData.contractorDepartment);
-        const legacyContractorDeptOption = (!hasCurrentContractorDept && violationData?.contractorDepartment)
-            ? `<option value="${Utils.escapeHTML(violationData.contractorDepartment)}" selected>${Utils.escapeHTML(violationData.contractorDepartment)}</option>`
-            : '';
 
         // افتراضات التاريخ والوقت (تاريخ اليوم والوقت الحالي للمخالفة الجديدة)
         const todayStr = new Date().toISOString().slice(0, 10);
@@ -5957,25 +5966,43 @@ const Violations = {
                     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
                 }
             </style>
-            <div class="modal-content" style="max-width: 880px; max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.25); border: 1px solid #cbd5e1;">
-                <!-- رأس النموذج التنفيذي -->
-                <div class="modal-header" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 16px 22px; border-bottom: 2px solid #3b82f6; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-exclamation-triangle" style="color: #fbbf24; font-size: 1.2rem;"></i>
+            <div class="modal-content" style="max-width: 880px; max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35); border: 1px solid #cbd5e1;">
+                <!-- شريط الهوية المؤسسية العلوية (Corporate Identity Ribbon) -->
+                <div style="height: 5px; width: 100%; background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 35%, #fbbf24 70%, #10b981 100%);"></div>
+
+                <!-- رأس النموذج التنفيذي بهوية ICAPP المعتمدة -->
+                <div class="modal-header" style="background: linear-gradient(135deg, #0b1329 0%, #1e293b 60%, #0f172a 100%); color: #ffffff; padding: 18px 24px; border-bottom: 2px solid #2563eb; display: flex; align-items: center; justify-content: space-between; position: relative;">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.25) 0%, rgba(245, 158, 11, 0.22) 100%); border: 1.5px solid rgba(245, 158, 11, 0.45); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
+                            <i class="fas fa-shield-halved" style="color: #fbbf24; font-size: 1.35rem;"></i>
                         </div>
                         <div>
-                            <h2 style="font-size: 1.15rem; font-weight: 800; color: #f8fafc; margin: 0; letter-spacing: -0.2px;">
-                                ${isEdit ? 'تعديل بيانات المخالفة المسجلة' : 'تسجيل مخالفة ميدانية جديدة'}
-                            </h2>
-                            <p style="margin: 2px 0 0 0; font-size: 0.78rem; color: #94a3b8; font-weight: 500;">
-                                نظام السلامة والصحة المهنية الرقمي (ICAPP HSE System)
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <h2 style="font-size: 1.18rem; font-weight: 800; color: #ffffff; margin: 0; letter-spacing: -0.2px;">
+                                    ${isEdit ? 'تعديل بيانات المخالفة المسجلة' : 'تسجيل مخالفة ميدانية جديدة'}
+                                </h2>
+                                <span style="font-size: 0.70rem; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); padding: 2px 7px; border-radius: 5px;">
+                                    HSE-OFFICIAL
+                                </span>
+                            </div>
+                            <p style="margin: 3px 0 0 0; font-size: 0.80rem; color: #cbd5e1; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                <span style="color: #60a5fa; font-weight: 700;">شركة الشرق الأوسط للزجاج (ICAPP)</span>
+                                <span style="color: #64748b;">•</span>
+                                <span>قطاع السلامة والصحة المهنية والبيئة (QHSE)</span>
                             </p>
                         </div>
                     </div>
-                    <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق" style="width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s;">
-                        <i class="fas fa-times" style="font-size: 15px;"></i>
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="hidden sm:flex" style="flex-direction: column; align-items: flex-end; gap: 2px; text-align: left;">
+                            <span style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">
+                                ICAPP-HSE-VIO-01
+                            </span>
+                            <span style="font-size: 0.66rem; color: #94a3b8; font-weight: 600;">وثيقة جودة وسلامة معتمدة</span>
+                        </div>
+                        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()" title="إغلاق النافذة" style="width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.18); color: #cbd5e1; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;">
+                            <i class="fas fa-times" style="font-size: 15px;"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- جسم النموذج -->
@@ -5995,13 +6022,13 @@ const Violations = {
                     <form id="violation-form" class="space-y-4">
                         <!-- البطاقة 1: بيانات الشخص المخالف -->
                         <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 16px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 9px;">
-                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: #2563eb; color: #ffffff; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(37,99,235,0.25);">1</span>
-                                    <span style="font-size: 0.92rem; font-weight: 800; color: #1e293b;">بيانات الشخص المخالف (الموظف / المقاول)</span>
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #ffffff; font-weight: 800; font-size: 13px; box-shadow: 0 2px 4px rgba(37,99,235,0.25);">1</span>
+                                    <span style="font-size: 0.94rem; font-weight: 800; color: #1e293b;">بيانات الشخص المخالف (الموظف / المقاول)</span>
                                 </div>
-                                <span style="font-size: 0.76rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 2px 10px; border-radius: 20px;">
-                                    التحقق الذكي الفوري من تكرار الجزاءات
+                                <span style="font-size: 0.76rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 3px 11px; border-radius: 20px;">
+                                    <i class="fas fa-bolt-lightning ml-1 text-amber-500"></i> فحص ذكي فوري لسجل الجزاءات والتكرار الشهري
                                 </span>
                             </div>
 
@@ -6090,7 +6117,7 @@ const Violations = {
                                         </div>
                                         <div id="violation-contractor-position-container">
                                             <label for="violation-contractor-position" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-briefcase ml-1 text-slate-600"></i> الوظيفة (قائمة أو كتابة حرة)
+                                                <i class="fas fa-briefcase ml-1 text-slate-600"></i> مهنة / وظيفة العامل
                                             </label>
                                             <input type="text" id="violation-contractor-position" list="violation-contractor-positions-list" class="form-input"
                                                 value="${violationData?.contractorPosition || ''}" 
@@ -6102,11 +6129,10 @@ const Violations = {
                                         </div>
                                         <div id="violation-contractor-department-container">
                                             <label for="violation-contractor-department" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-sitemap ml-1 text-teal-600"></i> الإدارة المشرفة في النظام
+                                                <i class="fas fa-sitemap ml-1 text-teal-600"></i> الإدارة التابع له المقاول *
                                             </label>
                                             <select id="violation-contractor-department" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
-                                                <option value="">-- اختر الإدارة في النظام --</option>
-                                                ${legacyContractorDeptOption}
+                                                <option value="">-- اختر الإدارة التابع له المقاول --</option>
                                                 ${contractorDeptOptions}
                                             </select>
                                         </div>
@@ -6437,17 +6463,17 @@ const Violations = {
                             </div>
                         </div>
 
-                        <!-- شريط الأزرار السفلي المدمج -->
-                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                            <div style="font-size: 0.8rem; color: #64748b; font-weight: 600;">
-                                <i class="fas fa-shield-check text-emerald-600 ml-1"></i>
-                                <span>الحقول الموسومة بـ (*) إلزامية لحفظ المخالفة بالسجل</span>
+                        <!-- شريط الأزرار السفلي المدمج بهوية تنفيذية فاخرة -->
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                            <div style="font-size: 0.82rem; color: #64748b; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-shield-check text-emerald-600 text-sm"></i>
+                                <span>الحقول الموسومة بـ (*) إلزامية لتوثيق المخالفة بالسجل الرسمي</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 10px;">
-                                <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="height: 42px; padding: 0 20px; border-radius: 9px; font-weight: 700; font-size: 0.88rem; background: #f8fafc; border: 1.5px solid #cbd5e1; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                                <button type="button" class="btn-secondary" onclick="this.closest('.modal-overlay').remove()" style="height: 44px; padding: 0 22px; border-radius: 10px; font-weight: 700; font-size: 0.90rem; background: #ffffff; border: 1.5px solid #cbd5e1; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
                                     <i class="fas fa-times"></i> إلغاء
                                 </button>
-                                <button type="submit" id="violation-submit-btn" class="btn-primary" style="height: 42px; padding: 0 26px; border-radius: 9px; font-weight: 800; font-size: 0.92rem; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(37,99,235,0.3);">
+                                <button type="submit" id="violation-submit-btn" class="btn-primary" style="height: 44px; padding: 0 28px; border-radius: 10px; font-weight: 800; font-size: 0.94rem; background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%); color: #ffffff; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.35); transition: all 0.2s ease;">
                                     <i class="fas fa-save"></i> ${isEdit ? 'حفظ التعديلات' : 'تسجيل المخالفة'}
                                 </button>
                             </div>
@@ -7261,6 +7287,10 @@ const Violations = {
                         const selectedOption = contractorSelect.options[contractorSelect.selectedIndex];
                         contractorId = selectedOption?.dataset.contractorCode || selectedOption?.dataset.contractorId || '';
                     }
+                    const contractorDept = document.getElementById('violation-contractor-department')?.value.trim();
+                    if (!contractorDept) {
+                        missing.push('الإدارة التابع له المقاول');
+                    }
                 }
 
                 // التحقق من الموقع ومكان المخالفة
@@ -7312,6 +7342,7 @@ const Violations = {
                         if (field.includes('الكود الوظيفي')) inputId = 'violation-employee-code';
                         else if (field.includes('اسم الموظف')) inputId = 'violation-person-name';
                         else if (field.includes('اسم المقاول')) inputId = 'violation-contractor-select';
+                        else if (field.includes('الإدارة التابع له المقاول')) inputId = 'violation-contractor-department';
                         else if (field.includes('تاريخ')) inputId = 'violation-date';
                         else if (field.includes('وقت')) inputId = 'violation-time';
                         else if (field.includes('نوع المخالفة')) inputId = 'violation-type';
@@ -8008,7 +8039,7 @@ const Violations = {
                                 </div>
                                 ${violation.contractorDepartment ? `
                                 <div>
-                                    <label class="text-sm font-semibold text-gray-600">الإدارة:</label>
+                                    <label class="text-sm font-semibold text-gray-600">الإدارة التابع له المقاول:</label>
                                     <p class="text-gray-800">${Utils.escapeHTML(violation.contractorDepartment || '-')}</p>
                                 </div>
                                 ` : ''}
@@ -8411,7 +8442,7 @@ const Violations = {
                             <span class="info-cell-value">${esc(v.contractorPosition || 'عامل مقاول')}</span>
                         </div>
                         <div class="info-cell">
-                            <span class="info-cell-label">الإدارة / القسم المشرف</span>
+                            <span class="info-cell-label">الإدارة التابع له المقاول</span>
                             <span class="info-cell-value">${esc(v.contractorDepartment || '—')}</span>
                         </div>
                         <div class="info-cell">
