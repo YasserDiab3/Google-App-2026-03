@@ -4450,7 +4450,7 @@ const DEFAULT_COMPANY_NAME = 'الشركة العالمية للإنتاج وا�
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1779',
+    appVersion: '1.0.1780',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6827,10 +6827,17 @@ const Utils = {
             let scale = Number(preferredScale) || this.DEFAULT_CAPTURE_SCALE;
             const w = Math.max(1, Number(contentWidthPx) || 794);
             const h = Math.max(1, Number(contentHeightPx) || 1);
-            while (scale > 1 && (w * scale > 8192 || h * scale > 12000)) {
+            while (scale > 0.8 && (w * scale > 8192 || h * scale > 12000)) {
                 scale -= 0.15;
             }
-            return Math.max(1, Math.round(scale * 100) / 100);
+            // ضمان عدم تجاوز الحد الأقصى لأبعاد Canvas في المتصفحات (Chromium Canvas limit ~32767px)
+            if (h * scale > 14000) {
+                scale = Math.max(0.4, 14000 / h);
+            }
+            if (w * scale > 8192) {
+                scale = Math.max(0.4, 8000 / w);
+            }
+            return Math.max(0.4, Math.round(scale * 100) / 100);
         },
 
         createSliceCanvas(sourceCanvas, yPx, heightPx) {
@@ -6857,15 +6864,18 @@ const Utils = {
             const pxPerMm = canvas.width / contentWmm;
             const pageHeightPx = Math.max(1, Math.floor(contentHmm * pxPerMm));
             const totalPages = Math.max(1, Math.ceil(canvas.height / pageHeightPx));
-            const bytesPerPage = Math.floor(this.TARGET_MAX_BYTES / totalPages);
+            const bytesPerPage = Math.max(35000, Math.floor(this.TARGET_MAX_BYTES / Math.min(totalPages, 50)));
 
             for (let p = 0; p < totalPages; p++) {
-                if (p > 0) pdf.addPage();
+                if (pdf._hasDrawnContent) {
+                    pdf.addPage();
+                }
                 const sliceH = Math.min(pageHeightPx, canvas.height - p * pageHeightPx);
                 const sliceCanvas = this.createSliceCanvas(canvas, p * pageHeightPx, sliceH);
                 const { dataUrl, format } = this.compressCanvasToJpegDataUrl(sliceCanvas, bytesPerPage);
                 const drawHmm = (sliceCanvas.height / sliceCanvas.width) * contentWmm;
                 pdf.addImage(dataUrl, format, marginMm, marginMm, contentWmm, Math.min(drawHmm, contentHmm));
+                pdf._hasDrawnContent = true;
             }
             return totalPages;
         },
@@ -6929,6 +6939,109 @@ const Utils = {
             return hasJsPdf() && hasHtml2Canvas();
         },
 
+        autoPaginateTableDom(iDoc, root, table, rows, isLandscape) {
+            if (!iDoc || !root || !table || !rows || rows.length === 0) return;
+            try {
+                const thead = table.querySelector('thead');
+                const theadHtml = thead ? thead.outerHTML : '';
+
+                const preHeader = root.querySelector('.iso-print-header');
+                const headerHtml = preHeader ? preHeader.outerHTML : '';
+                const preInfo = root.querySelector('.handover-info-grid, .info-cards-grid');
+                const infoHtml = preInfo ? preInfo.outerHTML : '';
+                const preTitle = root.querySelector('h2, h3, .report-title');
+                const titleHtml = preTitle ? preTitle.outerHTML : '';
+
+                const sigs = root.querySelector('.signatures-grid');
+                const sigsHtml = sigs ? sigs.outerHTML : '';
+                const footer = root.querySelector('.iso-print-footer, .portal-unified-footer');
+                const footerHtml = footer ? footer.outerHTML : '';
+
+                const p1Cap = isLandscape ? 12 : 16;
+                const regCap = isLandscape ? 18 : 24;
+                const lastCap = isLandscape ? 10 : 14;
+
+                const rowHtmlList = rows.map(r => r.outerHTML);
+                const totalRows = rowHtmlList.length;
+
+                const pagesRows = [];
+                let idx = 0;
+
+                const p1Rows = rowHtmlList.slice(0, Math.min(totalRows, p1Cap));
+                pagesRows.push(p1Rows);
+                idx = p1Rows.length;
+
+                while (idx < totalRows) {
+                    const remaining = totalRows - idx;
+                    if (remaining <= lastCap) {
+                        pagesRows.push(rowHtmlList.slice(idx));
+                        idx = totalRows;
+                    } else if (remaining <= regCap + lastCap) {
+                        const mid = Math.ceil(remaining / 2);
+                        pagesRows.push(rowHtmlList.slice(idx, idx + mid));
+                        idx += mid;
+                        pagesRows.push(rowHtmlList.slice(idx));
+                        idx = totalRows;
+                    } else {
+                        pagesRows.push(rowHtmlList.slice(idx, idx + regCap));
+                        idx += regCap;
+                    }
+                }
+
+                const totalPages = pagesRows.length;
+                const tableClass = table.className || 'iso-table';
+
+                let newHtml = '';
+                for (let p = 0; p < totalPages; p++) {
+                    const pageNum = p + 1;
+                    const isFirst = (pageNum === 1);
+                    const isLast = (pageNum === totalPages);
+                    const chunkRows = pagesRows[p].join('');
+
+                    let pageHeader = '';
+                    if (isFirst) {
+                        pageHeader = `${headerHtml}${infoHtml}${titleHtml}`;
+                    } else {
+                        pageHeader = `
+                            <div class="iso-print-mini-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1e3a8a; padding-bottom:5px; margin-bottom:10px;">
+                                <div style="font-size:11px; font-weight:800; color:#0f172a;">
+                                    الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) — إدارة السلامة والصحة المهنية والبيئة
+                                </div>
+                                <div style="font-size:10px; font-weight:800; color:#1e3a8a;">
+                                    صفحة ${pageNum} من ${totalPages}
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    const pageSignatures = (isLast && sigsHtml) ? sigsHtml : '';
+                    const pageFooter = footerHtml
+                        ? footerHtml.replace(/صفحة\s*\d+\s*من\s*\d+/g, `صفحة ${pageNum} من ${totalPages}`)
+                        : '';
+
+                    newHtml += `
+                        <div class="report-page" style="width:100%; box-sizing:border-box; padding:16px 20px; background:#ffffff; page-break-after:always; break-after:page;">
+                            ${pageHeader}
+                            <table class="${tableClass}" style="width:100%; border-collapse:collapse; margin-bottom:10px;">
+                                ${theadHtml}
+                                <tbody>
+                                    ${chunkRows}
+                                </tbody>
+                            </table>
+                            ${pageSignatures}
+                            ${pageFooter}
+                        </div>
+                    `;
+                }
+
+                root.innerHTML = newHtml;
+            } catch (err) {
+                if (typeof Utils !== 'undefined' && Utils.safeWarn) {
+                    Utils.safeWarn('autoPaginateTableDom error:', err);
+                }
+            }
+        },
+
         async downloadHtmlAsPdf(htmlContent, fileName = 'report.pdf', options = {}) {
             if (!htmlContent) return false;
             try {
@@ -6969,7 +7082,7 @@ const Utils = {
                             word-spacing: normal !important;
                             box-sizing: border-box !important;
                         }
-                        .report-wrapper {
+                        .report-wrapper, .report-page-container {
                             min-height: auto !important;
                             height: auto !important;
                             display: block !important;
@@ -6980,6 +7093,17 @@ const Utils = {
                             background: #ffffff !important;
                             visibility: visible !important;
                             opacity: 1 !important;
+                        }
+                        .report-page {
+                            width: 100% !important;
+                            box-sizing: border-box !important;
+                            background: #ffffff !important;
+                            page-break-after: always !important;
+                            break-after: page !important;
+                        }
+                        .report-page:last-child {
+                            page-break-after: auto !important;
+                            break-after: auto !important;
                         }
                         .report-header {
                             margin-bottom: 16px !important;
@@ -7054,7 +7178,30 @@ const Utils = {
 
                     await new Promise((r) => setTimeout(r, 150));
 
-                    const pageEls = iDoc.querySelectorAll('.ptw-a4-page, .report-page, .pdf-page');
+                    let pageEls = iDoc.querySelectorAll('.ptw-a4-page, .report-page, .pdf-page');
+
+                    // فحص تلقائي لتقسيم الجداول الضخمة إلى صفحات إذا لم تكن مقسمة مسبقاً
+                    if (pageEls.length === 0) {
+                        const rootEl = iDoc.getElementById('ptw-permit-print-root')
+                            || iDoc.querySelector('.ptw-manual-print')
+                            || iDoc.querySelector('.report-wrapper')
+                            || iDoc.querySelector('.report-page-container')
+                            || iDoc.querySelector('.form-container')
+                            || iDoc.body;
+
+                        if (rootEl) {
+                            const tbl = rootEl.querySelector('table');
+                            const trs = tbl ? Array.from(tbl.querySelectorAll('tbody tr')) : [];
+                            const isLandscape = !!options.landscape;
+                            const threshold = isLandscape ? 14 : 20;
+
+                            if (trs.length > threshold) {
+                                this.autoPaginateTableDom(iDoc, rootEl, tbl, trs, isLandscape);
+                                pageEls = iDoc.querySelectorAll('.report-page');
+                            }
+                        }
+                    }
+
                     const orientation = options.landscape ? 'landscape' : 'portrait';
                     const pdf = this.createPdf({ orientation, unit: 'mm', format: 'a4' });
                     if (!pdf) return false;
@@ -7064,7 +7211,7 @@ const Utils = {
 
                     if (pageEls.length > 0) {
                         const totalHeight = Math.max(iDoc.body?.scrollHeight || 0, iDoc.documentElement?.scrollHeight || 0, 1123 * pageEls.length);
-                        iframe.style.height = `${totalHeight + 200}px`;
+                        iframe.style.height = `${Math.min(totalHeight + 200, 14000)}px`;
                         await new Promise((r) => setTimeout(r, 100));
 
                         for (let p = 0; p < pageEls.length; p++) {
@@ -7077,8 +7224,8 @@ const Utils = {
                             pageEl.style.opacity = '1';
                             pageEl.style.background = '#ffffff';
 
-                            const pageH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1123);
-                            const safeScale = this.getOptimalCaptureScale(a4WidthPx, pageH, options.scale || 2);
+                            const pageH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, options.landscape ? 794 : 1123);
+                            const safeScale = this.getOptimalCaptureScale(a4WidthPx, pageH, options.scale || 1.8);
                             const canvas = await h2c(pageEl, {
                                 scale: safeScale,
                                 backgroundColor: '#ffffff',
@@ -7088,7 +7235,7 @@ const Utils = {
                                 width: a4WidthPx,
                                 height: pageH,
                                 windowWidth: a4WidthPx,
-                                windowHeight: totalHeight,
+                                windowHeight: pageH,
                                 scrollX: 0,
                                 scrollY: 0,
                                 onclone: (clonedDoc) => {
@@ -7104,11 +7251,13 @@ const Utils = {
                                 }
                             });
                             if (canvas) {
-                                const { dataUrl, format } = this.compressCanvasToJpegDataUrl(canvas, this.TARGET_MAX_BYTES);
+                                const bytesPerPage = Math.max(35000, Math.floor(this.TARGET_MAX_BYTES / Math.min(pageEls.length, 50)));
+                                const { dataUrl, format } = this.compressCanvasToJpegDataUrl(canvas, bytesPerPage);
                                 const contentW = pdf.internal.pageSize.getWidth() - marginMm * 2;
                                 const contentH = pdf.internal.pageSize.getHeight() - marginMm * 2;
                                 const drawH = (canvas.height / canvas.width) * contentW;
                                 pdf.addImage(dataUrl, format, marginMm, marginMm, contentW, Math.min(drawH, contentH));
+                                pdf._hasDrawnContent = true;
                             }
                         }
                     } else {
@@ -7128,55 +7277,94 @@ const Utils = {
                         root.style.opacity = '1';
 
                         const scrollH = Math.max(root.scrollHeight, root.offsetHeight, iDoc.body?.scrollHeight || 0, 1);
-                        iframe.style.height = `${scrollH + 200}px`;
+                        iframe.style.height = `${Math.min(scrollH + 200, 14000)}px`;
                         await new Promise((r) => setTimeout(r, 100));
 
-                        const safeScale = this.getOptimalCaptureScale(a4WidthPx, scrollH, options.scale || 2);
-                        const canvas = await h2c(root, {
-                            scale: safeScale,
-                            backgroundColor: '#ffffff',
-                            useCORS: true,
-                            allowTaint: true,
-                            logging: false,
-                            width: a4WidthPx,
-                            height: scrollH,
-                            windowWidth: a4WidthPx,
-                            windowHeight: scrollH,
-                            scrollX: 0,
-                            scrollY: 0,
-                            onclone: (clonedDoc) => {
-                                try {
-                                    if (clonedDoc.documentElement) {
-                                        clonedDoc.documentElement.style.visibility = 'visible';
-                                        clonedDoc.documentElement.style.opacity = '1';
-                                    }
-                                    if (clonedDoc.body) {
-                                        clonedDoc.body.style.visibility = 'visible';
-                                        clonedDoc.body.style.opacity = '1';
-                                        clonedDoc.body.style.minHeight = 'auto';
-                                        clonedDoc.body.style.height = 'auto';
-                                        clonedDoc.body.style.display = 'block';
-                                        clonedDoc.body.style.background = '#ffffff';
-                                    }
-                                    const clonedRoot = clonedDoc.getElementById('ptw-permit-print-root')
-                                        || clonedDoc.querySelector('.ptw-manual-print')
-                                        || clonedDoc.querySelector('.report-wrapper')
-                                        || clonedDoc.querySelector('.report-page-container')
-                                        || clonedDoc.querySelector('.form-container')
-                                        || clonedDoc.body;
-                                    if (clonedRoot) {
-                                        clonedRoot.style.visibility = 'visible';
-                                        clonedRoot.style.opacity = '1';
-                                        clonedRoot.style.minHeight = 'auto';
-                                        clonedRoot.style.boxShadow = 'none';
-                                        clonedRoot.style.background = '#ffffff';
-                                    }
-                                } catch (_e) {}
-                            }
-                        });
+                        const maxChunkH = 3200;
+                        if (scrollH <= maxChunkH) {
+                            const safeScale = this.getOptimalCaptureScale(a4WidthPx, scrollH, options.scale || 1.8);
+                            const canvas = await h2c(root, {
+                                scale: safeScale,
+                                backgroundColor: '#ffffff',
+                                useCORS: true,
+                                allowTaint: true,
+                                logging: false,
+                                width: a4WidthPx,
+                                height: scrollH,
+                                windowWidth: a4WidthPx,
+                                windowHeight: scrollH,
+                                scrollX: 0,
+                                scrollY: 0,
+                                onclone: (clonedDoc) => {
+                                    try {
+                                        if (clonedDoc.documentElement) {
+                                            clonedDoc.documentElement.style.visibility = 'visible';
+                                            clonedDoc.documentElement.style.opacity = '1';
+                                        }
+                                        if (clonedDoc.body) {
+                                            clonedDoc.body.style.visibility = 'visible';
+                                            clonedDoc.body.style.opacity = '1';
+                                            clonedDoc.body.style.minHeight = 'auto';
+                                            clonedDoc.body.style.height = 'auto';
+                                            clonedDoc.body.style.display = 'block';
+                                            clonedDoc.body.style.background = '#ffffff';
+                                        }
+                                        const clonedRoot = clonedDoc.getElementById('ptw-permit-print-root')
+                                            || clonedDoc.querySelector('.ptw-manual-print')
+                                            || clonedDoc.querySelector('.report-wrapper')
+                                            || clonedDoc.querySelector('.report-page-container')
+                                            || clonedDoc.querySelector('.form-container')
+                                            || clonedDoc.body;
+                                        if (clonedRoot) {
+                                            clonedRoot.style.visibility = 'visible';
+                                            clonedRoot.style.opacity = '1';
+                                            clonedRoot.style.minHeight = 'auto';
+                                            clonedRoot.style.boxShadow = 'none';
+                                            clonedRoot.style.background = '#ffffff';
+                                        }
+                                    } catch (_e) {}
+                                }
+                            });
 
-                        if (!canvas) return false;
-                        this.appendCanvasAsPdfPages(pdf, canvas, { marginMm });
+                            if (!canvas) return false;
+                            this.appendCanvasAsPdfPages(pdf, canvas, { marginMm });
+                        } else {
+                            // تجزئة المحتوى الطويل المستمر إلى مقاطع آمنة برمجياً لتجنب إخفاق Canvas وتجاوز حد الذاكرة
+                            const numChunks = Math.ceil(scrollH / maxChunkH);
+                            for (let c = 0; c < numChunks; c++) {
+                                const chunkY = c * maxChunkH;
+                                const chunkH = Math.min(maxChunkH, scrollH - chunkY);
+                                const safeScale = this.getOptimalCaptureScale(a4WidthPx, chunkH, options.scale || 1.5);
+                                const chunkCanvas = await h2c(root, {
+                                    scale: safeScale,
+                                    backgroundColor: '#ffffff',
+                                    useCORS: true,
+                                    allowTaint: true,
+                                    logging: false,
+                                    x: 0,
+                                    y: chunkY,
+                                    width: a4WidthPx,
+                                    height: chunkH,
+                                    windowWidth: a4WidthPx,
+                                    windowHeight: scrollH,
+                                    scrollX: 0,
+                                    scrollY: 0,
+                                    onclone: (clonedDoc) => {
+                                        try {
+                                            if (clonedDoc.documentElement) clonedDoc.documentElement.style.visibility = 'visible';
+                                            if (clonedDoc.body) {
+                                                clonedDoc.body.style.visibility = 'visible';
+                                                clonedDoc.body.style.opacity = '1';
+                                                clonedDoc.body.style.background = '#ffffff';
+                                            }
+                                        } catch (_e) {}
+                                    }
+                                });
+                                if (chunkCanvas) {
+                                    this.appendCanvasAsPdfPages(pdf, chunkCanvas, { marginMm });
+                                }
+                            }
+                        }
                     }
 
                     this.savePdf(pdf, safeName, options);

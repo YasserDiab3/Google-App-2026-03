@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1779",
+  "version": "1.0.1780",
   "highlights": {
     "ar": [
-      "ترقية وتوحيد كافة تقارير ونماذج منظومة التدريب لتتوافق مع المعيار المؤسسي ISO 45001 ونمط تقارير ICAPP المعتمد.",
-      "إضافة ميزة التحميل المباشر لكافة التقارير بصيغة PDF فورياً دون الحاجة للدخول في نافذة الطباعة، مع استمرار توفير خيار المعاينة والطباعة.",
-      "تطوير كشوف الحضور والتقييم (DOC-HSE-TRN-ATT-01)، تقرير البرامج التدريبية (DOC-HSE-TRN-REP-01)، تقرير تدريب المقاولين (DOC-HSE-TRN-CON-01)، تحليلات المدربين والمتدربين (DOC-HSE-TRN-KPI-01/02/03)، السجل العام للتدريب (DOC-HSE-TRN-REG-01)، وسجل التدريبات القانونية (DOC-HSE-TRN-LEG-01)."
+      "معالجة جذرية لمشكلة ظهور صفحات بيضاء فارغة عند تصدير التقارير الضخمة ومتعددة الصفحات (مثل سجل تدريبات المقاولين لأكثر من 100 صفحة).",
+      "تطوير محرك تصدير PDF (Utils.downloadHtmlAsPdf) بنظام التقسيم التلقائي للجداول (Auto Table Pagination) والتجزئة الآمنة للشرائح (Chunked Capture) لمنع تجاوز حدود ذاكرة Canvas في المتصفحات.",
+      "تكرار ترويسة الأعمدة وعناوين الجداول الرسمية في بداية كل صفحة مع ترقيم دقيق (صفحة X من Y) وتوقيعات معتمدة في الصفحة الأخيرة دون اقتطاع للأسطر."
     ],
     "en": [
-      "Upgraded and standardized all Training module exports and reports to the unified ISO 45001 corporate template.",
-      "Added direct PDF report download capability across all forms and reports without forcing print dialog mode, while retaining preview & print options.",
-      "Redesigned Attendance & Evaluation Records (DOC-HSE-TRN-ATT-01), Summary Reports (DOC-HSE-TRN-REP-01), Contractor Dossiers (DOC-HSE-TRN-CON-01), Analytics & KPI Reports (DOC-HSE-TRN-KPI-01/02/03), Master Attendance Register (DOC-HSE-TRN-REG-01), and Legal Training Compliance Registry (DOC-HSE-TRN-LEG-01)."
+      "Resolved blank white page export failures on large multi-page reports (e.g. Contractor Training Registry exceeding 100+ pages).",
+      "Upgraded PDF rendering engine (Utils.downloadHtmlAsPdf) with Auto Table Pagination and safe chunked capturing to prevent browser canvas buffer memory overflow (>32,767px).",
+      "Ensured table headers are repeated cleanly across every page with dynamic page numbering (Page X of Y) and official signature blocks on the final page."
     ]
   },
-  "releaseName": "v1.0.1779 - Training Module Unified ISO 45001 & Direct PDF Download Redesign",
-  "lastUpdate": "2026-09-28T20:10:00.000Z"
+  "releaseName": "v1.0.1780 - PDF Multi-Page Export Engine & Auto Table Pagination Fix",
+  "lastUpdate": "2026-09-28T20:45:00.000Z"
 }

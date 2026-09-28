@@ -6541,7 +6541,7 @@ const Training = {
             const totalTrainees = records.reduce((sum, entry) => sum + (parseInt(entry.traineesCount, 10) || 0), 0);
             const totalHours = records.reduce((sum, entry) => sum + (parseFloat(entry.totalHours) || 0), 0);
 
-            const rowsHtml = records.map((entry, index) => {
+            const rowItems = records.map((entry, index) => {
                 const entryContractorId = String(entry.contractorId || '').trim();
                 let entryContractorName = '-';
                 const storedName = String(entry.contractorName || '').replace(/\s+/g, ' ').trim();
@@ -6580,7 +6580,7 @@ const Training = {
                     <td style="text-align: right;">${Utils.escapeHTML(entry.subLocation || '-')}</td>
                 </tr>
             `;
-            }).join('');
+            });
 
             // إنشاء معلومات الفترة الزمنية
             let periodInfo = '';
@@ -6604,9 +6604,7 @@ const Training = {
             const headerHtml = this.getIsoPrintHeaderHtml(reportTitle, subtitle, docCode, 'Rev. 03', 'داخلي ومعتمد');
             const footerHtml = this.getIsoPrintFooterHtml(docCode, 'Rev. 03', 'ISO 45001:2018 (Clause 7.2 Competence & 8.1.4 Contractors)');
 
-            const bodyContent = `
-                ${headerHtml}
-
+            const summaryCardsHtml = `
                 <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
                     <div class="info-card" style="grid-column: span ${selectedContractorName ? '2' : '1'};">
                         <div class="card-label">المقاول / الشركة الخارجية:</div>
@@ -6634,32 +6632,31 @@ const Training = {
                     </div>
                 </div>
 
-                <div style="margin-top: 14px; margin-bottom: 6px;">
+                <div style="margin-top: 10px; margin-bottom: 6px;">
                     <h3 style="margin: 0; font-size: 13px; font-weight: 900; color: #1e3a8a;">
                         <i class="fas fa-list-check" style="margin-left: 6px;"></i> تفاصيل جلسات التدريب والتأهيل الميداني للعمالة الخارجية
                     </h3>
                 </div>
+            `;
 
-                <table class="iso-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 35px;">#</th>
-                            <th style="width: 85px;">التاريخ</th>
-                            <th>الموضوع التدريبي</th>
-                            <th>المدرب</th>
-                            ${!selectedContractorName ? '<th>المقاول / الشركة</th>' : ''}
-                            <th style="width: 65px;">المتدربين</th>
-                            <th style="width: 65px;">المدة (د)</th>
-                            <th style="width: 65px;">الساعات</th>
-                            <th>الموقع</th>
-                            <th>الموقع الفرعي</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${rowsHtml || `<tr><td colspan="${selectedContractorName ? '9' : '10'}" style="padding: 16px; text-align: center; color: #64748b;">لا توجد سجلات تدريب مطابقة للفترة المحددة</td></tr>`}
-                    </tbody>
-                </table>
+            const theadHtml = `
+                <thead>
+                    <tr>
+                        <th style="width: 35px;">#</th>
+                        <th style="width: 85px;">التاريخ</th>
+                        <th>الموضوع التدريبي</th>
+                        <th>المدرب</th>
+                        ${!selectedContractorName ? '<th>المقاول / الشركة</th>' : ''}
+                        <th style="width: 65px;">المتدربين</th>
+                        <th style="width: 65px;">المدة (د)</th>
+                        <th style="width: 65px;">الساعات</th>
+                        <th>الموقع</th>
+                        <th>الموقع الفرعي</th>
+                    </tr>
+                </thead>
+            `;
 
+            const signaturesHtml = `
                 <div class="signatures-grid">
                     <div class="sig-card">
                         <div class="sig-card-title">مسؤول تدريب وتأهيل المقاولين</div>
@@ -6677,9 +6674,94 @@ const Training = {
                         <div class="sig-line-area">الاعتماد والختم الرسمي</div>
                     </div>
                 </div>
-
-                ${footerHtml}
             `;
+
+            let bodyContent = '';
+            if (rowItems.length <= 12) {
+                const emptyRow = `<tr><td colspan="${selectedContractorName ? '9' : '10'}" style="padding: 16px; text-align: center; color: #64748b;">لا توجد سجلات تدريب مطابقة للفترة المحددة</td></tr>`;
+                bodyContent = `
+                    <div class="report-page landscape">
+                        ${headerHtml}
+                        ${summaryCardsHtml}
+                        <table class="iso-table">
+                            ${theadHtml}
+                            <tbody>
+                                ${rowItems.join('') || emptyRow}
+                            </tbody>
+                        </table>
+                        ${signaturesHtml}
+                        ${footerHtml}
+                    </div>
+                `;
+            } else {
+                const p1Cap = 12;
+                const regCap = 18;
+                const lastCap = 10;
+                const pages = [];
+                let cur = 0;
+
+                const p1 = rowItems.slice(0, p1Cap);
+                pages.push(p1);
+                cur = p1Cap;
+
+                while (cur < rowItems.length) {
+                    const rem = rowItems.length - cur;
+                    if (rem <= lastCap) {
+                        pages.push(rowItems.slice(cur));
+                        cur = rowItems.length;
+                    } else if (rem <= regCap + lastCap) {
+                        const mid = Math.ceil(rem / 2);
+                        pages.push(rowItems.slice(cur, cur + mid));
+                        cur += mid;
+                        pages.push(rowItems.slice(cur));
+                        cur = rowItems.length;
+                    } else {
+                        pages.push(rowItems.slice(cur, cur + regCap));
+                        cur += regCap;
+                    }
+                }
+
+                const totalPagesCount = pages.length;
+                bodyContent = pages.map((pageRows, pIdx) => {
+                    const pageNo = pIdx + 1;
+                    const isFirst = (pageNo === 1);
+                    const isLast = (pageNo === totalPagesCount);
+
+                    const pHeader = isFirst ? headerHtml : `
+                        <div class="iso-print-mini-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #1e3a8a; padding-bottom:5px; margin-bottom:10px;">
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <img src="/icons/icapp-logo.png" style="height:22px; max-width:65px; object-fit:contain;">
+                                <span style="font-size:11px; font-weight:800; color:#0f172a;">${Utils.escapeHTML(reportTitle)}</span>
+                                ${selectedContractorName ? `<span style="font-size:10px; background:#eff6ff; color:#1e3a8a; padding:2px 6px; border-radius:4px; font-weight:700;">${Utils.escapeHTML(selectedContractorName)}</span>` : ''}
+                            </div>
+                            <div style="font-size:10px; color:#475569; font-weight:700;">
+                                <span>كود: <strong>${docCode}</strong></span> | 
+                                <span>إصدار: <strong>Rev. 03</strong></span> | 
+                                <span style="color:#1e3a8a; font-weight:800;">صفحة ${pageNo} من ${totalPagesCount}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    const pFooter = footerHtml
+                        ? footerHtml.replace(/صفحة\s*\d+\s*من\s*\d+/g, `صفحة ${pageNo} من ${totalPagesCount}`)
+                        : '';
+
+                    return `
+                        <div class="report-page landscape">
+                            ${pHeader}
+                            ${isFirst ? summaryCardsHtml : ''}
+                            <table class="iso-table">
+                                ${theadHtml}
+                                <tbody>
+                                    ${pageRows.join('')}
+                                </tbody>
+                            </table>
+                            ${isLast ? signaturesHtml : ''}
+                            ${pFooter}
+                        </div>
+                    `;
+                }).join('');
+            }
 
             const pdfFileName = `${reportTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
@@ -17831,10 +17913,23 @@ const Training = {
                 max-width: ${isLandscape ? '1180px' : '920px'};
                 margin: 22px auto 40px auto;
                 background: #ffffff;
-                padding: 24px 30px;
+                padding: 12px 16px;
                 border-radius: 12px;
                 box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
                 border: 1px solid #e2e8f0;
+            }
+            .report-page {
+                box-sizing: border-box;
+                width: 100%;
+                min-height: ${isLandscape ? '740px' : '1080px'};
+                padding: 16px 20px;
+                background: #ffffff;
+                page-break-after: always;
+                break-after: page;
+            }
+            .report-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
             }
 
             .iso-print-header {
@@ -18071,9 +18166,19 @@ const Training = {
                 .report-page-container {
                     max-width: 100% !important;
                     margin: 0 !important;
-                    padding: 4mm 6mm !important;
+                    padding: 0 !important;
                     border: none !important;
                     box-shadow: none !important;
+                }
+                .report-page {
+                    min-height: auto !important;
+                    padding: 4mm 6mm !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                }
+                .report-page:last-child {
+                    page-break-after: auto !important;
+                    break-after: auto !important;
                 }
                 @page {
                     size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
