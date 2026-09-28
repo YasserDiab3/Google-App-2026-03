@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1786",
+  "version": "1.0.1787",
   "highlights": {
     "ar": [
-      "جعل التاريخ والوقت في بطاقة تقرير المخالفة في سطر واحد متناسق (التاريخ | الوقت) مع دعم التنسيق ثنائي الاتجاه LTR/RTL.",
-      "معالجة ثبات الوقت على 02:00 من خلال تجاهل أزمنة منتصف الليل الافتراضية واستخراج التوقيت الفعلي الدقيق من المعرف الزمني للسجل أو حقل التوقيت المباشر.",
-      "تأمين حفظ حقول التوقيت في السيرفر لضمان تسجيل التوقيت الفعلي بصيغة نصية معزولة عن إزاحة المناطق الزمنية."
+      "اختصار مراجع التوثيق القياسية (ISO 45001) في فوتر تقارير ونماذج المخالفات لتظهر في سطر واحد موجز ومضبوط دون استطالة.",
+      "تأمين عدم التفاف أو نزول عناصر شريط التوثيق (كود الوثيقة، رقم الإصدار، مرجعية التوثيق، نظام الجودة) للأسفل من خلال منع الالتفاف التام.",
+      "ضبط التنسيق المرن (Flexbox) والحجم الأمثل للخط في تذييل التقارير لضمان التوافق التام مع طباعة A4 والشاشات."
     ],
     "en": [
-      "Displayed violation date and time on a single unified horizontal line (Date | Time) with clean bidirectional LTR/RTL rendering.",
-      "Fixed static 02:00 time bug by filtering out Google Sheets midnight timezone artifacts and extracting the actual recording time from the record timestamp.",
-      "Secured server-side time-only fields to prevent timezone shifts during sheet writes."
+      "Shortened ISO 45001 documentation references across violation reports and footers to ensure clean single-line rendering.",
+      "Enforced strict non-wrapping (white-space: nowrap) on all ISO footer strip metadata fields preventing broken lines.",
+      "Optimized flex layout and typography in report footers for flawless A4 print and display consistency."
     ]
   },
-  "releaseName": "v1.0.1786 - Single-Line Violation Date/Time Display & Real Timestamp Resolution",
-  "lastUpdate": "2026-09-28T22:32:00.000Z"
+  "releaseName": "v1.0.1787 - Shortened ISO Footer References & Single-Line Layout Enforcement",
+  "lastUpdate": "2026-09-28T22:38:00.000Z"
 }

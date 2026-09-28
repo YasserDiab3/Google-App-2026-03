@@ -421,16 +421,27 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            gap: 8px;
             padding: 5px 12px;
             background: #f8fafc;
-            font-size: 9.5px;
+            font-size: 8.5px;
             font-weight: 800;
             color: #334155;
             page-break-inside: avoid;
         }
+        .iso-footer-strip span {
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            flex-shrink: 0;
+        }
         .iso-footer-strip span strong {
             color: #0f172a;
             font-family: monospace, inherit;
+            white-space: nowrap;
         }
 
         /* فوتر النظام الموحد */

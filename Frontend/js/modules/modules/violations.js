@@ -5099,7 +5099,7 @@ const Violations = {
                         </div>
                     </div>
 
-                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-KPI-01', 'Rev. 03', 'ISO 45001:2018 (Clause 9.1 Monitoring and measurement)')}
+                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-KPI-01', 'Rev. 03', 'ISO 45001:2018 (Clause 9.1)')}
                 </div>
             `;
 
@@ -7333,7 +7333,7 @@ const Violations = {
                 </div>
             </div>
 
-            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-REC-01', 'Rev. 03', 'ISO 45001:2018 (Clause 10.2 Nonconformity and corrective action)')}
+            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-REC-01', 'Rev. 03', 'ISO 45001:2018 (Clause 10.2)')}
         `;
     },
 
@@ -9152,7 +9152,7 @@ const Violations = {
                         </div>
                     </div>
 
-                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4 Procurement & Contractor Controls)')}
+                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4)')}
                 </div>
             `;
 
@@ -9284,7 +9284,7 @@ const Violations = {
                                 </div>
                             </div>
 
-                            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-REG-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4 Procurement & Contractor Controls)')}
+                            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-REG-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4)')}
                         ` : ''}
 
                         <div class="page-counter-footer">صفحة ${pageNum} من ${totalPages}</div>
@@ -9789,16 +9789,27 @@ const Violations = {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-wrap: nowrap;
+                white-space: nowrap;
+                gap: 8px;
                 padding: 5px 12px;
                 background: #f8fafc;
-                font-size: 9.5px;
+                font-size: 8.5px;
                 font-weight: 800;
                 color: #334155;
                 page-break-inside: avoid;
             }
+            .iso-footer-strip span {
+                white-space: nowrap;
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                flex-shrink: 0;
+            }
             .iso-footer-strip span strong {
                 color: #0f172a;
                 font-family: monospace, inherit;
+                white-space: nowrap;
             }
             .portal-unified-footer {
                 margin-top: 8px;
@@ -9912,13 +9923,19 @@ const Violations = {
     /**
      * تذييل ISO 45001 المعتمد لجميع نماذج وتقارير المخالفات
      */
-    getIsoPrintFooterHtml(docCode, revision = 'Rev. 03', standard = 'ISO 45001:2018 (Clause 10.2 Nonconformity and corrective action)') {
+    getIsoPrintFooterHtml(docCode, revision = 'Rev. 03', standard = 'ISO 45001:2018 (Clause 10.2)') {
+        // اختصار مرجعية التوثيق لتكون في سطر واحد دون إطالة تسبب نزول النص للأسفل
+        let cleanStandard = String(standard || 'ISO 45001:2018 (Clause 10.2)').trim();
+        cleanStandard = cleanStandard
+            .replace(/\(Clause\s+([\d.\s&,]+)[^)]*\)/i, '(Clause $1)')
+            .replace(/\s{2,}/g, ' ');
+
         return `
-            <div class="iso-footer-strip">
-                <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
-                <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
-                <span>مرجعية التوثيق: <strong dir="ltr" style="display: inline-block;">${Utils.escapeHTML(standard)}</strong></span>
-                <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+            <div class="iso-footer-strip" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; white-space: nowrap; gap: 8px;">
+                <span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;">كود الوثيقة: <strong style="white-space: nowrap;">${Utils.escapeHTML(docCode)}</strong></span>
+                <span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;">رقم الإصدار: <strong style="white-space: nowrap;">${Utils.escapeHTML(revision)}</strong></span>
+                <span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;">مرجعية التوثيق: <strong dir="ltr" style="white-space: nowrap;">${Utils.escapeHTML(cleanStandard)}</strong></span>
+                <span style="white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;">نظام الجودة: <strong style="white-space: nowrap;">ICAPP HSE MS</strong></span>
             </div>
             <footer class="portal-unified-footer">
                 <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
