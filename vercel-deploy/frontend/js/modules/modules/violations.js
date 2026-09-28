@@ -1864,8 +1864,13 @@ const Violations = {
                 <!-- Tab Content -->
                 <div id="violations-tab-content">
                     <div class="content-card" id="violations-list-tab">
-                    <div class="card-header">
-                        <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <h2 class="card-title" style="margin: 0;"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog()" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
+                                <i class="fas fa-file-pdf ml-1"></i>تصدير السجل العام (ISO PDF)
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         ${this.renderAllViolationsStats()}
@@ -2066,6 +2071,9 @@ const Violations = {
                                             </button>
                                             <button type="button" onclick='Violations.showViolationForm(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(139,92,246,0.3);" title="تعديل">
                                                 <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" onclick='Violations.printViolationProfessional(${this._escapeIdForHandler(violation.id)})' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #0f766e, #0d9488); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(15,118,110,0.3);" title="معاينة وطباعة النموذج (ISO)">
+                                                <i class="fas fa-print"></i>
                                             </button>
                                             <button type="button" onclick='Violations.downloadViolationReport(${this._escapeIdForHandler(violation.id)}, this)' style="width: 36px; height: 36px; border-radius: 8px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 2px 6px rgba(16,185,129,0.3);" title="تحميل تقرير المخالفة PDF مباشرة" aria-label="تحميل تقرير المخالفة PDF">
                                                 <i class="fas fa-file-download"></i>
@@ -2538,8 +2546,13 @@ const Violations = {
             case 'all':
                 contentContainer.innerHTML = `
                     <div class="content-card" id="violations-list-tab">
-                        <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <h2 class="card-title" style="margin: 0;"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog()" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
+                                    <i class="fas fa-file-pdf ml-1"></i>تصدير السجل العام (ISO PDF)
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             ${this.renderAllViolationsStats()}
@@ -2557,8 +2570,13 @@ const Violations = {
             case 'employees':
                 contentContainer.innerHTML = `
                     <div class="content-card">
-                        <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-user-tie ml-2"></i>مخالفات الموظفين</h2>
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <h2 class="card-title" style="margin: 0;"><i class="fas fa-user-tie ml-2"></i>مخالفات الموظفين</h2>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog('employee')" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
+                                    <i class="fas fa-file-pdf ml-1"></i>تصدير سجل الموظفين (ISO PDF)
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div id="violations-filters-container" class="mb-4">
@@ -3169,91 +3187,155 @@ const Violations = {
         }
 
         try {
-            Loading.show('جاري إنشاء تقرير مخالفات المقاولين...');
+            Loading.show('جاري إنشاء تقرير مخالفات المقاولين (ISO 45001)...');
 
             const highCount = violations.filter(v => String(v.severity || '').trim() === 'عالية').length;
             const mediumCount = violations.filter(v => String(v.severity || '').trim() === 'متوسطة').length;
-            const lowCount = violations.filter(v => String(v.severity || '').trim() === 'منخضة').length;
+            const lowCount = violations.filter(v => String(v.severity || '').trim() === 'منخفضة').length;
             const resolvedCount = violations.filter(v => String(v.status || '').trim() === 'محلول').length;
             const unresolvedCount = Math.max(0, violations.length - resolvedCount);
             const resolutionRate = violations.length > 0 ? Math.round((resolvedCount / violations.length) * 100) : 0;
             const uniqueContractors = new Set(violations.map(v => String(v.contractorName || '').trim()).filter(Boolean)).size;
             const totalFineAmount = violations.reduce((sum, v) => sum + (Number(this.getEffectiveFineAmount(v)) || 0), 0);
 
-            const arCell = this._AR_PDF_TEXT_STYLE_;
-            const rowsHtml = violations.map((v, index) => `
-                <tr>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${index + 1}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.contractorName || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.violationType || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.severity || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.actionTaken || '-')}</td>
-                    <td dir="rtl" style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; ${arCell}">${Utils.escapeHTML(v.status || '-')}</td>
-                </tr>
-            `).join('');
+            const reportTitle = selectedContractorName
+                ? `تقرير مخالفات المقاول: ${selectedContractorName}`
+                : 'تقرير سجل مخالفات مقاولي الشركة';
 
-            const headingName = selectedContractorName ? ` - ${Utils.escapeHTML(selectedContractorName)}` : '';
-            const content = `
-                <div style="margin-bottom: 24px; direction: rtl;">
-                    <h2 dir="rtl" style="font-size: 20px; margin-bottom: 12px; color: #991B1B; font-weight: 700; ${arCell}">تقرير مخالفات المقاولين${headingName}</h2>
-                    ${periodInfo ? `<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;"><strong style="color: #D97706;">الفترة:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(periodInfo)}</span></div>` : ''}
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FEF2F2; border: 1px solid #FECACA;"><div style="font-size: 12px; color: #B91C1C; margin-bottom: 6px; font-weight: 600;">إجمالي المخالفات</div><div style="font-size: 24px; font-weight: 700; color: #991B1B;">${violations.length}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;"><div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد المقاولين</div><div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${uniqueContractors}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFFBEB; border: 1px solid #FDE68A;"><div style="font-size: 12px; color: #B45309; margin-bottom: 6px; font-weight: 600;">القيمة المالية للمخالفات</div><div style="font-size: 24px; font-weight: 700; color: #92400E;">${this.formatFineAmount(Number(totalFineAmount))}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #FFF7ED; border: 1px solid #FED7AA;"><div style="font-size: 12px; color: #C2410C; margin-bottom: 6px; font-weight: 600;">عالية / متوسطة / منخفضة</div><div style="font-size: 20px; font-weight: 700; color: #9A3412;">${highCount} / ${mediumCount} / ${lowCount}</div></div>
-                        <div style="flex: 1 1 180px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;"><div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">معدل الحل</div><div style="font-size: 24px; font-weight: 700; color: #065F46;">${resolutionRate}%</div><div style="font-size: 11px; color: #065F46; margin-top: 4px;">محلول: ${resolvedCount} | غير محلول: ${unresolvedCount}</div></div>
+            // تقسيم الصفحات بنظام .report-page landscape
+            const pagesData = this._paginateViolationsList(violations, 8, 11);
+            const totalPages = pagesData.length;
+
+            const pagesHtml = pagesData.map((pageRecords, pageIdx) => {
+                const pageNum = pageIdx + 1;
+                const isFirstPage = pageNum === 1;
+                const isLastPage = pageNum === totalPages;
+
+                const rowsHtml = pageRecords.map((v, rIdx) => {
+                    const globalIdx = (pageIdx === 0 ? 0 : 8 + (pageIdx - 1) * 11) + rIdx + 1;
+                    const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
+
+                    return `
+                        <tr>
+                            <td style="font-weight: 700;">${globalIdx}</td>
+                            <td style="font-weight: 800; text-align: right;">${Utils.escapeHTML(v.contractorName || '-')}</td>
+                            <td style="text-align: right; font-weight: 700;">${Utils.escapeHTML(v.violationType || '-')}</td>
+                            <td>${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                            <td>
+                                <span style="font-weight: 800; color: ${v.severity === 'عالية' ? '#b91c1c' : v.severity === 'متوسطة' ? '#d97706' : '#2563eb'};">
+                                    ${Utils.escapeHTML(v.severity || '-')}
+                                </span>
+                            </td>
+                            <td style="font-weight: 800; color: #166534;">${this.formatFineAmount(fineVal)}</td>
+                            <td style="text-align: right; font-size: 9.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                            <td>
+                                <span style="font-weight: 800; color: ${v.status === 'محلول' ? '#047857' : '#b91c1c'};">
+                                    ${Utils.escapeHTML(v.status || '-')}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="report-page landscape">
+                        ${this.getIsoPrintHeaderHtml(
+                            reportTitle,
+                            isFirstPage ? 'سجل رسمي موثق لمخالفات المقاولين ومعدلات الامتثال والسلامة الميدانية' : `تابع جدول ${reportTitle} — استكمال البيانات`,
+                            'DOC-HSE-VIO-CON-01',
+                            'Rev. 03',
+                            'سري وداخلي'
+                        )}
+
+                        ${isFirstPage ? `
+                            ${periodInfo ? `
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: #fff7ed; border-right: 4px solid #ea580c; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px; font-size: 11px;">
+                                    <div><strong style="color: #9a3412;">الفترة الزمنية المحددة:</strong> <span style="color: #0f172a; font-weight: 700;">${Utils.escapeHTML(periodInfo)}</span></div>
+                                    <div><strong style="color: #9a3412;">تاريخ الاستخراج:</strong> ${Utils.formatDate(new Date())}</div>
+                                </div>
+                            ` : ''}
+
+                            <div class="summary-cards-row">
+                                <div class="kpi-stat-card accent-red">
+                                    <div class="kpi-card-label">إجمالي المخالفات</div>
+                                    <div class="kpi-card-value" style="color: #991b1b;">${violations.length}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-blue">
+                                    <div class="kpi-card-label">عدد المقاولين</div>
+                                    <div class="kpi-card-value" style="color: #1e3a8a;">${uniqueContractors}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-green">
+                                    <div class="kpi-card-label">القيمة المالية للمخالفات</div>
+                                    <div class="kpi-card-value" style="color: #166534; font-size: 16px;">${this.formatFineAmount(Number(totalFineAmount))}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-amber">
+                                    <div class="kpi-card-label">عالية / متوسطة / منخفضة</div>
+                                    <div class="kpi-card-value" style="color: #92400e; font-size: 15px;">${highCount} / ${mediumCount} / ${lowCount}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-green">
+                                    <div class="kpi-card-label">معدل الحل والإغلاق</div>
+                                    <div class="kpi-card-value" style="color: #065f46;">${resolutionRate}% <small style="font-size: 11px; font-weight: 700;">(${resolvedCount} محلول / ${unresolvedCount} مفتوح)</small></div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <table class="iso-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 35px;">#</th>
+                                    <th>اسم المقاول</th>
+                                    <th>نوع المخالفة</th>
+                                    <th style="width: 80px;">التاريخ</th>
+                                    <th style="width: 65px;">الشدة</th>
+                                    <th style="width: 85px;">الغرامة</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th style="width: 70px;">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+
+                        ${isLastPage ? `
+                            <div class="signatures-grid">
+                                <div class="sig-card">
+                                    <div class="sig-card-title">ممثل المقاول / المشرف المسؤول</div>
+                                    <div class="sig-card-name">العلم والتعهد بتلافي المخالفات</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">ضابط السلامة الميداني</div>
+                                    <div class="sig-card-name">المراجع والمدقق الميداني</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">الاعتماد الرسمي</div>
+                                    <div class="sig-card-name">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                                    <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                                </div>
+                            </div>
+
+                            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-CON-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4.2 & 10.2)')}
+                        ` : ''}
+
+                        <div class="page-counter-footer">صفحة ${pageNum} من ${totalPages}</div>
                     </div>
-                </div>
-                <div style="margin-bottom: 16px; direction: rtl;">
-                    <h3 dir="rtl" style="font-size: 18px; margin-bottom: 12px; color: #991B1B; font-weight: 700; border-bottom: 2px solid #DC2626; padding-bottom: 8px; ${arCell}">جدول المخالفات</h3>
-                </div>
-                <div style="overflow-x: auto; direction: rtl;">
-                    <table dir="rtl" style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; ${arCell}">
-                        <thead>
-                            <tr style="background: #B91C1C; color: #FFFFFF;">
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">#</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">اسم المقاول</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">نوع المخالفة</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">التاريخ</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الشدة</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الإجراء المتخذ</th>
-                                <th dir="rtl" style="padding: 12px 8px; border: 1px solid #991B1B; text-align: center; font-weight: 700; ${arCell}">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsHtml}</tbody>
-                    </table>
-                </div>
-            `;
+                `;
+            }).join('');
 
-            const formCode = `CONTRACTOR-VIOL-${new Date().toISOString().slice(0, 10)}`;
-            const reportTitle = selectedContractorName ? `تقرير مخالفات المقاول: ${selectedContractorName}` : 'تقرير مخالفات المقاولين';
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, false, {
-                    source: 'ContractorViolationsTab',
-                    contractorId: contractorId || '',
-                    contractorName: selectedContractorName || '',
-                    titleAr: reportTitle,
-                    includeQRCode: false
-                }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(reportTitle)}</title></head><body>${content}</body></html>`;
-
-            const safeFileName = `${String(reportTitle).replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, safeFileName);
-            if (!downloaded) {
-                throw new Error('تعذّر إنشاء ملف PDF — تحقق من الاتصال بالإنترنت ثم أعد المحاولة');
-            }
             Loading.hide();
-            Notification.success('تم تحميل تقرير مخالفات المقاولين بصيغة PDF بنجاح');
+
+            const safeFileName = `${String(reportTitle).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            await this.downloadIsoReportAsPdf(reportTitle, pagesHtml, safeFileName, true);
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير مخالفات المقاولين:', error);
-            Notification.error('تعذر إنشاء تقرير مخالفات المقاولين: ' + (error.message || 'خطأ غير معروف'));
+            Notification.error('فشل في إنشاء التقرير: ' + (error.message || 'خطأ غير معروف'));
         }
     },
 
-    async deleteViolation(id) {
+        async deleteViolation(id) {
         if (!id) {
             if (typeof Utils !== 'undefined' && Utils.showToast) {
                 Utils.showToast('معرف المخالفة غير موجود', 'error');
@@ -4698,45 +4780,45 @@ const Violations = {
             if (wasVisible) filterPanel.style.display = '';
 
             const { dataUrl } = Utils.PdfExport.compressCanvasToJpegDataUrl(canvas, Utils.PdfExport.TARGET_MAX_BYTES);
-            const content = `
-                <div style="margin:0 auto;max-width:100%;">
-                    <img src="${dataUrl}" alt="Violations Analytics Dashboard" style="width:100%;max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0;">
-                </div>`;
+            
+            const formTitleAr = 'تقرير تحليلات ومؤشرات أداء المخالفات';
+            const formTitleEn = 'Violations Performance Analytics & Incident Metrics KPI Report';
+            const legendHtml = this._buildViolAnalyticsExportLegend_();
 
-            const formCode = `VIOL-ANALYTICS-${new Date().toISOString().slice(0, 10)}`;
-            const formTitleAr = 'لوحة تحليل المخالفات';
-            const formTitleEn = 'Violations Analysis Report';
-            const nowIso = new Date().toISOString();
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    formTitleAr,
-                    content,
-                    false,
-                    false,
-                    {
-                        source: 'ViolationsAnalytics',
-                        titleEn: formTitleEn,
-                        titleAr: formTitleAr,
-                        version: AppState?.companySettings?.formVersion || '1.0',
-                        includeQRCode: false,
-                        compactPdfFooter: true,
-                        headerLayoutLtr: true,
-                        footerLegendHtml: this._buildViolAnalyticsExportLegend_()
-                    },
-                    nowIso,
-                    nowIso
-                )
-                : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${formTitleAr}</title></head><body>${content}</body></html>`;
+            const fullContent = `
+                <div class="report-page landscape">
+                    ${this.getIsoPrintHeaderHtml(formTitleAr, formTitleEn, 'DOC-HSE-VIO-KPI-01', 'Rev. 03', 'سري وداخلي')}
+
+                    <div style="margin: 0 auto 12px auto; max-width: 100%; text-align: center;">
+                        <img src="${dataUrl}" alt="Violations Analytics Dashboard" style="width: 100%; max-width: 100%; height: auto; display: block; border-radius: 8px; border: 1.5px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+                    </div>
+
+                    ${legendHtml ? `<div style="margin-top: 8px;">${legendHtml}</div>` : ''}
+
+                    <div class="signatures-grid">
+                        <div class="sig-card">
+                            <div class="sig-card-title">إعداد وتحليل البيانات</div>
+                            <div class="sig-card-name">مسؤول الإحصاء ومؤشرات السلامة</div>
+                            <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">المراجعة والتدقيق الإداري</div>
+                            <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                            <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">الاعتماد الرسمي</div>
+                            <div class="sig-card-name">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                            <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                        </div>
+                    </div>
+
+                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-KPI-01', 'Rev. 03', 'ISO 45001:2018 (Clause 9.1 Monitoring and measurement)')}
+                </div>
+            `;
 
             const fileName = `Violations-Analysis-${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-            if (!downloaded) {
-                throw new Error('PDF generation failed');
-            }
-            if (typeof Notification !== 'undefined' && Notification.success) {
-                Notification.success('تم تصدير تقرير المخالفات PDF بنجاح');
-            }
+            await this.downloadIsoReportAsPdf(formTitleAr, fullContent, fileName, true);
         } catch (err) {
             console.error('PDF export error:', err);
             if (typeof Notification !== 'undefined' && Notification.error) {
@@ -4747,7 +4829,7 @@ const Violations = {
         }
     },
 
-    // ── ربط أحداث لوحة التحليل ──
+        // ── ربط أحداث لوحة التحليل ──
     _vBindAnalyticsEvents() {
         const root = document.getElementById('viol-analytics-root');
         if (!root) return;
@@ -6769,193 +6851,185 @@ const Violations = {
     _buildViolationReportTableHtml(violation) {
         const v = this.normalizeViolationRecord(violation) || violation;
         const esc = (value, fallback = '—') => Utils.escapeHTML(String(value == null || value === '' ? fallback : value));
-        const formatDateTime = (value) => {
-            if (!value) return '—';
-            if (typeof Utils.formatDateTime === 'function') {
-                const formatted = Utils.formatDateTime(value);
-                return formatted && formatted !== '-' ? formatted : '—';
-            }
-            const date = new Date(value);
-            if (Number.isNaN(date.getTime())) return String(value);
-            return date.toLocaleString('ar-EG-u-nu-latn', {
-                year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-            });
-        };
         const isContractor = v.personType === 'contractor' || !!v.contractorName;
-        const infoItem = (label, value, options = {}) => `
-            <div class="vr-info ${options.wide ? 'vr-info-wide' : ''}">
-                <span class="vr-label">${esc(label, '')}</span>
-                <strong class="vr-value ${options.accent || ''}">${esc(value)}</strong>
-            </div>`;
         const photoUrl = this.processPhoto(v.photo);
+        const resolvedPhoto = photoUrl ? this.convertGoogleDriveLinkToPrintable(photoUrl) : '';
+
+        const title = isContractor ? 'تقرير رصد وتوثيق مخالفة مقاول' : 'تقرير رصد وتوثيق مخالفة موظف';
+        const subtitle = 'نموذج رسمي لتوثيق المخالفات الميدانية والإجراءات التصحيحية المتخذة';
+        const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
+
         return `
-            <style>
-                .violation-report{--vr-navy:#102a43;--vr-red:#b91c1c;--vr-gold:#d97706;--vr-ink:#172033;direction:rtl;color:var(--vr-ink);font-family:'Cairo','Tahoma','Segoe UI',sans-serif;letter-spacing:0}
-                .violation-report *{box-sizing:border-box;letter-spacing:0}
-                .vr-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 14px;margin:0 0 7px;border-radius:8px;background:linear-gradient(125deg,var(--vr-navy),#173d6c);color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                .vr-banner-title{font-size:14px;font-weight:800}.vr-banner-sub{margin-top:2px;color:#bfdbfe;font-size:9px}
-                .vr-code{min-width:110px;padding:4px 8px;border:1px solid rgba(255,255,255,.3);border-radius:6px;text-align:center;background:rgba(255,255,255,.09)}
-                .vr-code small{display:block;color:#bae6fd;font-size:8px}.vr-code strong{display:block;margin-top:1px;font-size:11.5px}
-                .vr-section{margin:0 0 7px;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;page-break-inside:avoid;break-inside:avoid;background:#fff}
-                .vr-section-title{display:flex;align-items:center;gap:6px;padding:4px 10px;border-bottom:1px solid #cbd5e1;color:var(--vr-navy);background:#f1f5f9;font-size:10px;font-weight:800;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-                .vr-section-title:before{content:'';width:3px;height:12px;border-radius:3px;background:#0891b2}
-                .vr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
-                .vr-info{min-height:36px;padding:4px 8px;border-bottom:1px solid #edf2f7;border-left:1px solid #edf2f7}.vr-info-wide{grid-column:1/-1}
-                .vr-label{display:block;margin-bottom:2px;color:#64748b;font-size:8px;font-weight:700}.vr-value{display:block;color:#172033;font-size:9.5px;line-height:1.35;overflow-wrap:anywhere;white-space:pre-wrap}
-                .vr-value.vr-danger{color:#b91c1c;font-weight:700}.vr-value.vr-success{color:#047857;font-weight:700}.vr-value.vr-money{color:#166534;font-size:11px;font-weight:700}
-                .vr-photo{padding:4px 8px;text-align:center;background:#f8fafc}.vr-photo img{display:block;max-width:100%;max-height:170px;margin:auto;border:1px solid #cbd5e1;border-radius:6px;object-fit:contain}
-                .vr-signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;page-break-inside:avoid;break-inside:avoid}
-                .vr-sign{min-height:48px;padding:5px;border:1px dashed #94a3b8;border-radius:6px;text-align:center;color:#64748b;font-size:8px}.vr-sign strong{display:block;margin-bottom:20px;color:#334155;font-size:9px}
-                .vr-footnote{margin-top:4px;padding-top:3px;border-top:1px solid #e2e8f0;color:#64748b;text-align:center;font-size:7.5px}
-                @media print {
-                    @page { size: A4 portrait; margin: 6mm 8mm; }
-                    html, body { background: #fff !important; height: auto !important; min-height: 0 !important; }
-                    .report-wrapper { padding: 8px 12px !important; box-shadow: none !important; border: none !important; border-radius: 0 !important; }
-                    .report-header { padding-bottom: 6px !important; margin-bottom: 6px !important; }
-                    .report-footer-unified { margin-top: 6px !important; padding-top: 4px !important; }
-                    .vr-section, .vr-photo, .vr-signatures, .vr-banner { page-break-inside: avoid !important; break-inside: avoid !important; }
-                }
-            </style>
-            <div class="violation-report">
-                <div class="vr-banner">
-                    <div><div class="vr-banner-title">${isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف'}</div><div class="vr-banner-sub">سجل رسمي موثق بكامل بيانات المخالفة والإجراء المتخذ</div></div>
-                    <div class="vr-code"><small>رقم التقرير</small><strong>${esc(v.isoCode || v.id || '—')}</strong></div>
+            ${this.getIsoPrintHeaderHtml(title, subtitle, 'DOC-HSE-VIO-REC-01', 'Rev. 03', 'سري وداخلي')}
+
+            <div class="summary-cards-row">
+                <div class="kpi-stat-card accent-red">
+                    <div class="kpi-card-label">رقم المخالفة / الكود</div>
+                    <div class="kpi-card-value" style="color: #991b1b; font-size: 14px;">${esc(v.isoCode || v.id || '—')}</div>
                 </div>
-
-                <section class="vr-section">
-                    <div class="vr-section-title">${isContractor ? 'بيانات المقاول والمخالف' : 'بيانات الموظف المخالف'}</div>
-                    <div class="vr-grid">
-                        ${isContractor ? `
-                            ${infoItem('اسم المقاول', v.contractorName)}
-                            ${infoItem('معرف المقاول', v.contractorId)}
-                            ${infoItem('اسم العامل المخالف', v.contractorWorker || v.employeeName || v.contractorName)}
-                            ${infoItem('الوظيفة', v.contractorPosition)}
-                            ${infoItem('الإدارة / القسم', v.contractorDepartment)}
-                            ${infoItem('نوع السجل', 'مخالفة مقاول')}
-                        ` : `
-                            ${infoItem('اسم الموظف', v.employeeName)}
-                            ${infoItem('الكود الوظيفي', v.employeeCode || v.employeeNumber)}
-                            ${infoItem('الوظيفة', v.employeePosition)}
-                            ${infoItem('الإدارة / القسم', v.employeeDepartment)}
-                        `}
+                <div class="kpi-stat-card accent-amber">
+                    <div class="kpi-card-label">تاريخ وتوقيت المخالفة</div>
+                    <div class="kpi-card-value" style="color: #92400e; font-size: 13px;">
+                        ${v.violationDate ? Utils.formatDate(v.violationDate) : '—'} ${v.violationTime ? `(${esc(v.violationTime)})` : ''}
                     </div>
-                </section>
-
-                <section class="vr-section">
-                    <div class="vr-section-title">بيانات المخالفة</div>
-                    <div class="vr-grid">
-                        ${infoItem('نوع المخالفة', v.violationType)}
-                        ${infoItem('معرف نوع المخالفة', v.violationTypeId)}
-                        ${infoItem('تاريخ المخالفة', v.violationDate ? Utils.formatDate(v.violationDate) : '—')}
-                        ${infoItem('وقت المخالفة', v.violationTime)}
-                        ${infoItem('الموقع', v.violationLocation)}
-                        ${infoItem('معرف الموقع', v.violationLocationId)}
-                        ${infoItem('مكان المخالفة', v.violationPlace)}
-                        ${infoItem('معرف المكان', v.violationPlaceId)}
-                        ${infoItem('درجة الشدة', v.severity, { accent: 'vr-danger' })}
-                        ${infoItem('حالة المخالفة', v.status, { accent: v.status === 'محلول' ? 'vr-success' : 'vr-danger' })}
-                        ${infoItem('تسلسل المخالفة خلال الشهر', v.violationSequenceInMonth)}
-                        ${infoItem('القيمة المالية', this.formatFineAmount(Number(this.getEffectiveFineAmount(v))), { accent: 'vr-money' })}
-                        ${v.violationDetails ? infoItem('تفاصيل المخالفة', v.violationDetails, { wide: true }) : ''}
-                        ${v.actionTaken ? infoItem('الإجراء المتخذ', v.actionTaken, { wide: true }) : ''}
-                    </div>
-                </section>
-
-                ${photoUrl ? `<section class="vr-section"><div class="vr-section-title">صورة المخالفة</div><div class="vr-photo"><img src="${esc(photoUrl, '')}" alt="صورة المخالفة" onerror="this.closest('.vr-section').style.display='none'"></div></section>` : ''}
-
-                <div class="vr-signatures">
-                    <div class="vr-sign"><strong>ممثل المقاول / المخالف</strong>الاسم والتوقيع</div>
-                    <div class="vr-sign"><strong>مسؤول السلامة</strong>الاسم والتوقيع</div>
-                    <div class="vr-sign"><strong>اعتماد الإدارة</strong>الاسم والتوقيع</div>
                 </div>
-                <div class="vr-footnote">تم إنشاء هذا التقرير إلكترونياً من مديول المخالفات - تاريخ الإصدار: ${esc(formatDateTime(new Date().toISOString()))}</div>
-            </div>`;
+                <div class="kpi-stat-card ${v.severity === 'عالية' ? 'accent-red' : v.severity === 'متوسطة' ? 'accent-amber' : 'accent-blue'}">
+                    <div class="kpi-card-label">درجة الشدة</div>
+                    <div class="kpi-card-value" style="font-size: 15px; color: ${v.severity === 'عالية' ? '#b91c1c' : v.severity === 'متوسطة' ? '#d97706' : '#2563eb'};">
+                        ${esc(v.severity || '—')}
+                    </div>
+                </div>
+                <div class="kpi-stat-card ${v.status === 'محلول' ? 'accent-green' : 'accent-red'}">
+                    <div class="kpi-card-label">حالة المخالفة</div>
+                    <div class="kpi-card-value" style="font-size: 15px; color: ${v.status === 'محلول' ? '#047857' : '#b91c1c'};">
+                        ${esc(v.status || '—')}
+                    </div>
+                </div>
+                <div class="kpi-stat-card accent-green">
+                    <div class="kpi-card-label">القيمة المالية للغرامة</div>
+                    <div class="kpi-card-value" style="color: #166534; font-size: 15px;">${this.formatFineAmount(fineVal)}</div>
+                </div>
+                <div class="kpi-stat-card accent-blue">
+                    <div class="kpi-card-label">تسلسل المخالفة بالشهر</div>
+                    <div class="kpi-card-value" style="color: #1e3a8a; font-size: 15px;">${esc(v.violationSequenceInMonth || '1')}</div>
+                </div>
+            </div>
+
+            <!-- بيانات المخالف -->
+            <div class="info-section-block">
+                <div class="info-section-header">
+                    <i class="fas ${isContractor ? 'fa-hard-hat' : 'fa-user-tie'}"></i>
+                    ${isContractor ? 'بيانات المقاول والعامل المخالف' : 'بيانات الموظف المخالف'}
+                </div>
+                <div class="info-grid-2">
+                    ${isContractor ? `
+                        <div class="info-cell">
+                            <span class="info-cell-label">اسم شركة المقاولات</span>
+                            <span class="info-cell-value">${esc(v.contractorName)}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">كود / معرف المقاول</span>
+                            <span class="info-cell-value">${esc(v.contractorId || v.contractorCode || '—')}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">اسم العامل المخالف</span>
+                            <span class="info-cell-value" style="color: #991b1b; font-weight: 900;">${esc(v.contractorWorker || v.employeeName || v.contractorName)}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">الوظيفة / المهنة</span>
+                            <span class="info-cell-value">${esc(v.contractorPosition || 'عامل مقاول')}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">الإدارة / القسم المشرف</span>
+                            <span class="info-cell-value">${esc(v.contractorDepartment || '—')}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">نوع السجل</span>
+                            <span class="info-cell-value">مخالفة مقاول معتمد</span>
+                        </div>
+                    ` : `
+                        <div class="info-cell">
+                            <span class="info-cell-label">اسم الموظف</span>
+                            <span class="info-cell-value" style="color: #991b1b; font-weight: 900;">${esc(v.employeeName)}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">الرقم / الكود الوظيفي</span>
+                            <span class="info-cell-value">${esc(v.employeeCode || v.employeeNumber || '—')}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">المسمى الوظيفي</span>
+                            <span class="info-cell-value">${esc(v.employeePosition || '—')}</span>
+                        </div>
+                        <div class="info-cell">
+                            <span class="info-cell-label">الإدارة / القسم التابع له</span>
+                            <span class="info-cell-value">${esc(v.employeeDepartment || '—')}</span>
+                        </div>
+                    `}
+                </div>
+            </div>
+
+            <!-- تفاصيل واقعة المخالفة -->
+            <div class="info-section-block">
+                <div class="info-section-header">
+                    <i class="fas fa-exclamation-circle"></i>
+                    بيانات واقعة المخالفة والإجراء المتخذ
+                </div>
+                <div class="info-grid-2">
+                    <div class="info-cell">
+                        <span class="info-cell-label">المصنع / المنشأة</span>
+                        <span class="info-cell-value">${esc(v.violationLocation || 'مصنع ICAPP')}</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell-label">المكان المحدد داخل الموقع</span>
+                        <span class="info-cell-value">${esc(v.violationPlace || '—')}</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell-label">تصنيف المخالفة</span>
+                        <span class="info-cell-value" style="color: #991b1b; font-weight: 800;">${esc(v.violationType || '—')}</span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell-label">معرف نوع المخالفة</span>
+                        <span class="info-cell-value">${esc(v.violationTypeId || '—')}</span>
+                    </div>
+                    ${v.violationDetails ? `
+                        <div class="info-cell info-cell-wide">
+                            <span class="info-cell-label">الوصف التفصيلي لواقعة المخالفة</span>
+                            <span class="info-cell-value" style="white-space: pre-wrap; line-height: 1.5;">${esc(v.violationDetails)}</span>
+                        </div>
+                    ` : ''}
+                    ${v.actionTaken ? `
+                        <div class="info-cell info-cell-wide">
+                            <span class="info-cell-label">الإجراء الفوري المتخذ / الجزاء الموقع</span>
+                            <span class="info-cell-value" style="white-space: pre-wrap; line-height: 1.5; color: #047857; font-weight: 800;">${esc(v.actionTaken)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- التوثيق الفوتوغرافي -->
+            ${resolvedPhoto ? `
+                <div class="info-section-block">
+                    <div class="info-section-header">
+                        <i class="fas fa-camera"></i>
+                        التوثيق المصور للمخالفة الميدانية
+                    </div>
+                    <div style="padding: 10px; text-align: center; background: #f8fafc;">
+                        <img src="${esc(resolvedPhoto, '')}" alt="صورة المخالفة" style="max-height: 180px; max-width: 95%; object-fit: contain; border: 1.5px solid #cbd5e1; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" onerror="this.closest('.info-section-block').style.display='none';">
+                    </div>
+                </div>
+            ` : ''}
+
+            <!-- صندوق التوقيعات الثلاثي المعتمد -->
+            <div class="signatures-grid">
+                <div class="sig-card">
+                    <div class="sig-card-title">مرتكب المخالفة / ممثل المقاول</div>
+                    <div class="sig-card-name">إقرار بالعلم وتعهد بعدم التكرار</div>
+                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مشرف / ضابط السلامة الميداني</div>
+                    <div class="sig-card-name">المحرر والراصد الميداني</div>
+                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">الاعتماد الرسمي للجزاء</div>
+                    <div class="sig-card-name">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                    <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                </div>
+            </div>
+
+            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-REC-01', 'Rev. 03', 'ISO 45001:2018 (Clause 10.2 Nonconformity and corrective action)')}
+        `;
     },
 
     _generateViolationPrintDocumentHtml(violation, documentTitle) {
         const v = this.normalizeViolationRecord(violation) || violation;
         const inner = this._buildViolationReportTableHtml(v);
-        const formCode = v.isoCode || `VIOL-${v.id?.substring(0, 8) || 'UNKNOWN'}`;
-        if (typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function') {
-            return FormHeader.generatePDFHTML(
-                formCode,
-                documentTitle,
-                inner,
-                false,
-                false,
-                { version: '1.0', includeQRCode: false, compactPdfFooter: true },
-                v.createdAt,
-                v.updatedAt
-            );
-        }
-        const companyName = (typeof AppState !== 'undefined' && AppState.companySettings?.name)
-            ? Utils.escapeHTML(AppState.companySettings.name)
-            : '';
-        return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${Utils.escapeHTML(documentTitle)}</title>
-<style>
-body{font-family:'Segoe UI',Tahoma,sans-serif;padding:24px;color:#111;} h1{font-size:1.25rem;margin:0 0 8px;} .co{color:#475569;font-size:0.9rem;margin-bottom:20px;white-space:nowrap;word-break:keep-all;overflow-wrap:normal;}
-table{border-collapse:collapse;width:100%;} th,td{border:1px solid #e2e8f0;padding:10px 12px;text-align:right;font-size:0.95rem;} th{background:#f1f5f9;width:30%;color:#334155;}
-</style></head><body>
-<h1>${Utils.escapeHTML(documentTitle)}</h1>
-${companyName ? `<div class="co">${companyName}</div>` : ''}
-${inner}
-</body></html>`;
+        return `<div class="report-page portrait">${inner}</div>`;
     },
 
     async _completeViolationReportPrint(htmlContent, fileName = 'تقرير_المخالفة.pdf') {
-        const ok = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
-            ? Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'تقرير المخالفة' })
-            : false);
-        if (ok) {
-            Notification.success('تم تحميل تقرير المخالفة بصيغة PDF بنجاح');
-            return true;
-        }
-
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (!printWindow) {
-            URL.revokeObjectURL(url);
-            throw new Error('popup_blocked');
-        }
-        await new Promise((resolve, reject) => {
-            printWindow.onload = () => {
-                try {
-                    const images = printWindow.document.querySelectorAll('img');
-                    let imagesLoaded = 0;
-                    const totalImages = images.length;
-                    let done = false;
-                    const finish = () => {
-                        if (done) return;
-                        done = true;
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                            resolve();
-                        }, 300);
-                    };
-                    if (totalImages === 0) {
-                        finish();
-                        return;
-                    }
-                    const checkAllImagesLoaded = () => {
-                        if (imagesLoaded >= totalImages) finish();
-                    };
-                    images.forEach(img => {
-                        if (img.complete) {
-                            imagesLoaded++;
-                            checkAllImagesLoaded();
-                        } else {
-                            img.onload = () => { imagesLoaded++; checkAllImagesLoaded(); };
-                            img.onerror = () => { imagesLoaded++; checkAllImagesLoaded(); };
-                        }
-                    });
-                    setTimeout(() => finish(), 3500);
-                } catch (e) {
-                    reject(e);
-                }
-            };
-        });
+        return this.openIsoPrintWindow('تقرير المخالفة', htmlContent, false, '', fileName);
     },
 
     async printViolationProfessional(id) {
@@ -6965,16 +7039,22 @@ ${inner}
             return;
         }
         try {
-            Loading.show();
-            const htmlContent = this._generateViolationPrintDocumentHtml(violation, 'بطاقة مخالفة — نسخة طباعة');
-            await this._completeViolationReportPrint(htmlContent);
+            Loading.show('جاري إعداد وثيقة المخالفة...');
+            const normalized = this.normalizeViolationRecord(violation) || violation;
+            const isContractor = normalized.personType === 'contractor' || !!normalized.contractorName;
+            const documentTitle = isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف';
+            const reportPhoto = await this._resolveViolationReportPhoto_(normalized.photo);
+            const reportViolation = { ...normalized, photo: reportPhoto };
+            const htmlContent = this._generateViolationPrintDocumentHtml(reportViolation, documentTitle);
+            const subject = isContractor
+                ? (normalized.contractorName || normalized.contractorWorker)
+                : normalized.employeeName;
+            const reportCode = normalized.isoCode || normalized.id || 'سجل';
+            const fileName = `تقرير_مخالفة_${this._safeViolationReportFilePart(subject)}_${this._safeViolationReportFilePart(reportCode)}.pdf`;
+            this.openIsoPrintWindow(documentTitle, htmlContent, false, '', fileName);
         } catch (error) {
-            if (error && error.message === 'popup_blocked') {
-                Notification.error('يرجى السماح بنوافذ منبثقة للطباعة');
-            } else {
-                Utils.safeError('خطأ في الطباعة:', error);
-                Notification.error('فشل فتح نافذة الطباعة: ' + (error.message || ''));
-            }
+            Utils.safeError('خطأ في إعداد طباعة المخالفة:', error);
+            Notification.error('فشل في إعداد الطباعة: ' + (error.message || ''));
         } finally {
             Loading.hide();
         }
@@ -7012,6 +7092,9 @@ ${inner}
         if (!source) return '';
         if (/^data:image\//i.test(source)) return source;
 
+        const printableUrl = this.convertGoogleDriveLinkToPrintable(source);
+        if (printableUrl !== source) return printableUrl;
+
         const display = typeof Utils.resolveDriveAwareImgDisplay === 'function'
             ? Utils.resolveDriveAwareImgDisplay(source)
             : { canonical: source, displaySrc: source, needsProxy: false, proxyFileId: '' };
@@ -7031,7 +7114,7 @@ ${inner}
                     const dataUri = await this._readViolationReportImageBlob_(await response.blob());
                     if (dataUri) return dataUri;
                 }
-            } catch (_error) { /* retain canonical source for html2canvas fallback */ }
+            } catch (_error) { /* retain canonical source */ }
         }
 
         return fetchSource;
@@ -7053,7 +7136,7 @@ ${inner}
                 triggerButton.setAttribute('aria-busy', 'true');
                 triggerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             }
-            Loading.show();
+            Loading.show('جاري إنشاء وتحميل تقرير المخالفة (PDF)...');
             const documentTitle = isContractor ? 'تقرير مخالفة مقاول' : 'تقرير مخالفة موظف';
             const reportPhoto = await this._resolveViolationReportPhoto_(normalized.photo);
             const reportViolation = { ...normalized, photo: reportPhoto };
@@ -7071,10 +7154,8 @@ ${inner}
                 this._safeViolationReportFilePart(reportCode),
                 this._safeViolationReportFilePart(reportDate)
             ].join('_') + '.pdf';
-            const downloaded = await this._downloadHtmlReportAsPdf(htmlContent, fileName);
-            if (!downloaded) throw new Error('تعذر إنشاء ملف PDF');
-            Notification.success('تم تحميل تقرير المخالفة PDF بجميع البيانات بنجاح');
-            return true;
+            const downloaded = await this.downloadIsoReportAsPdf(documentTitle, htmlContent, fileName, false);
+            return downloaded;
         } catch (error) {
             Utils.safeError('خطأ في تحميل تقرير المخالفة PDF:', error);
             Notification.error('فشل تحميل تقرير المخالفة: ' + (error.message || ''));
@@ -8614,149 +8695,155 @@ ${inner}
         }
     },
 
-    printBlacklistDetails(recordId) {
+    async printBlacklistDetails(recordId) {
         const record = AppState.appData?.blacklistRegister?.find(r => r.id === recordId);
         if (!record) {
             Notification.error('السجل غير موجود');
             return;
         }
 
-        // ✅ معالجة الصورة بشكل صحيح
-        const photoUrl = this.processPhoto(record);
-
         try {
-            Loading.show('جاري إعداد الطباعة...');
+            Loading.show('جاري إعداد وثيقة أمر المنع (ISO 45001)...');
 
-            const formCode = `BLACKLIST-${(record.id || record.serialNumber || 'UNKNOWN').substring(0, 12)}`;
-            const title = 'تفاصيل الممنوع من الدخول - Blacklist Details';
+            const photoUrl = this.processPhoto(record);
+            const resolvedPhoto = photoUrl ? this.convertGoogleDriveLinkToPrintable(photoUrl) : '';
+            const title = 'أمر منع إداري من دخول المنشأة ومواقع العمل';
+            const subtitle = 'Blacklist Ban Order — إجراء أمني وسلامة مهنية مشدد';
 
-            // بناء محتوى التقرير
             const content = `
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <span class="summary-label">الرقم التسلسلي</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.serialNumber || '-')}</span>
+                <div class="report-page portrait">
+                    ${this.getIsoPrintHeaderHtml(title, subtitle, 'DOC-HSE-VIO-BLK-01', 'Rev. 03', 'سري للغاية')}
+
+                    <div style="background: #fef2f2; border: 2px solid #b91c1c; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; color: #991b1b; font-weight: 800; font-size: 11.5px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle ml-2"></i>
+                        قرار إداري ملزم: يُمنع المذكور أدناه منعاً باتاً من دخول جميع مصانع ومواقع الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) لمخالفته معايير السلامة والأمن الصناعي
                     </div>
-                    <div class="summary-card">
-                        <span class="summary-label">تاريخ المنع</span>
-                        <span class="summary-value">${record.banDate ? Utils.formatDate(record.banDate) : '-'}</span>
+
+                    <div class="summary-cards-row">
+                        <div class="kpi-stat-card accent-red">
+                            <div class="kpi-card-label">الرقم التسلسلي للمنع</div>
+                            <div class="kpi-card-value" style="color: #991b1b; font-size: 14px;">${Utils.escapeHTML(record.serialNumber || record.id || '-')}</div>
+                        </div>
+                        <div class="kpi-stat-card accent-amber">
+                            <div class="kpi-card-label">تاريخ المنع</div>
+                            <div class="kpi-card-value" style="color: #92400e; font-size: 14px;">${record.banDate ? Utils.formatDate(record.banDate) : '-'}</div>
+                        </div>
+                        <div class="kpi-stat-card accent-blue">
+                            <div class="kpi-card-label">المصنع المعني</div>
+                            <div class="kpi-card-value" style="color: #1e3a8a; font-size: 14px;">${Utils.escapeHTML(record.factory || '-')}</div>
+                        </div>
+                        <div class="kpi-stat-card accent-green">
+                            <div class="kpi-card-label">الموقع المحدد</div>
+                            <div class="kpi-card-value" style="color: #047857; font-size: 14px;">${Utils.escapeHTML(record.location || '-')}</div>
+                        </div>
                     </div>
-                    <div class="summary-card">
-                        <span class="summary-label">المصنع</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.factory || '-')}</span>
+
+                    <!-- بيانات الشخص الممنوع -->
+                    <div class="info-section-block">
+                        <div class="info-section-header">
+                            <i class="fas fa-user-slash"></i>
+                            بيانات وهوية الشخص الممنوع من الدخول
+                        </div>
+                        <div class="info-grid-2">
+                            <div class="info-cell">
+                                <span class="info-cell-label">الاسم رباعي</span>
+                                <span class="info-cell-value" style="color: #991b1b; font-weight: 900; font-size: 12px;">${Utils.escapeHTML(record.fullName || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">رقم بطاقة الرقم القومي</span>
+                                <span class="info-cell-value" style="font-family: monospace, inherit; font-weight: 900;">${Utils.escapeHTML(record.idNumber || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">الوظيفة / المهنة</span>
+                                <span class="info-cell-value">${Utils.escapeHTML(record.job || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">الشركة التابع لها - المقاول</span>
+                                <span class="info-cell-value">${Utils.escapeHTML(record.contractor || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">الإدارة / القسم</span>
+                                <span class="info-cell-value">${Utils.escapeHTML(record.department || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">القائم بالمنع</span>
+                                <span class="info-cell-value">${Utils.escapeHTML(record.bannedBy || '-')}</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="summary-card">
-                        <span class="summary-label">الموقع</span>
-                        <span class="summary-value">${Utils.escapeHTML(record.location || '-')}</span>
+
+                    <!-- الصورة الشخصية -->
+                    ${resolvedPhoto ? `
+                        <div class="info-section-block">
+                            <div class="info-section-header">
+                                <i class="fas fa-id-card"></i>
+                                الصورة الشخصية للشخص الممنوع
+                            </div>
+                            <div style="padding: 10px; text-align: center; background: #f8fafc;">
+                                <img src="${Utils.escapeHTML(resolvedPhoto)}" alt="صورة شخصية" style="max-height: 180px; max-width: 95%; object-fit: contain; border: 1.5px solid #cbd5e1; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);" onerror="this.closest('.info-section-block').style.display='none';">
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- أسباب وتفاصيل قرار المنع -->
+                    <div class="info-section-block">
+                        <div class="info-section-header">
+                            <i class="fas fa-file-alt"></i>
+                            أسباب وحيثيات قرار المنع الإداري
+                        </div>
+                        <div class="info-grid-2">
+                            <div class="info-cell info-cell-wide">
+                                <span class="info-cell-label">سبب المنع والمخالفة المرتكبة</span>
+                                <span class="info-cell-value" style="white-space: pre-wrap; line-height: 1.5; color: #b91c1c;">${Utils.escapeHTML(record.banReason || '-')}</span>
+                            </div>
+                            ${record.notes ? `
+                                <div class="info-cell info-cell-wide">
+                                    <span class="info-cell-label">ملاحظات أمنية وإدارية</span>
+                                    <span class="info-cell-value" style="white-space: pre-wrap; line-height: 1.5;">${Utils.escapeHTML(record.notes)}</span>
+                                </div>
+                            ` : ''}
+                            <div class="info-cell">
+                                <span class="info-cell-label">محرر البيانات</span>
+                                <span class="info-cell-value">${Utils.escapeHTML(record.editor || '-')}</span>
+                            </div>
+                            <div class="info-cell">
+                                <span class="info-cell-label">تاريخ تحرير السجل</span>
+                                <span class="info-cell-value">${record.createdAt ? Utils.formatDateTime(record.createdAt) : '-'}</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- التوقيعات والاعتمادات -->
+                    <div class="signatures-grid">
+                        <div class="sig-card">
+                            <div class="sig-card-title">أمن المنشآت والحراسات</div>
+                            <div class="sig-card-name">مسؤول التنفيذ الميداني بالبوابات</div>
+                            <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">إدارة السلامة والصحة المهنية</div>
+                            <div class="sig-card-name">مُصدر قرار المنع والتدقيق</div>
+                            <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                        </div>
+                        <div class="sig-card">
+                            <div class="sig-card-title">الاعتماد الإداري النهائي</div>
+                            <div class="sig-card-name">المدير العام للمصنع / الإدارة العليا</div>
+                            <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                        </div>
+                    </div>
+
+                    ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4 Procurement & Contractor Controls)')}
                 </div>
-
-                <div class="section-title">معلومات الشخص الممنوع</div>
-                <table class="report-table">
-                    <tr>
-                        <th style="width: 30%;">الاسم رباعي</th>
-                        <td>${Utils.escapeHTML(record.fullName || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th>رقم البطاقة</th>
-                        <td>${Utils.escapeHTML(record.idNumber || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th>الوظيفة</th>
-                        <td>${Utils.escapeHTML(record.job || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th>الشركة - المقاول</th>
-                        <td>${Utils.escapeHTML(record.contractor || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th>الإدارة</th>
-                        <td>${Utils.escapeHTML(record.department || '-')}</td>
-                    </tr>
-                </table>
-
-                ${photoUrl ? `
-                <div class="section-title">الصورة الشخصية</div>
-                <div style="text-align: center; margin: 20px 0;">
-                    <img src="${Utils.escapeHTML(photoUrl)}" alt="صورة شخصية" style="max-width: 300px; max-height: 400px; border: 2px solid #ddd; border-radius: 8px; object-fit: contain;" 
-                         onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22400%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22300%22 height=%22400%22/%3E%3Ctext fill=%22%23999%22 font-family=%22sans-serif%22 font-size=%2216%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22%3Eفشل تحميل الصورة%3C/text%3E%3C/svg%3E';">
-                </div>
-                ` : ''}
-
-                <div class="section-title">تفاصيل المنع</div>
-                <table class="report-table">
-                    <tr>
-                        <th style="width: 30%;">سبب المنع</th>
-                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(record.banReason || '-')}</td>
-                    </tr>
-                    ${record.notes ? `
-                    <tr>
-                        <th>ملاحظات</th>
-                        <td style="white-space: pre-wrap;">${Utils.escapeHTML(record.notes)}</td>
-                    </tr>
-                    ` : ''}
-                    <tr>
-                        <th>القائم بالمنع</th>
-                        <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
-                    </tr>
-                    <tr>
-                        <th>محرر البيانات</th>
-                        <td>${Utils.escapeHTML(record.editor || '-')}</td>
-                    </tr>
-                    ${record.createdAt ? `
-                    <tr>
-                        <th>تاريخ الإنشاء</th>
-                        <td>${Utils.formatDateTime(record.createdAt)}</td>
-                    </tr>
-                    ` : ''}
-                    ${record.updatedAt ? `
-                    <tr>
-                        <th>تاريخ آخر تحديث</th>
-                        <td>${Utils.formatDateTime(record.updatedAt)}</td>
-                    </tr>
-                    ` : ''}
-                </table>
             `;
 
-            // استخدام FormHeader.generatePDFHTML لإضافة الهيدر
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    title,
-                    content,
-                    false,  // includeQrInHeader = false
-                    true,   // includeQrInFooter = true
-                    {
-                        version: '1.0',
-                        releaseDate: record.createdAt || new Date().toISOString(),
-                        revisionDate: record.updatedAt || record.createdAt || new Date().toISOString(),
-                        'الرقم التسلسلي': record.serialNumber || record.id || '',
-                        qrData: {
-                            type: 'Blacklist',
-                            id: record.id,
-                            serialNumber: record.serialNumber
-                        }
-                    },
-                    record.createdAt || new Date().toISOString(),
-                    record.updatedAt || record.createdAt || new Date().toISOString()
-                )
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${title}</title></head><body>${content}</body></html>`;
-
-            const pdfFileName = `${title.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
-                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title })
-                : false);
-
             Loading.hide();
-            if (downloaded) {
-                Notification.success('تم تحميل التقرير بصيغة PDF بنجاح');
-            } else {
-                Notification.error('تعذر تصدير التقرير بصيغة PDF');
-            }
+
+            const pdfFileName = `أمر_منع_${Utils.escapeHTML(record.fullName || 'شخص')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+            this.openIsoPrintWindow(title, content, false, '', pdfFileName);
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في تصدير التفاصيل:', error);
-            Notification.error('فشل في تصدير PDF: ' + error.message);
+            Utils.safeError('خطأ في إعداد طباعة أمر المنع:', error);
+            Notification.error('فشل في إعداد الطباعة: ' + error.message);
         }
     },
 
@@ -8768,217 +8855,135 @@ ${inner}
                 return;
             }
 
-            Loading.show('جاري إنشاء PDF...');
+            Loading.show('جاري إنشاء سجل الممنوعين من الدخول (ISO 45001)...');
 
-            // محاولة استخدام jsPDF أولاً
-            if (typeof window.jsPDF !== 'undefined') {
-                try {
-                    const { jsPDF } = window.jsPDF;
-                    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+            const title = 'سجل الأشخاص والجهات الممنوعة من دخول المنشأة';
+            const subtitle = 'Master Blacklist Register — قائمة الحظر الأمني والسلامة المهنية';
 
-                    // العنوان
-                    doc.setFontSize(18);
-                    doc.text('قائمة الممنوعين من الدخول - Blacklist Register', 150, 15, { align: 'center' });
+            // إحصائيات
+            const totalCount = blacklistRecords.length;
+            const uniqueFactories = new Set(blacklistRecords.map(r => r.factory).filter(Boolean)).size;
+            const uniqueContractors = new Set(blacklistRecords.map(r => r.contractor).filter(Boolean)).size;
 
-                    // المعلومات
-                    doc.setFontSize(10);
-                    doc.text(`تاريخ التصدير: ${Utils.formatDateTime(new Date().toISOString())}`, 14, 22);
-                    doc.text(`عدد السجلات: ${blacklistRecords.length}`, 14, 27);
+            // تقسيم الصفحات بنظام .report-page landscape
+            const pagesData = this._paginateViolationsList(blacklistRecords, 8, 11);
+            const totalPages = pagesData.length;
 
-                    // البيانات
-                    const tableData = blacklistRecords.map(record => [
-                        record.serialNumber || '-',
-                        record.banDate ? Utils.formatDate(record.banDate) : '-',
-                        Utils.escapeHTML(record.factory || '-'),
-                        Utils.escapeHTML(record.location || '-'),
-                        Utils.escapeHTML(record.fullName || '-'),
-                        Utils.escapeHTML(record.idNumber || '-'),
-                        Utils.escapeHTML(record.job || '-'),
-                        Utils.escapeHTML(record.contractor || '-'),
-                        Utils.escapeHTML(record.department || '-'),
-                        Utils.escapeHTML(record.bannedBy || '-'),
-                        Utils.escapeHTML(record.banReason || '-').substring(0, 50)
-                    ]);
+            const pagesHtml = pagesData.map((pageRecords, pageIdx) => {
+                const pageNum = pageIdx + 1;
+                const isFirstPage = pageNum === 1;
+                const isLastPage = pageNum === totalPages;
 
-                    if (typeof doc.autoTable !== 'undefined') {
-                        doc.autoTable({
-                            head: [['م', 'تاريخ المنع', 'المصنع', 'الموقع', 'الاسم رباعي', 'رقم البطاقة', 'الوظيفة', 'الشركة', 'الإدارة', 'القائم بالمنع', 'سبب المنع']],
-                            body: tableData,
-                            startY: 35,
-                            styles: { fontSize: 7, font: 'Arial', cellPadding: 2 },
-                            headStyles: { fillColor: [59, 130, 246], textColor: 255, fontSize: 8 },
-                            alternateRowStyles: { fillColor: [245, 247, 250] },
-                            margin: { left: 14, right: 14 },
-                            overflow: 'linebreak'
-                        });
-                    } else {
-                        // Fallback if autoTable is not available
-                        let y = 35;
-                        tableData.forEach((row, index) => {
-                            if (y > 180) {
-                                doc.addPage();
-                                y = 20;
-                            }
-                            doc.setFontSize(8);
-                            doc.text(`${index + 1}. ${row[4]} - ${row[3]}`, 14, y);
-                            y += 7;
-                        });
-                    }
+                const rowsHtml = pageRecords.map((r, rIdx) => {
+                    const globalIdx = (pageIdx === 0 ? 0 : 8 + (pageIdx - 1) * 11) + rIdx + 1;
+                    return `
+                        <tr>
+                            <td style="font-weight: 700;">${globalIdx}</td>
+                            <td>${r.banDate ? Utils.formatDate(r.banDate) : '-'}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.factory || '-')}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.location || '-')}</td>
+                            <td style="font-weight: 800; text-align: right; color: #991b1b;">${Utils.escapeHTML(r.fullName || '-')}</td>
+                            <td style="font-family: monospace, inherit; font-size: 9.5px;">${Utils.escapeHTML(r.idNumber || '-')}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.job || '-')}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.contractor || '-')}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.department || '-')}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(r.bannedBy || '-')}</td>
+                            <td style="text-align: right; font-size: 9.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML((r.banReason || '-').substring(0, 80))}</td>
+                        </tr>
+                    `;
+                }).join('');
 
-                    // حفظ الملف
-                    const fileName = `قائمة_الممنوعين_من_الدخول_${new Date().toISOString().slice(0, 10)}.pdf`;
-                    doc.save(fileName);
-                    Loading.hide();
-                    Notification.success('تم تصدير البيانات إلى PDF بنجاح');
-                    return;
-                } catch (pdfError) {
-                    Utils.safeWarn('فشل استخدام jsPDF، سيتم استخدام طريقة HTML:', pdfError);
-                }
-            }
+                return `
+                    <div class="report-page landscape">
+                        ${this.getIsoPrintHeaderHtml(
+                            title,
+                            isFirstPage ? subtitle : `تابع جدول ${title} — استكمال البيانات`,
+                            'DOC-HSE-VIO-BLK-REG-01',
+                            'Rev. 03',
+                            'سري للغاية'
+                        )}
 
-            // Fallback: استخدام HTML للطباعة
-            const htmlContent = `
-<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head>
-    <meta charset="UTF-8">
-    <title>قائمة الممنوعين من الدخول</title>
-    <style>
-        @media print {
-            @page { margin: 1cm; size: A4 landscape; }
-            body { margin: 0; }
-            .no-print { display: none !important; }
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-            padding: 20px;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #003865;
-            padding-bottom: 15px;
-        }
-        .header h1 {
-            color: #003865;
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 6px;
-            text-align: right;
-        }
-        th {
-            background: #3b82f6;
-            color: white;
-            font-weight: bold;
-        }
-        tr:nth-child(even) {
-            background: #f5f7fa;
-        }
-        .print-btn {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            padding: 12px 24px;
-            background: #003865;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-    </style>
-</head>
-<body>
-    <button class="print-btn no-print" onclick="window.print()">
-        <i class="fas fa-print"></i> طباعة
-    </button>
-    <div class="header">
-        <h1>قائمة الممنوعين من الدخول - Blacklist Register</h1>
-        <p>تاريخ التصدير: ${Utils.formatDateTime(new Date().toISOString())} | عدد السجلات: ${blacklistRecords.length}</p>
-    </div>
-    <table>
-        <thead>
-            <tr>
-                <th>م</th>
-                <th>تاريخ المنع</th>
-                <th>المصنع</th>
-                <th>الموقع</th>
-                <th>الاسم رباعي</th>
-                <th>رقم البطاقة</th>
-                <th>الوظيفة</th>
-                <th>الشركة - المقاول</th>
-                <th>الإدارة</th>
-                <th>القائم بالمنع</th>
-                <th>محرر البيانات</th>
-                <th>سبب المنع</th>
-                <th>ملاحظات</th>
-            </tr>
-        </thead>
-        <tbody>
-            ${blacklistRecords.map(record => `
-                <tr>
-                    <td>${Utils.escapeHTML(record.serialNumber || '-')}</td>
-                    <td>${record.banDate ? Utils.formatDate(record.banDate) : '-'}</td>
-                    <td>${Utils.escapeHTML(record.factory || '-')}</td>
-                    <td>${Utils.escapeHTML(record.location || '-')}</td>
-                    <td>${Utils.escapeHTML(record.fullName || '-')}</td>
-                    <td>${Utils.escapeHTML(record.idNumber || '-')}</td>
-                    <td>${Utils.escapeHTML(record.job || '-')}</td>
-                    <td>${Utils.escapeHTML(record.contractor || '-')}</td>
-                    <td>${Utils.escapeHTML(record.department || '-')}</td>
-                    <td>${Utils.escapeHTML(record.bannedBy || '-')}</td>
-                    <td>${Utils.escapeHTML(record.editor || '-')}</td>
-                    <td>${Utils.escapeHTML((record.banReason || '-').substring(0, 100))}</td>
-                    <td>${Utils.escapeHTML((record.notes || '-').substring(0, 50))}</td>
-                </tr>
-            `).join('')}
-        </tbody>
-    </table>
-</body>
-</html>`;
+                        ${isFirstPage ? `
+                            <div class="summary-cards-row">
+                                <div class="kpi-stat-card accent-red">
+                                    <div class="kpi-card-label">إجمالي الأشخاص الممنوعين</div>
+                                    <div class="kpi-card-value" style="color: #991b1b;">${totalCount}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-blue">
+                                    <div class="kpi-card-label">المصانع والمواقع المعنية</div>
+                                    <div class="kpi-card-value" style="color: #1e3a8a;">${uniqueFactories}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-amber">
+                                    <div class="kpi-card-label">الشركات والمقاولون</div>
+                                    <div class="kpi-card-value" style="color: #92400e;">${uniqueContractors}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-green">
+                                    <div class="kpi-card-label">تاريخ استخراج السجل</div>
+                                    <div class="kpi-card-value" style="color: #047857; font-size: 14px;">${Utils.formatDate(new Date())}</div>
+                                </div>
+                            </div>
+                        ` : ''}
 
-            if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
-                await Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: 'قائمة الممنوعين من الدخول' });
-                Loading.hide();
-                Notification.success('تم تصدير البيانات إلى PDF بنجاح');
-                return;
-            }
+                        <table class="iso-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 32px;">م</th>
+                                    <th style="width: 75px;">تاريخ المنع</th>
+                                    <th>المصنع</th>
+                                    <th>الموقع</th>
+                                    <th>الاسم رباعي</th>
+                                    <th>رقم البطاقة</th>
+                                    <th>الوظيفة</th>
+                                    <th>الشركة - المقاول</th>
+                                    <th>الإدارة</th>
+                                    <th>القائم بالمنع</th>
+                                    <th>سبب المنع</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+                        ${isLastPage ? `
+                            <div class="signatures-grid">
+                                <div class="sig-card">
+                                    <div class="sig-card-title">مسؤول أمن البوابات والمنشآت</div>
+                                    <div class="sig-card-name">التنفيذ الميداني وإخطار الحراسات</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">مشرف السلامة والصحة المهنية</div>
+                                    <div class="sig-card-name">المراجعة والتدقيق والربط النظامي</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">مدير عام السلامة والأمن الصناعي</div>
+                                    <div class="sig-card-name">الاعتماد الرسمي لقائمة الحظر</div>
+                                    <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                                </div>
+                            </div>
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                        }, 800);
-                    }, 500);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
+                            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-BLK-REG-01', 'Rev. 03', 'ISO 45001:2018 (Clause 8.1.4 Procurement & Contractor Controls)')}
+                        ` : ''}
+
+                        <div class="page-counter-footer">صفحة ${pageNum} من ${totalPages}</div>
+                    </div>
+                `;
+            }).join('');
+
+            Loading.hide();
+
+            const fileName = `سجل_الممنوعين_من_الدخول_${new Date().toISOString().slice(0, 10)}.pdf`;
+            await this.downloadIsoReportAsPdf(title, pagesHtml, fileName, true);
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
+            Utils.safeError('خطأ في تصدير سجل الممنوعين PDF:', error);
             Notification.error('فشل في تصدير PDF: ' + error.message);
         }
     },
 
-    exportBlacklistToExcel() {
+        exportBlacklistToExcel() {
         try {
             const blacklistRecords = AppState.appData?.blacklistRegister || [];
             if (blacklistRecords.length === 0) {
@@ -9052,7 +9057,1164 @@ ${inner}
             Utils.safeError('خطأ في تصدير Excel:', error);
             Notification.error('فشل في تصدير Excel: ' + error.message);
         }
-    }
+    },
+    // ===== دوال التنسيق الموحدة لمديول المخالفات طبقاً لـ ISO 45001 =====
+
+    /**
+     * تحويل روابط Google Drive إلى روابط صور قابلة للعرض والطباعة
+     */
+    convertGoogleDriveLinkToPrintable(link) {
+        if (!link) return '';
+        if (typeof window.__convertGoogleDriveUrl === 'function') {
+            link = window.__convertGoogleDriveUrl(link);
+        }
+        if (link.startsWith('data:image/')) {
+            return link;
+        }
+        if (link.includes('drive.google.com/thumbnail')) {
+            return link;
+        }
+        const fileIdMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+            return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w800`;
+        }
+        return link;
+    },
+
+    /**
+     * الأنماط والقواعد المشتركة لطباعة وتصدير جميع نماذج وتقارير المخالفات (ISO 45001)
+     */
+    getIsoPrintCommonStyles(isLandscape = false) {
+        return `
+            :root {
+                --brand-primary: #991b1b;
+                --brand-navy: #0f172a;
+                --brand-green: #047857;
+                --brand-red: #b91c1c;
+                --brand-amber: #d97706;
+                --border-color: #cbd5e1;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f8fafc;
+                color: #0f172a;
+                line-height: 1.5;
+                direction: rtl;
+            }
+            .no-print-bar {
+                position: sticky;
+                top: 0;
+                z-index: 9999;
+                background: #0f172a;
+                color: #ffffff;
+                padding: 12px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+                border-bottom: 3px solid #dc2626;
+            }
+            .no-print-bar .brand-badge {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .no-print-bar .pill-tag {
+                background: #dc2626;
+                color: #ffffff;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 800;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+            }
+            .no-print-bar .title-text {
+                font-size: 13.5px;
+                font-weight: 800;
+            }
+            .no-print-bar .action-buttons {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .btn-direct-download {
+                padding: 8px 18px;
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(5,150,105,0.35);
+            }
+            .btn-direct-download:hover { background: #047857; }
+            .btn-print {
+                padding: 8px 18px;
+                background: #2563eb;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+            }
+            .btn-print:hover { background: #1d4ed8; }
+            .btn-close {
+                padding: 8px 16px;
+                background: #475569;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+            .btn-close:hover { background: #334155; }
+
+            .report-page-container {
+                max-width: ${isLandscape ? '1180px' : '920px'};
+                margin: 22px auto 40px auto;
+                background: #ffffff;
+                padding: 12px 16px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+                border: 1px solid #e2e8f0;
+            }
+            .report-page {
+                box-sizing: border-box;
+                width: 100%;
+                min-height: ${isLandscape ? '740px' : '1080px'};
+                padding: 16px 20px;
+                background: #ffffff;
+                page-break-after: always;
+                break-after: page;
+            }
+            .report-page:last-child {
+                page-break-after: auto;
+                break-after: auto;
+            }
+
+            .iso-print-header {
+                display: grid;
+                grid-template-columns: 240px 1fr 210px;
+                border: 2px solid #0f172a;
+                border-top: 5px solid #991b1b;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #ffffff;
+                margin-bottom: 14px;
+            }
+            .iso-box-brand {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-left: 1.5px solid #0f172a;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                gap: 4px;
+                text-align: center;
+            }
+            .iso-print-logo {
+                max-height: 46px;
+                max-width: 130px;
+                object-fit: contain;
+                margin-bottom: 2px;
+            }
+            .iso-company-title {
+                font-size: 10.5px;
+                font-weight: 900;
+                color: #0f172a;
+                line-height: 1.3;
+            }
+            .iso-dept-title {
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #991b1b;
+                line-height: 1.25;
+            }
+
+            .iso-box-title {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                background: #ffffff;
+            }
+            .iso-main-title {
+                margin: 0;
+                font-size: 15.5px;
+                font-weight: 900;
+                color: #991b1b;
+                line-height: 1.3;
+            }
+            .iso-sub-title {
+                font-size: 10px;
+                font-weight: 700;
+                color: #475569;
+                margin-top: 3px;
+            }
+            .iso-badge-std {
+                display: inline-block;
+                margin-top: 5px;
+                background: #fef2f2;
+                color: #b91c1c;
+                border: 1px solid #fecaca;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9px;
+                font-weight: 800;
+            }
+
+            .iso-box-meta {
+                padding: 8px 12px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-right: 1.5px solid #0f172a;
+                background: #f8fafc;
+                gap: 3px;
+            }
+            .meta-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px dashed #cbd5e1;
+                padding-bottom: 2px;
+                font-size: 10px;
+            }
+            .meta-row:last-child { border-bottom: none; }
+            .meta-row span { color: #64748b; font-weight: 700; }
+            .meta-row strong { color: #0f172a; font-family: monospace, inherit; font-size: 10px; }
+
+            .summary-cards-row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                margin-bottom: 14px;
+            }
+            .kpi-stat-card {
+                flex: 1 1 140px;
+                padding: 10px 12px;
+                border-radius: 8px;
+                border: 1.5px solid #cbd5e1;
+                background: #f8fafc;
+            }
+            .kpi-stat-card.accent-red { background: #fef2f2; border-color: #fecaca; }
+            .kpi-stat-card.accent-blue { background: #eff6ff; border-color: #bfdbfe; }
+            .kpi-stat-card.accent-amber { background: #fffbeb; border-color: #fde68a; }
+            .kpi-stat-card.accent-green { background: #ecfdf5; border-color: #a7f3d0; }
+            .kpi-card-label {
+                font-size: 10px;
+                font-weight: 700;
+                color: #64748b;
+                margin-bottom: 4px;
+            }
+            .kpi-card-value {
+                font-size: 18px;
+                font-weight: 900;
+                color: #0f172a;
+                line-height: 1.1;
+            }
+
+            .info-section-block {
+                border: 1.5px solid #cbd5e1;
+                border-radius: 8px;
+                margin-bottom: 12px;
+                overflow: hidden;
+                background: #ffffff;
+                page-break-inside: avoid;
+            }
+            .info-section-header {
+                background: #f1f5f9;
+                color: #0f172a;
+                font-size: 11px;
+                font-weight: 900;
+                padding: 6px 12px;
+                border-bottom: 1.5px solid #cbd5e1;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .info-section-header i { color: #991b1b; }
+            .info-grid-2 {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            .info-grid-4 {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+            .info-cell {
+                padding: 6px 10px;
+                border-bottom: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+            }
+            .info-cell-wide {
+                grid-column: 1 / -1;
+            }
+            .info-cell-label {
+                font-size: 9.5px;
+                color: #64748b;
+                font-weight: 700;
+                margin-bottom: 2px;
+                display: block;
+            }
+            .info-cell-value {
+                font-size: 11px;
+                font-weight: 800;
+                color: #0f172a;
+                line-height: 1.35;
+                word-break: break-word;
+            }
+            .info-cell-value.danger { color: #b91c1c; }
+            .info-cell-value.success { color: #047857; }
+            .info-cell-value.money { color: #166534; font-size: 13px; font-weight: 900; }
+
+            .iso-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 8px;
+                margin-bottom: 12px;
+                font-size: 10.5px;
+            }
+            .iso-table th {
+                background: #991b1b;
+                color: #ffffff;
+                padding: 7px 6px;
+                font-weight: 800;
+                border: 1px solid #7f1d1d;
+                text-align: center;
+            }
+            .iso-table td {
+                padding: 6px 6px;
+                border: 1px solid #cbd5e1;
+                text-align: center;
+                color: #0f172a;
+            }
+            .iso-table tr:nth-child(even) td {
+                background: #fef2f2;
+            }
+
+            .signatures-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                margin-top: 14px;
+                page-break-inside: avoid;
+            }
+            .sig-card {
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 8px 10px;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 90px;
+            }
+            .sig-card-title {
+                font-size: 10px;
+                font-weight: 800;
+                color: #991b1b;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 3px;
+                margin-bottom: 4px;
+                text-align: center;
+            }
+            .sig-card-name {
+                font-size: 10px;
+                font-weight: 800;
+                color: #0f172a;
+                text-align: center;
+            }
+            .sig-line-area {
+                margin-top: 14px;
+                border-top: 1.5px dashed #64748b;
+                padding-top: 3px;
+                text-align: center;
+                font-size: 8.5px;
+                color: #64748b;
+                font-weight: 700;
+            }
+
+            .iso-footer-strip {
+                margin-top: 14px;
+                border: 1.5px solid #0f172a;
+                border-radius: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 12px;
+                background: #f8fafc;
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #334155;
+                page-break-inside: avoid;
+            }
+            .iso-footer-strip span strong {
+                color: #0f172a;
+                font-family: monospace, inherit;
+            }
+            .portal-unified-footer {
+                margin-top: 8px;
+                text-align: center;
+                font-size: 8.5px;
+                color: #64748b;
+                line-height: 1.45;
+                page-break-inside: avoid;
+            }
+            .portal-unified-footer strong {
+                color: #991b1b;
+                font-weight: 800;
+            }
+            .page-counter-footer {
+                text-align: center;
+                font-size: 9px;
+                font-weight: 700;
+                color: #64748b;
+                margin-top: 6px;
+            }
+
+            @media print {
+                body {
+                    background: #ffffff !important;
+                    padding: 0 !important;
+                }
+                .no-print-bar {
+                    display: none !important;
+                }
+                .report-page-container {
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                .report-page {
+                    min-height: auto !important;
+                    padding: 4mm 6mm !important;
+                    page-break-after: always !important;
+                    break-after: page !important;
+                }
+                .report-page:last-child {
+                    page-break-after: auto !important;
+                    break-after: auto !important;
+                }
+                @page {
+                    size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+                    margin: 8mm 10mm 8mm 10mm;
+                }
+            }
+        `;
+    },
+
+    /**
+     * ترويسة ISO 45001 المعتمدة لجميع نماذج وتقارير المخالفات
+     */
+    getIsoPrintHeaderHtml(title, subtitle, docCode, revision = 'Rev. 03', classification = 'سري وداخلي') {
+        let logoSrc = '/icons/icapp-logo.png';
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.protocol === 'file:') {
+                logoSrc = 'icons/icapp-logo.png';
+            } else if (window.location.origin && window.location.origin !== 'null') {
+                logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+            }
+        }
+        if (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) {
+            const configuredLogo = AppState.companyLogo || AppState.companySettings?.logo;
+            if (configuredLogo) logoSrc = this.convertGoogleDriveLinkToPrintable(configuredLogo);
+        }
+        const logoFallback = 'icons/icon-192x192.png';
+        const now = new Date();
+        const releaseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        return `
+            <div class="iso-print-header">
+                <div class="iso-box-brand">
+                    <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
+                    <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                </div>
+
+                <div class="iso-box-title">
+                    <h1 class="iso-main-title">${Utils.escapeHTML(title)}</h1>
+                    <div class="iso-sub-title">${Utils.escapeHTML(subtitle)}</div>
+                    <div class="iso-badge-std">معتمد طبقاً للمواصفة ISO 45001:2018 & ISO 9001:2015</div>
+                </div>
+
+                <div class="iso-box-meta">
+                    <div class="meta-row">
+                        <span>كود الوثيقة:</span>
+                        <strong>${Utils.escapeHTML(docCode)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>رقم الإصدار:</span>
+                        <strong>${Utils.escapeHTML(revision)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>تاريخ الاعتماد:</span>
+                        <strong>${releaseDate}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>درجة السرية:</span>
+                        <strong style="color: #047857;">${Utils.escapeHTML(classification)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * تذييل ISO 45001 المعتمد لجميع نماذج وتقارير المخالفات
+     */
+    getIsoPrintFooterHtml(docCode, revision = 'Rev. 03', standard = 'ISO 45001:2018 (Clause 10.2 Nonconformity and corrective action)') {
+        return `
+            <div class="iso-footer-strip">
+                <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
+                <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
+                <span>مرجعية التوثيق: <strong>${Utils.escapeHTML(standard)}</strong></span>
+                <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+            </div>
+            <footer class="portal-unified-footer">
+                <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+                <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الإدارية والقانونية</div>
+            </footer>
+        `;
+    },
+
+    /**
+     * فتح نافذة معاينة وطباعة النموذج بنظام A4 مع شريط تحكم علوي يتيح التحميل المباشر والطباعة
+     */
+    openIsoPrintWindow(title, htmlBody, isLandscape = false, customStyle = '', directDownloadFileName = '') {
+        const safeDlName = directDownloadFileName || `${String(title).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <div class="brand-badge">
+            <span class="pill-tag">ICAPP SAFETY HUB</span>
+            <span class="title-text">${Utils.escapeHTML(title)}</span>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-direct-download" id="dl-pdf-top-btn" onclick="directDownloadReportPdf()">
+                <i class="fas fa-file-arrow-down"></i> تحميل التقرير (PDF)
+            </button>
+            <button class="btn-print" onclick="window.print()">
+                <i class="fas fa-print"></i> طباعة المستند
+            </button>
+            <button class="btn-close" onclick="window.close()">
+                <i class="fas fa-times"></i> إغلاق
+            </button>
+        </div>
+    </div>
+    <div class="report-page-container">
+        ${htmlBody}
+    </div>
+    <script>
+        async function directDownloadReportPdf() {
+            var btn = document.getElementById('dl-pdf-top-btn');
+            var originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+            }
+            try {
+                if (window.opener && window.opener.Utils && typeof window.opener.Utils.downloadHtmlAsPdf === 'function') {
+                    var container = document.querySelector('.report-page-container');
+                    var targetHtml = container ? container.outerHTML : document.body.innerHTML;
+                    var ok = await window.opener.Utils.downloadHtmlAsPdf(targetHtml, ${JSON.stringify(safeDlName)}, {
+                        landscape: ${isLandscape ? 'true' : 'false'},
+                        title: ${JSON.stringify(title)}
+                    });
+                    if (ok) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check"></i> تم التحميل!';
+                            setTimeout(function() { btn.innerHTML = originalText; }, 2500);
+                        }
+                        return;
+                    }
+                }
+                window.print();
+            } catch (err) {
+                console.warn('Direct PDF download error, fallback to print:', err);
+                window.print();
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    setTimeout(function() { btn.innerHTML = originalText; }, 2500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>`;
+
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لمعاينة التقرير');
+            return false;
+        }
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 15000);
+        return true;
+    },
+
+    /**
+     * تحميل تقرير ISO 45001 كملف PDF مباشرة دون إجبار المستخدم على وضع الطباعة
+     */
+    async downloadIsoReportAsPdf(title, htmlBody, fileName = '', isLandscape = false, customStyle = '') {
+        const docFileName = fileName || `${String(title).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    <div class="report-page-container">
+        ${htmlBody}
+    </div>
+</body>
+</html>`;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            try {
+                const downloaded = await Utils.downloadHtmlAsPdf(fullHtml, docFileName, {
+                    landscape: isLandscape,
+                    title
+                });
+                if (downloaded) {
+                    Notification.success(`تم تحميل ملف PDF بنجاح: ${docFileName}`);
+                    return true;
+                }
+            } catch (err) {
+                Utils.safeWarn('فشل التحميل المباشر لتقرير المخالفات:', err);
+            }
+        }
+
+        // في حال تعذر التصدير المباشر يتم فتح نافذة المعاينة والطباعة
+        return this.openIsoPrintWindow(title, htmlBody, isLandscape, customStyle, docFileName);
+    },
+
+    /**
+     * تقسيم مصفوفة سجلات إلى صفحات لمنع تراكم المحتوى والصفحات البيضاء
+     */
+    _paginateViolationsList(items, firstPageLimit = 8, subsequentLimit = 12) {
+        if (!items || items.length === 0) return [];
+        const pages = [];
+        const copy = [...items];
+        pages.push(copy.splice(0, firstPageLimit));
+        while (copy.length > 0) {
+            pages.push(copy.splice(0, subsequentLimit));
+        }
+        return pages;
+    },
+
+    /**
+     * نافذة حوار تصدير السجل العام للمخالفات مع فلاتر كاملة (ISO 45001)
+     */
+    showAllViolationsReportDialog(defaultPersonType = '') {
+        const existing = document.getElementById('all-violations-report-modal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'all-violations-report-modal';
+
+        const now = new Date();
+        const monthOptions = [];
+        for (let i = 0; i < 12; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const label = d.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
+            monthOptions.push(`<option value="${val}"${i === 0 ? ' selected' : ''}>${label}</option>`);
+        }
+
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 540px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #991b1b, #7f1d1d); color: white;">
+                    <h3 class="text-lg font-bold flex items-center gap-2">
+                        <i class="fas fa-file-pdf"></i>
+                        تصدير سجل المخالفات العام (ISO 45001)
+                    </h3>
+                    <button type="button" class="modal-close text-white hover:text-gray-200" data-action="close">&times;</button>
+                </div>
+                <div class="modal-body p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">نطاق المخالفات المطلوب تضمينها:</label>
+                        <select id="all-viol-scope-select" class="form-input w-full">
+                            <option value="all"${!defaultPersonType ? ' selected' : ''}>جميع المخالفات (موظفين + مقاولين)</option>
+                            <option value="employee"${defaultPersonType === 'employee' ? ' selected' : ''}>مخالفات الموظفين فقط</option>
+                            <option value="contractor"${defaultPersonType === 'contractor' ? ' selected' : ''}>مخالفات المقاولين فقط</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">نطاق الفترة الزمنية:</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="all-viol-range-type" value="all" checked>
+                                <span>جميع السجلات المسجلة</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="all-viol-range-type" value="month">
+                                <span>شهر محدد</span>
+                            </label>
+                            <div class="mr-6">
+                                <select id="all-viol-month-select" class="form-input w-full text-sm" disabled>
+                                    ${monthOptions.join('')}
+                                </select>
+                            </div>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="all-viol-range-type" value="custom">
+                                <span>فترة مخصصة (من / إلى)</span>
+                            </label>
+                            <div class="mr-6 grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">من تاريخ:</label>
+                                    <input type="date" id="all-viol-from-date" class="form-input w-full text-sm" disabled>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">إلى تاريخ:</label>
+                                    <input type="date" id="all-viol-to-date" class="form-input w-full text-sm" disabled>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">درجة الشدة:</label>
+                            <select id="all-viol-severity-select" class="form-input w-full text-sm">
+                                <option value="">الكل (جميع الدرجات)</option>
+                                <option value="عالية">عالية فقط</option>
+                                <option value="متوسطة">متوسطة فقط</option>
+                                <option value="منخفضة">منخفضة فقط</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">حالة المعالجة:</label>
+                            <select id="all-viol-status-select" class="form-input w-full text-sm">
+                                <option value="">الكل (جميع الحالات)</option>
+                                <option value="محلول">محلول فقط</option>
+                                <option value="قيد المراجعة">قيد المراجعة فقط</option>
+                                <option value="مفتوح">غير محلول / مفتوح</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">صيغة الإخراج والتصدير:</label>
+                        <div class="flex items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="all-viol-format" value="pdf" checked>
+                                <span class="font-medium text-red-700"><i class="fas fa-file-pdf ml-1"></i>PDF معتمد ISO</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="all-viol-format" value="excel">
+                                <span class="font-medium text-green-700"><i class="fas fa-file-excel ml-1"></i>Excel (.xlsx)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer flex items-center justify-between p-4 bg-gray-50 border-t">
+                    <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="btn-primary" id="all-viol-preview-btn" style="background: linear-gradient(135deg, #1e3a8a, #0f172a);">
+                            <i class="fas fa-eye ml-1"></i>
+                            معاينة وطباعة
+                        </button>
+                        <button type="button" class="btn-primary" id="all-viol-generate-btn" style="background: linear-gradient(135deg, #059669, #047857);">
+                            <i class="fas fa-file-download ml-1"></i>
+                            تحميل مباشر
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelector('.modal-close')?.addEventListener('click', close);
+        modal.querySelector('[data-action="close"]')?.addEventListener('click', close);
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+
+        const rangeRadios = modal.querySelectorAll('input[name="all-viol-range-type"]');
+        const monthSelect = modal.querySelector('#all-viol-month-select');
+        const fromInput = modal.querySelector('#all-viol-from-date');
+        const toInput = modal.querySelector('#all-viol-to-date');
+
+        const updateRangeState = () => {
+            const val = modal.querySelector('input[name="all-viol-range-type"]:checked')?.value || 'all';
+            monthSelect.disabled = val !== 'month';
+            fromInput.disabled = val !== 'custom';
+            toInput.disabled = val !== 'custom';
+        };
+        rangeRadios.forEach(r => r.addEventListener('change', updateRangeState));
+
+        const handleExport = async (isDirectDownload) => {
+            const scope = modal.querySelector('#all-viol-scope-select')?.value || 'all';
+            const rangeType = modal.querySelector('input[name="all-viol-range-type"]:checked')?.value || 'all';
+            const month = monthSelect?.value || '';
+            const fromDate = fromInput?.value || '';
+            const toDate = toInput?.value || '';
+            const severity = modal.querySelector('#all-viol-severity-select')?.value || '';
+            const status = modal.querySelector('#all-viol-status-select')?.value || '';
+            const exportFormat = modal.querySelector('input[name="all-viol-format"]:checked')?.value || 'pdf';
+
+            if (rangeType === 'custom') {
+                if (!fromDate || !toDate) {
+                    Notification.warning('يرجى تحديد تاريخ البداية وتاريخ النهاية');
+                    return;
+                }
+                if (new Date(fromDate) > new Date(toDate)) {
+                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                    return;
+                }
+            }
+
+            close();
+            await this.generateAllViolationsReport({
+                personType: scope,
+                dateRangeType: rangeType,
+                month,
+                fromDate,
+                toDate,
+                severity,
+                status,
+                exportFormat,
+                directDownload: isDirectDownload
+            });
+        };
+
+        modal.querySelector('#all-viol-preview-btn')?.addEventListener('click', () => handleExport(false));
+        modal.querySelector('#all-viol-generate-btn')?.addEventListener('click', () => handleExport(true));
+    },
+
+    /**
+     * إنشاء تقرير السجل العام لمخالفات السلامة والصحة المهنية (ISO 45001)
+     */
+    async generateAllViolationsReport(filters = {}) {
+        const {
+            personType = 'all',
+            dateRangeType = 'all',
+            month = '',
+            fromDate = '',
+            toDate = '',
+            severity = '',
+            status = '',
+            exportFormat = 'pdf',
+            directDownload = true
+        } = filters;
+
+        try {
+            Loading.show('جاري استخراج وتجميع بيانات المخالفات...');
+
+            let records = (AppState.appData?.violations || [])
+                .map(v => this.normalizeViolationRecord(v))
+                .filter(Boolean);
+
+            // تصفية حسب الشخص
+            if (personType === 'employee') {
+                records = records.filter(v => v.employeeName || v.personType === 'employee' || (!v.contractorName && v.employeeName));
+            } else if (personType === 'contractor') {
+                records = records.filter(v => v.contractorName || v.contractorCode || v.contractorId || v.personType === 'contractor');
+            }
+
+            // تصفية حسب الفترة
+            let periodText = 'كافة السجلات المسجلة بالمنظومة';
+            if (dateRangeType === 'month' && month) {
+                const [y, m] = month.split('-');
+                records = records.filter(v => {
+                    if (!v.violationDate) return false;
+                    const d = new Date(v.violationDate);
+                    return d.getFullYear() === parseInt(y, 10) && (d.getMonth() + 1) === parseInt(m, 10);
+                });
+                const dObj = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1);
+                periodText = dObj.toLocaleDateString('ar-SA-u-nu-latn', { year: 'numeric', month: 'long' });
+            } else if (dateRangeType === 'custom' && fromDate && toDate) {
+                const start = new Date(fromDate); start.setHours(0,0,0,0);
+                const end = new Date(toDate); end.setHours(23,59,59,999);
+                records = records.filter(v => {
+                    if (!v.violationDate) return false;
+                    const d = new Date(v.violationDate);
+                    return d >= start && d <= end;
+                });
+                periodText = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
+            }
+
+            // تصفية حسب الشدة
+            if (severity) {
+                records = records.filter(v => String(v.severity || '').trim() === severity);
+            }
+
+            // تصفية حسب الحالة
+            if (status) {
+                if (status === 'مفتوح') {
+                    records = records.filter(v => String(v.status || '').trim() !== 'محلول');
+                } else {
+                    records = records.filter(v => String(v.status || '').trim() === status);
+                }
+            }
+
+            if (records.length === 0) {
+                Loading.hide();
+                Notification.warning('لا توجد مخالفات مسجلة تطابق محددات التصفية المختارة');
+                return;
+            }
+
+            // ترتيب السجلات تنازلياً حسب التاريخ
+            records.sort((a, b) => new Date(b.violationDate || 0) - new Date(a.violationDate || 0));
+
+            // تحديد اسم التقرير
+            const scopeTitle = personType === 'employee' ? 'مخالفات الموظفين' : personType === 'contractor' ? 'مخالفات المقاولين' : 'السجل العام للمخالفات';
+            const reportTitle = `سجل ${scopeTitle} وإجراءات التصحيح`;
+
+            if (exportFormat === 'excel') {
+                this.exportAllViolationsToExcel_(records, scopeTitle, periodText);
+                Loading.hide();
+                return;
+            }
+
+            // إحصائيات المؤشرات
+            const totalCount = records.length;
+            const highCount = records.filter(v => String(v.severity || '').trim() === 'عالية').length;
+            const medCount = records.filter(v => String(v.severity || '').trim() === 'متوسطة').length;
+            const lowCount = records.filter(v => String(v.severity || '').trim() === 'منخفضة').length;
+            const resolvedCount = records.filter(v => String(v.status || '').trim() === 'محلول').length;
+            const openCount = totalCount - resolvedCount;
+            const resolutionRate = totalCount > 0 ? Math.round((resolvedCount / totalCount) * 100) : 0;
+            const totalFines = records.reduce((sum, v) => sum + (Number(this.getEffectiveFineAmount(v)) || 0), 0);
+
+            // تقسيم الصفحات بنظام .report-page landscape
+            const pagesData = this._paginateViolationsList(records, 8, 11);
+            const totalPages = pagesData.length;
+
+            const pagesHtml = pagesData.map((pageRecords, pageIdx) => {
+                const pageNum = pageIdx + 1;
+                const isFirstPage = pageNum === 1;
+                const isLastPage = pageNum === totalPages;
+
+                const rowsHtml = pageRecords.map((v, rIdx) => {
+                    const globalIdx = (pageIdx === 0 ? 0 : 8 + (pageIdx - 1) * 11) + rIdx + 1;
+                    const isCon = v.personType === 'contractor' || !!v.contractorName;
+                    const subjectName = isCon ? (v.contractorName || v.contractorWorker || 'مقاول') : (v.employeeName || 'موظف');
+                    const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
+
+                    return `
+                        <tr>
+                            <td style="font-weight: 700;">${globalIdx}</td>
+                            <td style="font-weight: 800; text-align: right;">
+                                <i class="fas ${isCon ? 'fa-hard-hat text-amber-600' : 'fa-user-tie text-blue-600'} ml-1"></i>
+                                ${Utils.escapeHTML(subjectName)}
+                            </td>
+                            <td style="font-size: 9.5px;">${isCon ? 'مقاول' : 'موظف'}</td>
+                            <td style="font-size: 9.5px;">${Utils.escapeHTML(v.violationLocation || '-')}</td>
+                            <td style="font-weight: 700; text-align: right;">${Utils.escapeHTML(v.violationType || '-')}</td>
+                            <td>${v.violationDate ? Utils.formatDate(v.violationDate) : '-'}</td>
+                            <td>
+                                <span style="font-weight: 800; color: ${v.severity === 'عالية' ? '#b91c1c' : v.severity === 'متوسطة' ? '#d97706' : '#2563eb'};">
+                                    ${Utils.escapeHTML(v.severity || '-')}
+                                </span>
+                            </td>
+                            <td style="font-weight: 800; color: #166534;">${this.formatFineAmount(fineVal)}</td>
+                            <td style="text-align: right; font-size: 9.5px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${Utils.escapeHTML(v.actionTaken || '-')}</td>
+                            <td>
+                                <span style="font-weight: 800; color: ${v.status === 'محلول' ? '#047857' : '#b91c1c'};">
+                                    ${Utils.escapeHTML(v.status || '-')}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="report-page landscape">
+                        ${this.getIsoPrintHeaderHtml(
+                            reportTitle,
+                            isFirstPage ? 'سجل رسمي موثق لحالات عدم المطابقة والإجراءات التصحيحية الميدانية' : `تابع جدول ${reportTitle} — استكمال البيانات`,
+                            'DOC-HSE-VIO-REG-01',
+                            'Rev. 03',
+                            'سري وداخلي'
+                        )}
+
+                        ${isFirstPage ? `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: #fff7ed; border-right: 4px solid #ea580c; border-radius: 6px; padding: 6px 12px; margin-bottom: 10px; font-size: 11px;">
+                                <div><strong style="color: #9a3412;">نطاق التقرير والفترة:</strong> <span style="color: #0f172a; font-weight: 700;">${Utils.escapeHTML(periodText)}</span></div>
+                                <div><strong style="color: #9a3412;">تاريخ التصدير:</strong> ${Utils.formatDate(new Date())}</div>
+                            </div>
+
+                            <div class="summary-cards-row">
+                                <div class="kpi-stat-card accent-red">
+                                    <div class="kpi-card-label">إجمالي المخالفات</div>
+                                    <div class="kpi-card-value" style="color: #991b1b;">${totalCount}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-amber">
+                                    <div class="kpi-card-label">الشدة (عالية / متوسطة / منخفضة)</div>
+                                    <div class="kpi-card-value" style="color: #92400e; font-size: 15px;">${highCount} / ${medCount} / ${lowCount}</div>
+                                </div>
+                                <div class="kpi-stat-card accent-green">
+                                    <div class="kpi-card-label">معدل الحل والإغلاق</div>
+                                    <div class="kpi-card-value" style="color: #065f46;">${resolutionRate}% <small style="font-size: 11px; font-weight: 700;">(${resolvedCount} محلول / ${openCount} مفتوح)</small></div>
+                                </div>
+                                <div class="kpi-stat-card accent-blue">
+                                    <div class="kpi-card-label">إجمالي الغرامات المالية</div>
+                                    <div class="kpi-card-value" style="color: #1e3a8a; font-size: 16px;">${this.formatFineAmount(totalFines)}</div>
+                                </div>
+                            </div>
+                        ` : ''}
+
+                        <table class="iso-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 32px;">#</th>
+                                    <th>اسم المخالف</th>
+                                    <th style="width: 65px;">الصفة</th>
+                                    <th>الموقع / المصنع</th>
+                                    <th>نوع المخالفة</th>
+                                    <th style="width: 75px;">التاريخ</th>
+                                    <th style="width: 60px;">الشدة</th>
+                                    <th style="width: 85px;">الغرامة</th>
+                                    <th>الإجراء المتخذ</th>
+                                    <th style="width: 65px;">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+
+                        ${isLastPage ? `
+                            <div class="signatures-grid">
+                                <div class="sig-card">
+                                    <div class="sig-card-title">مسؤول الرصد الميداني وإدخال البيانات</div>
+                                    <div class="sig-card-name">مشرف السلامة والصحة المهنية</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">المراجعة والتدقيق الإداري</div>
+                                    <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                                    <div class="sig-line-area">الاسم والتوقيع: ............................</div>
+                                </div>
+                                <div class="sig-card">
+                                    <div class="sig-card-title">الاعتماد الرسمي</div>
+                                    <div class="sig-card-name">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                                    <div class="sig-line-area">الاعتماد والختم: ............................</div>
+                                </div>
+                            </div>
+
+                            ${this.getIsoPrintFooterHtml('DOC-HSE-VIO-REG-01', 'Rev. 03', 'ISO 45001:2018 (Clause 9.1 & 10.2)')}
+                        ` : ''}
+
+                        <div class="page-counter-footer">صفحة ${pageNum} من ${totalPages}</div>
+                    </div>
+                `;
+            }).join('');
+
+            Loading.hide();
+
+            const fileName = `${String(reportTitle).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            if (directDownload) {
+                await this.downloadIsoReportAsPdf(reportTitle, pagesHtml, fileName, true);
+            } else {
+                this.openIsoPrintWindow(reportTitle, pagesHtml, true, '', fileName);
+            }
+        } catch (error) {
+            Loading.hide();
+            Utils.safeError('خطأ في استخراج تقرير سجل المخالفات:', error);
+            Notification.error('فشل إنشاء تقرير سجل المخالفات: ' + error.message);
+        }
+    },
+
+    /**
+     * تصدير سجل المخالفات إلى ملف Excel
+     */
+    exportAllViolationsToExcel_(violations, targetName = '', periodInfo = '') {
+        if (typeof XLSX === 'undefined') {
+            Notification.error('مكتبة Excel غير متوفرة. يرجى تحديث الصفحة والمحاولة ثانية.');
+            return false;
+        }
+
+        const excelData = violations.map((v, idx) => ({
+            '#': idx + 1,
+            'اسم المخالف': v.employeeName || v.contractorName || v.contractorWorker || '',
+            'الصفة': (v.personType === 'contractor' || v.contractorName) ? 'مقاول' : 'موظف',
+            'الكود الوظيفي / كود المقاول': v.employeeCode || v.employeeNumber || v.contractorCode || v.contractorId || '',
+            'نوع المخالفة': v.violationType || '',
+            'تاريخ المخالفة': v.violationDate ? Utils.formatDate(v.violationDate) : '',
+            'وقت المخالفة': v.violationTime || '',
+            'المصنع / الموقع': v.violationLocation || '',
+            'مكان المخالفة': v.violationPlace || '',
+            'درجة الشدة': v.severity || '',
+            'القيمة المالية': Number(this.getEffectiveFineAmount(v)) || 0,
+            'تسلسل المخالفة بالشهر': v.violationSequenceInMonth || '',
+            'حالة المخالفة': v.status || '',
+            'الإجراء المتخذ': v.actionTaken || '',
+            'تفاصيل المخالفة': v.violationDetails || ''
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(wb, ws, 'سجل المخالفات');
+
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `سجل_${targetName || 'المخالفات'}_${dateStr}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        Notification.success('تم تصدير سجل المخالفات إلى Excel بنجاح');
+        return true;
+    },
+
 };
 
 // ===== Export module to global scope =====
