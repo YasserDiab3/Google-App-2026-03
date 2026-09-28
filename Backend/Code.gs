@@ -396,7 +396,7 @@ function doPost(e) {
         // SEC: أُزيل fixClinicSheetHeaders / mfaClear* — تتطلب جلسة مدير + CSRF
         // SEC: initializeSheets وكتابات HSE الداخلية تتطلب CSRF — كتابات HSE العامة عبر PIN فقط (pinProtectedWriteActions)
         const pinProtectedWriteActions = ['saveHseBroadcastMessages', 'saveHseEmergencyContacts'];
-        const csrfExemptActions = ['login', 'verifyMfaLogin', 'warmup', 'getObsHealth', 'patchObs2224', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'trackObservation', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'removeDailySafetyDuplicates', 'deduplicateDailySafetyReports', 'dscAuditDuplicates', 'getPublicTbtConfig', 'submitPublicTbtRecord', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'getHseEmergencyContacts', 'getPublicFormsStatus', 'savePublicFormsStatus'];
+        const csrfExemptActions = ['login', 'verifyMfaLogin', 'warmup', 'getObsHealth', 'patchObs2224', 'testConnection', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke', 'triggerDailySafetyFormSync', 'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'setOfficialChampionsApproval', 'getPublicLivePTWSummary', 'trackObservation', 'submitObservationClosure', 'submitPublicNearMiss', 'getPublicNearMissConfig', 'submitPublicFireInspection', 'getPublicFireInspectionConfig', 'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'removeDailySafetyDuplicates', 'deduplicateDailySafetyReports', 'dscAuditDuplicates', 'getPublicTbtConfig', 'submitPublicTbtRecord', 'submitGateVisitorCheckIn', 'submitGateVisitorCheckOut', 'getActiveGateVisitors', 'getAllGateVisitors', 'repairAllGateVisitorsRows', 'getSecurityOfficersList', 'getHseBroadcastMessages', 'getHseEmergencyContacts', 'getPublicFormsStatus', 'savePublicFormsStatus'];
         const isPinProtectedWrite = pinProtectedWriteActions.indexOf(action) !== -1;
         const isCsrfExempt = csrfExemptActions.includes(action) || isPinProtectedWrite;
 
@@ -465,7 +465,7 @@ function doPost(e) {
             'testConnection', 'warmup', 'getObsHealth', 'patchObs2224', 'getPublicIP', 'invalidateServerSession',
             'saveHseBroadcastMessages', 'saveHseEmergencyContacts',
             'getAuthBootstrapPolicy', 'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
-            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'trackObservation',
+            'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics', 'getPublicLivePTWSummary', 'trackObservation', 'submitObservationClosure',
             'submitPublicNearMiss', 'getPublicNearMissConfig',
             'submitPublicFireInspection', 'getPublicFireInspectionConfig',
             'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig', 'removeDailySafetyDuplicates', 'deduplicateDailySafetyReports', 'dscAuditDuplicates',
@@ -598,6 +598,8 @@ function doPost(e) {
                 result = getPublicLivePTWSummary(payload || postData.data || postData || {});
             } else if (action === 'trackObservation' && typeof trackObservation === 'function') {
                 result = trackObservation(payload || postData.data || postData || {});
+            } else if (action === 'submitObservationClosure' && typeof submitObservationClosure === 'function') {
+                result = submitObservationClosure(payload || postData.data || postData || {});
             } else if (action === 'submitPublicFireInspection' && typeof submitPublicFireInspection === 'function') {
                 result = submitPublicFireInspection(payload || postData.data || postData || {});
             } else if (action === 'getPublicFireInspectionConfig' && typeof getPublicFireInspectionConfig === 'function') {

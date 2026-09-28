@@ -3730,6 +3730,145 @@ function trackObservation(payload) {
     }
 }
 
+/**
+ * توثيق معالجة وإغلاق الملاحظة الميدانية وإرفاق صور المطابقة "قبل وبعد"
+ * يدعم التحديث المباشر لشيت DailyObservations وقاعدة البيانات السحابية
+ */
+function submitObservationClosure(payload) {
+    try {
+        var rawCode = (payload && (payload.id || payload.isoCode || payload.refCode || payload.code)) || '';
+        var cleanCode = String(rawCode).trim().toUpperCase();
+        if (!cleanCode) {
+            return { success: false, message: 'كود الملاحظة مطلوب لإتمام الإغلاق' };
+        }
+
+        var spreadsheetId = getSpreadsheetId();
+        var ss = SpreadsheetApp.openById(spreadsheetId);
+        var sh = ss ? ss.getSheetByName('DailyObservations') : null;
+        if (!sh || sh.getLastRow() < 2) {
+            return { success: false, message: 'جدول الملاحظات DailyObservations غير متاح' };
+        }
+
+        var lr = sh.getLastRow();
+        var lc = sh.getLastColumn();
+        var hdrs = sh.getRange(1, 1, 1, lc).getValues()[0].map(function(h) { return String(h || '').trim(); });
+
+        var idCol = hdrs.indexOf('id');
+        var isoCol = hdrs.indexOf('isoCode');
+        var statusCol = hdrs.indexOf('status');
+        var stageCol = hdrs.indexOf('workflowStage');
+        var actionCol = hdrs.indexOf('correctiveAction');
+        var remarksCol = hdrs.indexOf('remarks');
+        var afterImagesCol = hdrs.indexOf('afterExecutionImages');
+        var updatedCol = hdrs.indexOf('updatedAt');
+        var closedByCol = hdrs.indexOf('closedBy');
+        var closedAtCol = hdrs.indexOf('closedAt');
+        var timeLogCol = hdrs.indexOf('timeLog');
+
+        var dataRows = sh.getRange(2, 1, lr - 1, lc).getValues();
+        var targetRowIdx = -1;
+        var matchedCode = cleanCode;
+
+        for (var i = dataRows.length - 1; i >= 0; i--) {
+            var r = dataRows[i];
+            var rId = (idCol >= 0 && r[idCol]) ? String(r[idCol]).trim().toUpperCase() : '';
+            var rIso = (isoCol >= 0 && r[isoCol]) ? String(r[isoCol]).trim().toUpperCase() : '';
+            var rRem = (remarksCol >= 0 && r[remarksCol]) ? String(r[remarksCol]).trim().toUpperCase() : '';
+
+            if (rId === cleanCode || rIso === cleanCode || (rRem && rRem.indexOf(cleanCode) !== -1)) {
+                targetRowIdx = i + 2; // 1-indexed including header
+                matchedCode = rIso || rId || cleanCode;
+                break;
+            }
+            if (cleanCode.length >= 5 && (rId.indexOf(cleanCode) !== -1 || rIso.indexOf(cleanCode) !== -1)) {
+                targetRowIdx = i + 2;
+                matchedCode = rIso || rId || cleanCode;
+                break;
+            }
+        }
+
+        var nowIso = new Date().toISOString();
+        var closedBy = String(payload.closedBy || payload.inspectorName || 'مشرف السلامة').trim();
+        var notes = String(payload.closureNotes || payload.notes || payload.correctiveAction || '').trim();
+
+        // معالجة صور بعد الإصلاح
+        var afterImageUrls = [];
+        if (payload.afterPhoto && typeof payload.afterPhoto === 'string' && payload.afterPhoto.length > 50) {
+            try {
+                if (typeof uploadFormPhotosToDrive === 'function') {
+                    afterImageUrls = uploadFormPhotosToDrive(matchedCode, [payload.afterPhoto], 'ObsClosure');
+                } else if (typeof uploadBase64ImageToDrive === 'function') {
+                    var upRes = uploadBase64ImageToDrive(payload.afterPhoto, 'ObsClosure_' + matchedCode + '_' + Date.now() + '.jpg');
+                    if (upRes && upRes.url) afterImageUrls.push(upRes.url);
+                }
+            } catch (pErr) {
+                Logger.log('Photo upload error: ' + pErr.toString());
+            }
+        }
+
+        if (targetRowIdx > 1) {
+            if (statusCol >= 0) sh.getRange(targetRowIdx, statusCol + 1).setValue('مغلق (Closed)');
+            if (stageCol >= 0) sh.getRange(targetRowIdx, stageCol + 1).setValue('closed');
+            if (actionCol >= 0 && notes) sh.getRange(targetRowIdx, actionCol + 1).setValue(notes);
+            if (remarksCol >= 0 && notes) sh.getRange(targetRowIdx, remarksCol + 1).setValue(notes);
+            if (updatedCol >= 0) sh.getRange(targetRowIdx, updatedCol + 1).setValue(nowIso);
+            if (closedByCol >= 0) sh.getRange(targetRowIdx, closedByCol + 1).setValue(closedBy);
+            if (closedAtCol >= 0) sh.getRange(targetRowIdx, closedAtCol + 1).setValue(nowIso);
+
+            if (afterImagesCol >= 0 && afterImageUrls.length > 0) {
+                var prevAfter = '';
+                try { prevAfter = sh.getRange(targetRowIdx, afterImagesCol + 1).getValue(); } catch (_) {}
+                var combinedImgs = [];
+                try {
+                    if (prevAfter) {
+                        var parsedPrev = JSON.parse(prevAfter);
+                        if (Array.isArray(parsedPrev)) combinedImgs = parsedPrev;
+                    }
+                } catch (_) {}
+                afterImageUrls.forEach(function(u) { combinedImgs.push(u); });
+                sh.getRange(targetRowIdx, afterImagesCol + 1).setValue(JSON.stringify(combinedImgs));
+            }
+
+            if (timeLogCol >= 0) {
+                var prevLog = '';
+                try { prevLog = sh.getRange(targetRowIdx, timeLogCol + 1).getValue(); } catch (_) {}
+                var logsArr = [];
+                try {
+                    if (prevLog) {
+                        var parsedLog = JSON.parse(prevLog);
+                        if (Array.isArray(parsedLog)) logsArr = parsedLog;
+                    }
+                } catch (_) {}
+                logsArr.push({
+                    action: 'closed',
+                    user: closedBy,
+                    timestamp: nowIso,
+                    roleLabel: 'توثيق وإغلاق الملاحظة',
+                    actionDetail: 'تم إغلاق الملاحظة وتوثيق المعالجة ميدانياً',
+                    note: notes
+                });
+                sh.getRange(targetRowIdx, timeLogCol + 1).setValue(JSON.stringify(logsArr));
+            }
+        }
+
+        try { invalidateHseSheetCaches('DailyObservations'); } catch (_) {}
+
+        return {
+            success: true,
+            id: matchedCode,
+            isoCode: matchedCode,
+            status: 'مغلق (Closed)',
+            closedBy: closedBy,
+            closedAt: nowIso,
+            closureNotes: notes,
+            message: 'تم توثيق معالجة وإغلاق الملاحظة بنجاح'
+        };
+    } catch (err) {
+        Logger.log('Error in submitObservationClosure: ' + err.toString());
+        return { success: false, message: 'حدث خطأ أثناء إغلاق الملاحظة: ' + err.toString() };
+    }
+}
+
 
 
 

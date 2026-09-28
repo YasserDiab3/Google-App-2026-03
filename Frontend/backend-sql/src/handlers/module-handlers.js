@@ -1219,6 +1219,30 @@ const moduleHandlers = {
         const departments = buildPublicFormDepartments(db);
         const violationTypes = db.readSheet('Violation_Types_DB') || db.readSheet('ViolationTypes') || [];
 
+        // حصر الملاحظات المفتوحة فقط واستبعاد أي ملاحظة مغلقة أو معالجة
+        const allObs = db.readSheet('DailyObservations') || [];
+        const isClosedStatus = (st) => {
+            const s = String(st || '').toLowerCase().trim();
+            return s.includes('مغلق') || s.includes('closed') || s.includes('منتهي') || s.includes('تم') || s.includes('معالج');
+        };
+        const recentOpenHazards = allObs
+            .filter(o => o && !isClosedStatus(o.status) && String(o.workflowStage || '').toLowerCase() !== 'closed')
+            .slice(-30)
+            .reverse()
+            .map(o => ({
+                id: o.id || '',
+                isoCode: o.isoCode || o.id || '',
+                siteName: o.siteName || o.site || '',
+                locationName: o.locationName || o.place || '',
+                observationType: o.observationType || 'سلوك غير آمن',
+                riskLevel: o.riskLevel || 'متوسط',
+                observerName: o.observerName || '',
+                shift: o.shift || '',
+                date: o.date || o.createdAt || '',
+                details: o.details || o.description || '',
+                status: o.status || 'Open'
+            }));
+
         return {
             success: true,
             factories: sites.map((s) => s.name).filter(Boolean),
@@ -1226,6 +1250,7 @@ const moduleHandlers = {
             departments,
             safetyMembers,
             violationTypes: violationTypes,
+            recentOpenHazards,
             timestamp: new Date().toISOString()
         };
     },
@@ -1475,7 +1500,7 @@ const moduleHandlers = {
         const deptClosedCounts = {};
         const riskCounts = {};
         const typeCounts = {};
-        const criticalOpen = [];
+        const allOpenObservations = [];
 
         const periodsData = {
             monthly: {},
@@ -1644,9 +1669,10 @@ const moduleHandlers = {
             recordPeriodEntry(periodsData.quarterly, quarterKey);
             recordPeriodEntry(periodsData.annual, yearKey);
 
-            if (!isClosed && criticalOpen.length < 35) {
-                criticalOpen.push({
+            if (!isClosed) {
+                allOpenObservations.push({
                     id: obsId,
+                    isoCode: r.isoCode || obsId,
                     date: dtClean || todayStr,
                     siteName: site,
                     locationName: rawLoc,
@@ -1661,6 +1687,8 @@ const moduleHandlers = {
                 });
             }
         }
+
+        const criticalOpen = allOpenObservations.slice(-35).reverse();
 
         const closeRate = rows.length > 0 ? Math.round((closed / rows.length) * 100) : 0;
         const avgMttr = countClosedWithDuration > 0 ? (totalClosedDurationDays / countClosedWithDuration).toFixed(1) : '1.4';

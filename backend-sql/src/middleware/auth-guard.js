@@ -28,6 +28,7 @@ const PUBLIC_EXEMPT_ACTIONS = new Set([
     'mfaSelfTest', 'getEmployeesSheetHealth', 'getEmployeesLoadSmoke',
     'triggerDailySafetyFormSync',
     'submitPublicObservation', 'getPublicObservationConfig', 'getPublicObservationsAnalytics',
+    'trackObservation', 'submitObservationClosure',
     'getPublicLivePTWSummary', 'submitPublicNearMiss', 'getPublicNearMissConfig',
     'submitPublicFireInspection', 'getPublicFireInspectionConfig',
     'submitPublicDailySafetyChecklist', 'getPublicDailySafetyConfig',

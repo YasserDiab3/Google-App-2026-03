@@ -3811,7 +3811,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1775</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1776</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -8576,35 +8576,8 @@
             const cleanCode = code.toUpperCase().trim();
             let foundObs = null;
 
-            // 1. فحص الملاحظات المفتوحة المحملة محلياً
-            const localList = window._recentOpenHazards || [];
-            for (const obs of localList) {
-                const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
-                if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
-                    foundObs = obs;
-                    break;
-                }
-            }
-
-            // 2. فحص طابور عدم الاتصال المحلي
-            if (!foundObs) {
-                const queue = getOfflineQueue();
-                for (const item of queue) {
-                    const qCode = String(item.refCode || '').toUpperCase();
-                    if (qCode === cleanCode || qCode.includes(cleanCode)) {
-                        foundObs = {
-                            ...item.payload,
-                            isoCode: item.refCode,
-                            status: 'قيد المزامنة (محفوظ محلياً)',
-                            isOfflineItem: true
-                        };
-                        break;
-                    }
-                }
-            }
-
-            // 3. الاستعلام من السيرفر السحابي عند وجود اتصال
-            if (navigator.onLine && (!foundObs || foundObs.isOfflineItem)) {
+            // 1. الاستعلام المباشر من السيرفر السحابي أولاً عند وجود اتصال (المرجع المعتمد لقاعدة البيانات)
+            if (navigator.onLine) {
                 try {
                     const targetUrl = getEffectiveApiUrl();
                     const res = await fetch(targetUrl, {
@@ -8621,6 +8594,71 @@
                         }
                     }
                 } catch(e) {}
+            }
+
+            // 2. إذا لم يعثر عليها بالسيرفر أو أوفلاين، فحص سجل التخزين المحلي للملاحظات المغلقة أو المحفوظة
+            if (!foundObs) {
+                try {
+                    const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
+                    for (const item of localHistory) {
+                        const obsCode = String(item.isoCode || item.id || item.refCode || (item.data && item.data.instantRefCode) || '').toUpperCase();
+                        if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                            foundObs = {
+                                ...item,
+                                isoCode: item.isoCode || item.refCode || item.id,
+                                status: item.status || 'مغلق (Closed)',
+                                details: item.details || (item.data && item.data.details) || '',
+                                siteName: item.site || item.siteName || (item.data && item.data.site) || '',
+                                locationName: item.place || item.locationName || (item.data && item.data.place) || '',
+                                riskLevel: item.riskLevel || (item.data && item.data.riskLevel) || 'متوسط'
+                            };
+                            break;
+                        }
+                    }
+                } catch (_) {}
+            }
+
+            // 3. فحص الملاحظات المفتوحة المحملة محلياً (مع استبعاد أي ملاحظة مغلقة محلياً)
+            if (!foundObs) {
+                const localList = window._recentOpenHazards || [];
+                for (const obs of localList) {
+                    const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+                    if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                        foundObs = obs;
+                        break;
+                    }
+                }
+            }
+
+            // 4. فحص طابور عدم الاتصال المحلي
+            if (!foundObs) {
+                const queue = getOfflineQueue();
+                for (const item of queue) {
+                    const qCode = String(item.refCode || '').toUpperCase();
+                    if (qCode === cleanCode || qCode.includes(cleanCode)) {
+                        foundObs = {
+                            ...item.payload,
+                            isoCode: item.refCode,
+                            status: 'قيد المزامنة (محفوظ محلياً)',
+                            isOfflineItem: true
+                        };
+                        break;
+                    }
+                }
+            }
+
+            // إذا تبين أن الملاحظة مغلقة، يتم استبعادها فوراً من قائمة الملاحظات المفتوحة
+            if (foundObs) {
+                const st = String(foundObs.status || '').toLowerCase();
+                const isClosed = st.includes('مغلق') || st.includes('closed') || st.includes('منتهي') || st.includes('معالج');
+                if (isClosed && Array.isArray(window._recentOpenHazards)) {
+                    window._recentOpenHazards = window._recentOpenHazards.filter(o => {
+                        const oc = String(o.isoCode || o.id || o.refCode || '').toUpperCase();
+                        return oc !== cleanCode && !oc.includes(cleanCode) && !cleanCode.includes(oc);
+                    });
+                    try { refreshLocationHazardsBanner(); } catch (_) {}
+                    try { renderPlantRiskHeatmap(); } catch (_) {}
+                }
             }
 
             renderTrackResult(foundObs, cleanCode);
@@ -8642,7 +8680,7 @@
 
             const code = escapeHtml(obs.isoCode || obs.id || obs.refCode || queryCode);
             const status = obs.status || 'Open';
-            const isClosed = status === 'مغلق' || status === 'Closed' || String(status).includes('مغلق');
+            const isClosed = status === 'مغلق' || status === 'Closed' || String(status).includes('مغلق') || String(status).toLowerCase().includes('closed');
             const isPendingSync = !!obs.isOfflineItem;
             const statusBg = isClosed ? '#dcfce7' : (isPendingSync ? '#ffedd5' : '#e0f2fe');
             const statusColor = isClosed ? '#15803d' : (isPendingSync ? '#c2410c' : '#0369a1');
@@ -8652,7 +8690,7 @@
             const step3Done = isClosed;
 
             resultWrap.innerHTML = `
-                <div style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: right;">
+                <div style="background: #ffffff; border: 1.5px solid ${isClosed ? '#86efac' : '#cbd5e1'}; border-radius: 12px; padding: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: right;">
                     <!-- Status Header -->
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
                         <div>
@@ -8698,20 +8736,33 @@
                             <strong style="color: #1e293b;">${escapeHtml(obs.responsibleDepartment || '—')}</strong>
                         </div>
                         <div style="background: #f1f5f9; padding: 6px 10px; border-radius: 6px;">
-                            <span style="color: #64748b; display: block; font-size: 0.7rem;">التاريخ المتوقع:</span>
-                            <strong style="color: #1e293b;">${escapeHtml(obs.expectedCompletionDate || '—')}</strong>
+                            <span style="color: #64748b; display: block; font-size: 0.7rem;">تاريخ الرصد:</span>
+                            <strong style="color: #1e293b;">${escapeHtml(obs.date || obs.createdAt || '—')}</strong>
                         </div>
                     </div>
 
                     ${obs.details ? `
                     <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #334155; margin-bottom: 8px;">
-                        <strong>تفاصيل الملاحظة:</strong> ${escapeHtml(obs.details)}
+                        <strong>تفاصيل الخطر الأصلي:</strong> ${escapeHtml(obs.details)}
                     </div>` : ''}
 
-                    ${obs.correctiveAction ? `
-                    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 8px 10px; font-size: 0.78rem; color: #065f46;">
-                        <strong>الإجراء التصحيحي:</strong> ${escapeHtml(obs.correctiveAction)}
-                    </div>` : ''}
+                    ${isClosed ? `
+                    <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px; margin-top: 10px;">
+                        <div style="font-weight: 800; color: #166534; font-size: 0.84rem; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                            <i class="fas fa-certificate text-emerald-600"></i>
+                            <span>تم توثيق المعالجة وإغلاق الملاحظة بنجاح ✅</span>
+                        </div>
+                        ${obs.closedBy ? `<div style="font-size: 0.78rem; color: #15803d; margin-bottom: 3px;">👤 <b>مسؤول الإغلاق الميداني:</b> ${escapeHtml(obs.closedBy)}</div>` : ''}
+                        ${obs.closedAt ? `<div style="font-size: 0.74rem; color: #64748b; margin-bottom: 4px;">🕒 <b>توقيت الاعتماد:</b> ${escapeHtml(new Date(obs.closedAt).toLocaleString('ar-EG'))}</div>` : ''}
+                        ${(obs.closureNotes || obs.correctiveAction) ? `<div style="font-size: 0.78rem; color: #166534; background: #ffffff; border: 1px solid #bbf7d0; border-radius: 6px; padding: 6px 8px; margin-top: 4px;"><b>الإجراء المنفذ:</b> ${escapeHtml(obs.closureNotes || obs.correctiveAction)}</div>` : ''}
+                    </div>` : `
+                    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: flex-end;">
+                        <button type="button" onclick="if (window.HseActionClosure && typeof window.HseActionClosure.open === 'function') { window.HseActionClosure.open('${code}', ${JSON.stringify(obs).replace(/"/g, '&quot;')}); }"
+                                style="background: linear-gradient(135deg, #059669, #047857); color: #ffffff; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 800; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 4px rgba(5,150,105,0.2);">
+                            <i class="fas fa-camera"></i>
+                            <span>توثيق المعالجة وإغلاق الملاحظة الآن 🔒</span>
+                        </button>
+                    </div>`}
                 </div>
             `;
         }
@@ -9666,6 +9717,21 @@
                     setTimeout(() => executeTrackSearch(trackCode), 300);
                 }
             } catch(e) {}
+
+            // الاستماع لحدث إغلاق الملاحظة وتحديث القوائم الحية فوراً
+            window.addEventListener('observationClosed', (e) => {
+                const closedId = e.detail && (e.detail.id || e.detail.isoCode);
+                if (!closedId) return;
+                const clean = String(closedId).toUpperCase().trim();
+                if (Array.isArray(window._recentOpenHazards)) {
+                    window._recentOpenHazards = window._recentOpenHazards.filter(item => {
+                        const c = String(item.id || item.isoCode || item.refCode || '').toUpperCase().trim();
+                        return c !== clean && !c.includes(clean) && !clean.includes(c);
+                    });
+                }
+                try { refreshLocationHazardsBanner(); } catch (_) {}
+                try { renderPlantRiskHeatmap(); } catch (_) {}
+            });
         });
     </script>
 </body>

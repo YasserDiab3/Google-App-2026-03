@@ -426,6 +426,16 @@
             setTimeout(updateBadgeCount, 500);
         }
 
+        // الاستماع الفوري لحدث إغلاق الملاحظة وتحديث العدادات والواجهة
+        try {
+            window.addEventListener('observationClosed', () => {
+                updateBadgeCount();
+                if (tasksModalEl && tasksModalEl.style.display === 'flex') {
+                    renderTasksList();
+                }
+            });
+        } catch (_) {}
+
         // Public API
         const api = {
             open: openTasksModal,

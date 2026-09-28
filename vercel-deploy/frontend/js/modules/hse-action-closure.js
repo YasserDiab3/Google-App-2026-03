@@ -410,28 +410,122 @@
                     body: JSON.stringify(payload)
                 });
 
-                // Update local storage history if exists
+                // 1. Update local storage history (HSE_PUBLIC_OBS_LOCAL_HISTORY)
                 try {
                     const localHistoryStr = localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY');
-                    if (localHistoryStr) {
-                        const list = JSON.parse(localHistoryStr);
-                        if (Array.isArray(list)) {
-                            const found = list.find(item => item.id === obsId || item.isoCode === obsId);
-                            if (found) {
-                                found.status = 'مغلق (Closed)';
-                                found.closedAt = payload.closedAt;
-                                found.closedBy = inspectorName;
-                                found.closureNotes = actionTaken;
-                                localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(list));
-                            }
+                    let list = localHistoryStr ? JSON.parse(localHistoryStr) : [];
+                    if (!Array.isArray(list)) list = [];
+                    const cleanObsId = String(obsId).trim().toUpperCase();
+                    let matched = false;
+                    for (let i = 0; i < list.length; i++) {
+                        const item = list[i];
+                        const ref = String(item.id || item.isoCode || item.refCode || (item.data && item.data.instantRefCode) || '').trim().toUpperCase();
+                        if (ref === cleanObsId || ref.includes(cleanObsId) || cleanObsId.includes(ref)) {
+                            item.status = 'مغلق (Closed)';
+                            item.isClosed = true;
+                            item.closedAt = payload.closedAt;
+                            item.closedBy = inspectorName;
+                            item.closureNotes = actionTaken;
+                            item.correctiveAction = actionTaken;
+                            if (capturedPhotoBase64) item.afterPhoto = capturedPhotoBase64;
+                            matched = true;
+                        }
+                    }
+                    if (!matched) {
+                        list.unshift({
+                            id: obsId,
+                            isoCode: obsId,
+                            refCode: obsId,
+                            status: 'مغلق (Closed)',
+                            isClosed: true,
+                            closedAt: payload.closedAt,
+                            closedBy: inspectorName,
+                            closureNotes: actionTaken,
+                            correctiveAction: actionTaken,
+                            afterPhoto: capturedPhotoBase64 || '',
+                            site: currentObsData.site || currentObsData.siteName || '',
+                            place: currentObsData.place || currentObsData.locationName || '',
+                            details: currentObsData.details || ''
+                        });
+                    }
+                    localStorage.setItem('HSE_PUBLIC_OBS_LOCAL_HISTORY', JSON.stringify(list));
+                } catch (_) {}
+
+                // 2. Clear from active open hazards cache in memory and local config
+                const cleanObsId = String(obsId).trim().toUpperCase();
+                if (Array.isArray(window._recentOpenHazards)) {
+                    window._recentOpenHazards = window._recentOpenHazards.filter(item => {
+                        const c = String(item.id || item.isoCode || item.refCode || '').trim().toUpperCase();
+                        return c !== cleanObsId && !c.includes(cleanObsId) && !cleanObsId.includes(c);
+                    });
+                }
+
+                try {
+                    const cachedCfgStr = localStorage.getItem('HSE_PUBLIC_OBS_CONFIG');
+                    if (cachedCfgStr) {
+                        const cfg = JSON.parse(cachedCfgStr);
+                        if (cfg && Array.isArray(cfg.recentOpenHazards)) {
+                            cfg.recentOpenHazards = cfg.recentOpenHazards.filter(item => {
+                                const c = String(item.id || item.isoCode || item.refCode || '').trim().toUpperCase();
+                                return c !== cleanObsId && !c.includes(cleanObsId) && !cleanObsId.includes(c);
+                            });
+                            localStorage.setItem('HSE_PUBLIC_OBS_CONFIG', JSON.stringify(cfg));
                         }
                     }
                 } catch (_) {}
 
-                alert(`✅ تم توثيق معالجة وإغلاق الملاحظة (${obsId}) بنجاح! تم حفظ السجل وإرفاق الإثبات.`);
+                // 3. Clear from analytics memory cache if present
+                try {
+                    if (window.rawObservationsAnalyticsData && Array.isArray(window.rawObservationsAnalyticsData.criticalOpen)) {
+                        window.rawObservationsAnalyticsData.criticalOpen = window.rawObservationsAnalyticsData.criticalOpen.filter(item => {
+                            const c = String(item.id || item.isoCode || item.refCode || '').trim().toUpperCase();
+                            return c !== cleanObsId && !c.includes(cleanObsId) && !cleanObsId.includes(c);
+                        });
+                    }
+                } catch (_) {}
+
+                // 4. Update other local caches
+                try {
+                    const savedFieldStr = localStorage.getItem('HSE_FIELD_SAVED_OBS');
+                    if (savedFieldStr) {
+                        const fieldList = JSON.parse(savedFieldStr);
+                        if (Array.isArray(fieldList)) {
+                            fieldList.forEach(item => {
+                                const c = String(item.id || item.isoCode || item.refCode || '').trim().toUpperCase();
+                                if (c === cleanObsId || c.includes(cleanObsId) || cleanObsId.includes(c)) {
+                                    item.status = 'مغلق (Closed)';
+                                    item.isClosed = true;
+                                }
+                            });
+                            localStorage.setItem('HSE_FIELD_SAVED_OBS', JSON.stringify(fieldList));
+                        }
+                    }
+                } catch (_) {}
+
+                // 5. Notify all components via custom event
+                try {
+                    window.dispatchEvent(new CustomEvent('observationClosed', {
+                        detail: {
+                            id: obsId,
+                            isoCode: obsId,
+                            status: 'مغلق (Closed)',
+                            closedBy: inspectorName,
+                            closureNotes: actionTaken,
+                            closedAt: payload.closedAt
+                        }
+                    }));
+                } catch (_) {}
+
+                alert(`✅ تم توثيق معالجة وإغلاق الملاحظة (${obsId}) بنجاح! تم حفظ السجل وتحديث قاعدة البيانات وإرفاق الإثبات.`);
                 closeClosureModal();
 
-                // Refresh track result if track modal is currently open
+                // 6. Refresh active UI views
+                if (typeof refreshLocationHazardsBanner === 'function') {
+                    try { refreshLocationHazardsBanner(); } catch (_) {}
+                }
+                if (typeof renderPlantRiskHeatmap === 'function') {
+                    try { renderPlantRiskHeatmap(); } catch (_) {}
+                }
                 if (typeof executeTrackSearch === 'function') {
                     executeTrackSearch(obsId);
                 }

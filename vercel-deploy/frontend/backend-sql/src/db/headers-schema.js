@@ -1939,7 +1939,11 @@ const headersMap = {
         "subCategory",
         "gpsCoordinates",
         "gpsAccuracy",
-        "mapsUrl"
+        "mapsUrl",
+        "closedBy",
+        "closedAt",
+        "closureNotes",
+        "actionClosureNotes"
     ],
     "ISODocuments": [
         "id",

@@ -47,6 +47,16 @@ function initSchema(db = getDatabase()) {
         db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "idx_DailyObservations_iso_unique" ON "DailyObservations" ("isoCode") WHERE "isoCode" IS NOT NULL AND "isoCode" != '';`);
     } catch (_) {}
 
+    // التأكد من توفر أعمدة توثيق الإغلاق في جدول DailyObservations
+    try {
+        const closureCols = ['closedBy', 'closedAt', 'closureNotes', 'actionClosureNotes'];
+        for (const col of closureCols) {
+            try {
+                db.exec(`ALTER TABLE "DailyObservations" ADD COLUMN "${col}" TEXT;`);
+            } catch (_) {}
+        }
+    } catch (_) {}
+
     // دفع DDL (CREATE TABLE/INDEX) إلى Turso إن كان المحرك embedded replica
     try { if (db && typeof db.syncNow === 'function') db.syncNow(); } catch (_) {}
 }

@@ -3809,7 +3809,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1775</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1776</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -4188,7 +4188,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1775</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1776</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -9368,7 +9368,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1775-20260928')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1776-20260928')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
@@ -11977,18 +11977,8 @@
         const cleanCode = code.toUpperCase().trim();
         let foundObs = null;
 
-        // فحص الملاحظات من التحليلات المخزنة محلياً
-        const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
-        for (const obs of localList) {
-            const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
-            if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
-                foundObs = obs;
-                break;
-            }
-        }
-
-        // فحص السيرفر السحابي
-        if (navigator.onLine && !foundObs) {
+        // 1. الاستعلام المباشر من السيرفر السحابي أولاً عند وجود اتصال (المرجع المعتمد لقاعدة البيانات)
+        if (navigator.onLine) {
             try {
                 const targetUrl = (typeof getEffectiveApiUrl === 'function') ? getEffectiveApiUrl() : '';
                 if (targetUrl) {
@@ -12007,6 +11997,36 @@
                     }
                 }
             } catch(e) {}
+        }
+
+        // 2. إذا لم يعثر عليها، فحص السجل المحلي للملاحظات المغلقة أو المحفوظة
+        if (!foundObs) {
+            try {
+                const localHistory = JSON.parse(localStorage.getItem('HSE_PUBLIC_OBS_LOCAL_HISTORY') || '[]');
+                for (const item of localHistory) {
+                    const obsCode = String(item.isoCode || item.id || item.refCode || (item.data && item.data.instantRefCode) || '').toUpperCase();
+                    if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                        foundObs = {
+                            ...item,
+                            isoCode: item.isoCode || item.refCode || item.id,
+                            status: item.status || 'مغلق (Closed)'
+                        };
+                        break;
+                    }
+                }
+            } catch (_) {}
+        }
+
+        // 3. فحص الملاحظات من التحليلات المخزنة محلياً
+        if (!foundObs) {
+            const localList = (rawObservationsAnalyticsData && rawObservationsAnalyticsData.criticalOpen) || [];
+            for (const obs of localList) {
+                const obsCode = String(obs.isoCode || obs.id || obs.refCode || '').toUpperCase();
+                if (obsCode === cleanCode || obsCode.includes(cleanCode) || cleanCode.includes(obsCode)) {
+                    foundObs = obs;
+                    break;
+                }
+            }
         }
 
         renderTrackResult(foundObs, cleanCode);
