@@ -1,19 +1,19 @@
 {
-  "version": "1.0.1774",
+  "version": "1.0.1775",
   "highlights": {
     "ar": [
-      "توحيد إصدارات النظام في جميع البوابات والنماذج وشاشات النظام لتكون موحدة برقم V.1.0.1774.",
-      "تطابق نموذج تقرير المرور اليومي للسلامة والصحة المهنية (DOC-HSE-DSR-01) عند التصدير والطباعة من داخل النظام مع تصميم البوابة الرسمي المعين بهوية ISO.",
-      "تضمين شريط الترويسة الثلاثي ISO وشبكة البيانات والكروت الرقمية الأربعة KPI وجدول بنود الفحص الميداني الـ 18 مع شارات المطابقة الملونة وقراءة ضغط طلمبة الحريق وبلوك التوقيع الثلاثي المعتمد.",
-      "التحميل المباشر لتقرير المرور اليومي كملف PDF عالي الدقة دون أخطاء أو صفحات بيضاء."
+      "إصلاح شامل لمحرك تصدير مستندات PDF لتصاريح العمل (PTW) وتقارير تدريب المقاولين وتفتيشات السلامة لمنع ظهور صفحات بيضاء فارغة عند التحميل في متصفح Microsoft Edge وChrome.",
+      "ضبط شفافية وتهيئة إطار العرض وتحديد المقاسات والأبعاد ومنع تجاوز الذاكرة الرسومية للكانفاس لضمان طباعة وتصدير جميع الصفحات بوضوح كامل.",
+      "توحيد إصدارات النظام في جميع البوابات والنماذج وشاشات النظام لتكون موحدة برقم V.1.0.1775.",
+      "تحديث تخزين الذاكرة المؤقتة (Service Worker Cache) لتسريع وصول التحديث لجميع المستخدمين فوراً."
     ],
     "en": [
-      "Unified system version numbers across all portals, public forms, and main system views to V.1.0.1774.",
-      "Aligned in-system Daily Safety Patrol report print and export (DOC-HSE-DSR-01) to match the official ISO portal design.",
-      "Included 3-column ISO header, metadata grid, 4 KPI cards, 18-item field checklist with colored badges, fire pump pressure reading, and triple verified signature block.",
-      "Instant high-resolution PDF download for Daily Safety Patrol inspection records without blank page glitches."
+      "Comprehensive fix for PDF export engine across Work Permits (PTW), Contractor Training Reports, and Safety Inspections to eliminate blank white pages in Microsoft Edge and Chrome.",
+      "Optimized rendering frame visibility, dynamic canvas dimensions, and scaling limits to ensure all document pages export cleanly.",
+      "Unified system version numbers across all portals, public forms, and main system views to V.1.0.1775.",
+      "Invalidated Service Worker Cache to deliver updates immediately to all users."
     ]
   },
-  "releaseName": "v1.0.1774 - Unified ISO Daily Safety Patrol Export and System Version Unification",
-  "lastUpdate": "2026-09-27T23:55:00.000Z"
+  "releaseName": "v1.0.1775 - Comprehensive PDF Blank Page Fix and System Version Alignment",
+  "lastUpdate": "2026-09-28T00:20:00.000Z"
 }

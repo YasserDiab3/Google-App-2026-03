@@ -4450,7 +4450,7 @@ const DEFAULT_COMPANY_NAME = 'الشركة العالمية للإنتاج وا�
 
 const AppState = {
     /** إصدار التطبيق — تسلسلي: 1.0.0 → 1.0.1 → 1.0.2 … عند كل نشر زِد الرقم هنا وفي version.json */
-    appVersion: '1.0.1774',
+    appVersion: '1.0.1775',
     /** نص اختياري لرسالة التحديث (ملخص التغييرات). إن تُركت فارغة يُستخدم النص الافتراضي. */
     updateMessage: '',
     debugMode: false,
@@ -6957,12 +6957,33 @@ const Utils = {
                             font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
                             -webkit-print-color-adjust: exact !important;
                             print-color-adjust: exact !important;
+                            min-height: auto !important;
+                            height: auto !important;
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
                         }
                         * {
                             font-family: 'Cairo', Tahoma, Arial, sans-serif !important;
                             letter-spacing: 0 !important;
                             word-spacing: normal !important;
                             box-sizing: border-box !important;
+                        }
+                        .report-wrapper {
+                            min-height: auto !important;
+                            height: auto !important;
+                            display: block !important;
+                            box-shadow: none !important;
+                            border-radius: 0 !important;
+                            margin: 0 !important;
+                            padding: 20px 24px !important;
+                            background: #ffffff !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
+                        .report-header {
+                            margin-bottom: 16px !important;
+                            padding-bottom: 12px !important;
                         }
                         .no-print, .no-print-bar, .modal-close, button.btn-close, .modal-footer, .action-buttons {
                             display: none !important;
@@ -6988,7 +7009,7 @@ const Utils = {
                 const a4WidthPx = options.windowWidth || (options.landscape ? 1123 : 794);
                 const iframe = document.createElement('iframe');
                 iframe.setAttribute('aria-hidden', 'true');
-                iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4WidthPx}px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-9999;`;
+                iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4WidthPx}px;height:1123px;border:0;margin:0;padding:0;visibility:visible !important;opacity:1 !important;pointer-events:none;z-index:-99999;background:#ffffff;`;
                 document.body.appendChild(iframe);
 
                 try {
@@ -7011,13 +7032,15 @@ const Utils = {
 
                     if (iDoc.fonts && typeof iDoc.fonts.load === 'function') {
                         try {
-                            await Promise.all([
-                                iDoc.fonts.load('400 14px Cairo'),
-                                iDoc.fonts.load('600 14px Cairo'),
-                                iDoc.fonts.load('700 18px Cairo'),
-                                iDoc.fonts.load('800 20px Cairo')
+                            await Promise.race([
+                                Promise.all([
+                                    iDoc.fonts.load('400 14px Cairo'),
+                                    iDoc.fonts.load('600 14px Cairo'),
+                                    iDoc.fonts.load('700 18px Cairo'),
+                                    iDoc.fonts.load('800 20px Cairo')
+                                ]).then(() => iDoc.fonts.ready),
+                                new Promise((r) => setTimeout(r, 2000))
                             ]);
-                            await iDoc.fonts.ready;
                         } catch (_fe) {}
                     }
 
@@ -7029,7 +7052,7 @@ const Utils = {
                         setTimeout(resolve, 3000);
                     })));
 
-                    await new Promise((r) => setTimeout(r, 200));
+                    await new Promise((r) => setTimeout(r, 150));
 
                     const pageEls = iDoc.querySelectorAll('.ptw-a4-page, .report-page, .pdf-page');
                     const orientation = options.landscape ? 'landscape' : 'portrait';
@@ -7040,18 +7063,45 @@ const Utils = {
                     const marginMm = options.marginMm ?? 4;
 
                     if (pageEls.length > 0) {
+                        const totalHeight = Math.max(iDoc.body?.scrollHeight || 0, iDoc.documentElement?.scrollHeight || 0, 1123 * pageEls.length);
+                        iframe.style.height = `${totalHeight + 200}px`;
+                        await new Promise((r) => setTimeout(r, 100));
+
                         for (let p = 0; p < pageEls.length; p++) {
                             if (p > 0) pdf.addPage();
                             const pageEl = pageEls[p];
                             pageEl.style.width = `${a4WidthPx}px`;
                             pageEl.style.maxWidth = `${a4WidthPx}px`;
                             pageEl.style.boxSizing = 'border-box';
+                            pageEl.style.visibility = 'visible';
+                            pageEl.style.opacity = '1';
+                            pageEl.style.background = '#ffffff';
+
+                            const pageH = Math.max(pageEl.scrollHeight, pageEl.offsetHeight, 1123);
+                            const safeScale = this.getOptimalCaptureScale(a4WidthPx, pageH, options.scale || 2);
                             const canvas = await h2c(pageEl, {
-                                scale: options.scale || 2,
+                                scale: safeScale,
                                 backgroundColor: '#ffffff',
                                 useCORS: true,
                                 allowTaint: true,
-                                logging: false
+                                logging: false,
+                                width: a4WidthPx,
+                                height: pageH,
+                                windowWidth: a4WidthPx,
+                                windowHeight: totalHeight,
+                                scrollX: 0,
+                                scrollY: 0,
+                                onclone: (clonedDoc) => {
+                                    if (clonedDoc.documentElement) {
+                                        clonedDoc.documentElement.style.visibility = 'visible';
+                                        clonedDoc.documentElement.style.opacity = '1';
+                                    }
+                                    if (clonedDoc.body) {
+                                        clonedDoc.body.style.visibility = 'visible';
+                                        clonedDoc.body.style.opacity = '1';
+                                        clonedDoc.body.style.background = '#ffffff';
+                                    }
+                                }
                             });
                             if (canvas) {
                                 const { dataUrl, format } = this.compressCanvasToJpegDataUrl(canvas, this.TARGET_MAX_BYTES);
@@ -7074,20 +7124,55 @@ const Utils = {
                         root.style.maxWidth = `${a4WidthPx}px`;
                         root.style.boxSizing = 'border-box';
                         root.style.background = '#ffffff';
+                        root.style.visibility = 'visible';
+                        root.style.opacity = '1';
 
-                        const scrollH = Math.max(root.scrollHeight, root.offsetHeight, 1);
-                        iframe.style.height = `${scrollH + 100}px`;
+                        const scrollH = Math.max(root.scrollHeight, root.offsetHeight, iDoc.body?.scrollHeight || 0, 1);
+                        iframe.style.height = `${scrollH + 200}px`;
+                        await new Promise((r) => setTimeout(r, 100));
+
+                        const safeScale = this.getOptimalCaptureScale(a4WidthPx, scrollH, options.scale || 2);
                         const canvas = await h2c(root, {
-                            scale: options.scale || 2,
+                            scale: safeScale,
                             backgroundColor: '#ffffff',
                             useCORS: true,
                             allowTaint: true,
                             logging: false,
                             width: a4WidthPx,
+                            height: scrollH,
                             windowWidth: a4WidthPx,
                             windowHeight: scrollH,
                             scrollX: 0,
-                            scrollY: 0
+                            scrollY: 0,
+                            onclone: (clonedDoc) => {
+                                try {
+                                    if (clonedDoc.documentElement) {
+                                        clonedDoc.documentElement.style.visibility = 'visible';
+                                        clonedDoc.documentElement.style.opacity = '1';
+                                    }
+                                    if (clonedDoc.body) {
+                                        clonedDoc.body.style.visibility = 'visible';
+                                        clonedDoc.body.style.opacity = '1';
+                                        clonedDoc.body.style.minHeight = 'auto';
+                                        clonedDoc.body.style.height = 'auto';
+                                        clonedDoc.body.style.display = 'block';
+                                        clonedDoc.body.style.background = '#ffffff';
+                                    }
+                                    const clonedRoot = clonedDoc.getElementById('ptw-permit-print-root')
+                                        || clonedDoc.querySelector('.ptw-manual-print')
+                                        || clonedDoc.querySelector('.report-wrapper')
+                                        || clonedDoc.querySelector('.report-page-container')
+                                        || clonedDoc.querySelector('.form-container')
+                                        || clonedDoc.body;
+                                    if (clonedRoot) {
+                                        clonedRoot.style.visibility = 'visible';
+                                        clonedRoot.style.opacity = '1';
+                                        clonedRoot.style.minHeight = 'auto';
+                                        clonedRoot.style.boxShadow = 'none';
+                                        clonedRoot.style.background = '#ffffff';
+                                    }
+                                } catch (_e) {}
+                            }
                         });
 
                         if (!canvas) return false;

@@ -9438,7 +9438,7 @@ const PTW = {
 
         const iframe = document.createElement('iframe');
         iframe.setAttribute('aria-hidden', 'true');
-        iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4W}px;height:1123px;border:0;opacity:0;pointer-events:none;z-index:-9999;`;
+        iframe.style.cssText = `position:fixed;left:0;top:0;width:${a4W}px;height:1123px;border:0;margin:0;padding:0;visibility:visible !important;opacity:1 !important;pointer-events:none;z-index:-99999;background:#ffffff;`;
         document.body.appendChild(iframe);
 
         try {
