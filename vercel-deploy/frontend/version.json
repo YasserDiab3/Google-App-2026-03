@@ -1,19 +1,17 @@
 {
-  "version": "1.0.1782",
+  "version": "1.0.1783",
   "highlights": {
     "ar": [
-      "تصحيح التفاف النصوص وانسياب الخط العربي في عمود 'الإجراء المتخذ' عبر إلغاء التقطيع الجبري (nowrap & ellipsis) وإتاحة الالتفاف التلقائي السليم للكلمات لجميع التقارير والجداول.",
-      "معالجة جذرية لظهور الصور الميدانية في تقرير رصد المخالفة (DOC-HSE-VIO-REC-01) عبر جلبها المباشر بصيغة Base64 Data URI من Google Drive لتخطي قيود CORS في الـ Canvas والطباعة.",
-      "تصحيح وضبط توقيت وتاريخ المخالفة وإزالة التواريخ الافتراضية القديمة (مثل 1899-12-30) وعرض الوقت بنظام 12 ساعة معزول Bidi بدون تداخل للأقواس أو الأرقام.",
-      "ضبط اتجاه نصوص المواصفات والمعايير الإنجليزية (dir='ltr') في تذييل ISO 45001 لمنع انعكاس الأقواس والبنود."
+      "معالجة جذرية لظهور تاريخ إيبوك جداول جوجل (1899-12-30) في خانة التوقيت، وتنقية الوقت وإخفاؤه في حال غياب التوقيت الفعلي أو كونه توقيت منتصف ليل افتراضي.",
+      "تصحيح خانة 'كود / معرف المقاول' في تقرير رصد المخالفة الفردي ومنع ظهور التواريخ والطوابع الزمنية (ISO Date Strings) بدلاً من الكود، مع حل الكود تلقائياً من سجل المقاولين المعتمدين.",
+      "تصحيح رسم واتصال الحروف العربية في خانة 'المكان المحدد داخل الموقع' عبر تنقية نصوص الأماكن من الكشيدة/التطويل والشرطات السفلية وعزل النصوص اللاتينية، مع ضبط التفاف الكلمات الطبيعي لمنع تقطع الحروف."
     ],
     "en": [
-      "Fixed Arabic typography and text-wrap in 'Action Taken' column across all reports by removing restrictive nowrap/ellipsis and enabling smooth natural word wrapping.",
-      "Resolved field violation photo display in report (DOC-HSE-VIO-REC-01) by fetching images as Base64 Data URIs to bypass CORS and origin restrictions in canvas/print.",
-      "Corrected violation date & time formatting, purifying legacy default epoch timestamps (e.g. 1899-12-30) and rendering 12-hour AM/PM with clean isolated Bidi layout.",
-      "Enforced dir='ltr' on ISO 45001 standard clauses in footers to prevent parenthesis flipping in RTL environments."
+      "Fixed phantom Google Sheets epoch date (1899-12-30) in violation time card, properly formatting genuine times and omitting empty or midnight placeholders.",
+      "Resolved contractor code/ID displaying ISO timestamps in violation report, implementing dynamic resolution from approved contractors register.",
+      "Fixed Arabic typography and cursive shaping in violation place/location field by stripping harmful tatweel, normalizing underscores, and enforcing non-destructive word breaking."
     ]
   },
-  "releaseName": "v1.0.1782 - Violations Arabic Typography, Photo Resolution & Time Formatting Fix",
-  "lastUpdate": "2026-09-28T21:15:00.000Z"
+  "releaseName": "v1.0.1783 - Violations Time Epoch Cleanup, Contractor Code Resolution & Arabic Shaping Fix",
+  "lastUpdate": "2026-09-28T21:42:00.000Z"
 }

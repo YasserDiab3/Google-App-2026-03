@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1780",
+  "version": "1.0.1783",
   "highlights": {
     "ar": [
-      "معالجة جذرية لمشكلة ظهور صفحات بيضاء فارغة عند تصدير التقارير الضخمة ومتعددة الصفحات (مثل سجل تدريبات المقاولين لأكثر من 100 صفحة).",
-      "تطوير محرك تصدير PDF (Utils.downloadHtmlAsPdf) بنظام التقسيم التلقائي للجداول (Auto Table Pagination) والتجزئة الآمنة للشرائح (Chunked Capture) لمنع تجاوز حدود ذاكرة Canvas في المتصفحات.",
-      "تكرار ترويسة الأعمدة وعناوين الجداول الرسمية في بداية كل صفحة مع ترقيم دقيق (صفحة X من Y) وتوقيعات معتمدة في الصفحة الأخيرة دون اقتطاع للأسطر."
+      "معالجة جذرية لظهور تاريخ إيبوك جداول جوجل (1899-12-30) في خانة التوقيت، وتنقية الوقت وإخفاؤه في حال غياب التوقيت الفعلي أو كونه توقيت منتصف ليل افتراضي.",
+      "تصحيح خانة 'كود / معرف المقاول' في تقرير رصد المخالفة الفردي ومنع ظهور التواريخ والطوابع الزمنية (ISO Date Strings) بدلاً من الكود، مع حل الكود تلقائياً من سجل المقاولين المعتمدين.",
+      "تصحيح رسم واتصال الحروف العربية في خانة 'المكان المحدد داخل الموقع' عبر تنقية نصوص الأماكن من الكشيدة/التطويل والشرطات السفلية وعزل النصوص اللاتينية، مع ضبط التفاف الكلمات الطبيعي لمنع تقطع الحروف."
     ],
     "en": [
-      "Resolved blank white page export failures on large multi-page reports (e.g. Contractor Training Registry exceeding 100+ pages).",
-      "Upgraded PDF rendering engine (Utils.downloadHtmlAsPdf) with Auto Table Pagination and safe chunked capturing to prevent browser canvas buffer memory overflow (>32,767px).",
-      "Ensured table headers are repeated cleanly across every page with dynamic page numbering (Page X of Y) and official signature blocks on the final page."
+      "Fixed phantom Google Sheets epoch date (1899-12-30) in violation time card, properly formatting genuine times and omitting empty or midnight placeholders.",
+      "Resolved contractor code/ID displaying ISO timestamps in violation report, implementing dynamic resolution from approved contractors register.",
+      "Fixed Arabic typography and cursive shaping in violation place/location field by stripping harmful tatweel, normalizing underscores, and enforcing non-destructive word breaking."
     ]
   },
-  "releaseName": "v1.0.1780 - PDF Multi-Page Export Engine & Auto Table Pagination Fix",
-  "lastUpdate": "2026-09-28T20:45:00.000Z"
+  "releaseName": "v1.0.1783 - Violations Time Epoch Cleanup, Contractor Code Resolution & Arabic Shaping Fix",
+  "lastUpdate": "2026-09-28T21:42:00.000Z"
 }

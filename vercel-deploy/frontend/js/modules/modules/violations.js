@@ -142,20 +142,51 @@ const Violations = {
         const fineAmount = this.parseFineAmount(fineAmountRaw);
         const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
 
-        // تنقية وتصحيح صيغة الوقت المسجل (لمنع ظهور 1899-12-30 أو تواريخ Google Sheets غير المقصودة)
-        let cleanedTime = String(record.violationTime || record['وقت المخالفة'] || '').trim();
-        if (cleanedTime) {
-            const tm = cleanedTime.match(/(?:T|\s|^)(\d{1,2}:\d{2})/);
+        // تنقية وتطهير صيغة الوقت المسجل (لمنع ظهور 1899-12-30 أو تواريخ Google Sheets غير المقصودة)
+        let rawTime = String(record.violationTime ?? record['وقت المخالفة'] ?? '').trim();
+        let cleanedTime = '';
+        if (rawTime && rawTime !== '—' && rawTime !== '-') {
+            const isEpoch = rawTime.includes('1899-12-30') || rawTime.includes('1899-12-31') || rawTime.includes('1900-01-00');
+            const tm = rawTime.match(/(?:T|\s|^)(\d{1,2}:\d{2})/);
             if (tm) {
-                cleanedTime = tm[1];
+                const [hStr, mStr] = tm[1].split(':');
+                const hNum = parseInt(hStr, 10);
+                const mNum = parseInt(mStr, 10);
+                if (!(isEpoch && hNum === 0 && mNum === 0)) {
+                    cleanedTime = `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}`;
+                }
             }
+        }
+
+        // تنقية كود المقاول من التواريخ الشاردة في جداول جوجل
+        let contractorId = String(record.contractorId || '').trim();
+        let contractorCode = String(record.contractorCode || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}/.test(contractorId) || /^\d{1,2}\/\d{1,2}\/\d{4}/.test(contractorId)) {
+            contractorId = '';
+        }
+        if (/^\d{4}-\d{2}-\d{2}/.test(contractorCode) || /^\d{1,2}\/\d{1,2}\/\d{4}/.test(contractorCode)) {
+            contractorCode = '';
+        }
+
+        // تنقية مكان وموقع المخالفة لمنع تشوه الحروف العربية وإزالة التطويل والشرطات السفلية
+        let violationPlace = record.violationPlace ?? record['مكان المخالفة'] ?? '';
+        if (violationPlace) {
+            violationPlace = typeof this.formatLocationPlace === 'function' ? this.formatLocationPlace(violationPlace) : String(violationPlace).replace(/\u0640+/g, '').replace(/_+/g, ' - ').trim();
+        }
+        let violationLocation = record.violationLocation ?? record['الموقع'] ?? '';
+        if (violationLocation) {
+            violationLocation = typeof this.formatLocationPlace === 'function' ? this.formatLocationPlace(violationLocation) : String(violationLocation).replace(/\u0640+/g, '').replace(/_+/g, ' - ').trim();
         }
 
         return {
             ...record,
             personType,
             fineAmount,
-            violationTime: cleanedTime || record.violationTime
+            violationTime: cleanedTime,
+            contractorId,
+            contractorCode,
+            violationPlace: violationPlace || record.violationPlace,
+            violationLocation: violationLocation || record.violationLocation
         };
     },
 
@@ -272,15 +303,82 @@ const Violations = {
     },
 
     /**
+     * تنقية وتطهير نصوص الأماكن والمواقع من أي تشوهات أو تطويل أو شرطات سفلية مسببة لتفكك الحروف
+     */
+    formatLocationPlace(place) {
+        if (!place) return '—';
+        let str = String(place).trim();
+        if (!str || str === '—' || str === '-') return '—';
+        // إزالة التطويل / الكشيدة (\u0640) التي تسبب تشوه أو تفكك اتصال الحروف العربية
+        str = str.replace(/\u0640+/g, '');
+        // إزالة الحروف غير المرئية ومحارف التوجيه الخفية
+        str = str.replace(/[\u200B-\u200F\uFEFF]/g, '');
+        // استبدال الشرطات السفلية _ بفاصل نظيف يفصل الإنجليزية عن العربية
+        str = str.replace(/_+/g, ' - ');
+        // ضبط الفواصل والمسافات الزائدة
+        str = str.replace(/\s*-\s*-\s*/g, ' - ').replace(/\s+/g, ' ').trim();
+        return str || '—';
+    },
+
+    /**
+     * استخراج كود المقاول بشكل نظيف وموثوق مع تطهيره من أي تواريخ شاردة في جداول جوجل
+     */
+    getCleanContractorCode(v) {
+        if (!v) return '—';
+        let code = String(v.contractorCode || v.contractorId || '').trim();
+        const isDateString = /^\d{4}-\d{2}-\d{2}/.test(code) || /^\d{1,2}\/\d{1,2}\/\d{4}/.test(code);
+        if (!code || isDateString || code === '—' || code === '-') {
+            // محاولة جلب كود المقاول الحقيقي من مديول المقاولين
+            if (v.contractorName && typeof Contractors !== 'undefined' && typeof Contractors.resolveContractorForAnalytics === 'function') {
+                try {
+                    const c = Contractors.resolveContractorForAnalytics('', v.contractorName);
+                    if (c) {
+                        const candidate = String(c.code || c.contractorCode || c.isoCode || c.id || '').trim();
+                        if (candidate && !/^\d{4}-\d{2}-\d{2}/.test(candidate)) {
+                            return candidate;
+                        }
+                    }
+                } catch (e) {}
+            }
+            // فحص قائمة المقاولين المعتمدين مباشرة في AppState
+            if (v.contractorName && typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.approvedContractors)) {
+                const normName = String(v.contractorName).trim().toLowerCase();
+                const found = AppState.appData.approvedContractors.find(c => {
+                    const cName = String(c.companyName || c.name || '').trim().toLowerCase();
+                    return cName && (cName === normName || cName.includes(normName) || normName.includes(cName));
+                });
+                if (found) {
+                    const candidate = String(found.code || found.contractorCode || found.isoCode || found.id || '').trim();
+                    if (candidate && !/^\d{4}-\d{2}-\d{2}/.test(candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+            return '—';
+        }
+        return code;
+    },
+
+    /**
      * تنسيق وقت المخالفة بشكل سليم باللغة العربية (12 ساعة ص/م) وتطهيره من أي تواريخ Google Sheets افتراضية
      */
     formatViolationTime(timeVal) {
         if (!timeVal) return '';
         const str = String(timeVal).trim();
-        const tm = str.match(/(?:T|\s|^)(\d{1,2}):(\d{2})/);
-        if (!tm) return str;
-        const h24 = parseInt(tm[1], 10);
-        const mm = tm[2];
+        if (!str || str === '—' || str === '-') return '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str) || /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) return '';
+        const isEpoch = str.includes('1899-12-30') || str.includes('1899-12-31') || str.includes('1900-01-00');
+        const tm = str.match(/(?:T|\s|^)(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM|am|pm|[صم]))?/i);
+        if (!tm) return '';
+        let h24 = parseInt(tm[1], 10);
+        const mm = tm[2].padStart(2, '0');
+        const marker = (tm[4] || '').toUpperCase();
+        if (isEpoch && h24 === 0 && (mm === '00' || mm === '0')) return '';
+        if (marker === 'PM' || marker === 'م') {
+            if (h24 < 12) h24 += 12;
+        } else if (marker === 'AM' || marker === 'ص') {
+            if (h24 === 12) h24 = 0;
+        }
         const period = h24 >= 12 ? 'م' : 'ص';
         const h12 = (h24 % 12) || 12;
         return `${h12}:${mm} ${period}`;
@@ -6945,7 +7043,7 @@ const Violations = {
                         </div>
                         <div class="info-cell">
                             <span class="info-cell-label">كود / معرف المقاول</span>
-                            <span class="info-cell-value">${esc(v.contractorId || v.contractorCode || '—')}</span>
+                            <span class="info-cell-value" dir="ltr" style="text-align: right;"><bdi>${esc(this.getCleanContractorCode(v))}</bdi></span>
                         </div>
                         <div class="info-cell">
                             <span class="info-cell-label">اسم العامل المخالف</span>
@@ -6970,7 +7068,7 @@ const Violations = {
                         </div>
                         <div class="info-cell">
                             <span class="info-cell-label">الرقم / الكود الوظيفي</span>
-                            <span class="info-cell-value">${esc(v.employeeCode || v.employeeNumber || '—')}</span>
+                            <span class="info-cell-value" dir="ltr" style="text-align: right;"><bdi>${esc(v.employeeCode || v.employeeNumber || '—')}</bdi></span>
                         </div>
                         <div class="info-cell">
                             <span class="info-cell-label">المسمى الوظيفي</span>
@@ -6993,11 +7091,11 @@ const Violations = {
                 <div class="info-grid-2">
                     <div class="info-cell">
                         <span class="info-cell-label">المصنع / المنشأة</span>
-                        <span class="info-cell-value">${esc(v.violationLocation || 'مصنع ICAPP')}</span>
+                        <span class="info-cell-value" dir="auto" style="font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;"><bdi>${esc(this.formatLocationPlace(v.violationLocation) || 'مصنع ICAPP')}</bdi></span>
                     </div>
                     <div class="info-cell">
                         <span class="info-cell-label">المكان المحدد داخل الموقع</span>
-                        <span class="info-cell-value">${esc(v.violationPlace || '—')}</span>
+                        <span class="info-cell-value" dir="auto" style="font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif;"><bdi>${esc(this.formatLocationPlace(v.violationPlace))}</bdi></span>
                     </div>
                     <div class="info-cell">
                         <span class="info-cell-label">تصنيف المخالفة</span>
@@ -9429,7 +9527,8 @@ const Violations = {
                 font-weight: 800;
                 color: #0f172a;
                 line-height: 1.35;
-                word-break: break-word;
+                word-break: normal;
+                overflow-wrap: break-word;
             }
             .info-cell-value.danger { color: #b91c1c; }
             .info-cell-value.success { color: #047857; }
