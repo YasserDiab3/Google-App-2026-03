@@ -3979,8 +3979,8 @@ function readFromSheet(sheetName, spreadsheetId = null, skipSecurityFilter = fal
                         try {
                             if (Object.prototype.toString.call(processedValue) === '[object Date]' && !isNaN(processedValue.getTime())) {
                                 // للحقول التي تحتاج وقت (visitDate, exitDate, checkIn, checkOut, etc.)
-                                const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date'];
-                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo'];
+                                const timeFields = ['visitDate', 'exitDate', 'checkIn', 'checkOut', 'injuryDate', 'startDate', 'endDate', 'timeFrom', 'timeTo', 'closureTime', 'investigationDateTime', 'incidentDateTime', 'date', 'violationDate'];
+                                const timeOnlyFields = ['fromTime', 'toTime', 'startTime', 'endTime', 'timeFrom', 'timeTo', 'violationTime', 'incidentTime'];
                                 if (shouldPreserveSheetDateTimeAsText_(sheetName, cleanHeader)) {
                                     processedValue = normalizeSheetDateTimeText_(processedValue, sheetTz);
                                 } else if (timeOnlyFields.includes(cleanHeader)) {

@@ -142,18 +142,20 @@ const Violations = {
         const fineAmount = this.parseFineAmount(fineAmountRaw);
         const personType = record.personType || (record.contractorName ? 'contractor' : 'employee');
 
-        // تنقية وتطهير صيغة الوقت المسجل (لمنع ظهور 1899-12-30 أو تواريخ Google Sheets غير المقصودة)
-        let rawTime = String(record.violationTime ?? record['وقت المخالفة'] ?? '').trim();
-        let cleanedTime = '';
-        if (rawTime && rawTime !== '—' && rawTime !== '-') {
-            const isEpoch = rawTime.includes('1899-12-30') || rawTime.includes('1899-12-31') || rawTime.includes('1900-01-00');
-            const tm = rawTime.match(/(?:T|\s|^)(\d{1,2}:\d{2})/);
-            if (tm) {
-                const [hStr, mStr] = tm[1].split(':');
-                const hNum = parseInt(hStr, 10);
-                const mNum = parseInt(mStr, 10);
-                if (!(isEpoch && hNum === 0 && mNum === 0)) {
-                    cleanedTime = `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}`;
+        // تنقية وتطهير صيغة الوقت المسجل مع استخراج الوقت البديل إن كان حقل الوقت فارغاً أو متأثراً بـ 1899-12-30
+        let cleanedTime = typeof this.getResolvedViolationTime === 'function' ? this.getResolvedViolationTime(record) : '';
+        if (!cleanedTime) {
+            let rawTime = String(record.violationTime ?? record['وقت المخالفة'] ?? '').trim();
+            if (rawTime && rawTime !== '—' && rawTime !== '-') {
+                const isEpoch = rawTime.includes('1899-12-30') || rawTime.includes('1899-12-31') || rawTime.includes('1900-01-00');
+                const tm = rawTime.match(/(?:T|\s|^)(\d{1,2}:\d{2})/);
+                if (tm) {
+                    const [hStr, mStr] = tm[1].split(':');
+                    const hNum = parseInt(hStr, 10);
+                    const mNum = parseInt(mStr, 10);
+                    if (!(isEpoch && hNum === 0 && mNum === 0)) {
+                        cleanedTime = `${hStr.padStart(2, '0')}:${mStr.padStart(2, '0')}`;
+                    }
                 }
             }
         }
@@ -178,11 +180,18 @@ const Violations = {
             violationLocation = typeof this.formatLocationPlace === 'function' ? this.formatLocationPlace(violationLocation) : String(violationLocation).replace(/\u0640+/g, '').replace(/_+/g, ' - ').trim();
         }
 
+        // تنقية معرف نوع المخالفة لمنع ظهور المعرفات العشوائية VTYPE_ في التقارير
+        let violationTypeId = String(record.violationTypeId || '').trim();
+        if (/^VTYPE_/i.test(violationTypeId) && typeof this.getCleanViolationTypeCode === 'function') {
+            violationTypeId = this.getCleanViolationTypeCode(record);
+        }
+
         return {
             ...record,
             personType,
             fineAmount,
             violationTime: cleanedTime,
+            violationTypeId,
             contractorId,
             contractorCode,
             violationPlace: violationPlace || record.violationPlace,
@@ -357,6 +366,113 @@ const Violations = {
             return '—';
         }
         return code;
+    },
+
+    /**
+     * استخراج وتحديد توقيت المخالفة الفعلي من جميع الحقول المتاحة (violationTime, violationDate, createdAt)
+     */
+    getResolvedViolationTime(record) {
+        if (!record) return '';
+        // 1. فحص حقل الوقت المباشر
+        const rawTime = record.violationTime ?? record['وقت المخالفة'] ?? record.time;
+        if (rawTime !== undefined && rawTime !== null && rawTime !== '' && rawTime !== '—' && rawTime !== '-') {
+            const timeStr = String(rawTime).trim();
+            if (/^0\.\d+$/.test(timeStr)) {
+                const frac = parseFloat(timeStr);
+                const totalMin = Math.round(frac * 24 * 60);
+                const h = Math.floor(totalMin / 60);
+                const m = totalMin % 60;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
+            const tm = timeStr.match(/(?:T|\s|^)(\d{1,2}:\d{2})(?::\d{2})?(?:\s*(AM|PM|am|pm|[صم]))?/i);
+            if (tm) {
+                const isEpoch = timeStr.includes('1899-12-30') || timeStr.includes('1899-12-31') || timeStr.includes('1900-01-00');
+                let h = parseInt(tm[1], 10);
+                const m = tm[2].padStart(2, '0');
+                const marker = (tm[3] || '').toUpperCase();
+                if (marker === 'PM' || marker === 'م') {
+                    if (h < 12) h += 12;
+                } else if (marker === 'AM' || marker === 'ص') {
+                    if (h === 12) h = 0;
+                }
+                if (!(isEpoch && h === 0 && m === '00')) {
+                    return `${String(h).padStart(2, '0')}:${m}`;
+                }
+            }
+        }
+
+        // 2. فحص تاريخ المخالفة إذا كان يحوي طابعاً زمنياً
+        const rawDate = record.violationDate ?? record['تاريخ المخالفة'] ?? record.date;
+        if (rawDate && typeof rawDate === 'string' && (rawDate.includes('T') || rawDate.includes(' '))) {
+            const d = new Date(rawDate);
+            if (!isNaN(d.getTime())) {
+                const h = d.getHours();
+                const m = d.getMinutes();
+                if (h !== 0 || m !== 0) {
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+            }
+        }
+
+        // 3. فحص وقت إنشاء السجل في النظام الميداني
+        const rawCreated = record.createdAt ?? record['تاريخ الإنشاء'] ?? record.timestamp;
+        if (rawCreated) {
+            const d = new Date(rawCreated);
+            if (!isNaN(d.getTime())) {
+                const h = d.getHours();
+                const m = d.getMinutes();
+                if (h !== 0 || m !== 0) {
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+            }
+        }
+
+        return '';
+    },
+
+    /**
+     * استخراج كود تصنيف نوع المخالفة بشكل مهني ومعتمد لمعايير ISO وتطهيره من المعرفات الداخلية العشوائية
+     */
+    getCleanViolationTypeCode(v) {
+        if (!v) return '—';
+        const rawId = String(v.violationTypeId || '').trim();
+        const typeName = String(v.violationType || '').trim().toLowerCase();
+
+        let allTypes = [];
+        try {
+            if (typeof ViolationTypesManager !== 'undefined' && ViolationTypesManager.getAll) {
+                allTypes = ViolationTypesManager.getAll() || [];
+            }
+        } catch (e) {}
+        if (!allTypes.length && typeof AppState !== 'undefined' && Array.isArray(AppState.appData?.violationTypes)) {
+            allTypes = AppState.appData.violationTypes;
+        }
+
+        const typeObj = allTypes.find(t =>
+            (rawId && String(t.id).trim() === rawId) ||
+            (typeName && String(t.name || '').trim().toLowerCase() === typeName)
+        );
+
+        if (typeObj) {
+            const exp = typeObj.code || typeObj.isoCode || typeObj.typeCode;
+            let code = '';
+            if (exp && !exp.startsWith('VTYPE_')) {
+                code = exp;
+            } else {
+                const idx = allTypes.findIndex(t => t.id === typeObj.id);
+                code = `VT-${String(idx >= 0 ? idx + 1 : 1).padStart(2, '0')}`;
+            }
+            if (typeObj.category) {
+                return `${code} (${typeObj.category})`;
+            }
+            return code;
+        }
+
+        if (/^VTYPE_/i.test(rawId)) {
+            return 'VT-01';
+        }
+
+        return rawId || '—';
     },
 
     /**
@@ -6982,7 +7098,8 @@ const Violations = {
         const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
 
         const formattedDate = v.violationDate ? Utils.formatDate(v.violationDate) : '—';
-        const formattedTime = this.formatViolationTime(v.violationTime);
+        const resolvedTimeStr = typeof this.getResolvedViolationTime === 'function' ? this.getResolvedViolationTime(v) : (v.violationTime || '');
+        const formattedTime = resolvedTimeStr ? this.formatViolationTime(resolvedTimeStr) : '';
 
         let resolvedPhoto = '';
         if (v.photo && typeof v.photo === 'string' && v.photo.startsWith('data:image/')) {
@@ -7004,7 +7121,7 @@ const Violations = {
                     <div class="kpi-card-label">تاريخ وتوقيت المخالفة</div>
                     <div class="kpi-card-value" style="color: #92400e; font-size: 13px;">
                         <span>${formattedDate}</span>
-                        ${formattedTime ? `<div style="font-size: 11.5px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>${formattedTime}</div>` : ''}
+                        ${formattedTime ? `<div style="font-size: 11.5px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>${formattedTime}</div>` : (v.shift ? `<div style="font-size: 11px; color: #b45309; margin-top: 3px; font-weight: 700;"><i class="fas fa-sun ml-1"></i>الوردية: ${esc(v.shift)}</div>` : `<div style="font-size: 11px; color: #92400e; margin-top: 3px; font-weight: 700;"><i class="far fa-clock ml-1"></i>أثناء جولة التفتيش</div>`)}
                     </div>
                 </div>
                 <div class="kpi-stat-card ${v.severity === 'عالية' ? 'accent-red' : v.severity === 'متوسطة' ? 'accent-amber' : 'accent-blue'}">
@@ -7102,8 +7219,8 @@ const Violations = {
                         <span class="info-cell-value" style="color: #991b1b; font-weight: 800;">${esc(v.violationType || '—')}</span>
                     </div>
                     <div class="info-cell">
-                        <span class="info-cell-label">معرف نوع المخالفة</span>
-                        <span class="info-cell-value">${esc(v.violationTypeId || '—')}</span>
+                        <span class="info-cell-label">كود نوع المخالفة</span>
+                        <span class="info-cell-value" dir="ltr" style="font-family: monospace, inherit; font-weight: 900; color: #1e3a8a;"><bdi>${esc(this.getCleanViolationTypeCode(v))}</bdi></span>
                     </div>
                     ${v.violationDetails ? `
                         <div class="info-cell info-cell-wide">

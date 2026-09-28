@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1783",
+  "version": "1.0.1784",
   "highlights": {
     "ar": [
-      "معالجة جذرية لظهور تاريخ إيبوك جداول جوجل (1899-12-30) في خانة التوقيت، وتنقية الوقت وإخفاؤه في حال غياب التوقيت الفعلي أو كونه توقيت منتصف ليل افتراضي.",
-      "تصحيح خانة 'كود / معرف المقاول' في تقرير رصد المخالفة الفردي ومنع ظهور التواريخ والطوابع الزمنية (ISO Date Strings) بدلاً من الكود، مع حل الكود تلقائياً من سجل المقاولين المعتمدين.",
-      "تصحيح رسم واتصال الحروف العربية في خانة 'المكان المحدد داخل الموقع' عبر تنقية نصوص الأماكن من الكشيدة/التطويل والشرطات السفلية وعزل النصوص اللاتينية، مع ضبط التفاف الكلمات الطبيعي لمنع تقطع الحروف."
+      "استعادة وإظهار توقيت المخالفة الميداني الفعلي بدقة عبر محرك الاستخلاص متعدد المصادر (violationTime, violationDate, createdAt)، مع إدراج حقول الوقت في قائمة المعالجة بالخلفية السحابية (Backend/Utils.gs).",
+      "تنقية وتصحيح حقل 'معرف نوع المخالفة' وتحويله إلى 'كود نوع المخالفة المعتمد' (مثل VT-01) مع الفئة المعيارية، وحجب المعرفات البرمجية الداخلية (VTYPE_...) نهائياً عن التقارير الرسمية.",
+      "مراجعة شاملة وتدقيق كامل لبيانات بطاقات وخلايا تقرير رصد وتوثيق المخالفة الفردي (DOC-HSE-VIO-REC-01) لضمان جودة وتكامل جميع المخرجات."
     ],
     "en": [
-      "Fixed phantom Google Sheets epoch date (1899-12-30) in violation time card, properly formatting genuine times and omitting empty or midnight placeholders.",
-      "Resolved contractor code/ID displaying ISO timestamps in violation report, implementing dynamic resolution from approved contractors register.",
-      "Fixed Arabic typography and cursive shaping in violation place/location field by stripping harmful tatweel, normalizing underscores, and enforcing non-destructive word breaking."
+      "Restored and guaranteed violation time rendering via multi-source fallback resolver (violationTime, violationDate, createdAt), and updated Google Sheets backend parser (Backend/Utils.gs).",
+      "Refactored violation type identifier into ISO-standardized code (e.g. VT-01 with category), permanently shielding internal raw UUIDs (VTYPE_...) from official reports.",
+      "Conducted thorough audit across individual violation report cards and data fields (DOC-HSE-VIO-REC-01) ensuring flawless ISO 45001 compliance."
     ]
   },
-  "releaseName": "v1.0.1783 - Violations Time Epoch Cleanup, Contractor Code Resolution & Arabic Shaping Fix",
-  "lastUpdate": "2026-09-28T21:42:00.000Z"
+  "releaseName": "v1.0.1784 - Violation Time Multi-Source Resolution, ISO Type Code & Full Audit",
+  "lastUpdate": "2026-09-28T22:00:00.000Z"
 }
