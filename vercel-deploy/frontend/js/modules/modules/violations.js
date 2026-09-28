@@ -197,6 +197,9 @@ const Violations = {
                 } catch (eType) {}
             }
 
+            // تنقية السبب الجذري للمخالفة RCA
+            let rootCause = String(record.rootCause ?? record['السبب الجذري'] ?? record['سبب المخالفة'] ?? '').trim();
+
             return {
                 ...record,
                 personType,
@@ -206,7 +209,8 @@ const Violations = {
                 contractorId,
                 contractorCode,
                 violationPlace: violationPlace || record.violationPlace,
-                violationLocation: violationLocation || record.violationLocation
+                violationLocation: violationLocation || record.violationLocation,
+                rootCause: rootCause || record.rootCause || ''
             };
         } catch (fatalNorm) {
             return record;
@@ -1640,10 +1644,72 @@ const Violations = {
         return n;
     },
 
+    /**
+     * رصد التكرار الذكي للجزاءات (Three-Strike / Repeat Offender Alert)
+     * يحسب عدد المخالفات السابقة لنفس الشخص (تاريخياً وفي نفس الشهر) ويحدد مستوى Strike والإجراء المقترح
+     */
+    getPersonViolationHistory(draft, excludeViolationId = null) {
+        if (!draft) {
+            return {
+                totalCount: 0,
+                monthCount: 0,
+                nextSequence: 1,
+                strikeLevel: 1,
+                strikeBadgeText: 'المخالفة الأولى (Strike 1)',
+                priorList: [],
+                suggestedAction: 'إنذار وتنبيه شفهي وتوعية ميدانية مع التعهد بعدم التكرار'
+            };
+        }
+
+        const list = AppState.appData?.violations || [];
+        const ym = this.getViolationYearMonthKey(draft.violationDate);
+        let totalCount = 0;
+        let monthCount = 0;
+        const priorList = [];
+
+        for (let i = 0; i < list.length; i++) {
+            const v = list[i];
+            if (!v || (excludeViolationId && String(v.id) === String(excludeViolationId))) continue;
+            if (this.sameViolationPersonForSequence(draft, v)) {
+                totalCount++;
+                if (ym != null && this.getViolationYearMonthKey(v.violationDate) === ym) {
+                    monthCount++;
+                }
+                priorList.push(v);
+            }
+        }
+
+        priorList.sort((a, b) => new Date(b.violationDate || 0) - new Date(a.violationDate || 0));
+
+        const nextSequence = totalCount + 1;
+        let strikeLevel = 1;
+        let strikeBadgeText = 'المخالفة الأولى (Strike 1)';
+        let suggestedAction = 'إنذار وتنبيه شفهي وتوعية ميدانية مع التعهد بعدم التكرار';
+
+        if (nextSequence === 2) {
+            strikeLevel = 2;
+            strikeBadgeText = 'مكرر — المخالفة رقم 2 (Strike 2)';
+            suggestedAction = 'إنذار كتابي رسمي مع تطبيق الجزاء والغرامة المالية المقررة';
+        } else if (nextSequence >= 3) {
+            strikeLevel = 3;
+            strikeBadgeText = `تكرار حرج — المخالفة رقم ${nextSequence} (Strike 3+)`;
+            suggestedAction = 'تصعيد فوري للإدارة العليا وإصدار أمر منع واستبعاد من المنشأة (Ban Order)';
+        }
+
+        return {
+            totalCount,
+            monthCount,
+            nextSequence,
+            strikeLevel,
+            strikeBadgeText,
+            priorList,
+            suggestedAction
+        };
+    },
+
     refreshViolationSequenceBadgeInModal(modal, excludeViolationId) {
         const info = modal && modal.querySelector ? modal.querySelector('#violation-sequence-info') : null;
-        const textEl = modal && modal.querySelector ? modal.querySelector('#violation-sequence-text') : null;
-        if (!info || !textEl) return;
+        if (!info) return;
         const personType = document.getElementById('violation-person-type')?.value;
         const violationDate = document.getElementById('violation-date')?.value;
         if (!personType || !violationDate) {
@@ -1653,7 +1719,8 @@ const Violations = {
         const draft = { personType, violationDate: `${violationDate}T12:00:00` };
         if (personType === 'employee') {
             draft.employeeCode = document.getElementById('violation-employee-code')?.value.trim() || '';
-            if (!draft.employeeCode) {
+            draft.employeeName = document.getElementById('violation-person-name')?.value.trim() || '';
+            if (!draft.employeeCode && !draft.employeeName) {
                 info.classList.add('hidden');
                 return;
             }
@@ -1666,11 +1733,78 @@ const Violations = {
                 return;
             }
         }
-        const prior = this.countPriorViolationsSamePersonMonth(draft, excludeViolationId);
-        const seq = prior + 1;
-        textEl.textContent = seq <= 1
-            ? 'أول مخالفة في الشهر لهذا الشخص (يُحسب تلقائياً من سجل المخالفات لنفس الشخص ونفس الشهر).'
-            : `المخالفة رقم ${seq} في الشهر لنفس الشخص.`;
+
+        const history = this.getPersonViolationHistory(draft, excludeViolationId);
+        const lastViol = history.priorList[0];
+        const lastViolDate = lastViol?.violationDate ? Utils.formatDate(lastViol.violationDate) : '';
+        const lastViolType = lastViol?.violationType || '';
+
+        let badgeHtml = '';
+        if (history.strikeLevel === 1) {
+            info.className = 'mb-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900';
+            badgeHtml = `
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-check-circle text-emerald-600 text-lg"></i>
+                        <div>
+                            <strong>السجل سليم (المخالفة الأولى — Strike 1)</strong>
+                            <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #065f46;">لا توجد مخالفات سابقة مسجلة لهذا الشخص. الإجراء الموصى به: ${history.suggestedAction}</p>
+                        </div>
+                    </div>
+                    <span class="badge" style="background: #d1fae5; color: #065f46; padding: 3px 10px; border-radius: 9999px; font-weight: 800; font-size: 11px;">سجل نظيف</span>
+                </div>
+            `;
+        } else if (history.strikeLevel === 2) {
+            info.className = 'mb-3 p-3 rounded-xl bg-amber-50 border border-amber-300 text-sm text-amber-950 shadow-sm';
+            badgeHtml = `
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-exclamation-triangle text-amber-600 text-lg"></i>
+                            <strong style="color: #92400e;">تنبيه تكرار الجزاء (المخالفة رقم 2 — Strike 2)</strong>
+                        </div>
+                        <span class="badge" style="background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; padding: 3px 10px; border-radius: 9999px; font-weight: 800; font-size: 11px;">
+                            ⚠️ مخالفة مكررة (2)
+                        </span>
+                    </div>
+                    <p style="margin: 0; font-size: 0.85rem; color: #78350f; line-height: 1.45;">
+                        لدى الشخص مخالفة سابقة مسجلة بتاريخ <strong>${lastViolDate}</strong> (${lastViolType}).
+                        <br><strong>الإجراء النظامي المقترح:</strong> ${history.suggestedAction}
+                    </p>
+                    <div style="display: flex; gap: 6px; margin-top: 4px;">
+                        <button type="button" class="btn-primary" style="background: #d97706; padding: 4px 12px; font-size: 12px; border-radius: 6px;" onclick="const a = document.getElementById('violation-action'); if(a){ a.value = '${history.suggestedAction}'; a.focus(); }">
+                            <i class="fas fa-magic ml-1"></i>تطبيق الإجراء المقترح تلقائياً
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else {
+            info.className = 'mb-3 p-3 rounded-xl bg-red-50 border-2 border-red-400 text-sm text-red-950 shadow-sm';
+            badgeHtml = `
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-radiation text-red-600 text-xl animate-pulse"></i>
+                            <strong style="color: #991b1b; font-size: 0.95rem;">🚨 تحذير عالي الخطورة (تكرار حرج — المخالفة رقم ${history.nextSequence} — Strike 3+)</strong>
+                        </div>
+                        <span class="badge" style="background: #fee2e2; color: #991b1b; border: 1.5px solid #f87171; padding: 3px 10px; border-radius: 9999px; font-weight: 900; font-size: 11px;">
+                            حظر واستبعاد مقترح
+                        </span>
+                    </div>
+                    <p style="margin: 0; font-size: 0.85rem; color: #7f1d1d; line-height: 1.45;">
+                        الشخص بلغ الحد الأقصى للمخالفات (${history.totalCount} مخالفات سابقة). آخرها بتاريخ <strong>${lastViolDate}</strong>.
+                        <br><strong>الإجراء النظامي الصارم:</strong> ${history.suggestedAction}
+                    </p>
+                    <div style="display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;">
+                        <button type="button" class="btn-primary" style="background: #dc2626; padding: 5px 14px; font-size: 12px; border-radius: 6px; font-weight: 700;" onclick="const a = document.getElementById('violation-action'); if(a){ a.value = '${history.suggestedAction}'; a.focus(); }">
+                            <i class="fas fa-ban ml-1"></i>تطبيق إجراء المنع المقترح
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        info.innerHTML = badgeHtml;
         info.classList.remove('hidden');
     },
 
@@ -2149,6 +2283,9 @@ const Violations = {
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                         <h2 class="card-title" style="margin: 0;"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
                         <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-primary" onclick="Violations.exportCurrentFilteredViolationsToExcel()" style="background: linear-gradient(135deg, #059669, #047857); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(5,150,105,0.25);" title="تصدير السجل الحالي إلى Excel منسق مع ملخص المقاولين وتحليل RCA">
+                                <i class="fas fa-file-excel ml-1"></i>تصدير Excel (مع ملخص المقاولين و RCA)
+                            </button>
                             <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog()" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
                                 <i class="fas fa-file-pdf ml-1"></i>تصدير السجل العام (ISO PDF)
                             </button>
@@ -2833,6 +2970,9 @@ const Violations = {
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <h2 class="card-title" style="margin: 0;"><i class="fas fa-list ml-2"></i>قائمة المخالفات</h2>
                             <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-primary" onclick="Violations.exportCurrentFilteredViolationsToExcel()" style="background: linear-gradient(135deg, #059669, #047857); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(5,150,105,0.25);" title="تصدير السجل الحالي إلى Excel منسق مع ملخص المقاولين وتحليل RCA">
+                                    <i class="fas fa-file-excel ml-1"></i>تصدير Excel (مع ملخص المقاولين و RCA)
+                                </button>
                                 <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog()" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
                                     <i class="fas fa-file-pdf ml-1"></i>تصدير السجل العام (ISO PDF)
                                 </button>
@@ -2858,6 +2998,9 @@ const Violations = {
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <h2 class="card-title" style="margin: 0;"><i class="fas fa-user-tie ml-2"></i>مخالفات الموظفين</h2>
                             <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-primary" onclick="Violations.exportCurrentFilteredViolationsToExcel()" style="background: linear-gradient(135deg, #059669, #047857); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(5,150,105,0.25);" title="تصدير سجل مخالفات الموظفين المفلتر إلى Excel">
+                                    <i class="fas fa-file-excel ml-1"></i>تصدير Excel
+                                </button>
                                 <button type="button" class="btn-primary" onclick="Violations.showAllViolationsReportDialog('employee')" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(30,58,138,0.25);">
                                     <i class="fas fa-file-pdf ml-1"></i>تصدير سجل الموظفين (ISO PDF)
                                 </button>
@@ -2879,17 +3022,20 @@ const Violations = {
                 this.currentFilters.personType = 'contractor';
                 contentContainer.innerHTML = `
                     <div class="content-card">
-                        <div class="card-header">
-                            <h2 class="card-title"><i class="fas fa-users-cog ml-2"></i>مخالفات المقاولين</h2>
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <h2 class="card-title" style="margin: 0;"><i class="fas fa-users-cog ml-2"></i>مخالفات المقاولين</h2>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-primary" onclick="Violations.exportCurrentFilteredViolationsToExcel()" style="background: linear-gradient(135deg, #059669, #047857); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 8px rgba(5,150,105,0.25);" title="تصدير سجل مخالفات المقاولين مع ملخص التقييم والخطورة إلى Excel">
+                                    <i class="fas fa-file-excel ml-1"></i>تصدير Excel (مع ملخص المقاولين و RCA)
+                                </button>
+                                <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
+                                    <i class="fas fa-file-export ml-1"></i>تصدير تقرير مخالفة المقاولين
+                                </button>
+                            </div>
                         </div>
                         <div class="card-body">
                             <div id="violations-filters-container" class="mb-4">
                                 ${this.renderFilters('contractor')}
-                            </div>
-                            <div class="mb-4 flex items-center justify-end">
-                                <button type="button" class="btn-primary" onclick="Violations.showContractorViolationsReportDialog()">
-                                    <i class="fas fa-file-export ml-2"></i>تصدير تقرير مخالفة المقاولين
-                                </button>
                             </div>
                             <div id="violations-list">
                                 ${this.renderContractorViolationsList()}
@@ -3839,6 +3985,7 @@ const Violations = {
                         {id:'viol-af-sev',     icon:'fas fa-exclamation-circle', color:'#f59e0b', label:t('module.violations.analytics.filter.severity', 'درجة الشدة')},
                         {id:'viol-af-status',  icon:'fas fa-circle',            color:'#10b981', label:t('module.violations.analytics.filter.status', 'الحالة')},
                         {id:'viol-af-loc',     icon:'fas fa-map-marker-alt',    color:'#3b82f6', label:t('module.violations.analytics.filter.location', 'الموقع الفرعي')},
+                        {id:'viol-af-rca',     icon:'fas fa-search-plus',       color:'#b91c1c', label:t('module.violations.analytics.filter.rca', 'السبب الجذري (RCA)')},
                     ].map(f => `
                         <div>
                             <label style="font-size:0.85rem;font-weight:700;color:#334155;display:block;margin-bottom:6px;">
@@ -3910,6 +4057,24 @@ const Violations = {
                 <div style="padding:14px;position:relative;height:270px;">
                     <canvas id="viol-chart-trend"></canvas>
                     <div id="viol-chart-trend-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                </div>
+            </div>
+
+            <!-- ── تحليل الأسباب الجذرية للمخالفات (RCA) ── -->
+            <div class="content-card" style="padding:0;overflow:hidden;margin-bottom:18px;">
+                <div style="padding:15px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <i class="fas fa-search-plus" style="color:#b91c1c;font-size:1.15rem;"></i>
+                        <span style="font-weight:800;font-size:1.02rem;color:#0f172a;">${t('module.violations.analytics.chart.rootCause', 'تحليل الأسباب الجذرية للمخالفات (Root Cause Analysis - RCA)')}</span>
+                    </div>
+                    <span id="viol-rca-total-badge" style="background:#fef2f2;color:#991b1b;padding:4px 12px;border-radius:12px;font-size:0.82rem;font-weight:700;"></span>
+                </div>
+                <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;align-items:center;">
+                    <div style="position:relative;height:250px;">
+                        <canvas id="viol-chart-rca"></canvas>
+                        <div id="viol-chart-rca-empty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#94a3b8;font-size:0.92rem;font-weight:600;">${t('module.violations.analytics.noData', 'لا توجد بيانات')}</div>
+                    </div>
+                    <div id="viol-rca-breakdown-list" style="display:flex;flex-direction:column;gap:10px;max-height:260px;overflow-y:auto;padding-left:4px;"></div>
                 </div>
             </div>
 
@@ -4130,6 +4295,13 @@ const Violations = {
         // الاتجاه الزمني
         this._vDrawTrend('viol-chart-trend', violByPeriod);
 
+        // تحليل الأسباب الجذرية (Root Cause Analysis - RCA)
+        this._vDrawListBreakdown('viol-chart-rca', 'viol-rca-breakdown-list', viol, 'rootCause', 10, [
+            'rgba(220,38,38,0.85)', 'rgba(234,88,12,0.85)', 'rgba(217,119,6,0.85)',
+            'rgba(13,148,136,0.85)', 'rgba(37,99,235,0.85)', 'rgba(124,58,237,0.85)',
+            'rgba(190,24,93,0.85)', 'rgba(75,85,99,0.85)'
+        ], '#fef2f2', '#991b1b', 'viol-rca-total-badge', 'viol-af-rca', null);
+
         // نوع المخالفة (توزيع تفاعلي مع Doughnut + قائمة)
         this._vDrawTypeBreakdown('viol-chart-type', 'viol-type-breakdown-list', viol, 10);
 
@@ -4240,7 +4412,8 @@ const Violations = {
         const fSev    = get('viol-af-sev');
         const fStatus = get('viol-af-status');
         const fLoc    = get('viol-af-loc');
-        const hasAny  = [fFactory,fPtype,fType,fSev,fStatus,fLoc].some(v => v !== '');
+        const fRca    = get('viol-af-rca');
+        const hasAny  = [fFactory,fPtype,fType,fSev,fStatus,fLoc,fRca].some(v => v !== '');
         const badge = document.getElementById('viol-filter-badge');
         if (badge) badge.style.display = hasAny ? 'inline' : 'none';
         return viol.filter(v => {
@@ -4250,6 +4423,7 @@ const Violations = {
             if (fSev    && String(v.severity||'').trim()             !== fSev)    return false;
             if (fStatus && String(v.status||'').trim()               !== fStatus) return false;
             if (fLoc    && String(v.violationLocation||'').trim()    !== fLoc)    return false;
+            if (fRca    && String(v.rootCause||'').trim()            !== fRca)    return false;
             return true;
         });
     },
@@ -4284,6 +4458,7 @@ const Violations = {
         fill('viol-af-sev',    unique(v => String(v.severity||'').trim()), 'module.violations.severity.');
         fill('viol-af-status', unique(v => String(v.status||'').trim()), 'module.violations.status.');
         fill('viol-af-loc',    unique(v => String(v.violationLocation||'').trim()));
+        fill('viol-af-rca',    unique(v => String(v.rootCause||'').trim()));
     },
 
     // ── مساعد: رسم عام — Doughnut + قائمة Progress Bars ──
@@ -5156,7 +5331,7 @@ const Violations = {
         const resetBtn = document.getElementById('viol-filter-reset-btn');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+                ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc','viol-af-rca'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.value = '';
                 });
@@ -5165,7 +5340,7 @@ const Violations = {
         }
 
         // قوائم الفلاتر
-        ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+        ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc','viol-af-rca'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.addEventListener('change', () => this.updateViolationAnalytics());
         });
@@ -5175,7 +5350,7 @@ const Violations = {
             card.addEventListener('click', () => {
                 const kpi = card.getAttribute('data-kpi');
                 if (kpi === 'total') {
-                    ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc'].forEach(id => {
+                    ['viol-af-factory','viol-af-ptype','viol-af-type','viol-af-sev','viol-af-status','viol-af-loc','viol-af-rca'].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.value = '';
                     });
@@ -5647,8 +5822,8 @@ const Violations = {
                             </div>
                         </div>
                         
-                        <!-- الصف الخامس: الشدة والحالة -->
-                        <div class="grid grid-cols-2 gap-4">
+                        <!-- الصف الخامس: الشدة والحالة والسبب الجذري -->
+                        <div class="grid grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-semibold text-gray-700 mb-2">
                                     <i class="fas fa-signal ml-2 text-orange-600"></i>
@@ -5658,7 +5833,7 @@ const Violations = {
                                     <option value="">اختر الشدة</option>
                                     <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>عالية</option>
                                     <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>متوسطة</option>
-                                    <option value="منخضة" ${violationData?.severity === 'منخضة' ? 'selected' : ''}>منخضة</option>
+                                    <option value="منخفضة" ${violationData?.severity === 'منخفضة' || violationData?.severity === 'منخضة' ? 'selected' : ''}>منخفضة</option>
                                 </select>
                             </div>
                             <div>
@@ -5671,6 +5846,21 @@ const Violations = {
                                     <option value="قيد المراجعة" ${violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>قيد المراجعة</option>
                                     <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>محلول</option>
                                     <option value="غير محلول" ${violationData?.status === 'غير محلول' ? 'selected' : ''}>غير محلول</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="violation-root-cause" class="block text-sm font-semibold text-gray-700 mb-2">
+                                    <i class="fas fa-search-plus ml-2 text-teal-600"></i>
+                                    السبب الجذري (RCA)
+                                </label>
+                                <select id="violation-root-cause" class="form-input">
+                                    <option value="">اختر السبب الجذري</option>
+                                    <option value="سلوك غير آمن (Unsafe Act)" ${violationData?.rootCause === 'سلوك غير آمن (Unsafe Act)' ? 'selected' : ''}>سلوك غير آمن (Unsafe Act)</option>
+                                    <option value="ظرف عمل غير آمن (Unsafe Condition)" ${violationData?.rootCause === 'ظرف عمل غير آمن (Unsafe Condition)' ? 'selected' : ''}>ظرف عمل غير آمن (Unsafe Condition)</option>
+                                    <option value="قصور تدريبي وتوعوي (Training Gap)" ${violationData?.rootCause === 'قصور تدريبي وتوعوي (Training Gap)' ? 'selected' : ''}>قصور تدريبي وتوعوي (Training Gap)</option>
+                                    <option value="قصور إشرافي وإجرائي (Supervisory Defect)" ${violationData?.rootCause === 'قصور إشرافي وإجرائي (Supervisory Defect)' ? 'selected' : ''}>قصور إشرافي وإجرائي (Supervisory Defect)</option>
+                                    <option value="خلل في المعدات ومهمات الوقاية" ${violationData?.rootCause === 'خلل في المعدات ومهمات الوقاية' ? 'selected' : ''}>خلل في المعدات ومهمات الوقاية</option>
+                                    <option value="عوامل خارجية وبيئية" ${violationData?.rootCause === 'عوامل خارجية وبيئية' ? 'selected' : ''}>عوامل خارجية وبيئية</option>
                                 </select>
                             </div>
                         </div>
@@ -6206,6 +6396,7 @@ const Violations = {
                 const status = document.getElementById('violation-status')?.value;
                 const violationDetails = document.getElementById('violation-details')?.value.trim() || '';
                 const actionTaken = document.getElementById('violation-action')?.value.trim() || '';
+                const rootCause = document.getElementById('violation-root-cause')?.value.trim() || '';
                 const fineAmountRaw = document.getElementById('violation-fine-amount')?.value;
                 let fineAmount = '';
                 if (fineAmountRaw !== '' && fineAmountRaw !== null && fineAmountRaw !== undefined) {
@@ -6364,6 +6555,7 @@ const Violations = {
                     severity: severity,
                     actionTaken: actionTaken,
                     status: status,
+                    rootCause: rootCause || violationData?.rootCause || 'سلوك غير آمن (Unsafe Act)',
                     photo: photo,
                     createdAt: violationData?.createdAt || new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
@@ -6838,6 +7030,7 @@ const Violations = {
         }
         const qSev = String(violation.severity || '').trim();
         const qStat = String(violation.status || '').trim();
+        const personHistory = typeof this.getPersonViolationHistory === 'function' ? this.getPersonViolationHistory(violation, violation.id) : null;
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -6856,8 +7049,13 @@ const Violations = {
                     <div class="space-y-4">
                         <!-- معلومات المخالف (نفس التصميم للموظفين والمقاولين) -->
                         <div style="background: #fef2f2; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-weight: 600; color: #991b1b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-user"></i> معلومات المخالف
+                            <h3 style="font-weight: 600; color: #991b1b; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                                <span><i class="fas fa-user"></i> معلومات المخالف</span>
+                                ${personHistory ? `
+                                    <span class="badge" style="background: ${personHistory.strikeLevel >= 3 ? '#fee2e2' : personHistory.strikeLevel === 2 ? '#fef3c7' : '#d1fae5'}; color: ${personHistory.strikeLevel >= 3 ? '#991b1b' : personHistory.strikeLevel === 2 ? '#92400e' : '#065f46'}; border: 1px solid ${personHistory.strikeLevel >= 3 ? '#fca5a5' : personHistory.strikeLevel === 2 ? '#fcd34d' : '#a7f3d0'}; padding: 3px 10px; border-radius: 9999px; font-weight: 800; font-size: 11px;">
+                                        <i class="fas ${personHistory.strikeLevel >= 3 ? 'fa-radiation' : personHistory.strikeLevel === 2 ? 'fa-exclamation-triangle' : 'fa-shield-alt'} ml-1"></i>${personHistory.strikeBadgeText}
+                                    </span>
+                                ` : ''}
                             </h3>
                             <div class="grid grid-cols-2 gap-4">
                                 ${(violation.contractorName || violation.personType === 'contractor') ? `
@@ -6945,6 +7143,12 @@ const Violations = {
                                 <div>
                                     <label class="text-sm font-semibold text-gray-600">القيمة المالية:</label>
                                     <p class="text-gray-800 font-semibold">${this.formatFineAmount(Number(this.getEffectiveFineAmount(violation)))}</p>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-600">السبب الجذري (RCA):</label>
+                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 16px; font-size: 0.85rem; font-weight: 700; background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4;">
+                                        ${Utils.escapeHTML(violation.rootCause || 'سلوك غير آمن (Unsafe Act)')}
+                                    </span>
                                 </div>
                             </div>
                             ${violation.violationDetails ? `
@@ -7140,8 +7344,9 @@ const Violations = {
         const isContractor = v.personType === 'contractor' || !!v.contractorName;
 
         const title = isContractor ? 'تقرير رصد وتوثيق مخالفة مقاول' : 'تقرير رصد وتوثيق مخالفة موظف';
-        const subtitle = 'نموذج رسمي لتوثيق المخالفات الميدانية والإجراءات التصحيحية المتخذة';
         const fineVal = Number(this.getEffectiveFineAmount(v)) || 0;
+        const personHistory = typeof this.getPersonViolationHistory === 'function' ? this.getPersonViolationHistory(v, v.id) : null;
+        const strikeBadgeText = personHistory?.strikeBadgeText || `المخالفة ${v.violationSequenceInMonth || 1}`;
 
         const formattedDate = v.violationDate ? Utils.formatDate(v.violationDate) : '—';
         const resolvedTimeStr = typeof this.getResolvedViolationTime === 'function' ? this.getResolvedViolationTime(v) : (v.violationTime || '');
@@ -7204,9 +7409,9 @@ const Violations = {
                     <div class="kpi-card-label">القيمة المالية للغرامة</div>
                     <div class="kpi-card-value" style="color: #166534; font-size: 15px;">${this.formatFineAmount(fineVal)}</div>
                 </div>
-                <div class="kpi-stat-card accent-blue">
-                    <div class="kpi-card-label">تسلسل المخالفة بالشهر</div>
-                    <div class="kpi-card-value" style="color: #1e3a8a; font-size: 15px;">${esc(v.violationSequenceInMonth || '1')}</div>
+                <div class="kpi-stat-card ${(personHistory?.strikeLevel >= 3) ? 'accent-red' : (personHistory?.strikeLevel === 2) ? 'accent-amber' : 'accent-blue'}">
+                    <div class="kpi-card-label">تكرار المخالفة للشخص</div>
+                    <div class="kpi-card-value" style="color: ${(personHistory?.strikeLevel >= 3) ? '#991b1b' : (personHistory?.strikeLevel === 2) ? '#92400e' : '#1e3a8a'}; font-size: 13px; font-weight: 800; white-space: nowrap;">${esc(strikeBadgeText)}</div>
                 </div>
             </div>
 
@@ -7285,6 +7490,10 @@ const Violations = {
                     <div class="info-cell">
                         <span class="info-cell-label">كود نوع المخالفة</span>
                         <span class="info-cell-value" dir="ltr" style="font-family: monospace, inherit; font-weight: 900; color: #1e3a8a;"><bdi>${esc(this.getCleanViolationTypeCode(v))}</bdi></span>
+                    </div>
+                    <div class="info-cell">
+                        <span class="info-cell-label">السبب الجذري (RCA)</span>
+                        <span class="info-cell-value" style="color: #0f766e; font-weight: 800;"><bdi>${esc(v.rootCause || 'سلوك غير آمن (Unsafe Act)')}</bdi></span>
                     </div>
                     ${v.violationDetails ? `
                         <div class="info-cell info-cell-wide">
@@ -10516,7 +10725,10 @@ const Violations = {
     },
 
     /**
-     * تصدير سجل المخالفات إلى ملف Excel
+     * تصدير سجل المخالفات إلى ملف Excel متعدد الأوراق:
+     * ورقة 1: سجل المخالفات التفصيلي مع الأسباب الجذرية ومستوى التكرار (Strike)
+     * ورقة 2: ملخص المقاولين مع معدل الإغلاق وتصنيف الخطورة
+     * ورقة 3: تحليل الأسباب الجذرية (RCA) مع نسب التكرار
      */
     exportAllViolationsToExcel_(violations, targetName = '', periodInfo = '') {
         if (typeof XLSX === 'undefined') {
@@ -10524,33 +10736,185 @@ const Violations = {
             return false;
         }
 
-        const excelData = violations.map((v, idx) => ({
-            '#': idx + 1,
-            'اسم المخالف': v.employeeName || v.contractorName || v.contractorWorker || '',
-            'الصفة': (v.personType === 'contractor' || v.contractorName) ? 'مقاول' : 'موظف',
-            'الكود الوظيفي / كود المقاول': v.employeeCode || v.employeeNumber || v.contractorCode || v.contractorId || '',
-            'نوع المخالفة': v.violationType || '',
-            'تاريخ المخالفة': v.violationDate ? Utils.formatDate(v.violationDate) : '',
-            'وقت المخالفة': v.violationTime || '',
-            'المصنع / الموقع': v.violationLocation || '',
-            'مكان المخالفة': v.violationPlace || '',
-            'درجة الشدة': v.severity || '',
-            'القيمة المالية': Number(this.getEffectiveFineAmount(v)) || 0,
-            'تسلسل المخالفة بالشهر': v.violationSequenceInMonth || '',
-            'حالة المخالفة': v.status || '',
-            'الإجراء المتخذ': v.actionTaken || '',
-            'تفاصيل المخالفة': v.violationDetails || ''
-        }));
+        if (!Array.isArray(violations) || violations.length === 0) {
+            Notification.warning('لا توجد مخالفات لتصديرها');
+            return false;
+        }
+
+        // 1. ورقة سجل المخالفات التفصيلي
+        const excelData = violations.map((v, idx) => {
+            const isCon = (v.personType === 'contractor' || !!v.contractorName);
+            const hist = this.getPersonViolationHistory(v, v.id);
+            const strikeText = hist.totalCount === 0
+                ? 'المخالفة الأولى'
+                : (hist.totalCount === 1 ? 'مخالفة ثانية (مكرر)' : `تكرار حرج (${hist.totalCount + 1} مخالفات)`);
+
+            return {
+                '#': idx + 1,
+                'اسم المخالف': v.employeeName || v.contractorWorker || v.contractorName || '',
+                'الصفة': isCon ? 'مقاول' : 'موظف',
+                'الكود الوظيفي / كود المقاول': v.employeeCode || v.employeeNumber || v.contractorCode || v.contractorId || '',
+                'المقاول / جهة العمل': isCon ? (v.contractorName || '') : (v.employeeDepartment || ''),
+                'نوع المخالفة': v.violationType || '',
+                'السبب الجذري (RCA)': v.rootCause || 'غير محدد',
+                'تاريخ المخالفة': v.violationDate ? Utils.formatDate(v.violationDate) : '',
+                'وقت المخالفة': v.violationTime || '',
+                'المصنع / الموقع': v.violationLocation || '',
+                'مكان المخالفة': v.violationPlace || '',
+                'درجة الشدة': v.severity || '',
+                'القيمة المالية': Number(this.getEffectiveFineAmount(v)) || 0,
+                'حالة المخالفة': v.status || '',
+                'سجل التكرار (Strike)': strikeText,
+                'تسلسل المخالفة بالشهر': v.violationSequenceInMonth || '',
+                'الإجراء المتخذ': v.actionTaken || '',
+                'تفاصيل المخالفة': v.violationDetails || ''
+            };
+        });
+
+        // 2. ورقة ملخص المقاولين
+        const contractorMap = {};
+        violations.forEach(v => {
+            const isCon = (v.personType === 'contractor' || !!v.contractorName);
+            if (!isCon) return;
+            const conName = String(v.contractorName || 'مقاول عام / غير محدد').trim();
+            if (!contractorMap[conName]) {
+                contractorMap[conName] = {
+                    name: conName,
+                    total: 0,
+                    high: 0,
+                    medium: 0,
+                    low: 0,
+                    unresolved: 0,
+                    resolved: 0,
+                    fines: 0,
+                    rcaCounts: {},
+                    typeCounts: {}
+                };
+            }
+            const c = contractorMap[conName];
+            c.total++;
+            const sev = String(v.severity || '').trim();
+            if (sev === 'عالية') c.high++;
+            else if (sev === 'متوسطة') c.medium++;
+            else if (sev === 'منخفضة') c.low++;
+
+            const st = String(v.status || '').trim();
+            if (st === 'محلول') c.resolved++;
+            else c.unresolved++;
+
+            c.fines += Number(this.getEffectiveFineAmount(v)) || 0;
+
+            const rca = String(v.rootCause || 'غير محدد').trim();
+            c.rcaCounts[rca] = (c.rcaCounts[rca] || 0) + 1;
+
+            const tp = String(v.violationType || 'غير محدد').trim();
+            c.typeCounts[tp] = (c.typeCounts[tp] || 0) + 1;
+        });
+
+        const contractorSummaryData = Object.values(contractorMap)
+            .sort((a, b) => b.total - a.total || b.high - a.high)
+            .map((c, idx) => {
+                const topRca = Object.entries(c.rcaCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+                const topType = Object.entries(c.typeCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+                let riskRating = '🟢 منخفض';
+                if (c.high >= 2 || c.total >= 5) {
+                    riskRating = '🚨 حرج';
+                } else if (c.high === 1 || c.total >= 2) {
+                    riskRating = '⚠️ متوسط';
+                }
+                const resolutionRate = c.total > 0 ? `${Math.round((c.resolved / c.total) * 100)}%` : '0%';
+
+                return {
+                    '#': idx + 1,
+                    'اسم المقاول': c.name,
+                    'إجمالي المخالفات': c.total,
+                    'عالية الشدة': c.high,
+                    'متوسطة الشدة': c.medium,
+                    'منخفضة الشدة': c.low,
+                    'غير المحلولة': c.unresolved,
+                    'معدل الإغلاق': resolutionRate,
+                    'إجمالي الغرامات': c.fines,
+                    'السبب الجذري الشائع': topRca,
+                    'المخالفة الأكثر تكراراً': topType,
+                    'تصنيف المخاطر': riskRating
+                };
+            });
+
+        // 3. ورقة تحليل الأسباب الجذرية (RCA)
+        const rcaMap = {};
+        violations.forEach(v => {
+            const rca = String(v.rootCause || 'غير محدد').trim();
+            if (!rcaMap[rca]) {
+                rcaMap[rca] = {
+                    category: rca,
+                    count: 0,
+                    high: 0,
+                    resolved: 0,
+                    unresolved: 0,
+                    fines: 0
+                };
+            }
+            const r = rcaMap[rca];
+            r.count++;
+            if (String(v.severity || '').trim() === 'عالية') r.high++;
+            if (String(v.status || '').trim() === 'محلول') r.resolved++;
+            else r.unresolved++;
+            r.fines += Number(this.getEffectiveFineAmount(v)) || 0;
+        });
+
+        const totalV = violations.length || 1;
+        const rcaSummaryData = Object.values(rcaMap)
+            .sort((a, b) => b.count - a.count)
+            .map((r, idx) => ({
+                '#': idx + 1,
+                'تصنيف السبب الجذري (RCA)': r.category,
+                'عدد المخالفات': r.count,
+                'النسبة المئوية': `${((r.count / totalV) * 100).toFixed(1)}%`,
+                'عالية الشدة': r.high,
+                'محلولة': r.resolved,
+                'غير محلولة': r.unresolved,
+                'إجمالي الغرامات المالية': r.fines
+            }));
 
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(excelData);
-        XLSX.utils.book_append_sheet(wb, ws, 'سجل المخالفات');
+
+        // Sheet 1: سجل المخالفات
+        const ws1 = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(wb, ws1, 'سجل المخالفات');
+
+        // Sheet 2: ملخص المقاولين
+        if (contractorSummaryData.length > 0) {
+            const ws2 = XLSX.utils.json_to_sheet(contractorSummaryData);
+            XLSX.utils.book_append_sheet(wb, ws2, 'ملخص المقاولين');
+        }
+
+        // Sheet 3: تحليل الأسباب الجذرية RCA
+        const ws3 = XLSX.utils.json_to_sheet(rcaSummaryData);
+        XLSX.utils.book_append_sheet(wb, ws3, 'الأسباب الجذرية RCA');
 
         const dateStr = new Date().toISOString().slice(0, 10);
         const fileName = `سجل_${targetName || 'المخالفات'}_${dateStr}.xlsx`;
         XLSX.writeFile(wb, fileName);
-        Notification.success('تم تصدير سجل المخالفات إلى Excel بنجاح');
+        Notification.success('تم تصدير سجل المخالفات إلى Excel بنجاح (مع ملخص المقاولين والأسباب الجذرية RCA)');
         return true;
+    },
+
+    /**
+     * تصدير المخالفات المفلترة المعروضة حالياً إلى Excel مباشرة
+     */
+    exportCurrentFilteredViolationsToExcel() {
+        const violations = this.getFilteredViolations();
+        if (!violations || violations.length === 0) {
+            Notification.warning('لا توجد مخالفات مسجلة أو مطابقة للفلاتر الحالية لتصديرها');
+            return;
+        }
+
+        const activeTab = document.querySelector('.tab-btn.active')?.dataset.tab || 'all';
+        let scopeName = 'المخالفات_العام';
+        if (activeTab === 'employees') scopeName = 'مخالفات_الموظفين';
+        else if (activeTab === 'contractors') scopeName = 'مخالفات_المقاولين';
+
+        this.exportAllViolationsToExcel_(violations, scopeName, 'السجلات الحالية المفلترة');
     },
 
 };

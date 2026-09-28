@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1787",
+  "version": "1.0.1788",
   "highlights": {
     "ar": [
-      "اختصار مراجع التوثيق القياسية (ISO 45001) في فوتر تقارير ونماذج المخالفات لتظهر في سطر واحد موجز ومضبوط دون استطالة.",
-      "تأمين عدم التفاف أو نزول عناصر شريط التوثيق (كود الوثيقة، رقم الإصدار، مرجعية التوثيق، نظام الجودة) للأسفل من خلال منع الالتفاف التام.",
-      "ضبط التنسيق المرن (Flexbox) والحجم الأمثل للخط في تذييل التقارير لضمان التوافق التام مع طباعة A4 والشاشات."
+      "رصد التكرار الذكي للجزاءات (Three-Strike / Repeat Offender Alert): تتبع فوري لسجل مخالفات الشخص مع احتساب التكرار واقتراح الإجراء المتدرج الموصى به تلقائياً.",
+      "تحليل الأسباب الجذرية (Root Cause Analysis - RCA): دمج تصنيف السبب الجذري في النماذج وقاعدة البيانات والتقارير المعتمدة ومخططات لوحة التحليل البيانية.",
+      "تصدير سجل المخالفات المفلتر إلى Excel منسق متعدد الأوراق: 3 صفحات تشمل السجل التفصيلي، ملخص المقاولين مع تصنيف الخطورة، وتحليل الأسباب الجذرية RCA."
     ],
     "en": [
-      "Shortened ISO 45001 documentation references across violation reports and footers to ensure clean single-line rendering.",
-      "Enforced strict non-wrapping (white-space: nowrap) on all ISO footer strip metadata fields preventing broken lines.",
-      "Optimized flex layout and typography in report footers for flawless A4 print and display consistency."
+      "Three-Strike & Repeat Offender Alert: automatic violation history tracking with graduated disciplinary actions and one-click auto-fill.",
+      "Root Cause Analysis (RCA): standardized root cause classification across entry forms, data normalization, approved reports, and analytics dashboards.",
+      "Multi-Sheet Filtered Excel Export: 3-sheet workbook with detailed violation logs, contractor risk evaluation summary, and RCA distribution breakdown."
     ]
   },
-  "releaseName": "v1.0.1787 - Shortened ISO Footer References & Single-Line Layout Enforcement",
-  "lastUpdate": "2026-09-28T22:38:00.000Z"
+  "releaseName": "v1.0.1788 - Violations Repeat Offender Alert, RCA Classification & Multi-Sheet Excel Export",
+  "lastUpdate": "2026-09-28T22:58:00.000Z"
 }
