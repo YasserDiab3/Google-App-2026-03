@@ -2913,9 +2913,13 @@ const Training = {
                                 <i class="fas fa-file-excel ml-2"></i>
                                 تصدير Excel
                             </button>
-                            <button id="attendance-registry-export-pdf" class="btn-primary">
-                                <i class="fas fa-file-pdf ml-2"></i>
-                                تصدير PDF
+                            <button id="attendance-registry-download-pdf" class="btn-primary" title="تحميل سجل التدريب PDF مباشرة">
+                                <i class="fas fa-file-download ml-2"></i>
+                                تحميل PDF
+                            </button>
+                            <button id="attendance-registry-export-pdf" class="btn-secondary" title="معاينة وطباعة سجل التدريب">
+                                <i class="fas fa-print ml-2"></i>
+                                طباعة السجل
                             </button>
                         </div>
                     </div>
@@ -3402,10 +3406,13 @@ const Training = {
                         <button onclick="Training.editTraining('${item.id}')" class="btn-icon btn-icon-primary" title="تعديل">
                             <i class="fas fa-edit" style="font-size: 13px;"></i>
                         </button>
-                        <button onclick="Training.printTraining('${item.id}')" class="btn-icon btn-icon-secondary" title="طباعة">
+                        <button onclick="Training.downloadTrainingPdf('${item.id}')" class="btn-icon btn-icon-success" title="تحميل كشف الحضور PDF">
+                            <i class="fas fa-file-arrow-down" style="font-size: 13px;"></i>
+                        </button>
+                        <button onclick="Training.printTraining('${item.id}')" class="btn-icon btn-icon-secondary" title="معاينة وطباعة كشف الحضور">
                             <i class="fas fa-print" style="font-size: 13px;"></i>
                         </button>
-                        <button onclick="Training.exportTraining('${item.id}')" class="btn-icon btn-icon-success" title="تصدير">
+                        <button onclick="Training.exportTraining('${item.id}')" class="btn-icon btn-icon-success" title="تصدير Excel">
                             <i class="fas fa-file-export" style="font-size: 13px;"></i>
                         </button>
                         <button onclick="Training.deleteTraining('${item.id}')" class="btn-icon btn-icon-danger" title="حذف">
@@ -5965,11 +5972,19 @@ const Training = {
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
                     <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
-                    <button type="button" class="btn-primary" id="generate-contractor-report-btn">
-                        <i class="fas fa-file-export ml-2"></i>
-                        إنشاء التقرير
+                    <button type="button" class="btn-secondary" id="export-contractor-report-excel-btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-file-excel text-green-600"></i>
+                        تصدير Excel
+                    </button>
+                    <button type="button" class="btn-secondary" id="preview-contractor-report-btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i>
+                        معاينة وطباعة
+                    </button>
+                    <button type="button" class="btn-primary" id="generate-contractor-report-btn" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                        <i class="fas fa-file-arrow-down"></i>
+                        تحميل مباشر (PDF)
                     </button>
                 </div>
             </div>
@@ -6021,7 +6036,7 @@ const Training = {
             input.addEventListener('change', updateDateFields);
         });
 
-        modal.querySelector('#generate-contractor-report-btn')?.addEventListener('click', async () => {
+        const getContractorReportInputs = () => {
             const contractorSelect = modal.querySelector('#contractor-report-select');
             const selectedContractorId = contractorSelect?.value ? String(contractorSelect.value).trim() : '';
             const selectedContractorName = selectedContractorId
@@ -6034,39 +6049,65 @@ const Training = {
             const fromDate = modal.querySelector('#contractor-report-from-date')?.value || '';
             const toDate = modal.querySelector('#contractor-report-to-date')?.value || '';
 
-            // ✅ التحقق من صحة المدخلات
-            if (dateRangeType === 'month' && !selectedMonth) {
-                Notification.warning('يرجى اختيار الشهر المطلوب');
-                return;
-            }
-
-            if (dateRangeType === 'custom') {
-                if (!fromDate || !toDate) {
-                    Notification.warning('يرجى اختيار تاريخ البداية والنهاية للفترة');
-                    return;
-                }
-                if (new Date(fromDate) > new Date(toDate)) {
-                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
-                    return;
-                }
-            }
-
-            // ✅ التحقق من أن المقاول المحدد موجود في القائمة
-            if (selectedContractorId) {
-                const selectedOption = contractorSelect?.options[contractorSelect?.selectedIndex];
-                if (!selectedOption || !selectedOption.value) {
-                    Notification.warning('يرجى اختيار مقاول صحيح من القائمة');
-                    return;
-                }
-            }
-
-            close();
-            await this.generateContractorTrainingReport(selectedContractorId, {
+            return {
+                selectedContractorId,
+                selectedContractorName,
                 dateRangeType,
-                month: selectedMonth,
+                selectedMonth,
                 fromDate,
                 toDate
-            }, selectedContractorName);
+            };
+        };
+
+        const validateContractorReportInputs = (inputs) => {
+            if (inputs.dateRangeType === 'month' && !inputs.selectedMonth) {
+                Notification.warning('يرجى اختيار الشهر المطلوب');
+                return false;
+            }
+
+            if (inputs.dateRangeType === 'custom') {
+                if (!inputs.fromDate || !inputs.toDate) {
+                    Notification.warning('يرجى اختيار تاريخ البداية والنهاية للفترة');
+                    return false;
+                }
+                if (new Date(inputs.fromDate) > new Date(inputs.toDate)) {
+                    Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                    return false;
+                }
+            }
+            return true;
+        };
+
+        // زر التحميل المباشر PDF
+        modal.querySelector('#generate-contractor-report-btn')?.addEventListener('click', async () => {
+            const inputs = getContractorReportInputs();
+            if (!validateContractorReportInputs(inputs)) return;
+            close();
+            await this.generateContractorTrainingReport(inputs.selectedContractorId, {
+                dateRangeType: inputs.dateRangeType,
+                month: inputs.selectedMonth,
+                fromDate: inputs.fromDate,
+                toDate: inputs.toDate
+            }, inputs.selectedContractorName, 'download');
+        });
+
+        // زر معاينة وطباعة التقرير
+        modal.querySelector('#preview-contractor-report-btn')?.addEventListener('click', async () => {
+            const inputs = getContractorReportInputs();
+            if (!validateContractorReportInputs(inputs)) return;
+            close();
+            await this.generateContractorTrainingReport(inputs.selectedContractorId, {
+                dateRangeType: inputs.dateRangeType,
+                month: inputs.selectedMonth,
+                fromDate: inputs.fromDate,
+                toDate: inputs.toDate
+            }, inputs.selectedContractorName, 'print');
+        });
+
+        // زر تصدير Excel
+        modal.querySelector('#export-contractor-report-excel-btn')?.addEventListener('click', () => {
+            close();
+            this.exportContractorTrainingExcel();
         });
     },
 
@@ -6181,8 +6222,18 @@ const Training = {
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">صيغة التصدير</label>
                         <div class="flex flex-wrap gap-4">
-                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ta-modal-format" value="excel" class="ml-1" checked><span>Excel</span></label>
-                            <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="ta-modal-format" value="pdf" class="ml-1"><span>PDF (طباعة)</span></label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="ta-modal-format" value="pdf_download" class="ml-1" checked>
+                                <span class="font-bold text-green-700"><i class="fas fa-file-arrow-down ml-1"></i>تحميل PDF مباشر</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="ta-modal-format" value="pdf_print" class="ml-1">
+                                <span><i class="fas fa-print ml-1 text-blue-600"></i>معاينة وطباعة PDF</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="ta-modal-format" value="excel" class="ml-1">
+                                <span><i class="fas fa-file-excel ml-1 text-emerald-600"></i>ملف Excel</span>
+                            </label>
                         </div>
                     </div>
                     <div style="border-top: 1px solid #E5E7EB; padding-top: 16px;">
@@ -6331,10 +6382,12 @@ const Training = {
             this._analysisExportContext = ctx;
             try {
                 if (isTrainers) {
-                    if (format === 'pdf') this.exportAnalysisTrainersPDF();
+                    if (format === 'pdf_download') this.exportAnalysisTrainersPDF('download');
+                    else if (format === 'pdf_print' || format === 'pdf') this.exportAnalysisTrainersPDF('print');
                     else this.exportAnalysisTrainersExcel();
                 } else {
-                    if (format === 'pdf') this.exportAnalysisAttendeesPDF();
+                    if (format === 'pdf_download') this.exportAnalysisAttendeesPDF('download');
+                    else if (format === 'pdf_print' || format === 'pdf') this.exportAnalysisAttendeesPDF('print');
                     else this.exportAnalysisAttendeesExcel();
                 }
             } finally {
@@ -6343,10 +6396,10 @@ const Training = {
         });
     },
 
-    async generateContractorTrainingReport(contractorId = null, dateFilter = {}, uiSelectedContractorName = '') {
+    async generateContractorTrainingReport(contractorId = null, dateFilter = {}, uiSelectedContractorName = '', mode = 'download') {
         this.ensureData();
         try {
-            Loading.show();
+            Loading.show(mode === 'download' ? 'جاري تحميل تقرير تدريبات المقاولين المباشر...' : 'جاري تجهيز التقرير للمعاينة والطباعة...');
 
             if ((!AppState.appData.contractorTrainings || AppState.appData.contractorTrainings.length === 0) && typeof this.loadContractorTrainingsPriority === 'function' && !this._contractorTrainingsFetchOk) {
                 await this.loadContractorTrainingsPriority().catch(() => {});
@@ -6489,28 +6542,20 @@ const Training = {
             const totalHours = records.reduce((sum, entry) => sum + (parseFloat(entry.totalHours) || 0), 0);
 
             const rowsHtml = records.map((entry, index) => {
-                // ✅ إصلاح: تطبيع contractorId قبل البحث في الـ map
                 const entryContractorId = String(entry.contractorId || '').trim();
-                
-                // ✅ الحصول على اسم المقاول مع التحقق المتعدد
                 let entryContractorName = '-';
                 const storedName = String(entry.contractorName || '').replace(/\s+/g, ' ').trim();
                 const hasStoredName = storedName && !['غير محدد', 'بدون اسم', '—', '-'].includes(storedName);
                 if (hasStoredName) {
                     entryContractorName = storedName;
                 } else if (entryContractorId) {
-                    // 1. البحث في contractorMap
                     entryContractorName = contractorMap.get(entryContractorId) || '';
-                    
-                    // 2. إذا لم يتم العثور عليه، البحث مباشرة في contractorOptions
                     if (!entryContractorName || entryContractorName === '') {
                         const foundContractor = contractorOptions.find(c => String(c?.id ?? '').trim() === entryContractorId);
                         if (foundContractor && foundContractor.name) {
                             entryContractorName = foundContractor.name.trim();
                         }
                     }
-                    
-                    // 3. إذا لم يتم العثور عليه، استخدام الاسم المحفوظ في السجل
                     if (!entryContractorName || entryContractorName === '') {
                         entryContractorName = storedName || '-';
                     }
@@ -6518,22 +6563,21 @@ const Training = {
                     entryContractorName = storedName || '-';
                 }
                 
-                // ✅ إصلاح: تحويل قيم الوقت إلى صيغة صحيحة لتجنب عرض تواريخ Excel الخاطئة
                 const formattedDuration = entry.durationMinutes && !isNaN(Number(entry.durationMinutes)) ? Number(entry.durationMinutes) : '-';
                 const formattedHours = entry.totalHours && !isNaN(Number(entry.totalHours)) ? parseFloat(entry.totalHours).toFixed(2) : '-';
                 
                 return `
-                <tr style="${index % 2 === 0 ? 'background-color: #FFFFFF;' : 'background-color: #F9FAFB;'}">
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${index + 1}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${entry.date ? Utils.formatDate(entry.date) : '-'}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(entry.topic || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(entry.trainer || '-')}</td>
-                    ${!selectedContractorName ? `<td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(entryContractorName)}</td>` : ''}
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${entry.traineesCount || '-'}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${formattedDuration}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px;">${formattedHours}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(entry.location || '-')}</td>
-                    <td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: right; font-size: 11px;">${Utils.escapeHTML(entry.subLocation || '-')}</td>
+                <tr>
+                    <td style="font-weight: 800;">${index + 1}</td>
+                    <td style="white-space: nowrap;">${entry.date ? Utils.formatDate(entry.date) : '-'}</td>
+                    <td style="text-align: right; font-weight: 700;">${Utils.escapeHTML(entry.topic || '-')}</td>
+                    <td style="text-align: right;">${Utils.escapeHTML(entry.trainer || '-')}</td>
+                    ${!selectedContractorName ? `<td style="text-align: right; font-weight: 700; color: #1e3a8a;">${Utils.escapeHTML(entryContractorName)}</td>` : ''}
+                    <td style="font-weight: 800; color: #047857;">${entry.traineesCount || '-'}</td>
+                    <td>${formattedDuration}</td>
+                    <td style="font-weight: 800; color: #1e3a8a;">${formattedHours}</td>
+                    <td style="text-align: right;">${Utils.escapeHTML(entry.location || '-')}</td>
+                    <td style="text-align: right;">${Utils.escapeHTML(entry.subLocation || '-')}</td>
                 </tr>
             `;
             }).join('');
@@ -6544,91 +6588,114 @@ const Training = {
                 const [year, monthNum] = month.split('-');
                 const monthDate = new Date(parseInt(year, 10), parseInt(monthNum, 10) - 1, 1);
                 const monthLabel = monthDate.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
-                periodInfo = ` - ${monthLabel}`;
+                periodInfo = monthLabel;
             } else if (dateRangeType === 'custom' && fromDate && toDate) {
-                const fromDateObj = new Date(fromDate);
-                const toDateObj = new Date(toDate);
-                const fromDateStr = fromDateObj.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-                const toDateStr = toDateObj.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-                periodInfo = ` - من ${fromDateStr} إلى ${toDateStr}`;
+                periodInfo = `من ${Utils.formatDate(fromDate)} إلى ${Utils.formatDate(toDate)}`;
+            } else {
+                periodInfo = 'جميع السجلات المعتمدة';
             }
 
+            const docCode = 'DOC-HSE-TRN-CON-01';
             const reportTitle = selectedContractorName 
-                ? `تقرير تدريبات المقاول: ${Utils.escapeHTML(selectedContractorName)}${periodInfo}`
-                : `تقرير تدريبات المقاولين${periodInfo}`;
-            
-            const content = `
-                <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px; color: #1E3A8A; font-weight: 700;">${selectedContractorName ? `ملخص تدريبات: ${Utils.escapeHTML(selectedContractorName)}` : 'ملخص تدريبات المقاولين'}</h2>
-                    ${selectedContractorName ? `<div style="margin-bottom: 16px; padding: 12px; background: #F0F9FF; border-right: 4px solid #1E3A8A; border-radius: 8px;">
-                        <strong style="color: #1E3A8A;">المقاول:</strong> <span style="color: #1F2937;">${Utils.escapeHTML(selectedContractorName)}</span>
-                    </div>` : ''}
-                    ${periodInfo ? `<div style="margin-bottom: 16px; padding: 12px; background: #FFF7ED; border-right: 4px solid #F59E0B; border-radius: 8px;">
-                        <strong style="color: #D97706;">الفترة:</strong> <span style="color: #1F2937;">${periodInfo.replace(' - ', '')}</span>
-                    </div>` : ''}
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px;">
-                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #EFF6FF; border: 1px solid #BFDBFE;">
-                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد البرامج</div>
-                            <div style="font-size: 26px; font-weight: 700; color: #1E3A8A;">${totalPrograms}</div>
-                        </div>
-                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #ECFDF5; border: 1px solid #BBF7D0;">
-                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">إجمالي المتدربين</div>
-                            <div style="font-size: 26px; font-weight: 700; color: #065F46;">${totalTrainees}</div>
-                        </div>
-                        <div style="flex: 1 1 200px; padding: 14px; border-radius: 10px; background: #FDF2F8; border: 1px solid #FBCFE8;">
-                            <div style="font-size: 12px; color: #BE185D; margin-bottom: 6px; font-weight: 600;">إجمالي ساعات التدريب</div>
-                            <div style="font-size: 26px; font-weight: 700; color: #9F1239;">${totalHours.toFixed(2)}</div>
-                        </div>
+                ? `تقرير تدريبات وتأهيل المقاول: ${selectedContractorName}`
+                : 'سجل تدريبات وتأهيل المقاولين والشركات الخارجية';
+            const subtitle = 'Contractor & Third-Party HSE Training & Induction Registry';
+
+            const headerHtml = this.getIsoPrintHeaderHtml(reportTitle, subtitle, docCode, 'Rev. 03', 'داخلي ومعتمد');
+            const footerHtml = this.getIsoPrintFooterHtml(docCode, 'Rev. 03', 'ISO 45001:2018 (Clause 7.2 Competence & 8.1.4 Contractors)');
+
+            const bodyContent = `
+                ${headerHtml}
+
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card" style="grid-column: span ${selectedContractorName ? '2' : '1'};">
+                        <div class="card-label">المقاول / الشركة الخارجية:</div>
+                        <div class="card-value" style="color: #1e3a8a;">${Utils.escapeHTML(selectedContractorName || 'جميع المقاولين والشركات')}</div>
+                    </div>
+                    <div class="info-card" style="grid-column: span ${selectedContractorName ? '2' : '1'};">
+                        <div class="card-label">الفترة الزمنية للتقرير:</div>
+                        <div class="card-value">${Utils.escapeHTML(periodInfo)}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">عدد البرامج المنعقدة:</div>
+                        <div class="card-value" style="color: #1e3a8a; font-size: 14px;">${totalPrograms}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إجمالي العمالة المتدربة:</div>
+                        <div class="card-value" style="color: #047857; font-size: 14px;">${totalTrainees} عامل</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إجمالي ساعات التدريب:</div>
+                        <div class="card-value" style="color: #b45309; font-size: 14px;">${totalHours.toFixed(2)} ساعة</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">حالة التوثيق:</div>
+                        <div class="card-value" style="color: #047857;">معتمد ومطابق</div>
                     </div>
                 </div>
-                <div style="margin-bottom: 16px;">
-                    <h3 style="font-size: 18px; margin-bottom: 12px; color: #1E3A8A; font-weight: 700; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px;">جدول التدريبات</h3>
+
+                <div style="margin-top: 14px; margin-bottom: 6px;">
+                    <h3 style="margin: 0; font-size: 13px; font-weight: 900; color: #1e3a8a;">
+                        <i class="fas fa-list-check" style="margin-left: 6px;"></i> تفاصيل جلسات التدريب والتأهيل الميداني للعمالة الخارجية
+                    </h3>
                 </div>
-                <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl;">
-                        <thead>
-                            <tr style="background: #1E3A8A; color: #FFFFFF;">
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">#</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">التاريخ</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">الموضوع</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">المدرب</th>
-                                ${!selectedContractorName ? '<th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">المقاول</th>' : ''}
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">عدد المتدربين</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">المدة (دقائق)</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">الساعات</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">المكان</th>
-                                <th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap;">المكان الفرعي</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml || `<tr><td colspan="${selectedContractorName ? '9' : '10'}" style="padding: 16px; text-align: center; border: 1px solid #E5E7EB; color: #6B7280;">لا توجد سجلات متاحة</td></tr>`}
-                        </tbody>
-                    </table>
+
+                <table class="iso-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;">#</th>
+                            <th style="width: 85px;">التاريخ</th>
+                            <th>الموضوع التدريبي</th>
+                            <th>المدرب</th>
+                            ${!selectedContractorName ? '<th>المقاول / الشركة</th>' : ''}
+                            <th style="width: 65px;">المتدربين</th>
+                            <th style="width: 65px;">المدة (د)</th>
+                            <th style="width: 65px;">الساعات</th>
+                            <th>الموقع</th>
+                            <th>الموقع الفرعي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml || `<tr><td colspan="${selectedContractorName ? '9' : '10'}" style="padding: 16px; text-align: center; color: #64748b;">لا توجد سجلات تدريب مطابقة للفترة المحددة</td></tr>`}
+                    </tbody>
+                </table>
+
+                <div class="signatures-grid">
+                    <div class="sig-card">
+                        <div class="sig-card-title">مسؤول تدريب وتأهيل المقاولين</div>
+                        <div class="sig-card-name">إدارة السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مشرف السلامة والصحة المهنية بالمصنع</div>
+                        <div class="sig-card-name">إدارة السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-card-name">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                        <div class="sig-line-area">الاعتماد والختم الرسمي</div>
+                    </div>
                 </div>
+
+                ${footerHtml}
             `;
 
-            const formCode = `CONTRACTOR-TRAINING-${contractorId ? contractorId.substring(0, 8) + '-' : ''}${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, reportTitle, content, false, true, { source: 'ContractorTraining', contractorId, contractorName: selectedContractorName }, new Date().toISOString(), new Date().toISOString())
-                : `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${reportTitle}</title><style>body { font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; padding: 20px; } table { width: 100%; border-collapse: collapse; } th, td { padding: 10px; border: 1px solid #E5E7EB; text-align: center; } thead th { background: #1E3A8A; color: #FFFFFF; }</style></head><body>${content}</body></html>`;
+            const pdfFileName = `${reportTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-            const pdfFileName = `${reportTitle.replace(/[\\/:*?"<>|]/g, '_')}.pdf`;
-            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
-                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: reportTitle })
-                : false);
+            if (mode === 'download') {
+                const ok = await this.downloadIsoReportAsPdf(reportTitle, bodyContent, pdfFileName, true);
+                Loading.hide();
+                if (ok) return true;
+            }
 
             Loading.hide();
-            if (downloaded) {
-                Notification.success(selectedContractorName 
-                    ? `تم تحميل تقرير تدريبات المقاول: ${selectedContractorName} بنجاح`
-                    : 'تم تحميل تقرير تدريبات المقاولين بنجاح');
-            } else {
-                Notification.error('تعذر تصدير تقرير تدريبات المقاولين بصيغة PDF');
-            }
+            return this.openIsoPrintWindow(reportTitle, bodyContent, true, '', pdfFileName);
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير تدريبات المقاولين:', error);
             Notification.error('تعذر إنشاء تقرير تدريبات المقاولين: ' + error.message);
+            return false;
         }
     },
 
@@ -7863,11 +7930,19 @@ const Training = {
                         في حال ترك أي حقل فارغ، سيتم تضمين جميع القيم الخاصة به في التقرير (جميع الموظفين، جميع الموضوعات، …إلخ).
                     </div>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
                     <button type="button" class="btn-secondary" data-action="close">إلغاء</button>
-                    <button type="button" class="btn-primary" id="generate-training-report-btn">
-                        <i class="fas fa-file-export ml-2"></i>
-                        إنشاء التقرير
+                    <button type="button" class="btn-secondary" id="export-training-report-excel-btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-file-excel text-green-600"></i>
+                        تصدير Excel
+                    </button>
+                    <button type="button" class="btn-secondary" id="preview-training-report-btn" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-print"></i>
+                        معاينة وطباعة
+                    </button>
+                    <button type="button" class="btn-primary" id="generate-training-report-btn" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                        <i class="fas fa-file-arrow-down"></i>
+                        تحميل مباشر (PDF)
                     </button>
                 </div>
             </div>
@@ -7882,22 +7957,40 @@ const Training = {
             if (event.target === modal) close();
         });
 
-        modal.querySelector('#generate-training-report-btn')?.addEventListener('click', async () => {
-            const filters = {
-                startDate: modal.querySelector('#training-report-start-date')?.value || '',
-                endDate: modal.querySelector('#training-report-end-date')?.value || '',
-                employees: this.getSelectedOptions('training-report-employees'),
-                contractors: this.getSelectedOptions('training-report-contractors'),
-                topics: this.getSelectedOptions('training-report-topics')
-            };
+        const getDialogFilters = () => ({
+            startDate: modal.querySelector('#training-report-start-date')?.value || '',
+            endDate: modal.querySelector('#training-report-end-date')?.value || '',
+            employees: this.getSelectedOptions('training-report-employees'),
+            contractors: this.getSelectedOptions('training-report-contractors'),
+            topics: this.getSelectedOptions('training-report-topics')
+        });
 
+        // زر التحميل المباشر PDF
+        modal.querySelector('#generate-training-report-btn')?.addEventListener('click', async () => {
+            const filters = getDialogFilters();
             if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
                 Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
                 return;
             }
-
             close();
-            await this.generateTrainingPDFReport(filters);
+            await this.generateTrainingPDFReport(filters, 'download');
+        });
+
+        // زر المعاينة والطباعة
+        modal.querySelector('#preview-training-report-btn')?.addEventListener('click', async () => {
+            const filters = getDialogFilters();
+            if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+                Notification.warning('تاريخ البداية يجب أن يكون قبل تاريخ النهاية');
+                return;
+            }
+            close();
+            await this.generateTrainingPDFReport(filters, 'print');
+        });
+
+        // زر تصدير Excel
+        modal.querySelector('#export-training-report-excel-btn')?.addEventListener('click', async () => {
+            close();
+            await this.exportToExcel();
         });
     },
 
@@ -7929,17 +8022,16 @@ const Training = {
         return Array.from(topics).sort((a, b) => a.localeCompare(b));
     },
 
-    async generateTrainingPDFReport(filters = {}) {
+    async generateTrainingPDFReport(filters = {}, mode = 'download') {
         this.ensureData();
         try {
-            Loading.show();
-            // ✅ تعريف isAdmin في بداية الدالة
-            const isAdmin = this.isCurrentUserAdmin();
+            Loading.show(mode === 'download' ? 'جاري تحميل تقرير التدريب المباشر...' : 'جاري تجهيز تقرير التدريب للمعاينة...');
             const trainings = AppState.appData.training || [];
             const filteredTrainings = this.filterTrainingsForReport(trainings, filters);
 
             const totalPrograms = filteredTrainings.length;
             const totalParticipants = filteredTrainings.reduce((acc, training) => acc + this.getParticipantsCount(training), 0);
+            const totalHours = filteredTrainings.reduce((acc, training) => acc + (parseFloat(training.hours) || this.calculateTrainingHours(this.cleanTime(training.startTime), this.cleanTime(training.endTime)) || 0), 0);
             const uniqueParticipants = new Set();
             filteredTrainings.forEach(training => {
                 const participants = Array.isArray(training.participants) ? training.participants : [];
@@ -7953,70 +8045,101 @@ const Training = {
             const rowsHtml = filteredTrainings.map((training, index) => this.renderTrainingReportRow(training, index + 1)).join('');
             const participantsBlocks = filteredTrainings.map(training => this.renderTrainingReportParticipantsBlock(training)).join('');
 
-            const content = `
-                <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px;">ملخص التقرير</h2>
-                    ${filtersSummary}
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px;">
-                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #EFF6FF; border: 1px solid #BFDBFE;">
-                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px;">عدد البرامج</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${totalPrograms}</div>
-                        </div>
-                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFDF5; border: 1px solid #BBF7D0;">
-                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px;">إجمالي المشاركين</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #065F46;">${totalParticipants}</div>
-                        </div>
-                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #FEF3C7; border: 1px solid #FCD34D;">
-                            <div style="font-size: 12px; color: #B45309; margin-bottom: 6px;">المشاركون المميزون</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #92400E;">${uniqueParticipants.size}</div>
-                        </div>
+            const formCode = 'DOC-HSE-TRN-REP-01';
+            const docTitle = 'تقرير البرامج التدريبية المعتمدة';
+            const subtitle = 'Comprehensive Training Programs & Participation Dossier';
+
+            const headerHtml = this.getIsoPrintHeaderHtml(docTitle, subtitle, formCode, 'Rev. 03', 'داخلي ومعتمد');
+            const footerHtml = this.getIsoPrintFooterHtml(formCode, 'Rev. 03', 'ISO 45001:2018 (Clause 7.2 Competence & 7.3 Awareness)');
+
+            const bodyContent = `
+                ${headerHtml}
+                
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card">
+                        <div class="card-label">عدد البرامج التدريبية:</div>
+                        <div class="card-value" style="color: #1e3a8a; font-size: 14px;">${totalPrograms}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إجمالي حضور المتدربين:</div>
+                        <div class="card-value" style="color: #047857; font-size: 14px;">${totalParticipants}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">المتدربون المميزون:</div>
+                        <div class="card-value" style="color: #b45309; font-size: 14px;">${uniqueParticipants.size}</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إجمالي ساعات التدريب:</div>
+                        <div class="card-value" style="color: #1e3a8a; font-size: 14px;">${totalHours.toFixed(1)} س</div>
                     </div>
                 </div>
-                
-                <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 12px;">جدول البرامج التدريبية</h2>
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr style="background: #1E3A8A; color: #FFFFFF;">
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: center;">#</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">اسم البرنامج</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">التاريخ</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">المدرب</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">النوع</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">المكان</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: center;">عدد المشاركين</th>
-                                <th style="padding: 10px; border: 1px solid #E5E7EB; text-align: right;">الحالة</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rowsHtml || `<tr><td colspan="8" style="padding: 16px; border: 1px solid #E5E7EB; text-align: center; color: #6B7280;">لا توجد برامج مطابقة للمعايير المحددة</td></tr>`}
-                        </tbody>
-                    </table>
+
+                <div style="margin-bottom: 12px;">
+                    ${filtersSummary}
                 </div>
-                
+
+                <div style="margin-top: 14px; margin-bottom: 6px;">
+                    <h3 style="margin: 0; font-size: 13px; font-weight: 900; color: #1e3a8a;">
+                        <i class="fas fa-list-check" style="margin-left: 6px;"></i> جدول البرامج التدريبية وسجل الانعقاد
+                    </h3>
+                </div>
+
+                <table class="iso-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 35px;">#</th>
+                            <th>اسم البرنامج التدريبي</th>
+                            <th style="width: 85px;">التاريخ</th>
+                            <th>المحاضر</th>
+                            <th style="width: 65px;">النوع</th>
+                            <th>الموقع / القاعة</th>
+                            <th style="width: 70px;">المشاركون</th>
+                            <th style="width: 75px;">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml || `<tr><td colspan="8" style="padding: 16px; text-align: center; color: #64748b;">لا توجد برامج مطابقة لمعايير التصفية المحددة</td></tr>`}
+                    </tbody>
+                </table>
+
                 ${participantsBlocks}
+
+                <div class="signatures-grid">
+                    <div class="sig-card">
+                        <div class="sig-card-title">إعداد ومراجعة السجلات</div>
+                        <div class="sig-card-name">أخصائي التدريب وتطوير الكفاءات</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">المراجعة والتحقق</div>
+                        <div class="sig-card-name">مشرف السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">الاعتماد النهائي</div>
+                        <div class="sig-card-name">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-line-area">الاعتماد والختم الرسمي</div>
+                    </div>
+                </div>
+
+                ${footerHtml}
             `;
 
-            const formCode = `TRAINING-REPORT-${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(formCode, 'تقرير التدريب', content, false, true, { filters }, filters.startDate || '', filters.endDate || '')
-                : `<html><body>${content}</body></html>`;
+            const pdfFileName = `تقرير_التدريب_المعتمد_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-            const pdfFileName = `تقرير_التدريب_${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
-                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: 'تقرير التدريب' })
-                : false);
+            if (mode === 'download') {
+                const ok = await this.downloadIsoReportAsPdf(docTitle, bodyContent, pdfFileName, false);
+                Loading.hide();
+                if (ok) return true;
+            }
 
             Loading.hide();
-            if (downloaded) {
-                Notification.success('تم تحميل تقرير التدريب بنجاح');
-            } else {
-                Notification.error('تعذر تصدير تقرير التدريب بصيغة PDF');
-            }
+            return this.openIsoPrintWindow(docTitle, bodyContent, false, '', pdfFileName);
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في إنشاء تقرير التدريب:', error);
             Notification.error('تعذر إنشاء تقرير التدريب: ' + error.message);
+            return false;
         }
     },
 
@@ -8315,11 +8438,19 @@ const Training = {
                     `;
                     })() : ''}
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;">
                     <button class="btn-secondary" onclick="this.closest('.modal-overlay').remove()">إغلاق</button>
-                    <button type="button" class="btn-secondary" onclick="Training.printTraining('${training.id}'); this.closest('.modal-overlay').remove();" style="display: inline-flex; align-items: center; gap: 6px;">
+                    <button type="button" class="btn-primary" onclick="Training.downloadTrainingPdf('${training.id}')" style="display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+                        <i class="fas fa-file-arrow-down"></i>
+                        تحميل كشف الحضور (PDF)
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="Training.printTraining('${training.id}')" style="display: inline-flex; align-items: center; gap: 6px;">
                         <i class="fas fa-print"></i>
-                        الطباعة
+                        معاينة وطباعة
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="Training.exportTraining('${training.id}')" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-file-excel text-green-600"></i>
+                        تصدير Excel
                     </button>
                     <button class="btn-primary" onclick="Training.editTraining('${training.id}'); this.closest('.modal-overlay').remove();">
                         <i class="fas fa-edit ml-2"></i>
@@ -8585,6 +8716,10 @@ const Training = {
         const printBtn = modalOverlay.querySelector('#training-form-print-btn');
         if (printBtn) {
             printBtn.onclick = () => this.printAttendanceFormFromScreen();
+        }
+        const dlBtn = modalOverlay.querySelector('#training-form-download-pdf-btn');
+        if (dlBtn) {
+            dlBtn.onclick = () => this.downloadAttendanceFormFromScreen();
         }
 
         this.initializeFormInteractions();
@@ -8919,8 +9054,11 @@ const Training = {
                 
                 <!-- 4. أزرار الإجراءات -->
                 <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 1rem; border-top: 1.5px solid #e2e8f0; flex-wrap: wrap;">
-                    <button type="button" id="training-form-print-btn" style="padding: 0.75rem 1.5rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #6366f1; background: #ffffff; color: #4338ca; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-                        <i class="fas fa-print"></i> طباعة كشف الحضور
+                    <button type="button" id="training-form-download-pdf-btn" onclick="Training.downloadAttendanceFormFromScreen()" style="padding: 0.75rem 1.4rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #059669; background: #ecfdf5; color: #047857; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-file-arrow-down"></i> تحميل كشف الحضور (PDF)
+                    </button>
+                    <button type="button" id="training-form-print-btn" onclick="Training.printAttendanceFormFromScreen()" style="padding: 0.75rem 1.4rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #6366f1; background: #ffffff; color: #4338ca; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-print"></i> معاينة وطباعة
                     </button>
                     <button type="button" onclick="Training.closeFormModal()" style="padding: 0.75rem 1.5rem; font-weight: 700; font-size: 0.9rem; border-radius: 10px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                         <i class="fas fa-times"></i> إلغاء
@@ -9811,68 +9949,47 @@ const Training = {
      */
     async _openTrainingAttendancePrint(innerHtml, options = {}) {
         const {
-            formCode = 'TRN-ATT',
-            docTitle = 'نموذج حضور تدريب',
+            formCode = 'DOC-HSE-TRN-ATT-01',
+            docTitle = 'نموذج حضور وتقييم برنامج تدريبي',
             createdAt = new Date().toISOString(),
             updatedAt = null,
             meta = {},
             successMessage = 'تم تجهيز نموذج الحضور بنجاح',
-            downloadDirect = true
+            downloadDirect = true,
+            isLandscape = false
         } = options;
 
-        const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-            ? FormHeader.generatePDFHTML(
-                formCode,
-                docTitle,
-                innerHtml,
-                false,
-                true,
-                Object.assign({ version: '1.0' }, meta),
-                createdAt,
-                updatedAt || createdAt
-            )
-            : `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${Utils.escapeHTML(docTitle)}</title></head><body>${innerHtml}</body></html>`;
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            docTitle,
+            'Official Training Attendance & Evaluation Record',
+            formCode,
+            'Rev. 03',
+            'داخلي ومعتمد'
+        );
 
-        if (downloadDirect !== false && typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
-            const fileName = `${docTitle.replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
-            const ok = await Utils.downloadHtmlAsPdf(htmlContent, fileName, { title: docTitle });
+        const footerHtml = this.getIsoPrintFooterHtml(
+            formCode,
+            'Rev. 03',
+            'ISO 45001:2018 (Clause 7.2 Competence & 7.3 Awareness)'
+        );
+
+        const bodyHtml = `
+            ${headerHtml}
+            ${innerHtml}
+            ${footerHtml}
+        `;
+
+        const fileName = `${String(docTitle).replace(/[\\/:*?"<>|]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+        if (downloadDirect !== false) {
+            Loading.show('جاري تحميل كشف الحضور بصيغة PDF...');
+            const ok = await this.downloadIsoReportAsPdf(docTitle, bodyHtml, fileName, isLandscape);
             Loading.hide();
-            if (ok) {
-                Notification.success(`تم تحميل ${docTitle} بصيغة PDF بنجاح`);
-                return true;
-            }
+            if (ok) return true;
         }
 
-        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const printWindow = window.open(url, '_blank');
-        if (printWindow) {
-            printWindow.onload = () => {
-                try {
-                    if (typeof requestAnimationFrame === 'function') {
-                        requestAnimationFrame(() => printWindow.print());
-                    } else {
-                        printWindow.print();
-                    }
-                    const cleanup = () => {
-                        try { URL.revokeObjectURL(url); } catch (e) {}
-                        try { printWindow.removeEventListener('afterprint', cleanup); } catch (e) {}
-                        Loading.hide();
-                        Notification.success(successMessage);
-                    };
-                    printWindow.addEventListener('afterprint', cleanup);
-                    setTimeout(cleanup, 1400);
-                } catch (e) {
-                    setTimeout(() => {
-                        try { URL.revokeObjectURL(url); } catch (err) {}
-                        Loading.hide();
-                    }, 1400);
-                }
-            };
-        } else {
-            Loading.hide();
-            Notification.error('يرجى السماح للنافذة المنبثقة لعرض التقرير');
-        }
+        Loading.hide();
+        return this.openIsoPrintWindow(docTitle, bodyHtml, isLandscape, '', fileName);
     },
 
     /**
@@ -9897,7 +10014,7 @@ const Training = {
                 code: p.code || p.employeeNumber || p.employeeCode || '—',
                 name: p.name || p.contractorName || '',
                 typeLabel: isContractor ? 'مقاول / عمالة خارجية' : 'موظف',
-                company: isContractor ? (p.company || p.contractorCompany || '—') : '—',
+                company: isContractor ? (p.company || p.contractorCompany || '—') : 'الشركة (ICAPP)',
                 position: p.position || p.jobTitle || '',
                 department: p.department || ''
             };
@@ -9915,8 +10032,8 @@ const Training = {
             trainer: training.trainer || '',
             startTime: this.cleanTime(training.startTime) || '',
             endTime: this.cleanTime(training.endTime) || '',
-            status: training.status || 'مخطط',
-            statusDisplay: training.status || 'مخطط',
+            status: training.status || 'مكتمل',
+            statusDisplay: training.status || 'مكتمل',
             topicsScientific: scientificSubject,
             participants
         };
@@ -9967,7 +10084,7 @@ const Training = {
                     code: code || '—',
                     name,
                     typeLabel: isContractor ? 'مقاول / عمالة خارجية' : 'موظف',
-                    company: isContractor ? (company || '—') : '—',
+                    company: isContractor ? (company || '—') : 'الشركة (ICAPP)',
                     position,
                     department
                 });
@@ -9994,137 +10111,185 @@ const Training = {
     },
 
     /**
-     * HTML نموذج حضور التدريب بنفس أقسام الواجهة (أنماط مضمّنة للطباعة).
+     * HTML نموذج حضور التدريب المعتمد بهوية ISO 45001 ومربعات التوقيع الثلاثية
      */
     buildTrainingAttendanceFormPrintHTML(payload) {
         const esc = (s) => Utils.escapeHTML(String(s ?? ''));
-        const title = payload.isEdit ? 'تعديل نموذج حضور تدريب' : 'نموذج حضور تدريب';
-        const sectionTitleStyle = 'margin:0;font-size:1.05rem;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:10px';
-        const iconBox = (bg) => `width:40px;height:40px;border-radius:10px;background:${bg};display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0`;
-        const fieldLabel = 'font-size:0.8rem;font-weight:600;color:#4b5563;margin:0 0 6px 0';
-        const fieldBox = 'background:#f9fafb;border:2px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-size:0.95rem;color:#111827;min-height:22px';
+        const participants = payload.participants || [];
 
-        const participantsRows = (payload.participants && payload.participants.length)
-            ? payload.participants.map((p, i) => `
+        const participantsRows = participants.length > 0
+            ? participants.map((p, i) => `
                 <tr>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem">${i + 1}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:center;font-size:0.85rem;font-weight:700;color:#1e40af">${esc(p.code)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem;font-weight:700">${esc(p.name)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.position)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;text-align:right;font-size:0.85rem">${esc(p.department)}</td>
-                    <td style="border:1px solid #d1d5db;padding:10px 8px;min-width:80px">&nbsp;</td>
+                    <td style="font-weight: 800;">${i + 1}</td>
+                    <td style="font-weight: 800; color: #1e3a8a; font-family: monospace, inherit;">${esc(p.code)}</td>
+                    <td style="text-align: right; font-weight: 700;">${esc(p.name)}</td>
+                    <td style="text-align: right;">${esc(p.position || '—')}</td>
+                    <td style="text-align: right;">${esc(p.department || '—')}</td>
+                    <td style="text-align: right;">${esc(p.company || 'ICAPP')}</td>
+                    <td style="min-width: 100px; height: 32px;"></td>
                 </tr>`).join('')
-            : '<tr><td colspan="6" style="border:1px solid #d1d5db;padding:16px;text-align:center;color:#6b7280">لا يوجد مشاركون في القائمة</td></tr>';
+            : '<tr><td colspan="7" style="padding: 18px; text-align: center; color: #64748b;">لا يوجد متدربون مسجلون في هذا البرنامج</td></tr>';
 
-        const scientificBlock = payload.topicsScientific
-            ? `<div style="grid-column:1/-1;margin-top:4px"><p style="${fieldLabel}">المادة العلمية / الموضوعات</p><div style="${fieldBox}">${esc(payload.topicsScientific)}</div></div>`
-            : '';
+        const scientificBlock = payload.topicsScientific ? `
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px;">
+                <div style="font-size: 10.5px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">المادة العلمية والمحاور التدريبية:</div>
+                <div style="font-size: 11px; color: #0f172a; line-height: 1.5;">${esc(payload.topicsScientific)}</div>
+            </div>
+        ` : '';
 
         return `
-<div class="training-attendance-print-root" style="font-family:'Cairo','Segoe UI',Tahoma,sans-serif;direction:rtl;text-align:right;color:#1f2937;-webkit-print-color-adjust:exact;print-color-adjust:exact">
-  <div style="border-radius:14px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.08);border:1px solid #e5e7eb">
-    <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:1.35rem 1.5rem">
-      <h1 style="margin:0;font-size:1.35rem;font-weight:700;color:#fff;display:flex;align-items:center;gap:12px">
-        <span style="${iconBox('rgba(255,255,255,0.25)')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></span>
-        ${esc(title)}
-      </h1>
-    </div>
-    <div style="padding:1.5rem 1.5rem 1.75rem;background:#fff">
-      <div style="background:linear-gradient(135deg,#eff6ff 0%,#eef2ff 100%);border:2px solid #bfdbfe;border-radius:14px;padding:1.35rem 1.25rem;margin-bottom:1.25rem">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.1rem;padding-bottom:0.65rem;border-bottom:2px solid rgba(191,219,254,0.7)">
-          <div style="${iconBox('#2563eb')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></div>
-          <h2 style="${sectionTitleStyle}">بيانات التدريب الأساسية</h2>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 20px">
-          <div><p style="${fieldLabel}">نوع التدريب</p><div style="${fieldBox}">${esc(payload.trainingTypeDisplay || payload.trainingType)}</div></div>
-          <div><p style="${fieldLabel}">تاريخ الانعقاد</p><div style="${fieldBox}">${esc(payload.dateDisplay)}</div></div>
-          <div><p style="${fieldLabel}">تاريخ انتهاء الصلاحية</p><div style="${fieldBox}">${esc(payload.expiryDateDisplay || '—')}</div></div>
-          <div><p style="${fieldLabel}">المصنع</p><div style="${fieldBox}">${esc(payload.factoryName)}</div></div>
-          <div><p style="${fieldLabel}">مكان التدريب</p><div style="${fieldBox}">${esc(payload.locationName)}</div></div>
-          <div style="grid-column:1/-1"><p style="${fieldLabel}">موضوع المحاضرة</p><div style="${fieldBox}">${esc(payload.topic)}</div></div>
-          <div><p style="${fieldLabel}">اسم المحاضر</p><div style="${fieldBox}">${esc(payload.trainer)}</div></div>
-          <div><p style="${fieldLabel}">وقت البدء</p><div style="${fieldBox}">${esc(payload.startTime)}</div></div>
-          <div><p style="${fieldLabel}">وقت الانتهاء</p><div style="${fieldBox}">${esc(payload.endTime)}</div></div>
-          <div><p style="${fieldLabel}">حالة البرنامج</p><div style="${fieldBox}">${esc(payload.statusDisplay || payload.status)}</div></div>
-          ${scientificBlock}
-        </div>
-      </div>
-      <div style="background:linear-gradient(135deg,#ecfdf5 0%,#d1fae5 100%);border:2px solid #a7f3d0;border-radius:14px;padding:1.35rem 1.25rem">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding-bottom:0.65rem;border-bottom:2px solid rgba(167,243,208,0.8)">
-          <div style="${iconBox('#059669')}"><span style="display:block;width:10px;height:10px;background:#fff;border-radius:2px;opacity:0.95"></span></div>
-          <h2 style="${sectionTitleStyle}">قائمة حضور الموظفين (${esc(String((payload.participants || []).length))})</h2>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:0.88rem">
-          <thead>
-            <tr style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff">
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:40px">م</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600">الكود الوظيفي</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">اسم الموظف</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">المسمى الوظيفي</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:right;font-weight:600">القسم/الإدارة</th>
-              <th style="border:1px solid #047857;padding:10px 6px;text-align:center;font-weight:600;width:80px">التوقيع</th>
-            </tr>
-          </thead>
-          <tbody>${participantsRows}</tbody>
-        </table>
-        <p style="margin:1.25rem 0 0;font-size:0.95rem;color:#374151">توقيع المحاضر: ________________________________ ${esc(payload.trainer)}</p>
-      </div>
-    </div>
-  </div>
-</div>`;
+            <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                <div class="info-card" style="grid-column: span 2;">
+                    <div class="card-label">اسم / موضوع البرنامج التدريبي:</div>
+                    <div class="card-value" style="color: #1e3a8a; font-size: 13px;">${esc(payload.topic || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">نوع التدريب:</div>
+                    <div class="card-value">${esc(payload.trainingTypeDisplay || payload.trainingType || 'داخلي')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">حالة البرنامج:</div>
+                    <div class="card-value" style="color: #047857;">${esc(payload.statusDisplay || payload.status || 'مكتمل')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تاريخ الانعقاد:</div>
+                    <div class="card-value">${esc(payload.dateDisplay || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">صلاحية التدريب حتى:</div>
+                    <div class="card-value">${esc(payload.expiryDateDisplay || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">المصنع / الموقع:</div>
+                    <div class="card-value">${esc(payload.factoryName || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">قاعة ومكان التدريب:</div>
+                    <div class="card-value">${esc(payload.locationName || '—')}</div>
+                </div>
+                <div class="info-card" style="grid-column: span 2;">
+                    <div class="card-label">اسم المحاضر / جهة التدريب:</div>
+                    <div class="card-value" style="color: #1e3a8a;">${esc(payload.trainer || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">وقت البدء:</div>
+                    <div class="card-value">${esc(payload.startTime || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">وقت الانتهاء:</div>
+                    <div class="card-value">${esc(payload.endTime || '—')}</div>
+                </div>
+            </div>
+
+            ${scientificBlock}
+
+            <div style="margin-top: 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 13px; font-weight: 900; color: #1e3a8a;">
+                    <i class="fas fa-users" style="margin-left: 6px;"></i> كشف حضور المتدربين والتوقيعات الرسمية (${participants.length} مشارك)
+                </h3>
+                <span style="font-size: 10px; color: #64748b; font-weight: 700;">يُشترط التوقيع الفعلي لكل متدرب لاكتمال اعتماد السجل</span>
+            </div>
+
+            <table class="iso-table">
+                <thead>
+                    <tr>
+                        <th style="width: 35px;">م</th>
+                        <th style="width: 90px;">الكود الوظيفي</th>
+                        <th>اسم المتدرب ثلاثياً</th>
+                        <th>المسمى الوظيفي</th>
+                        <th>القسم / الإدارة</th>
+                        <th>جهة العمل / الشركة</th>
+                        <th style="width: 120px;">التوقيع</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${participantsRows}
+                </tbody>
+            </table>
+
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 10px 14px; margin-top: 12px; font-size: 10.5px; line-height: 1.5; color: #334155; page-break-inside: avoid;">
+                <div style="font-weight: 800; color: #1e3a8a; margin-bottom: 2px;">إقرار واعتماد المحاضر / القائم بالتدريب:</div>
+                <div>أقر أنا المدرب / القائم بالتدريب المذكور أعلاه بإتمام تقديم البرنامج التدريبي الموضح وتغطية كافة المحاور النظرية والعملية المقررة وتقييم استيعاب المتدربين الحاضرين بنجاح.</div>
+            </div>
+
+            <div class="signatures-grid">
+                <div class="sig-card">
+                    <div class="sig-card-title">معد السجل / المدرب</div>
+                    <div class="sig-card-name">${esc(payload.trainer || 'المحاضر المعتمد')}</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مشرف / أخصائي السلامة والصحة المهنية</div>
+                    <div class="sig-card-name">إدارة السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">التوقيع والاعتماد</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                    <div class="sig-card-name">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="sig-line-area">الاعتماد النهائي والختم</div>
+                </div>
+            </div>
+        `;
     },
 
     /**
-     * طباعة نموذج الحضور من الشاشة الحالية (قبل أو بعد الحفظ) مع هيدر/فوتر النظام.
+     * طباعة أو تحميل نموذج الحضور من الشاشة الحالية
      */
-    printAttendanceFormFromScreen() {
+    async printAttendanceFormFromScreen(downloadDirect = false) {
         try {
             if (!document.getElementById('training-form')) {
                 Notification.warning('افتح نموذج حضور التدريب أولاً');
-                return;
+                return false;
             }
-            Loading.show();
+            Loading.show(downloadDirect ? 'جاري تحميل كشف الحضور...' : 'جاري تجهيز كشف الحضور للطباعة...');
             const payload = this.collectAttendanceFormDraftFromDOM();
             const body = this.buildTrainingAttendanceFormPrintHTML(payload);
             const formCode = this.currentEditId
-                ? `TRN-ATT-${String(this.currentEditId).substring(0, 8)}`
-                : `TRN-ATT-DRAFT-${Date.now()}`;
-            const docTitle = payload.topic ? `نموذج حضور تدريب — ${payload.topic}` : 'نموذج حضور تدريب';
-            this._openTrainingAttendancePrint(body, {
+                ? `DOC-HSE-TRN-ATT-${String(this.currentEditId).substring(0, 8)}`
+                : `DOC-HSE-TRN-ATT-DRAFT-${Date.now()}`;
+            const docTitle = payload.topic ? `نموذج حضور تدريب — ${payload.topic}` : 'نموذج حضور وتقييم برنامج تدريبي';
+
+            return await this._openTrainingAttendancePrint(body, {
                 formCode,
                 docTitle,
+                downloadDirect: !!downloadDirect,
                 meta: {
                     version: '1.0',
                     source: 'TrainingAttendanceForm',
-                    releaseDate: new Date().toISOString(),
-                    revisionDate: new Date().toISOString(),
-                    qrData: {
-                        type: 'TrainingAttendanceForm',
-                        editId: this.currentEditId || null,
-                        topic: payload.topic
-                    }
+                    topic: payload.topic
                 },
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
-                successMessage: 'تم تجهيز نموذج الحضور للطباعة'
+                successMessage: downloadDirect ? 'تم تحميل نموذج الحضور بنجاح' : 'تم تجهيز نموذج الحضور للمعاينة والطباعة'
             });
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في طباعة نموذج الحضور:', error);
-            Notification.error('حدث خطأ أثناء الطباعة: ' + (error?.message || ''));
+            Notification.error('حدث خطأ أثناء معالجة النموذج: ' + (error?.message || ''));
+            return false;
         }
     },
 
-    async printTraining(id) {
+    /**
+     * تحميل كشف الحضور من الشاشة الحالية بصيغة PDF مباشرة
+     */
+    async downloadAttendanceFormFromScreen() {
+        return this.printAttendanceFormFromScreen(true);
+    },
+
+    /**
+     * طباعة أو تحميل سجل تدريب فردي
+     */
+    async printTraining(id, downloadDirect = false) {
         this.ensureData();
         let training = AppState.appData.training.find(t => t.id === id);
         if (!training) {
-            Notification.error('البرنامج غير موجود');
-            return;
+            Notification.error('البرنامج التدريبي غير موجود');
+            return false;
         }
 
         try {
-            Loading.show();
+            Loading.show(downloadDirect ? 'جاري تحميل كشف التدريب...' : 'جاري تجهيز كشف التدريب للطباعة...');
             if (typeof GoogleIntegration !== 'undefined' && typeof GoogleIntegration.sendRequest === 'function') {
                 try {
                     const res = await GoogleIntegration.sendRequest({ action: 'getTraining', data: { trainingId: id } });
@@ -10137,32 +10302,36 @@ const Training = {
             const payload = this.trainingRecordToAttendancePrintPayload(training);
             const content = this.buildTrainingAttendanceFormPrintHTML(payload);
 
-            const formCode = training.isoCode || `TRN-ATT-${training.id?.substring(0, 8) || 'UNKNOWN'}`;
-            const docTitle = training.name ? `نموذج حضور تدريب — ${training.name}` : 'نموذج حضور تدريب';
+            const formCode = training.isoCode || `DOC-HSE-TRN-ATT-${training.id?.substring(0, 8) || '01'}`;
+            const docTitle = training.name ? `نموذج حضور تدريب — ${training.name}` : 'نموذج حضور وتقييم برنامج تدريبي';
 
-            this._openTrainingAttendancePrint(content, {
+            return await this._openTrainingAttendancePrint(content, {
                 formCode,
                 docTitle,
+                downloadDirect: !!downloadDirect,
                 meta: {
                     version: training.version || '1.0',
-                    releaseDate: training.startDate || training.createdAt,
-                    revisionDate: training.updatedAt || training.endDate || training.startDate,
-                    qrData: {
-                        type: 'Training',
-                        id: training.id,
-                        code: formCode,
-                        name: training.name
-                    }
+                    id: training.id,
+                    code: formCode,
+                    name: training.name
                 },
                 createdAt: training.createdAt || training.startDate,
                 updatedAt: training.updatedAt || training.endDate || training.createdAt,
-                successMessage: 'تم تجهيز نموذج الحضور للطباعة'
+                successMessage: downloadDirect ? 'تم تحميل نموذج الحضور بنجاح' : 'تم تجهيز نموذج الحضور للطباعة'
             });
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في الطباعة:', error);
-            Notification.error('حدث خطأ أثناء الطباعة: ' + error.message);
+            Utils.safeError('خطأ في طباعة التدريب:', error);
+            Notification.error('حدث خطأ: ' + error.message);
+            return false;
         }
+    },
+
+    /**
+     * تحميل كشف تدريب فردي كملف PDF مباشرة
+     */
+    async downloadTrainingPdf(id) {
+        return this.printTraining(id, true);
     },
 
     async exportTraining(id) {
@@ -12172,7 +12341,7 @@ const Training = {
             `).join('');
     },
 
-    exportAnalysisTrainersPDF() {
+    exportAnalysisTrainersPDF(mode = 'download') {
         const xctx = this._analysisExportContext;
         const limit = xctx && typeof xctx.limitTrainers === 'number'
             ? Math.min(500, Math.max(1, xctx.limitTrainers))
@@ -12182,7 +12351,7 @@ const Training = {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
             return;
         }
-        Loading.show('جاري تجهيز PDF...');
+        Loading.show(mode === 'download' ? 'جاري تحميل تقرير إحصائيات المدربين (PDF)...' : 'جاري تجهيز تقرير المدربين للطباعة...');
         const periodAr = this.getExportPeriodLabelAr();
         const slug = this.getExportPeriodExportSlug();
         const trainerFocus = xctx
@@ -12237,16 +12406,35 @@ const Training = {
                 </div>
                 ${extraCharts}
                 <p style="font-size: 11px; color: #6B7280;">يُحسب عدد البرامج من برامج التدريب ضمن فترة التقرير. «مجموع المشاركين» هو مجموع أعداد المشاركين في تلك البرامج.</p>
+
+                <div class="signatures-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; direction: rtl;">
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">إعداد ومراجعة الإحصائيات</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">أخصائي التدريب وتطوير الكفاءات</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">المراجعة والتحقق</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">مشرف السلامة والصحة المهنية</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">الاعتماد النهائي</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">مدير السلامة والصحة المهنية والبيئة</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والختم الرسمي</div>
+                    </div>
+                </div>
             `;
         this._openTrainingAttendancePrint(content, {
-            formCode: `TRN-ANL-TRAINERS-${slug}-${new Date().toISOString().slice(0, 10)}`,
-            docTitle: 'تقرير المدربين — تحليل التدريب',
+            formCode: 'DOC-HSE-TRN-KPI-01',
+            docTitle: 'تقرير مؤشرات وإحصائيات المدربين',
+            downloadDirect: mode === 'download',
             meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_trainers' },
-            successMessage: `تم تجهيز تقرير ${rows.length} مدرب للطباعة / PDF`
+            successMessage: mode === 'download' ? `تم تحميل تقرير ${rows.length} مدرب بنجاح` : `تم تجهيز تقرير ${rows.length} مدرب للطباعة`
         });
     },
 
-    exportAnalysisAttendeesPDF() {
+    exportAnalysisAttendeesPDF(mode = 'download') {
         const xctx = this._analysisExportContext;
         const limit = xctx && typeof xctx.limitAttendees === 'number'
             ? Math.min(2000, Math.max(1, xctx.limitAttendees))
@@ -12256,7 +12444,7 @@ const Training = {
             Notification.warning('لا توجد بيانات للتصدير في هذه الفترة');
             return;
         }
-        Loading.show('جاري تجهيز PDF...');
+        Loading.show(mode === 'download' ? 'جاري تحميل تقرير المتدربين (PDF)...' : 'جاري تجهيز تقرير المتدربين للطباعة...');
         const periodAr = this.getExportPeriodLabelAr();
         const slug = this.getExportPeriodExportSlug();
         const aud = xctx && xctx.audience
@@ -12346,12 +12534,31 @@ const Training = {
                 </div>
                 ${extraBlock}
                 <p style="font-size: 11px; color: #6B7280;">البيانات من سجل الحضور وفق خيارات الفترة والفئة${departmentFocus ? ' والإدارة' : ''} أعلاه.</p>
+
+                <div class="signatures-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; direction: rtl;">
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">إعداد وتدقيق البيانات</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">أخصائي التدريب وتطوير الكفاءات</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">المراجعة والتحقق</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">مشرف السلامة والصحة المهنية</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; text-align: center;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 12px; margin-bottom: 4px;">الاعتماد النهائي</div>
+                        <div style="font-size: 11px; color: #475569; margin-bottom: 24px;">مدير السلامة والصحة المهنية والبيئة</div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 6px; font-size: 10px; color: #64748b;">التوقيع والختم الرسمي</div>
+                    </div>
+                </div>
             `;
         this._openTrainingAttendancePrint(content, {
-            formCode: `TRN-ANL-ATTENDEES-${slug}-${new Date().toISOString().slice(0, 10)}`,
-            docTitle: 'تقرير المتدربين — تحليل التدريب',
+            formCode: 'DOC-HSE-TRN-KPI-02',
+            docTitle: 'تقرير مؤشرات وسجلات المتدربين',
+            downloadDirect: mode === 'download',
             meta: { period: periodAr, rowCount: rows.length, reportType: 'training_analysis_attendees', department: departmentFocus || undefined },
-            successMessage: `تم تجهيز تقرير ${rows.length} شخص للطباعة / PDF`
+            successMessage: mode === 'download' ? `تم تحميل تقرير ${rows.length} متدرب بنجاح` : `تم تجهيز تقرير ${rows.length} متدرب للطباعة`
         });
     },
 
@@ -13270,10 +13477,16 @@ const Training = {
             exportExcelBtn.onclick = () => this.exportAttendanceRegistryToExcel();
         }
         
-        // تصدير PDF
+        // تحميل PDF مباشر
+        const downloadPdfBtn = document.getElementById('attendance-registry-download-pdf');
+        if (downloadPdfBtn) {
+            downloadPdfBtn.onclick = () => this.exportAttendanceRegistryToPDF('download');
+        }
+
+        // معاينة وطباعة PDF
         const exportPdfBtn = document.getElementById('attendance-registry-export-pdf');
         if (exportPdfBtn) {
-            exportPdfBtn.onclick = () => this.exportAttendanceRegistryToPDF();
+            exportPdfBtn.onclick = () => this.exportAttendanceRegistryToPDF('print');
         }
 
         const moreBtn = document.getElementById('attendance-registry-show-more');
@@ -13551,185 +13764,178 @@ const Training = {
     },
     
     /**
-     * تصدير سجل التدريب إلى PDF
+     * تصدير السجل العام لحضور تدريبات العاملين إلى PDF (تحميل مباشر أو طباعة ومعاينة)
+     * DOC-HSE-TRN-REG-01 | Rev. 03 | ISO 45001:2018 §7.2
      */
-    async exportAttendanceRegistryToPDF() {
+    async exportAttendanceRegistryToPDF(mode = 'download') {
         try {
             this.ensureData();
-            const registry = AppState.appData.trainingAttendance || [];
-            
-            if (registry.length === 0) {
-                Notification.warning('لا توجد بيانات للتصدير');
+            const rawRegistry = AppState.appData.trainingAttendance || [];
+            if (rawRegistry.length === 0) {
+                Notification.warning('لا توجد بيانات في سجل التدريب للتصدير');
                 return;
             }
-            
-            Loading.show('جاري تصدير PDF...');
-            
-            // إعداد البيانات
-            const headers = ['م', 'التاريخ', 'نوع التدريب', 'المصنع', 'الكود', 'الاسم', 'الوظيفة', 'الإدارة', 'موضوع المحاضرة', 'اسم المحاضر', 'وقت البدء', 'وقت الانتهاء', 'إجمالي الساعات'];
-            const rows = registry.map((record, index) => [
-                index + 1,
-                record.date ? Utils.formatDate(record.date) : '',
-                record.trainingType || 'داخلي',
-                record.factoryName || record.factory || '',
-                record.employeeCode || '',
-                record.employeeName || '',
-                record.position || '',
-                record.department || '',
-                record.topic || '',
-                record.trainer || '',
-                this.cleanTime(record.startTime) || '',
-                this.cleanTime(record.endTime) || '',
-                (record.totalHours || '0') + ' ساعة'
-            ]);
-            
-            // بناء محتوى HTML للطباعة
-            const tableRows = rows.map((row, idx) => `
-                <tr style="${idx % 2 === 0 ? 'background-color: #FFFFFF;' : 'background-color: #F9FAFB;'}">
-                    ${row.map(cell => `<td style="padding: 10px 8px; border: 1px solid #E5E7EB; text-align: center; font-size: 11px; line-height: 1.5;">${Utils.escapeHTML(String(cell))}</td>`).join('')}
-                </tr>
-            `).join('');
-            
-            const content = `
-                <div style="margin-bottom: 24px;">
-                    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 20px;">
-                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #EFF6FF; border: 1px solid #BFDBFE;">
-                            <div style="font-size: 12px; color: #1D4ED8; margin-bottom: 6px; font-weight: 600;">عدد السجلات</div>
-                            <div style="font-size: 24px; font-weight: 700; color: #1E3A8A;">${registry.length}</div>
-                        </div>
-                        <div style="flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; background: #ECFDF5; border: 1px solid #BBF7D0;">
-                            <div style="font-size: 12px; color: #047857; margin-bottom: 6px; font-weight: 600;">تاريخ الإصدار</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #065F46;">${Utils.formatDate(new Date().toISOString())}</div>
-                        </div>
+
+            // تطبيق الفلاتر النشطة إن وجدت
+            const searchTerm = (document.getElementById('attendance-registry-search')?.value || '').toLowerCase();
+            const filterEmployee = (document.getElementById('attendance-filter-employee')?.value || '').trim().toLowerCase();
+            const filterTopic = (document.getElementById('attendance-filter-topic')?.value || '').trim().toLowerCase();
+            const filterDepartment = (document.getElementById('attendance-filter-department')?.value || '').trim().toLowerCase();
+            const filterFactory = (document.getElementById('attendance-filter-factory')?.value || document.getElementById('attendance-registry-filter-factory')?.value || '').trim().toLowerCase();
+            const filterTrainer = (document.getElementById('attendance-filter-trainer')?.value || '').trim().toLowerCase();
+            const filterDateFrom = document.getElementById('attendance-filter-date-from')?.value || '';
+            const filterDateTo = document.getElementById('attendance-filter-date-to')?.value || '';
+
+            const hasActiveFilter = !!(searchTerm || filterEmployee || filterTopic || filterDepartment || filterFactory || filterTrainer || filterDateFrom || filterDateTo);
+
+            const registry = hasActiveFilter ? rawRegistry.filter(record => {
+                const employee = String(record.employeeName || record.employee || '').toLowerCase();
+                const code = String(record.employeeCode || '').toLowerCase();
+                const topic = String(record.topic || '').toLowerCase();
+                const trainer = String(record.trainer || record.trainerName || record.conductedBy || '').toLowerCase();
+                const department = String(record.department || '').toLowerCase();
+                const factory = String(record.factoryName || record.factory || '').toLowerCase();
+                const position = String(record.position || '').toLowerCase();
+                const matchesSearch = !searchTerm || employee.includes(searchTerm) || code.includes(searchTerm) || topic.includes(searchTerm) || trainer.includes(searchTerm) || department.includes(searchTerm) || factory.includes(searchTerm) || position.includes(searchTerm);
+                const matchesEmployee = !filterEmployee || employee.includes(filterEmployee) || code.includes(filterEmployee);
+                const matchesTopic = !filterTopic || topic.includes(filterTopic);
+                const matchesDepartment = !filterDepartment || department.includes(filterDepartment);
+                const matchesFactory = !filterFactory || factory.includes(filterFactory) || String(record.factory || '').toLowerCase() === filterFactory;
+                const matchesTrainer = !filterTrainer || trainer.includes(filterTrainer);
+                const recordDate = this._trainingDateKey ? this._trainingDateKey(record.date || record.trainingDate || record.createdAt) : String(record.date || '').slice(0, 10);
+                const matchesDateFrom = !filterDateFrom || (!!recordDate && recordDate >= filterDateFrom);
+                const matchesDateTo = !filterDateTo || (!!recordDate && recordDate <= filterDateTo);
+                return matchesSearch && matchesEmployee && matchesTopic && matchesDepartment && matchesFactory && matchesTrainer && matchesDateFrom && matchesDateTo;
+            }) : rawRegistry;
+
+            if (registry.length === 0) {
+                Notification.warning('لا توجد سجلات مطابقة لمعايير البحث والتصفية المحددة');
+                return;
+            }
+
+            Loading.show(mode === 'download' ? 'جاري تحميل السجل العام للتدريب بصيغة PDF...' : 'جاري تجهيز السجل العام للطباعة والمعاينة...');
+
+            const formCode = 'DOC-HSE-TRN-REG-01';
+            const docTitle = 'السجل العام لحضور تدريبات العاملين';
+            const subtitle = 'General Employee Training & Attendance Register';
+
+            // إحصائيات المؤشرات
+            let totalHoursNum = 0;
+            const uniquePersons = new Set();
+            registry.forEach(r => {
+                const h = parseFloat(r.totalHours || r.hours || 0);
+                if (Number.isFinite(h)) totalHoursNum += h;
+                const pKey = r.employeeCode || r.employeeName || '';
+                if (pKey) uniquePersons.add(pKey);
+            });
+
+            // إعداد البيانات للجدول
+            const headers = ['م', 'التاريخ', 'نوع التدريب', 'الموقع / المصنع', 'كود الموظف', 'اسم المتدرب', 'الوظيفة', 'الإدارة', 'موضوع التدريب', 'المحاضر', 'وقت البدء', 'وقت الانتهاء', 'الساعات'];
+            const tableRowsHtml = registry.map((record, index) => {
+                const dateStr = record.date ? Utils.formatDate(record.date) : '—';
+                const sTime = this.cleanTime(record.startTime) || '—';
+                const eTime = this.cleanTime(record.endTime) || '—';
+                const hoursDisplay = Number.isFinite(parseFloat(record.totalHours)) ? parseFloat(record.totalHours).toFixed(1) + ' س' : (record.totalHours ? record.totalHours + ' س' : '—');
+                const rowBg = index % 2 === 0 ? '#FFFFFF' : '#F8FAFC';
+
+                return `
+                    <tr style="background-color: ${rowBg};">
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-weight: 600; font-size: 10px;">${index + 1}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px; white-space: nowrap;">${Utils.escapeHTML(dateStr)}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px;">${Utils.escapeHTML(record.trainingType || 'داخلي')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px;">${Utils.escapeHTML(record.factoryName || record.factory || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px; font-weight: 600; color: #1e3a8a;">${Utils.escapeHTML(record.employeeCode || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: right; font-size: 10px; font-weight: 700; color: #0f172a;">${Utils.escapeHTML(record.employeeName || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: right; font-size: 10px;">${Utils.escapeHTML(record.position || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: right; font-size: 10px;">${Utils.escapeHTML(record.department || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: right; font-size: 10px; font-weight: 600; color: #0369a1;">${Utils.escapeHTML(record.topic || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px;">${Utils.escapeHTML(record.trainer || '—')}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px;">${Utils.escapeHTML(sTime)}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-size: 10px;">${Utils.escapeHTML(eTime)}</td>
+                        <td style="padding: 7px 5px; border: 1px solid #E2E8F0; text-align: center; font-weight: 700; font-size: 10px; color: #15803d;">${Utils.escapeHTML(hoursDisplay)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const headerHtml = this.getIsoPrintHeaderHtml(docTitle, subtitle, formCode, 'Rev. 03', 'داخلي ومعتمد');
+            const footerHtml = this.getIsoPrintFooterHtml(formCode, 'Rev. 03', 'ISO 45001:2018 (Clause 7.2 Competence & 7.3 Awareness)');
+
+            const scopeLabel = hasActiveFilter ? 'سجلات مخصصة وفق التصفية الحالية' : 'كافة السجلات المسجلة بالنظام';
+
+            const bodyContent = `
+                ${headerHtml}
+
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card">
+                        <div class="card-label">إجمالي السجلات المسجلة:</div>
+                        <div class="card-value" style="color: #1e3a8a; font-size: 14px;">${registry.length} سجل</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">المتدربون المشمولون:</div>
+                        <div class="card-value" style="color: #047857; font-size: 14px;">${uniquePersons.size} متدرب</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">مجموع ساعات التدريب:</div>
+                        <div class="card-value" style="color: #b45309; font-size: 14px;">${totalHoursNum.toFixed(1)} ساعة</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">نطاق السجل:</div>
+                        <div class="card-value" style="color: #334155; font-size: 12px;">${scopeLabel}</div>
                     </div>
                 </div>
-                
-                <div style="margin-bottom: 24px;">
-                    <h2 style="font-size: 20px; margin-bottom: 16px; color: #1E3A8A; font-weight: 700; border-bottom: 3px solid #1E3A8A; padding-bottom: 8px;">جدول سجل التدريب للموظفين</h2>
-                    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-                        <table style="width: 100%; border-collapse: collapse; font-size: 11px; direction: rtl; min-width: 100%;">
-                            <thead>
-                                <tr style="background: #1E3A8A; color: #FFFFFF;">
-                                    ${headers.map(header => `<th style="padding: 12px 8px; border: 1px solid #1E40AF; text-align: center; font-weight: 700; white-space: nowrap; font-size: 11px;">${Utils.escapeHTML(header)}</th>`).join('')}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${tableRows}
-                            </tbody>
-                        </table>
+
+                <div style="margin-bottom: 16px;">
+                    <table class="report-table" style="width: 100%; direction: rtl;">
+                        <thead>
+                            <tr style="background: #1e3a8a; color: #ffffff;">
+                                ${headers.map(h => `<th style="padding: 9px 5px; border: 1px solid #1e40af; font-size: 10px; font-weight: 700; text-align: center;">${Utils.escapeHTML(h)}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="signatures-grid" style="margin-top: 20px;">
+                    <div class="sig-card">
+                        <div class="sig-card-title">إعداد وتوثيق السجل</div>
+                        <div class="sig-card-name">أخصائي التدريب وتطوير الكفاءات</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">المراجعة والتحقق</div>
+                        <div class="sig-card-name">مشرف السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">الاعتماد النهائي</div>
+                        <div class="sig-card-name">مدير السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-line-area">التوقيع والختم الرسمي</div>
                     </div>
                 </div>
+
+                ${footerHtml}
             `;
-            
-            const formCode = `TRAINING-ATTENDANCE-${new Date().toISOString().slice(0, 10)}`;
-            const htmlContent = typeof FormHeader !== 'undefined' && typeof FormHeader.generatePDFHTML === 'function'
-                ? FormHeader.generatePDFHTML(
-                    formCode,
-                    'سجل التدريب للموظفين',
-                    content,
-                    false,
-                    true,
-                    { 
-                        version: '1.0',
-                        recordCount: registry.length
-                    },
-                    new Date().toISOString(),
-                    new Date().toISOString()
-                )
-                : `
-                <!DOCTYPE html>
-                <html dir="rtl" lang="ar">
-                <head>
-                    <meta charset="UTF-8">
-                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                    <title>سجل التدريب للموظفين</title>
-                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-                    <style>
-                        @media print {
-                            @page { 
-                                margin: 1.5cm 1cm; 
-                                size: A4 landscape; 
-                            }
-                            body { 
-                                margin: 0; 
-                                padding: 15px; 
-                            }
-                            .no-print { 
-                                display: none !important; 
-                            }
-                        }
-                        * {
-                            box-sizing: border-box;
-                        }
-                        body {
-                            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                            direction: rtl;
-                            text-align: right;
-                            padding: 20px;
-                            color: #1f2937;
-                            line-height: 1.6;
-                            margin: 0;
-                            background: #ffffff;
-                        }
-                        h1, h2 {
-                            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                            font-weight: 700;
-                        }
-                        table {
-                            width: 100%;
-                            border-collapse: collapse;
-                            margin: 20px 0;
-                            font-size: 11px;
-                            direction: rtl;
-                            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                        }
-                        th, td {
-                            padding: 10px 8px;
-                            border: 1px solid #E5E7EB;
-                            text-align: center;
-                            font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-                        }
-                        thead th {
-                            background-color: #1E3A8A;
-                            color: #FFFFFF;
-                            font-weight: 700;
-                            font-size: 11px;
-                            white-space: nowrap;
-                        }
-                        tbody tr:nth-child(even) {
-                            background-color: #F9FAFB;
-                        }
-                        tbody tr:hover {
-                            background-color: #F3F4F6;
-                        }
-                        tbody td {
-                            font-size: 11px;
-                            line-height: 1.5;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <h1 style="text-align: center; color: #1E3A8A; margin-bottom: 20px; font-size: 24px;">سجل التدريب للموظفين</h1>
-                    ${content}
-                </body>
-                </html>
-            `;
-            
-            const pdfFileName = `سجل_تدريب_الموظفين_${new Date().toISOString().slice(0, 10)}.pdf`;
-            const downloaded = await (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function'
-                ? Utils.downloadHtmlAsPdf(htmlContent, pdfFileName, { title: 'سجل التدريب للموظفين' })
-                : false);
+
+            const fileName = `السجل_العام_لتدريب_الموظفين_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+            if (mode === 'download') {
+                const ok = await this.downloadIsoReportAsPdf(docTitle, bodyContent, fileName, true);
+                Loading.hide();
+                if (ok) {
+                    Notification.success(`تم تحميل السجل العام للتدريب (${registry.length} سجل) بصيغة PDF بنجاح`);
+                    return true;
+                }
+            }
 
             Loading.hide();
-            if (downloaded) {
-                Notification.success(`تم تحميل سجل تدريب الموظفين (${registry.length} سجل) بنجاح`);
-            } else {
-                Notification.error('تعذر تصدير سجل التدريب بصيغة PDF');
-            }
+            return this.openIsoPrintWindow(docTitle, bodyContent, true, '', fileName);
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + (error.message || 'خطأ غير معروف'));
+            Utils.safeError('خطأ في تصدير PDF لسجل التدريب:', error);
+            Notification.error('فشل تصدير سجل التدريب: ' + (error.message || 'خطأ غير معروف'));
+            return false;
         }
     },
     
@@ -15247,26 +15453,25 @@ const Training = {
                 if (p > 0) pdf.addPage();
 
                 // ══ HEADER ══
-                pdf.setFillColor(49, 46, 129); // indigo-900
+                pdf.setFillColor(30, 58, 138); // blue-900 corporate
                 pdf.rect(0, 0, pdfW, headerH, 'F');
                 // شريط فاتح أسفل الهيدر
-                pdf.setFillColor(79, 70, 229); // indigo-600
+                pdf.setFillColor(37, 99, 235); // blue-600
                 pdf.rect(0, headerH - 3, pdfW, 3, 'F');
-                // عنوان (English only — jsPDF لا يدعم Arabic)
+                // عنوان الشركة والإدارة
                 pdf.setTextColor(255, 255, 255);
-                pdf.setFontSize(13);
+                pdf.setFontSize(11);
                 pdf.setFont(undefined, 'bold');
-                pdf.text('Training Analytics Report', margin, 9, { align: 'left' });
+                pdf.text('ICAPP — Occupational Safety, Health & Environment Department', margin, 8, { align: 'left' });
                 pdf.setFontSize(8);
                 pdf.setFont(undefined, 'normal');
-                pdf.text('HSE Management System — Training Analysis Dashboard', margin, 15, { align: 'left' });
-                // التاريخ + الصفحة (يمين — English date format)
-                // (enDate/enTime defined above)
+                pdf.text('Training Performance Analytics & KPI Dashboard — ISO 45001:2018 §7.2', margin, 14, { align: 'left' });
+                // كود الوثيقة والتاريخ ورقم الصفحة
+                pdf.setFontSize(8);
+                pdf.text('DOC-HSE-TRN-KPI-03 | Rev. 03', pdfW - margin, 8, { align: 'right' });
                 pdf.setFontSize(8.5);
-                pdf.text(`${enDate}  ${enTime}`, pdfW - margin, 9, { align: 'right' });
-                pdf.setFontSize(9);
                 pdf.setFont(undefined, 'bold');
-                pdf.text(`Page ${p + 1} of ${totalPages}`, pdfW - margin, 15.5, { align: 'right' });
+                pdf.text(`Page ${p + 1} of ${totalPages}  •  ${enDate}`, pdfW - margin, 14, { align: 'right' });
                 pdf.setTextColor(0, 0, 0);
 
                 // ══ CONTENT ══
@@ -15280,36 +15485,39 @@ const Training = {
                 // ══ FOOTER ══
                 const footerY = pdfH - footerH;
                 // خط فاصل
-                pdf.setDrawColor(199, 210, 254);
+                pdf.setDrawColor(203, 213, 225);
                 pdf.setLineWidth(0.4);
                 pdf.line(0, footerY, pdfW, footerY);
                 // خلفية فاتحة
-                pdf.setFillColor(238, 242, 255); // indigo-50
+                pdf.setFillColor(248, 250, 252);
                 pdf.rect(0, footerY, pdfW, footerH, 'F');
                 // نص اليسار
                 pdf.setFontSize(7.5);
-                pdf.setTextColor(67, 56, 202); // indigo-700
+                pdf.setTextColor(30, 58, 138); // blue-900
                 pdf.setFont(undefined, 'bold');
-                pdf.text('HSE Management System', margin, footerY + 5, { align: 'left' });
+                pdf.text('International Company for Agricultural Production & Processing (ICAPP)', margin, footerY + 5, { align: 'left' });
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(100, 116, 139);
-                pdf.text('Training Analysis Report — Confidential', margin, footerY + 10, { align: 'left' });
+                pdf.text('HSE Training Management System — Confidential & Controlled Document', margin, footerY + 10, { align: 'left' });
                 // رقم الصفحة (وسط)
                 pdf.setFontSize(8);
-                pdf.setTextColor(79, 70, 229);
+                pdf.setTextColor(37, 99, 235);
                 pdf.setFont(undefined, 'bold');
                 pdf.text(`${p + 1} / ${totalPages}`, pdfW / 2, footerY + 7.5, { align: 'center' });
-                // التاريخ (يمين — English)
+                // التاريخ والاعتماد (يمين)
                 pdf.setFont(undefined, 'normal');
                 pdf.setFontSize(7);
                 pdf.setTextColor(100, 116, 139);
-                pdf.text(enDate, pdfW - margin, footerY + 5, { align: 'right' });
-                pdf.text(enTime, pdfW - margin, footerY + 10, { align: 'right' });
+                pdf.text(`Generated: ${enDate} ${enTime}`, pdfW - margin, footerY + 5, { align: 'right' });
+                pdf.text('ISO 45001:2018 Standard Compliance', pdfW - margin, footerY + 10, { align: 'right' });
             }
-            pdf.save(`تقرير-تحليل-التدريب-${new Date().toISOString().slice(0, 10)}.pdf`);
+            const pdfFileName = `لوحة_تحليلات_ومؤشرات_التدريب_${new Date().toISOString().slice(0, 10)}.pdf`;
+            pdf.save(pdfFileName);
+            Notification.success('تم تحميل لوحة مؤشرات وتحليلات منظومة التدريب بصيغة PDF بنجاح');
         } catch (err) {
             console.error('Training PDF export error:', err);
+            Notification.error('حدث خطأ أثناء تصدير لوحة التحليلات بصيغة PDF: ' + (err.message || ''));
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
@@ -15689,8 +15897,11 @@ const Training = {
                                     <i class="fas fa-search legal-search-icon"></i>
                                     <input type="text" id="legal-training-search" class="legal-search-input" placeholder="بحث في السجل...">
                                 </div>
-                                <button id="export-legal-training-pdf-btn" class="legal-action-btn btn-pdf" title="تصدير PDF">
-                                    <i class="fas fa-file-pdf"></i>
+                                <button id="export-legal-training-pdf-btn" class="legal-action-btn btn-pdf" title="تحميل سجل التدريبات القانونية PDF مباشرة">
+                                    <i class="fas fa-file-download"></i>
+                                </button>
+                                <button id="print-legal-training-pdf-btn" class="legal-action-btn" style="background:#475569; color:#fff;" title="معاينة وطباعة سجل التدريبات القانونية">
+                                    <i class="fas fa-print"></i>
                                 </button>
                                 <button id="export-legal-training-excel-btn" class="legal-action-btn btn-excel" title="تصدير Excel">
                                     <i class="fas fa-file-excel"></i>
@@ -15880,8 +16091,13 @@ const Training = {
             exportExcel.dataset.bound = '1';
         }
         if (exportPdf && !exportPdf.dataset.bound) {
-            exportPdf.addEventListener('click', () => this.exportLegalTrainingPdf());
+            exportPdf.addEventListener('click', () => this.exportLegalTrainingPdf('download'));
             exportPdf.dataset.bound = '1';
+        }
+        const printPdf = document.getElementById('print-legal-training-pdf-btn');
+        if (printPdf && !printPdf.dataset.bound) {
+            printPdf.addEventListener('click', () => this.exportLegalTrainingPdf('print'));
+            printPdf.dataset.bound = '1';
         }
 
         // ربط أزرار التبديل بين سجل التشريعات والتدريبات القانونية
@@ -16897,162 +17113,145 @@ const Training = {
         }
     },
 
-    async exportLegalTrainingPdf() {
+    async exportLegalTrainingPdf(mode = 'download') {
         try {
             this.ensureData();
             const items = AppState.appData.legalTrainings || [];
             if (items.length === 0) {
                 if (typeof Notification !== 'undefined' && Notification.warning) {
-                    Notification.warning('لا توجد بيانات للتصدير');
+                    Notification.warning('لا توجد بيانات في سجل التدريبات القانونية للتصدير');
                 }
                 return;
             }
 
             const origBtn = document.getElementById('export-legal-training-pdf-btn');
-            if (origBtn) { origBtn.disabled = true; origBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري التصدير...'; }
+            if (origBtn) { origBtn.disabled = true; origBtn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري التجهيز...'; }
 
-            const loadLib = (src, check) => new Promise((res, rej) => {
-                if (check()) return res();
-                const s = document.createElement('script'); s.src = src; s.onload = () => res(); s.onerror = () => rej(); document.head.appendChild(s);
-            });
-
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => typeof html2canvas !== 'undefined');
-            await loadLib('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => typeof window.jspdf !== 'undefined');
+            Loading.show(mode === 'download' ? 'جاري تحميل سجل التدريبات القانونية بصيغة PDF...' : 'جاري تجهيز سجل التدريبات القانونية للطباعة...');
 
             const stats = this.getLegalTrainingStats();
-            const container = document.getElementById('legal-training-container');
-            const origHtml = container ? container.innerHTML : '';
+            const formCode = 'DOC-HSE-TRN-LEG-01';
+            const docTitle = 'سجل التدريبات القانونية والإلزامية';
+            const subtitle = 'Mandatory & Legal Training Compliance Registry';
 
-            const companyName = (AppState && AppState.companySettings && AppState.companySettings.name)
-                ? String(AppState.companySettings.name).trim()
-                : (AppState && AppState.companyName) ? String(AppState.companyName).trim() : '';
-            const logoUrl = (AppState && (AppState.companyLogo || (AppState.companySettings && AppState.companySettings.logo)))
-                ? (AppState.companyLogo || AppState.companySettings.logo || '') : '';
-            const logoHtml = logoUrl ? `<img src="${logoUrl}" alt="" style="max-height:50px; max-width:130px; object-fit:contain;">` : '';
+            const headerHtml = this.getIsoPrintHeaderHtml(docTitle, subtitle, formCode, 'Rev. 03', 'داخلي ومعتمد');
+            const footerHtml = this.getIsoPrintFooterHtml(formCode, 'Rev. 03', 'ISO 45001:2018 (Clause 7.2 Competence & Clause 6.1.3 Legal Requirements)');
 
-            const reportHtml = `
-                <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, sans-serif; padding: 30px; background: #fff; direction: rtl;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 20px;">
-                        <div style="text-align: right;">
-                            ${companyName ? `<div style="font-size: 18px; font-weight: 700; color: #1e40af; margin-bottom: 4px; white-space: nowrap; word-break: keep-all;">${companyName}</div>` : ''}
-                            <h1 style="font-size: 20px; color: #1e293b; margin: 0 0 2px;">تقرير التدريبات القانونية</h1>
-                            <p style="font-size: 12px; color: #64748b; margin: 0;">الامتثال للقوانين المصرية — Egyptian Law Compliance</p>
-                        </div>
-                        ${logoHtml ? `<div style="flex-shrink: 0;">${logoHtml}</div>` : ''}
+            const headers = ['م', 'عنوان التدريب', 'التصنيف', 'المرجع القانوني', 'الدورية', 'التاريخ المخطط', 'الحالة', 'الامتثال', 'تاريخ الانتهاء'];
+            const tableRowsHtml = items.map((t, i) => {
+                const statusBadgeStyle = t.status === 'مكتمل'
+                    ? 'background: #dcfce7; color: #166534;'
+                    : t.status === 'مخطط'
+                    ? 'background: #dbeafe; color: #1e40af;'
+                    : t.status === 'قيد التنفيذ'
+                    ? 'background: #fef3c7; color: #92400e;'
+                    : 'background: #f1f5f9; color: #475569;';
+
+                const compBadgeStyle = t.complianceStatus === 'ممتثل'
+                    ? 'background: #dcfce7; color: #166534;'
+                    : t.complianceStatus === 'غير ممتثل'
+                    ? 'background: #fecaca; color: #991b1b;'
+                    : t.complianceStatus === 'قارب على الانتهاء'
+                    ? 'background: #fef3c7; color: #92400e;'
+                    : 'background: #dbeafe; color: #1e40af;';
+
+                return `
+                    <tr style="background: ${i % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+                        <td style="padding: 7px 5px; border: 1px solid #e2e8f0; text-align: center; color: #64748b; font-weight: 600; font-size: 10px;">${i + 1}</td>
+                        <td style="padding: 7px 8px; border: 1px solid #e2e8f0; text-align: right; font-weight: 700; color: #0f172a; font-size: 10px;">${Utils.escapeHTML(t.title || '—')}</td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: right; color: #475569; font-size: 10px;">${Utils.escapeHTML(t.category || '—')}</td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: right; color: #475569; font-size: 10px;">${Utils.escapeHTML(t.legalReference || '—')}</td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: center; font-size: 10px;">${Utils.escapeHTML(t.frequency || '—')}</td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: center; font-size: 10px; white-space: nowrap;">${Utils.escapeHTML(t.scheduledDate || '—')}</td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: center;">
+                            <span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; ${statusBadgeStyle}">
+                                ${Utils.escapeHTML(t.status || '—')}
+                            </span>
+                        </td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: center;">
+                            <span style="display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; ${compBadgeStyle}">
+                                ${Utils.escapeHTML(t.complianceStatus || '—')}
+                            </span>
+                        </td>
+                        <td style="padding: 7px 6px; border: 1px solid #e2e8f0; text-align: center; font-size: 10px; white-space: nowrap;">${Utils.escapeHTML(t.expiryDate || '—')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const bodyContent = `
+                ${headerHtml}
+
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card">
+                        <div class="card-label">إجمالي السجلات القانونية:</div>
+                        <div class="card-value" style="color: #1e3a8a; font-size: 14px;">${items.length} برنامج</div>
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
-                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
-                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">التاريخ</p>
-                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${new Date().toLocaleDateString('ar-EG')}</p>
-                        </div>
-                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
-                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">إجمالي السجلات</p>
-                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${items.length}</p>
-                        </div>
-                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
-                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">نسبة الامتثال</p>
-                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.complianceRate}%</p>
-                        </div>
-                        <div style="background: #f8fafc; padding: 12px 18px; border-radius: 10px; flex: 1; min-width: 140px; border: 1px solid #e2e8f0;">
-                            <p style="font-size: 11px; color: #64748b; margin: 0 0 2px;">ممتثل / غير ممتثل</p>
-                            <p style="font-size: 14px; font-weight: 700; color: #1e293b; margin: 0;">${stats.compliant} / ${stats.nonCompliant}</p>
-                        </div>
+                    <div class="info-card">
+                        <div class="card-label">نسبة الامتثال الكلية:</div>
+                        <div class="card-value" style="color: #047857; font-size: 14px;">${stats.complianceRate}%</div>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <div class="info-card">
+                        <div class="card-label">البرامج الممتثلة:</div>
+                        <div class="card-value" style="color: #15803d; font-size: 14px;">${stats.compliant} برنامج</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">البرامج غير الممتثلة:</div>
+                        <div class="card-value" style="color: #b91c1c; font-size: 14px;">${stats.nonCompliant} برنامج</div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 16px;">
+                    <table class="report-table" style="width: 100%; direction: rtl;">
                         <thead>
-                            <tr style="background: #1e40af; color: #fff;">
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">#</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">عنوان التدريب</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">التصنيف</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: right;">المرجع القانوني</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الدورية</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">التاريخ المخطط</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الحالة</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">الامتثال</th>
-                                <th style="padding: 8px 10px; border: 1px solid #1e3a8a; text-align: center;">تاريخ الانتهاء</th>
+                            <tr style="background: #1e3a8a; color: #ffffff;">
+                                ${headers.map(h => `<th style="padding: 9px 6px; border: 1px solid #1e40af; font-size: 10px; font-weight: 700; text-align: center;">${Utils.escapeHTML(h)}</th>`).join('')}
                             </tr>
                         </thead>
                         <tbody>
-                            ${items.map((t, i) => `
-                                <tr style="background: ${i % 2 === 0 ? '#fff' : '#f8fafc'};">
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; color: #64748b;">${i + 1}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${t.title || '—'}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.category || '—'}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #475569;">${t.legalReference || '—'}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.frequency || '—'}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.scheduledDate || '—'}</td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
-                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
-                                            background: ${t.status === 'مكتمل' ? '#dcfce7' : t.status === 'مخطط' ? '#dbeafe' : t.status === 'قيد التنفيذ' ? '#fef3c7' : '#f1f5f9'};
-                                            color: ${t.status === 'مكتمل' ? '#166534' : t.status === 'مخطط' ? '#1e40af' : t.status === 'قيد التنفيذ' ? '#92400e' : '#475569'};">
-                                            ${t.status || '—'}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">
-                                        <span style="display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;
-                                            background: ${t.complianceStatus === 'ممتثل' ? '#dcfce7' : t.complianceStatus === 'غير ممتثل' ? '#fecaca' : t.complianceStatus === 'قارب على الانتهاء' ? '#fef3c7' : '#dbeafe'};
-                                            color: ${t.complianceStatus === 'ممتثل' ? '#166534' : t.complianceStatus === 'غير ممتثل' ? '#991b1b' : t.complianceStatus === 'قارب على الانتهاء' ? '#92400e' : '#1e40af'};">
-                                            ${t.complianceStatus || '—'}
-                                        </span>
-                                    </td>
-                                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center;">${t.expiryDate || '—'}</td>
-                                </tr>
-                            `).join('')}
+                            ${tableRowsHtml}
                         </tbody>
                     </table>
-                    <div style="margin-top: 20px; text-align: center; color: #94a3b8; font-size: 11px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                        تم التصدير في ${new Date().toLocaleString('ar-EG')} — نظام إدارة HSE
+                </div>
+
+                <div class="signatures-grid" style="margin-top: 20px;">
+                    <div class="sig-card">
+                        <div class="sig-card-title">إعداد وتوثيق السجل</div>
+                        <div class="sig-card-name">أخصائي التدريب وتطوير الكفاءات</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">المراجعة والتحقق القانوني</div>
+                        <div class="sig-card-name">مسؤول الامتثال والسلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">الاعتماد النهائي</div>
+                        <div class="sig-card-name">مدير السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-line-area">التوقيع والختم الرسمي</div>
                     </div>
                 </div>
+
+                ${footerHtml}
             `;
 
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position: absolute; left: -9999px; top: 0; z-index: -1;';
-            wrapper.innerHTML = reportHtml;
-            document.body.appendChild(wrapper);
+            const fileName = `سجل_التدريبات_القانونية_${new Date().toISOString().slice(0, 10)}.pdf`;
 
-            try {
-                const canvas = await html2canvas(wrapper, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-                const pW = pdf.internal.pageSize.getWidth();
-                const pH = pdf.internal.pageSize.getHeight();
-                const mg = 8;
-                const cW = pW - mg * 2;
-                const ratio = cW / canvas.width;
-                const pgH = pH - mg * 2;
-                const pgPx = pgH / ratio;
-                const total = Math.ceil(canvas.height / pgPx);
-
-                for (let p = 0; p < total; p++) {
-                    if (p > 0) pdf.addPage();
-                    const sc = document.createElement('canvas');
-                    const sH = Math.min(pgPx, canvas.height - p * pgPx);
-                    sc.width = canvas.width;
-                    sc.height = sH;
-                    sc.getContext('2d').drawImage(canvas, 0, p * pgPx, canvas.width, sH, 0, 0, canvas.width, sH);
-                    pdf.addImage(sc.toDataURL('image/jpeg', 0.95), 'JPEG', mg, mg, cW, sH * ratio);
-                    pdf.setDrawColor(37, 99, 235);
-                    pdf.setLineWidth(0.3);
-                    pdf.line(mg, pH - mg + 1, pW - mg, pH - mg + 1);
-                    pdf.setTextColor(148, 163, 184);
-                    pdf.setFontSize(7);
-                    pdf.text(new Date().toISOString().slice(0, 10), mg, pH - 3);
-                    pdf.text(`${p + 1} / ${total}`, pW - mg, pH - 3, { align: 'right' });
+            if (mode === 'download') {
+                const ok = await this.downloadIsoReportAsPdf(docTitle, bodyContent, fileName, true);
+                Loading.hide();
+                if (ok) {
+                    Notification.success('تم تحميل تقرير التدريبات القانونية بصيغة PDF بنجاح');
+                    return true;
                 }
-
-                pdf.save(`Legal_Trainings_${new Date().toISOString().slice(0, 10)}.pdf`);
-                if (typeof Notification !== 'undefined' && Notification.success) {
-                    Notification.success('تم تصدير تقرير PDF بنجاح');
-                }
-            } finally {
-                document.body.removeChild(wrapper);
             }
+
+            Loading.hide();
+            return this.openIsoPrintWindow(docTitle, bodyContent, true, '', fileName);
         } catch (error) {
-            Utils.safeError('❌ خطأ في تصدير PDF:', error);
-            if (typeof Notification !== 'undefined' && Notification.error) {
-                Notification.error('تعذر تصدير PDF');
-            }
+            Loading.hide();
+            Utils.safeError('❌ خطأ في تصدير PDF للتدريبات القانونية:', error);
+            Notification.error('تعذر تصدير تقرير التدريبات القانونية: ' + (error?.message || ''));
+            return false;
         } finally {
             const btn = document.getElementById('export-legal-training-pdf-btn');
             if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-file-pdf ml-1" style="font-size: 14px;"></i>PDF'; }
@@ -17494,6 +17693,608 @@ const Training = {
         }
     },
 
+    // ===== دوال التنسيق الموحدة لنماذج وتقارير التدريب طبقا لـ ISO 45001 =====
+
+    /**
+     * تحويل روابط Google Drive إلى روابط صور قابلة للعرض والطباعة
+     */
+    convertGoogleDriveLinkToPrintable(link) {
+        if (!link) return '';
+        if (typeof window.__convertGoogleDriveUrl === 'function') {
+            link = window.__convertGoogleDriveUrl(link);
+        }
+        if (link.startsWith('data:image/')) {
+            return link;
+        }
+        if (link.includes('drive.google.com/thumbnail')) {
+            return link;
+        }
+        const fileIdMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+        if (fileIdMatch && fileIdMatch[1]) {
+            return `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w800`;
+        }
+        return link;
+    },
+
+    /**
+     * الأنماط والقواعد المشتركة لطباعة وتصدير جميع نماذج وتقارير التدريب والكفاءة
+     */
+    getIsoPrintCommonStyles(isLandscape = false) {
+        return `
+            :root {
+                --brand-primary: #1e3a8a;
+                --brand-navy: #0f172a;
+                --brand-green: #047857;
+                --brand-red: #b91c1c;
+                --brand-amber: #d97706;
+                --border-color: #cbd5e1;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f8fafc;
+                color: #0f172a;
+                line-height: 1.5;
+                direction: rtl;
+            }
+            .no-print-bar {
+                position: sticky;
+                top: 0;
+                z-index: 9999;
+                background: #0f172a;
+                color: #ffffff;
+                padding: 12px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+                border-bottom: 3px solid #2563eb;
+            }
+            .no-print-bar .brand-badge {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .no-print-bar .pill-tag {
+                background: #2563eb;
+                color: #ffffff;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 800;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+            }
+            .no-print-bar .title-text {
+                font-size: 13.5px;
+                font-weight: 800;
+            }
+            .no-print-bar .action-buttons {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .btn-direct-download {
+                padding: 8px 18px;
+                background: linear-gradient(135deg, #059669 0%, #047857 100%);
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(5,150,105,0.35);
+            }
+            .btn-direct-download:hover { background: #047857; }
+            .btn-print {
+                padding: 8px 18px;
+                background: #2563eb;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+            }
+            .btn-print:hover { background: #1d4ed8; }
+            .btn-close {
+                padding: 8px 16px;
+                background: #475569;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+            .btn-close:hover { background: #334155; }
+
+            .report-page-container {
+                max-width: ${isLandscape ? '1180px' : '920px'};
+                margin: 22px auto 40px auto;
+                background: #ffffff;
+                padding: 24px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+                border: 1px solid #e2e8f0;
+            }
+
+            .iso-print-header {
+                display: grid;
+                grid-template-columns: 240px 1fr 210px;
+                border: 2px solid #0f172a;
+                border-top: 5px solid #1e3a8a;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #ffffff;
+                margin-bottom: 16px;
+            }
+            .iso-box-brand {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-left: 1.5px solid #0f172a;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                gap: 4px;
+                text-align: center;
+            }
+            .iso-print-logo {
+                max-height: 46px;
+                max-width: 130px;
+                object-fit: contain;
+                margin-bottom: 2px;
+            }
+            .iso-company-title {
+                font-size: 10.5px;
+                font-weight: 900;
+                color: #0f172a;
+                line-height: 1.3;
+            }
+            .iso-dept-title {
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #1e3a8a;
+                line-height: 1.25;
+            }
+
+            .iso-box-title {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                background: #ffffff;
+            }
+            .iso-main-title {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 900;
+                color: #1e3a8a;
+                line-height: 1.3;
+            }
+            .iso-sub-title {
+                font-size: 10.5px;
+                font-weight: 700;
+                color: #475569;
+                margin-top: 3px;
+            }
+            .iso-badge-std {
+                display: inline-block;
+                margin-top: 5px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                border: 1px solid #bfdbfe;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9.5px;
+                font-weight: 800;
+            }
+
+            .iso-box-meta {
+                padding: 8px 12px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-right: 1.5px solid #0f172a;
+                background: #f8fafc;
+                gap: 3px;
+            }
+            .meta-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px dashed #cbd5e1;
+                padding-bottom: 2px;
+                font-size: 10px;
+            }
+            .meta-row:last-child { border-bottom: none; }
+            .meta-row span { color: #64748b; font-weight: 700; }
+            .meta-row strong { color: #0f172a; font-family: monospace, inherit; font-size: 10px; }
+
+            .handover-info-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .info-card {
+                background: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 7px 10px;
+            }
+            .info-card .card-label {
+                font-size: 9.5px;
+                color: #64748b;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+            .info-card .card-value {
+                font-size: 11.5px;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            .iso-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                margin-bottom: 16px;
+                font-size: 11px;
+            }
+            .iso-table th {
+                background: #1e3a8a;
+                color: #ffffff;
+                padding: 7px 8px;
+                font-weight: 800;
+                border: 1px solid #0f172a;
+                text-align: center;
+            }
+            .iso-table td {
+                padding: 6px 8px;
+                border: 1px solid #cbd5e1;
+                text-align: center;
+                color: #0f172a;
+            }
+            .iso-table tr:nth-child(even) td {
+                background: #f8fafc;
+            }
+            .iso-table tr.total-row td {
+                background: #eff6ff;
+                font-weight: 900;
+                border-top: 2px solid #1e3a8a;
+                color: #1e3a8a;
+            }
+
+            .signatures-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-top: 18px;
+                page-break-inside: avoid;
+            }
+            .sig-card {
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 8px 10px;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 100px;
+            }
+            .sig-card-title {
+                font-size: 10px;
+                font-weight: 800;
+                color: #1e3a8a;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 3px;
+                margin-bottom: 4px;
+                text-align: center;
+            }
+            .sig-card-name {
+                font-size: 10.5px;
+                font-weight: 800;
+                color: #0f172a;
+                text-align: center;
+            }
+            .sig-line-area {
+                margin-top: 16px;
+                border-top: 1.5px dashed #64748b;
+                padding-top: 3px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                font-weight: 700;
+            }
+
+            .iso-footer-strip {
+                margin-top: 16px;
+                border: 1.5px solid #0f172a;
+                border-radius: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 12px;
+                background: #f8fafc;
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #334155;
+                page-break-inside: avoid;
+            }
+            .iso-footer-strip span strong {
+                color: #0f172a;
+                font-family: monospace, inherit;
+            }
+            .portal-unified-footer {
+                margin-top: 10px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                line-height: 1.45;
+                page-break-inside: avoid;
+            }
+            .portal-unified-footer strong {
+                color: #1e3a8a;
+                font-weight: 800;
+            }
+
+            @media print {
+                body {
+                    background: #ffffff !important;
+                    padding: 0 !important;
+                }
+                .no-print-bar {
+                    display: none !important;
+                }
+                .report-page-container {
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 4mm 6mm !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                @page {
+                    size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+                    margin: 8mm 10mm 8mm 10mm;
+                }
+            }
+        `;
+    },
+
+    /**
+     * ترويسة ISO 45001 الثلاثية المعتمدة لجميع نماذج وتقارير التدريب والكفاءة
+     */
+    getIsoPrintHeaderHtml(title, subtitle, docCode, revision = 'Rev. 03', classification = 'سري وداخلي') {
+        let logoSrc = '/icons/icapp-logo.png';
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.protocol === 'file:') {
+                logoSrc = 'icons/icapp-logo.png';
+            } else if (window.location.origin && window.location.origin !== 'null') {
+                logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+            }
+        }
+        if (typeof AppState !== 'undefined' && (AppState.companyLogo || AppState.companySettings?.logo)) {
+            const configuredLogo = AppState.companyLogo || AppState.companySettings?.logo;
+            if (configuredLogo) logoSrc = this.convertGoogleDriveLinkToPrintable(configuredLogo);
+        }
+        const logoFallback = 'icons/icon-192x192.png';
+        const now = new Date();
+        const releaseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        return `
+            <div class="iso-print-header">
+                <div class="iso-box-brand">
+                    <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
+                    <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                </div>
+
+                <div class="iso-box-title">
+                    <h1 class="iso-main-title">${Utils.escapeHTML(title)}</h1>
+                    <div class="iso-sub-title">${Utils.escapeHTML(subtitle)}</div>
+                    <div class="iso-badge-std">معتمد طبقاً للمواصفة ISO 45001:2018 & ISO 9001:2015</div>
+                </div>
+
+                <div class="iso-box-meta">
+                    <div class="meta-row">
+                        <span>كود الوثيقة:</span>
+                        <strong>${Utils.escapeHTML(docCode)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>رقم الإصدار:</span>
+                        <strong>${Utils.escapeHTML(revision)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>تاريخ الاعتماد:</span>
+                        <strong>${releaseDate}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>درجة السرية:</span>
+                        <strong style="color: #047857;">${Utils.escapeHTML(classification)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * تذييل ISO 45001 المعتمد لجميع نماذج وتقارير التدريب والكفاءة
+     */
+    getIsoPrintFooterHtml(docCode, revision = 'Rev. 03', standard = 'ISO 45001:2018 (Clause 7.2 Competence & 7.3 Awareness)') {
+        return `
+            <div class="iso-footer-strip">
+                <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
+                <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
+                <span>مرجعية التوثيق: <strong>${Utils.escapeHTML(standard)}</strong></span>
+                <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+            </div>
+            <footer class="portal-unified-footer">
+                <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+                <div>وثيقة تدريبية رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الإدارية</div>
+            </footer>
+        `;
+    },
+
+    /**
+     * فتح نافذة معاينة وطباعة النموذج بنظام A4 مع شريط تحكم علوي يتيح التحميل المباشر والطباعة
+     */
+    openIsoPrintWindow(title, htmlBody, isLandscape = false, customStyle = '', directDownloadFileName = '') {
+        const safeDlName = directDownloadFileName || `${String(title).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    <div class="no-print-bar">
+        <div class="brand-badge">
+            <span class="pill-tag">ICAPP SAFETY HUB</span>
+            <span class="title-text">${Utils.escapeHTML(title)}</span>
+        </div>
+        <div class="action-buttons">
+            <button class="btn-direct-download" id="dl-pdf-top-btn" onclick="directDownloadReportPdf()">
+                <i class="fas fa-file-arrow-down"></i> تحميل التقرير (PDF)
+            </button>
+            <button class="btn-print" onclick="window.print()">
+                <i class="fas fa-print"></i> طباعة المستند
+            </button>
+            <button class="btn-close" onclick="window.close()">
+                <i class="fas fa-times"></i> إغلاق
+            </button>
+        </div>
+    </div>
+    <div class="report-page-container">
+        ${htmlBody}
+    </div>
+    <script>
+        async function directDownloadReportPdf() {
+            var btn = document.getElementById('dl-pdf-top-btn');
+            var originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحميل...';
+            }
+            try {
+                if (window.opener && window.opener.Utils && typeof window.opener.Utils.downloadHtmlAsPdf === 'function') {
+                    var container = document.querySelector('.report-page-container');
+                    var targetHtml = container ? container.outerHTML : document.body.innerHTML;
+                    var ok = await window.opener.Utils.downloadHtmlAsPdf(targetHtml, ${JSON.stringify(safeDlName)}, {
+                        landscape: ${isLandscape ? 'true' : 'false'},
+                        title: ${JSON.stringify(title)}
+                    });
+                    if (ok) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="fas fa-check"></i> تم التحميل!';
+                            setTimeout(function() { btn.innerHTML = originalText; }, 2500);
+                        }
+                        return;
+                    }
+                }
+                window.print();
+            } catch (err) {
+                console.warn('Direct PDF download error, fallback to print:', err);
+                window.print();
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    setTimeout(function() { btn.innerHTML = originalText; }, 2500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>`;
+
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لمعاينة التقرير');
+            return false;
+        }
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 15000);
+        return true;
+    },
+
+    /**
+     * تحميل تقرير ISO 45001 كملف PDF مباشرة دون إجبار المستخدم على وضع الطباعة
+     */
+    async downloadIsoReportAsPdf(title, htmlBody, fileName = '', isLandscape = false, customStyle = '') {
+        const docFileName = fileName || `${String(title).replace(/[^\w\u0600-\u06FF.-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    <div class="report-page-container">
+        ${htmlBody}
+    </div>
+</body>
+</html>`;
+
+        if (typeof Utils !== 'undefined' && typeof Utils.downloadHtmlAsPdf === 'function') {
+            try {
+                const downloaded = await Utils.downloadHtmlAsPdf(fullHtml, docFileName, {
+                    landscape: isLandscape,
+                    title
+                });
+                if (downloaded) {
+                    Notification.success(`تم تحميل ملف PDF بنجاح: ${docFileName}`);
+                    return true;
+                }
+            } catch (err) {
+                Utils.safeWarn('فشل التحميل المباشر لتقرير التدريب:', err);
+            }
+        }
+
+        // في حال تعذر التصدير المباشر يتم فتح نافذة المعاينة والطباعة
+        return this.openIsoPrintWindow(title, htmlBody, isLandscape, customStyle, docFileName);
+    }
 };
 // يتاح على window فور اكتمال تعريف الكائن (قبل app-ui وقبل أي refreshCurrentSection)
 if (typeof window !== 'undefined') {

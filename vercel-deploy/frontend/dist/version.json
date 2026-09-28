@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1778",
+  "version": "1.0.1779",
   "highlights": {
     "ar": [
-      "ترقية وتوحيد جميع نماذج التصدير والطباعة في مديول الحوادث المهنية لتتوافق تماماً مع النمط المؤسسي المعتمد ISO 45001 ونموذج تسليم الوردية.",
-      "تطبيق الهيدر الثلاثي الرسمي (.iso-print-header) والشريط العلوي الثابت للطباعة (.no-print-bar) مع اسم الشركة (ICAPP) واسم إدارة السلامة والصحة المهنية والبيئة المعتمد.",
-      "تطوير تقرير الحادث المفصل (DOC-HSE-INC-01)، تقرير التحقيق وRCA (DOC-HSE-INV-01)، إخطار الحادث (DOC-HSE-INC-NOTIF-01)، نشرة تنبيه السلامة (DOC-HSE-ALT-01)، وسجل الحوادث (DOC-HSE-INC-REG-01) مع تصدير Excel المؤسسي."
+      "ترقية وتوحيد كافة تقارير ونماذج منظومة التدريب لتتوافق مع المعيار المؤسسي ISO 45001 ونمط تقارير ICAPP المعتمد.",
+      "إضافة ميزة التحميل المباشر لكافة التقارير بصيغة PDF فورياً دون الحاجة للدخول في نافذة الطباعة، مع استمرار توفير خيار المعاينة والطباعة.",
+      "تطوير كشوف الحضور والتقييم (DOC-HSE-TRN-ATT-01)، تقرير البرامج التدريبية (DOC-HSE-TRN-REP-01)، تقرير تدريب المقاولين (DOC-HSE-TRN-CON-01)، تحليلات المدربين والمتدربين (DOC-HSE-TRN-KPI-01/02/03)، السجل العام للتدريب (DOC-HSE-TRN-REG-01)، وسجل التدريبات القانونية (DOC-HSE-TRN-LEG-01)."
     ],
     "en": [
-      "Upgraded and standardized all exports, prints, and reports in the Incidents module to the unified ISO 45001 & Shift Handover corporate design template.",
-      "Applied the official 3-box ISO header, sticky control bar (.no-print-bar), ICAPP brand box, and strict department title: Occupational Safety, Health & Environment Department.",
-      "Enhanced Incident Full Dossier (DOC-HSE-INC-01), Investigation & RCA Report (DOC-HSE-INV-01), Initial Notification (DOC-HSE-INC-NOTIF-01), Safety Alert (DOC-HSE-ALT-01), and Master Registry (DOC-HSE-INC-REG-01) with corporate Excel export."
+      "Upgraded and standardized all Training module exports and reports to the unified ISO 45001 corporate template.",
+      "Added direct PDF report download capability across all forms and reports without forcing print dialog mode, while retaining preview & print options.",
+      "Redesigned Attendance & Evaluation Records (DOC-HSE-TRN-ATT-01), Summary Reports (DOC-HSE-TRN-REP-01), Contractor Dossiers (DOC-HSE-TRN-CON-01), Analytics & KPI Reports (DOC-HSE-TRN-KPI-01/02/03), Master Attendance Register (DOC-HSE-TRN-REG-01), and Legal Training Compliance Registry (DOC-HSE-TRN-LEG-01)."
     ]
   },
-  "releaseName": "v1.0.1778 - Incidents Module Unified ISO 45001 Export & Print Redesign",
-  "lastUpdate": "2026-09-28T19:45:00.000Z"
+  "releaseName": "v1.0.1779 - Training Module Unified ISO 45001 & Direct PDF Download Redesign",
+  "lastUpdate": "2026-09-28T20:10:00.000Z"
 }
