@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1777",
+  "version": "1.0.1778",
   "highlights": {
     "ar": [
-      "ترقية وتطوير نماذج التصدير والطباعة في مديول قاعدة بيانات الموظفين لتتوافق بدقة مع معيار تصميم نموذج تسليم الوردية ونماذج السلامة المعتمدة طبقاً للمواصفة ISO 45001:2018.",
-      "تطبيق ترويسة ISO ثلاثية الصناديق والشريط العلوي الثابت للطباعة، وشبكات البيانات وبطاقات الاعتماد الرسمية لبطاقة الموظف وسجل القوى العاملة والتحليل الإحصائي والعمالة الخارجية.",
-      "إضافة تصدير سجل الموظفين إلى Excel مع الترويسة المعتمدة وطباعة السجل المعتمد وطباعة بطاقة الموظف من صفوف الجدول مباشرة."
+      "ترقية وتوحيد جميع نماذج التصدير والطباعة في مديول الحوادث المهنية لتتوافق تماماً مع النمط المؤسسي المعتمد ISO 45001 ونموذج تسليم الوردية.",
+      "تطبيق الهيدر الثلاثي الرسمي (.iso-print-header) والشريط العلوي الثابت للطباعة (.no-print-bar) مع اسم الشركة (ICAPP) واسم إدارة السلامة والصحة المهنية والبيئة المعتمد.",
+      "تطوير تقرير الحادث المفصل (DOC-HSE-INC-01)، تقرير التحقيق وRCA (DOC-HSE-INV-01)، إخطار الحادث (DOC-HSE-INC-NOTIF-01)، نشرة تنبيه السلامة (DOC-HSE-ALT-01)، وسجل الحوادث (DOC-HSE-INC-REG-01) مع تصدير Excel المؤسسي."
     ],
     "en": [
-      "Upgraded all export and print layouts in the Employees module to match the Shift Handover corporate ISO 45001 template.",
-      "Implemented the certified 3-box ISO header, sticky no-print control bar, structured data cards, and approval blocks across Employee Dossiers, Workforce Master Registry, Analytics, and Contractor Reports.",
-      "Added direct Excel export and certified PDF registry printing from the main employees list toolbar and table actions."
+      "Upgraded and standardized all exports, prints, and reports in the Incidents module to the unified ISO 45001 & Shift Handover corporate design template.",
+      "Applied the official 3-box ISO header, sticky control bar (.no-print-bar), ICAPP brand box, and strict department title: Occupational Safety, Health & Environment Department.",
+      "Enhanced Incident Full Dossier (DOC-HSE-INC-01), Investigation & RCA Report (DOC-HSE-INV-01), Initial Notification (DOC-HSE-INC-NOTIF-01), Safety Alert (DOC-HSE-ALT-01), and Master Registry (DOC-HSE-INC-REG-01) with corporate Excel export."
     ]
   },
-  "releaseName": "v1.0.1777 - Employees Module ISO 45001 Export & Print Redesign",
-  "lastUpdate": "2026-09-28T18:45:00.000Z"
+  "releaseName": "v1.0.1778 - Incidents Module Unified ISO 45001 Export & Print Redesign",
+  "lastUpdate": "2026-09-28T19:45:00.000Z"
 }

@@ -3087,27 +3087,52 @@ const Incidents = {
      * يُدرَج داخل لقطة html2canvas ليظهر الاسم العربي والشعار بشكل صحيح (jsPDF لا يدعم العربية)
      */
     _incidentBuildReportHeaderEl(reportTitleAr, reportTitleEn) {
-        const companyName = (AppState && (AppState.companySettings?.name || AppState.companyName)) || '';
-        const companySecondaryName = (AppState && AppState.companySettings?.secondaryName) || '';
-        const rawLogo = (AppState && AppState.companyLogo) || (AppState && AppState.companySettings?.logo) || '';
-        const logo = rawLogo ? this.convertGoogleDriveLinkToPrintable(rawLogo) : '';
-        const dateStr = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+        let logoSrc = '/icons/icapp-logo.png';
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.protocol === 'file:') {
+                logoSrc = 'icons/icapp-logo.png';
+            } else if (window.location.origin && window.location.origin !== 'null') {
+                logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+            }
+        }
+        if (AppState && (AppState.companyLogo || AppState.companySettings?.logo)) {
+            const rawLogo = AppState.companyLogo || AppState.companySettings?.logo;
+            if (rawLogo) logoSrc = this.convertGoogleDriveLinkToPrintable(rawLogo);
+        }
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
         const el = document.createElement('div');
         el.id = 'incident-pdf-report-header';
-        el.style.cssText = 'background:#fff;border-bottom:3px solid #dc2626;border-radius:12px;padding:16px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;direction:rtl;font-family:Tahoma,Arial,sans-serif;';
+        el.style.cssText = 'background:#fff;border:2px solid #0f172a;border-top:5px solid #1e3a8a;border-radius:8px;overflow:hidden;margin-bottom:16px;display:grid;grid-template-columns:240px 1fr 210px;direction:rtl;font-family:Cairo,Tahoma,Arial,sans-serif;';
         el.innerHTML = `
-            <div style="flex:0 0 auto;min-width:90px;text-align:right;">
-                ${logo ? `<img src="${logo}" alt="" crossorigin="anonymous" style="max-height:64px;max-width:170px;object-fit:contain;">` : ''}
+            <div style="padding:10px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1.5px solid #0f172a;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);gap:4px;text-align:center;">
+                <img src="${logoSrc}" alt="شعار ICAPP" crossorigin="anonymous" style="max-height:46px;max-width:130px;object-fit:contain;margin-bottom:2px;" onerror="this.onerror=null; this.src='icons/icon-192x192.png';">
+                <div style="font-size:10.5px;font-weight:900;color:#0f172a;line-height:1.3;">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                <div style="font-size:9.5px;font-weight:800;color:#1e3a8a;line-height:1.25;">إدارة السلامة والصحة المهنية والبيئة</div>
             </div>
-            <div style="flex:1;text-align:center;">
-                <div style="font-size:1.5rem;font-weight:800;color:#991b1b;line-height:1.2;">${Utils.escapeHTML(reportTitleAr || 'تقرير تحليل الحوادث')}</div>
-                ${reportTitleEn ? `<div style="font-size:0.95rem;font-weight:600;color:#dc2626;margin-top:3px;">${Utils.escapeHTML(reportTitleEn)}</div>` : ''}
-                <div style="font-size:0.8rem;color:#6b7280;margin-top:5px;"><i class="fas fa-calendar-day" style="margin-left:4px;"></i>${dateStr}</div>
+            <div style="padding:10px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#ffffff;">
+                <h1 style="margin:0;font-size:16px;font-weight:900;color:#1e3a8a;line-height:1.3;">${Utils.escapeHTML(reportTitleAr || 'تقرير تحليل مؤشرات أداء الحوادث المهنية')}</h1>
+                <div style="font-size:10.5px;font-weight:700;color:#475569;margin-top:3px;">${Utils.escapeHTML(reportTitleEn || 'Incidents Analytics & HSE KPI Statistical Report')}</div>
+                <div style="display:inline-block;margin-top:5px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:2px 8px;border-radius:4px;font-size:9.5px;font-weight:800;">معتمد طبقاً للمواصفة ISO 45001:2018 (Clause 9.1)</div>
             </div>
-            <div style="flex:0 0 auto;min-width:90px;text-align:left;">
-                <div style="font-size:1.05rem;font-weight:700;color:#1f2937;line-height:1.3;white-space:nowrap;word-break:keep-all;">${Utils.escapeHTML(companyName || '')}</div>
-                ${companySecondaryName ? `<div style="font-size:0.85rem;font-weight:500;color:#6b7280;margin-top:2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
+            <div style="padding:8px 12px;display:flex;flex-direction:column;justify-content:center;border-right:1.5px solid #0f172a;background:#f8fafc;gap:3px;font-size:10px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #cbd5e1;padding-bottom:2px;">
+                    <span style="color:#64748b;font-weight:700;">كود الوثيقة:</span>
+                    <strong style="color:#0f172a;font-family:monospace,inherit;">DOC-HSE-INC-KPI-01</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #cbd5e1;padding-bottom:2px;">
+                    <span style="color:#64748b;font-weight:700;">رقم الإصدار:</span>
+                    <strong style="color:#0f172a;font-family:monospace,inherit;">Rev. 02</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px dashed #cbd5e1;padding-bottom:2px;">
+                    <span style="color:#64748b;font-weight:700;">تاريخ التقرير:</span>
+                    <strong style="color:#0f172a;font-family:monospace,inherit;">${dateStr}</strong>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <span style="color:#64748b;font-weight:700;">درجة السرية:</span>
+                    <strong style="color:#047857;font-family:monospace,inherit;">عام داخلي</strong>
+                </div>
             </div>
         `;
         return el;
@@ -5802,32 +5827,63 @@ const Incidents = {
      */
     exportRegistryToExcel() {
         try {
-            const data = this.registryData;
+            const data = this.registryData || [];
             if (data.length === 0) {
                 Notification.warning('لا توجد بيانات للتصدير');
                 return;
             }
 
-            let csvContent = '\ufeff'; // BOM for UTF-8
-            csvContent += 'مسلسل,المصنع,مكان الحادث,تاريخ الحادث,يوم الحادث,وقت الحادث,الوردية,كود الموظف,اسم الموظف,الوظيفة,الإدارة / القسم,تفاصيل الحادث,الجزء المصاب,المعدة المتسببة,إجمالي أيام الإجازة\n';
+            const exportDate = new Date().toISOString().split('T')[0];
+            let csvContent = '\ufeff'; // BOM for UTF-8 Excel compatibility
+
+            // ترويسة الشركة الرسمية كصفوف أولى في الملف
+            csvContent += '"الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)"\n';
+            csvContent += '"إدارة السلامة والصحة المهنية والبيئة"\n';
+            csvContent += `"سجل حوادث وإصابات العمل المعتمد — كود الوثيقة: DOC-HSE-INC-REG-01 (Rev. 03)"\n`;
+            csvContent += `"تاريخ استخراج السجل: ${exportDate}"\n`;
+            csvContent += '\n'; // سطر فارغ فاصل
+
+            // عناوين الأعمدة
+            const headers = [
+                'مسلسل',
+                'المصنع',
+                'مكان الحادث',
+                'تاريخ الحادث',
+                'يوم الحادث',
+                'وقت الحادث',
+                'الوردية',
+                'كود الموظف',
+                'اسم الموظف',
+                'الوظيفة',
+                'الإدارة / القسم',
+                'تفاصيل الحادث',
+                'الجزء المصاب',
+                'المعدة المتسببة',
+                'إجمالي أيام الإجازة',
+                'الحالة'
+            ];
+            csvContent += headers.map(h => `"${h}"`).join(',') + '\n';
 
             data.forEach(entry => {
+                const escapeCsv = (val) => `"${String(val ?? '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+                const dateStr = entry.incidentDate ? new Date(entry.incidentDate).toLocaleDateString('ar-SA') : '';
                 const row = [
-                    entry.sequentialNumber || '',
-                    entry.factory || '',
-                    entry.incidentLocation || '',
-                    entry.incidentDate ? new Date(entry.incidentDate).toLocaleDateString('ar-SA') : '',
-                    entry.incidentDay || '',
-                    entry.incidentTime || '',
-                    entry.shift || '',
-                    entry.employeeCode || '',
-                    entry.employeeName || '',
-                    entry.employeeJob || '',
-                    entry.employeeDepartment || '',
-                    (entry.incidentDetails || '').replace(/,/g, ';'),
-                    entry.injuredPart || '',
-                    entry.equipmentCause || '',
-                    entry.totalLeaveDays || 0
+                    escapeCsv(entry.sequentialNumber || ''),
+                    escapeCsv(entry.factory || ''),
+                    escapeCsv(entry.incidentLocation || ''),
+                    escapeCsv(dateStr),
+                    escapeCsv(entry.incidentDay || ''),
+                    escapeCsv(entry.incidentTime || ''),
+                    escapeCsv(entry.shift || ''),
+                    escapeCsv(entry.employeeCode || ''),
+                    escapeCsv(entry.employeeName || ''),
+                    escapeCsv(entry.employeeJob || ''),
+                    escapeCsv(entry.employeeDepartment || ''),
+                    escapeCsv(entry.incidentDetails || ''),
+                    escapeCsv(entry.injuredPart || ''),
+                    escapeCsv(entry.equipmentCause || ''),
+                    entry.totalLeaveDays != null ? entry.totalLeaveDays : 0,
+                    escapeCsv(entry.status || 'مغلق')
                 ];
                 csvContent += row.join(',') + '\n';
             });
@@ -5836,7 +5892,7 @@ const Incidents = {
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `سجل_الحوادث_${new Date().toISOString().split('T')[0]}.csv`;
+            link.download = `سجل_الحوادث_ICAPP_${exportDate}.csv`;
             document.body.appendChild(link);
             link.click();
             setTimeout(() => {
@@ -5844,7 +5900,7 @@ const Incidents = {
                 URL.revokeObjectURL(url);
             }, 0);
 
-            Notification.success('تم تصدير السجل بنجاح');
+            Notification.success('تم تصدير سجل الحوادث المعتمد إلى Excel بنجاح');
         } catch (error) {
             Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
             Utils.safeError('خطأ في تصدير السجل:', error);
@@ -5852,61 +5908,104 @@ const Incidents = {
     },
 
     /**
-     * تصدير السجل إلى PDF
+     * تصدير السجل إلى PDF بنظام الهيدر الثلاثي والتنسيق المؤسسي الموحد
      */
     exportRegistryToPDF() {
         try {
-            const data = this.registryData;
+            const data = this.registryData || [];
             if (data.length === 0) {
                 Notification.warning('لا توجد بيانات للتصدير');
                 return;
             }
 
-            // استخدام نفس آلية تصدير PDF للحوادث
-            const content = this.buildRegistryPDFContent(data);
-            const htmlContent = `
-                <html lang="ar" dir="rtl">
-                    <head>
-                        <meta charset="UTF-8">
-                        <style>
-                            @page { size: A4 landscape; margin: 1cm; }
-                            @media print {
-                                @page { size: A4 landscape; margin: 1cm; }
-                            }
-                            body { font-family: 'Cairo', 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 11px; page-break-inside: auto; }
-                            th, td { border: 1px solid #ddd; padding: 6px; text-align: right; }
-                            th { background-color: #f2f2f2; font-weight: bold; }
-                            tr { page-break-inside: avoid; }
-                            tr:nth-child(even) { background-color: #f9f9f9; }
-                            thead { display: table-header-group; }
-                        </style>
-                    </head>
-                    <body>
-                        <h1>سجل الحوادث</h1>
-                        <p>تاريخ التصدير: ${new Date().toLocaleDateString('ar-SA')}</p>
-                        ${content}
-                    </body>
-                </html>
+            const headerHtml = this.getIsoPrintHeaderHtml(
+                'سجل حوادث وإصابات العمل المعتمد',
+                'Certified Master Occupational Accidents & Injuries Register',
+                'DOC-HSE-INC-REG-01',
+                'Rev. 03',
+                'سري وداخلي'
+            );
+
+            const footerHtml = this.getIsoPrintFooterHtml(
+                'DOC-HSE-INC-REG-01',
+                'Rev. 03',
+                'ISO 45001:2018 (Clause 10.2) & Egyptian Labor Law 12/2003'
+            );
+
+            const totalIncidents = data.length;
+            const totalLostDays = data.reduce((acc, curr) => acc + (parseInt(curr.totalLeaveDays, 10) || 0), 0);
+            const totalWithLostTime = data.filter(e => (parseInt(e.totalLeaveDays, 10) || 0) > 0).length;
+            const totalNearMiss = data.filter(e => String(e.incidentType || '').includes('وشيك') || String(e.incidentDetails || '').includes('وشيك')).length;
+
+            const kpiStripHtml = `
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card">
+                        <div class="card-label">إجمالي الحوادث المسجلة:</div>
+                        <div class="card-value" style="color: #1e3a8a;">${totalIncidents} حادث</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إجمالي أيام الإجازات المرضية (LWD):</div>
+                        <div class="card-value" style="color: #b91c1c;">${totalLostDays} يوم عمل</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">إصابات مع فقد أيام عمل (LTI):</div>
+                        <div class="card-value" style="color: #c2410c;">${totalWithLostTime} إصابة</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="card-label">حوادث وشيكة تم تسجيلها:</div>
+                        <div class="card-value" style="color: #047857;">${totalNearMiss} واقعة</div>
+                    </div>
+                </div>
             `;
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const tableHtml = this.buildRegistryPDFContent(data);
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                        }, 500);
-                    }, 300);
-                };
-            } else {
-                Notification.error('تعذر فتح نافذة التصدير. يرجى السماح بالنوافذ المنبثقة.');
-            }
+            const signaturesHtml = `
+                <div class="signatures-grid" style="margin-top: 20px;">
+                    <div class="sig-card">
+                        <div class="sig-card-title">مُعِد ومراجع السجل (أخصائي السلامة)</div>
+                        <div class="sig-card-name">أخصائي السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">رئيس قسم السلامة بالمصنع</div>
+                        <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-card-name">مدير عام السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">الاعتماد الإداري والتصديق</div>
+                    </div>
+                </div>
+            `;
+
+            const htmlBody = `
+                <div class="no-print-bar">
+                    <div class="brand-badge">
+                        <span class="pill-tag">ICAPP HSE REGISTRY</span>
+                        <span class="title-text">سجل حوادث وإصابات العمل المعتمد — DOC-HSE-INC-REG-01</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-print" onclick="window.print()">
+                            <i class="fas fa-print"></i> طباعة السجل / PDF
+                        </button>
+                        <button class="btn-close" onclick="window.close()">
+                            <i class="fas fa-times"></i> إغلاق
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-page-container">
+                    ${headerHtml}
+                    ${kpiStripHtml}
+                    ${tableHtml}
+                    ${signaturesHtml}
+                    ${footerHtml}
+                </div>
+            `;
+
+            this.openIsoPrintWindow('سجل حوادث وإصابات العمل المعتمد', htmlBody, true);
         } catch (error) {
             Notification.error('حدث خطأ أثناء التصدير: ' + error.message);
             Utils.safeError('خطأ في تصدير السجل:', error);
@@ -5914,60 +6013,67 @@ const Incidents = {
     },
 
     /**
-     * بناء محتوى PDF للسجل
+     * بناء محتوى جدول PDF للسجل بتنسيق جدول ISO عالي التباين
      */
     buildRegistryPDFContent(data) {
         const formatDate = (dateStr) => {
-            if (!dateStr) return '-';
+            if (!dateStr) return '—';
             try {
                 return new Date(dateStr).toLocaleDateString('ar-SA');
             } catch {
-                return '-';
+                return '—';
             }
         };
 
+        const esc = (val) => Utils.escapeHTML(String(val ?? '—'));
+
         let tableRows = '';
         data.forEach(entry => {
+            const leaveDays = parseInt(entry.totalLeaveDays, 10) || 0;
+            const leaveBadge = leaveDays > 0
+                ? `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:#fee2e2;color:#991b1b;font-weight:800;">${leaveDays} يوم</span>`
+                : `<span style="color:#64748b;">0</span>`;
+
             tableRows += `
                 <tr>
-                    <td>${entry.sequentialNumber || '-'}</td>
-                    <td>${entry.factory || '-'}</td>
-                    <td>${entry.incidentLocation || '-'}</td>
-                    <td>${formatDate(entry.incidentDate)}</td>
-                    <td>${entry.incidentDay || '-'}</td>
-                    <td>${entry.incidentTime || '-'}</td>
-                    <td>${entry.shift || '-'}</td>
-                    <td>${entry.employeeCode || '-'}</td>
-                    <td>${entry.employeeName || '-'}</td>
-                    <td>${entry.employeeJob || '-'}</td>
-                    <td>${entry.employeeDepartment || '-'}</td>
-                    <td>${(entry.incidentDetails || '-').substring(0, 100)}</td>
-                    <td>${entry.injuredPart || '-'}</td>
-                    <td>${entry.equipmentCause || '-'}</td>
-                    <td>${entry.totalLeaveDays || 0}</td>
+                    <td style="font-weight:700;font-family:monospace;">${esc(entry.sequentialNumber)}</td>
+                    <td style="font-weight:700;">${esc(entry.factory)}</td>
+                    <td>${esc(entry.incidentLocation)}</td>
+                    <td style="white-space:nowrap;">${formatDate(entry.incidentDate)}</td>
+                    <td>${esc(entry.incidentDay)}</td>
+                    <td style="white-space:nowrap;">${esc(entry.incidentTime)}</td>
+                    <td>${esc(entry.shift)}</td>
+                    <td style="font-family:monospace;font-weight:700;">${esc(entry.employeeCode)}</td>
+                    <td style="font-weight:700;">${esc(entry.employeeName)}</td>
+                    <td>${esc(entry.employeeJob)}</td>
+                    <td>${esc(entry.employeeDepartment)}</td>
+                    <td style="max-width:180px;text-align:right;font-size:10px;line-height:1.35;">${esc(String(entry.incidentDetails || '').substring(0, 120))}</td>
+                    <td style="color:#b91c1c;font-weight:700;">${esc(entry.injuredPart)}</td>
+                    <td>${esc(entry.equipmentCause)}</td>
+                    <td>${leaveBadge}</td>
                 </tr>
             `;
         });
 
         return `
-            <table>
+            <table class="iso-table" style="font-size:9.5px;margin-top:8px;">
                 <thead>
                     <tr>
-                        <th>مسلسل</th>
-                        <th>المصنع</th>
+                        <th style="width:40px;">مسلسل</th>
+                        <th style="width:65px;">المصنع</th>
                         <th>مكان الحادث</th>
-                        <th>تاريخ الحادث</th>
-                        <th>يوم الحادث</th>
-                        <th>وقت الحادث</th>
-                        <th>الوردية</th>
-                        <th>كود الموظف</th>
-                        <th>اسم الموظف</th>
-                        <th>الوظيفة</th>
-                        <th>الإدارة / القسم</th>
-                        <th>تفاصيل الحادث</th>
-                        <th>الجزء المصاب</th>
-                        <th>المعدة المتسببة</th>
-                        <th>إجمالي أيام الإجازة</th>
+                        <th style="width:70px;">تاريخ الحادث</th>
+                        <th style="width:50px;">اليوم</th>
+                        <th style="width:50px;">الوقت</th>
+                        <th style="width:45px;">الوردية</th>
+                        <th style="width:55px;">كود الموظف</th>
+                        <th style="width:110px;">اسم الموظف</th>
+                        <th style="width:75px;">الوظيفة</th>
+                        <th style="width:80px;">الإدارة / القسم</th>
+                        <th style="min-width:140px;">تفاصيل الحادث</th>
+                        <th style="width:75px;">الجزء المصاب</th>
+                        <th style="width:75px;">المعدة المتسببة</th>
+                        <th style="width:65px;">أيام الإجازة</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -6906,48 +7012,75 @@ const Incidents = {
     exportIncidentsReport(format = 'pdf') {
         const sections = this.buildReportContent();
         const content = `
-            ${sections.headerSection}
-            ${sections.summarySection}
-            ${sections.severitySection}
-            ${sections.yearlySection}
-            ${sections.detailsSection}
+            ${sections.headerSection || ''}
+            ${sections.summarySection || ''}
+            ${sections.severitySection || ''}
+            ${sections.yearlySection || ''}
+            ${sections.detailsSection || ''}
         `;
 
-        const filenameBase = `incidents-report-${new Date().toISOString().slice(0, 10)}`;
+        const filenameBase = `تقرير_الحوادث_ICAPP_${new Date().toISOString().slice(0, 10)}`;
 
         if (format === 'pdf') {
-            const styles = `
-                <style>
-                    body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; color: #111827; margin: 24px; }
-                    h1, h2 { color: #1f2937; }
-                    table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
-                    th, td { border: 1px solid #e5e7eb; padding: 8px; font-size: 13px; }
-                    thead th { background-color: #f9fafb; font-weight: 600; }
-                    tbody tr:nth-child(even) { background-color: #f9fafb; }
-                </style>
+            const headerHtml = this.getIsoPrintHeaderHtml(
+                'التقرير السنوي والإحصائي للحوادث المهنية',
+                'Annual Occupational Incidents Statistical & Trend Analysis Report',
+                'DOC-HSE-INC-REP-01',
+                'Rev. 02',
+                'سري وداخلي'
+            );
+
+            const footerHtml = this.getIsoPrintFooterHtml(
+                'DOC-HSE-INC-REP-01',
+                'Rev. 02',
+                'ISO 45001:2018 (Clause 9.1 & 10.2 Performance Evaluation & Incident Management)'
+            );
+
+            const signaturesHtml = `
+                <div class="signatures-grid" style="margin-top: 24px;">
+                    <div class="sig-card">
+                        <div class="sig-card-title">مُعِد ومحلل التقرير (أخصائي السلامة)</div>
+                        <div class="sig-card-name">أخصائي السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مراجعة رئيس قسم السلامة والصحة المهنية</div>
+                        <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
+                    </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                        <div class="sig-card-name">مدير عام السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">الاعتماد الإداري والتصديق</div>
+                    </div>
+                </div>
             `;
 
-            const htmlContent = typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML
-                ? FormHeader.generatePDFHTML('INCIDENTS-REPORT', 'تقرير الحوادث - آخر ٣ سنوات', content, false, true, { version: '1.0' }, new Date().toISOString(), new Date().toISOString())
-                : `<html><head>${styles}</head><body>${content}</body></html>`;
+            const htmlBody = `
+                <div class="no-print-bar">
+                    <div class="brand-badge">
+                        <span class="pill-tag">ICAPP HSE ANNUAL REPORT</span>
+                        <span class="title-text">التقرير السنوي والإحصائي للحوادث المهنية — DOC-HSE-INC-REP-01</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-print" onclick="window.print()">
+                            <i class="fas fa-print"></i> طباعة التقرير / PDF
+                        </button>
+                        <button class="btn-close" onclick="window.close()">
+                            <i class="fas fa-times"></i> إغلاق
+                        </button>
+                    </div>
+                </div>
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+                <div class="report-page-container">
+                    ${headerHtml}
+                    ${content}
+                    ${signaturesHtml}
+                    ${footerHtml}
+                </div>
+            `;
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                        }, 500);
-                    }, 300);
-                };
-            } else {
-                Notification.error('تعذر فتح نافذة التصدير. يرجى السماح بالنوافذ المنبثقة.');
-            }
+            this.openIsoPrintWindow('التقرير السنوي والإحصائي للحوادث المهنية', htmlBody, false);
             return;
         }
 
@@ -6957,18 +7090,43 @@ const Incidents = {
                       xmlns:x="urn:schemas-microsoft-com:office:excel"
                       xmlns="http://www.w3.org/TR/REC-html40">
                     <head>
+                        <meta charset="utf-8">
                         <!--[if gte mso 9]><xml>
                         <x:ExcelWorkbook>
                             <x:ExcelWorksheets>
                                 <x:ExcelWorksheet>
-                                    <x:Name>Incidents</x:Name>
+                                    <x:Name>Incidents Report</x:Name>
                                     <x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>
                                 </x:ExcelWorksheet>
                             </x:ExcelWorksheets>
                         </x:ExcelWorkbook>
                         </xml><![endif]-->
+                        <style>
+                            body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; text-align: right; }
+                            table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }
+                            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 11px; text-align: right; }
+                            thead th { background-color: #1e3a8a; color: #ffffff; font-weight: bold; }
+                            tbody tr:nth-child(even) { background-color: #f8fafc; }
+                        </style>
                     </head>
                     <body>
+                        <table style="margin-bottom: 20px;">
+                            <tr>
+                                <td colspan="5" style="font-size:16px;font-weight:bold;color:#1e3a8a;background:#eff6ff;text-align:center;padding:12px;">
+                                    الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP) — إدارة السلامة والصحة المهنية والبيئة
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" style="font-size:13px;font-weight:bold;color:#0f172a;text-align:center;padding:8px;">
+                                    التقرير الإحصائي والسنوي للحوادث المهنية — كود الوثيقة: DOC-HSE-INC-REP-01 (Rev. 02)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="5" style="font-size:11px;color:#64748b;text-align:center;padding:4px;">
+                                    تاريخ الاستخراج: ${new Date().toISOString().slice(0, 10)} • نظام الجودة والسلامة: ISO 45001:2018
+                                </td>
+                            </tr>
+                        </table>
                         ${content}
                     </body>
                 </html>
@@ -6985,7 +7143,7 @@ const Incidents = {
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
             }, 0);
-            Notification.success('تم تصدير التقرير بصيغة Excel');
+            Notification.success('تم تصدير التقرير السنوي بصيغة Excel بنجاح');
             return;
         }
 
@@ -9669,7 +9827,7 @@ const Incidents = {
         };
     },
 
-    // طباعة إخطار الحادث
+    // طباعة إخطار الحادث بالنمط المؤسسي ISO الموحد
     printNotification() {
         try {
             const notificationData = this.getNotificationFormData();
@@ -9686,7 +9844,8 @@ const Incidents = {
 
             Loading.show('جاري إعداد الطباعة...');
             const htmlContent = this._buildNotificationReportHtml(notificationData);
-            this._openIncidentPrintableHtml(htmlContent, 'تم تجهيز الإخطار للطباعة');
+            this.openIsoPrintWindow('إخطار مبدئي عن حادث', htmlContent, false);
+            Loading.hide();
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في طباعة الإخطار:', error);
@@ -9694,12 +9853,8 @@ const Incidents = {
         }
     },
 
-    // بناء محتوى HTML للطباعة
+    // بناء محتوى HTML للطباعة لإخطار الحادث
     buildNotificationPrintContent(notificationData) {
-        const companyName = AppState?.companySettings?.name || AppState?.companyName || '';
-        const companySecondaryName = AppState?.companySettings?.secondaryName || '';
-        const companyLogo = AppState?.companyLogo || '';
-        
         const formatDate = (dateStr) => {
             if (!dateStr) return 'غير محدد';
             try {
@@ -9712,7 +9867,7 @@ const Incidents = {
                     minute: '2-digit'
                 });
             } catch {
-                return dateStr;
+                return String(dateStr);
             }
         };
 
@@ -9725,174 +9880,230 @@ const Incidents = {
             'none': 'لا يوجد'
         };
 
+        const esc = (v) => Utils.escapeHTML(String(v ?? '—'));
+
         return `
-            <div style="direction: rtl; text-align: right; font-family: 'Tahoma', Arial, sans-serif;">
-                <!-- Header -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #667eea;">
-                    <div style="flex: 0 0 auto; text-align: right; padding-left: 20px;">
-                        ${companyLogo ? `<img src="${companyLogo}" alt="شعار الشركة" style="max-height: 60px; max-width: 150px; object-fit: contain;">` : ''}
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #667eea; margin-bottom: 5px;">إخطار عن حادث</div>
-                        <div style="font-size: 1.2rem; font-weight: 600; color: #764ba2;">Incident Notification</div>
-                    </div>
-                    <div style="flex: 0 0 auto; text-align: left; padding-right: 20px;">
-                        <div style="font-size: 14px; font-weight: 700; color: #1f2937; line-height: 1.3;">
-                            <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
-                            ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
+            <div class="inv-print-wrap">
+                <!-- 1) البيانات الأساسية للإخطار -->
+                <div class="inv-print-section inv-s1" style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-color: #2196F3; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; border: 2px solid #2196F3;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #1565C0; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #2196F3;">
+                        1) البيانات الأساسية للواقعة
+                    </h3>
+                    <div class="inv-field-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">رقم الإخطار</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 800; border: 2px solid #1976D2; color: #0d47a1;">${esc(notificationData.notificationNumber)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">تاريخ ووقت الحادث</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; border: 2px solid #2196F3;">${formatDate(notificationData.date)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">المصنع / الموقع العام</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; border: 2px solid #2196F3;">${esc(notificationData.siteName || notificationData.location)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">الموقع التفصيلي</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 600; border: 2px solid #2196F3;">${esc(notificationData.sublocationName || '—')}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">نوع وتصنيف الحادث</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 800; border: 2px solid #2196F3; color: #b91c1c;">${esc(notificationData.incidentType)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">درجة الشدة المتوقعة</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; border: 2px solid #2196F3;">${esc(notificationData.severity || 'متوسط')}</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- المعلومات الأساسية -->
-                <div style="margin-bottom: 25px;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; border-radius: 8px 8px 0 0; font-weight: 700; font-size: 1.1rem; margin-bottom: 15px;">
-                        <i class="fas fa-info-circle"></i> المعلومات الأساسية
+                <!-- 2) بيانات الشخص المصاب / المتضرر -->
+                <div class="inv-print-section inv-s4" style="background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%); border-color: #E91E63; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; border: 2px solid #E91E63;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #AD1457; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #E91E63;">
+                        2) بيانات الشخص المتضرر أو المصاب
+                    </h3>
+                    <div class="inv-field-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">التبعية</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; border: 2px solid #E91E63;">${affiliationNames[notificationData.affiliation] || notificationData.affiliation || '—'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">كود الموظف</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; font-family: monospace; border: 2px solid #E91E63;">${esc(notificationData.employeeCode)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">اسم المصاب / الطرف المتضرر</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 800; border: 2px solid #E91E63;">${esc(notificationData.employeeName || notificationData.contractorName)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">الوظيفة والمسمى</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 600; border: 2px solid #E91E63;">${esc(notificationData.employeeJob)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">الإدارة / القسم التابع له</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 600; border: 2px solid #E91E63;">${esc(notificationData.employeeDepartment)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">اسم المقاول (إن وُجد)</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 600; border: 2px solid #E91E63;">${esc(notificationData.contractorName)}</div>
+                        </div>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; background: white; border: 2px solid #667eea; border-radius: 0 0 8px 8px;">
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #e0e7ff; text-align: right; width: 30%;">رقم الإخطار</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.notificationNumber || 'غير محدد')}</td>
-                        </tr>
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #e0e7ff; text-align: right;">تاريخ ووقت الحادث</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${formatDate(notificationData.date)}</td>
-                        </tr>
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #e0e7ff; text-align: right;">مكان الحادث</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.siteName || notificationData.location || 'غير محدد')}</td>
-                        </tr>
-                        ${notificationData.sublocationName ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #e0e7ff; text-align: right;">المكان الفرعي</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.sublocationName)}</td>
-                        </tr>
-                        ` : ''}
-                    </table>
                 </div>
 
-                <!-- تفاصيل الحادث -->
-                <div style="margin-bottom: 25px;">
-                    <div style="background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; padding: 12px 20px; border-radius: 8px 8px 0 0; font-weight: 700; font-size: 1.1rem; margin-bottom: 15px;">
-                        <i class="fas fa-clipboard-list"></i> تفاصيل الحادث
+                <!-- 3) وصف الحادث والإصابة -->
+                <div class="inv-print-section inv-s3" style="background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border-color: #FF9800; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; border: 2px solid #FF9800;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #E65100; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #FF9800;">
+                        3) تفاصيل ووصف وقائع الحادث
+                    </h3>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 4px;">وصف مختصر للحادث والظروف المحيطة:</div>
+                        <div style="background: #fff; padding: 12px; border-radius: 6px; border: 2px solid #FF9800; white-space: pre-wrap; line-height: 1.6; font-size: 12px;">${esc(notificationData.description)}</div>
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; background: white; border: 2px solid #f59e0b; border-radius: 0 0 8px 8px;">
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">نوع الحادث</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.incidentType || 'غير محدد')}</td>
-                        </tr>
-                        ${notificationData.affiliation ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">التبعية</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${affiliationNames[notificationData.affiliation] || notificationData.affiliation}</td>
-                        </tr>
-                        ` : ''}
-                        ${notificationData.employeeCode ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">كود الموظف</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.employeeCode)}</td>
-                        </tr>
-                        ` : ''}
-                        ${notificationData.contractorName ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">اسم المقاول</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.contractorName)}</td>
-                        </tr>
-                        ` : ''}
-                        ${notificationData.employeeName ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">اسم الموظف</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.employeeName)}</td>
-                        </tr>
-                        ` : ''}
-                        ${notificationData.employeeJob ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">الوظيفة</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.employeeJob)}</td>
-                        </tr>
-                        ` : ''}
-                        ${notificationData.employeeDepartment ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #fef3c7; text-align: right;">الإدارة</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.employeeDepartment)}</td>
-                        </tr>
-                        ` : ''}
-                    </table>
-                    
-                    ${notificationData.description ? `
-                    <div style="background: white; padding: 15px; border: 2px solid #f59e0b; border-radius: 8px; margin-top: 15px;">
-                        <div style="font-weight: 700; margin-bottom: 10px; color: #f59e0b; font-size: 1rem;">وصف مختصر للحادث:</div>
-                        <div style="white-space: pre-wrap; line-height: 1.6;">${Utils.escapeHTML(notificationData.description)}</div>
-                    </div>
-                    ` : ''}
-                    
                     ${notificationData.injuryDescription ? `
-                    <div style="background: white; padding: 15px; border: 2px solid #f59e0b; border-radius: 8px; margin-top: 15px;">
-                        <div style="font-weight: 700; margin-bottom: 10px; color: #f59e0b; font-size: 1rem;">وصف الإصابة:</div>
-                        <div style="white-space: pre-wrap; line-height: 1.6;">${Utils.escapeHTML(notificationData.injuryDescription)}</div>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 4px;">وصف الإصابة والجزء المتضرر:</div>
+                        <div style="background: #fff; padding: 12px; border-radius: 6px; border: 2px solid #E91E63; white-space: pre-wrap; line-height: 1.6; font-size: 12px; color: #9d174d;">${esc(notificationData.injuryDescription)}</div>
                     </div>
                     ` : ''}
-                    
                     ${notificationData.losses ? `
-                    <div style="background: white; padding: 15px; border: 2px solid #f59e0b; border-radius: 8px; margin-top: 15px;">
-                        <div style="font-weight: 700; margin-bottom: 10px; color: #f59e0b; font-size: 1rem;">الخسائر:</div>
-                        <div style="white-space: pre-wrap; line-height: 1.6;">${Utils.escapeHTML(notificationData.losses)}</div>
-                    </div>
-                    ` : ''}
-                    
-                    ${notificationData.actions ? `
-                    <div style="background: white; padding: 15px; border: 2px solid #f59e0b; border-radius: 8px; margin-top: 15px;">
-                        <div style="font-weight: 700; margin-bottom: 10px; color: #f59e0b; font-size: 1rem;">الإجراءات المتخذة:</div>
-                        <div style="white-space: pre-wrap; line-height: 1.6;">${Utils.escapeHTML(notificationData.actions)}</div>
+                    <div>
+                        <div style="font-size: 11.5px; font-weight: 700; color: #374151; margin-bottom: 4px;">الخسائر المادية أو البيئية:</div>
+                        <div style="background: #fff; padding: 12px; border-radius: 6px; border: 2px solid #f59e0b; white-space: pre-wrap; line-height: 1.6; font-size: 12px;">${esc(notificationData.losses)}</div>
                     </div>
                     ` : ''}
                 </div>
 
-                <!-- معلومات معد الإخطار -->
-                <div style="margin-bottom: 25px;">
-                    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 12px 20px; border-radius: 8px 8px 0 0; font-weight: 700; font-size: 1.1rem; margin-bottom: 15px;">
-                        <i class="fas fa-user-edit"></i> معلومات معد الإخطار
+                <!-- 4) الإجراءات الفورية المتخذة -->
+                <div class="inv-print-section inv-s6" style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border-color: #4CAF50; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; border: 2px solid #4CAF50;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #2E7D32; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #4CAF50;">
+                        4) الإجراءات الفورية المتخذة لتأمين الموقع
+                    </h3>
+                    <div style="background: #fff; padding: 12px; border-radius: 6px; border: 2px solid #4CAF50; white-space: pre-wrap; line-height: 1.6; font-size: 12px;">
+                        ${esc(notificationData.actions || 'تم تأمين الموقع وتقديم الإسعافات الأولية فوراً')}
                     </div>
-                    <table style="width: 100%; border-collapse: collapse; background: white; border: 2px solid #10b981; border-radius: 0 0 8px 8px;">
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #d1fae5; text-align: right; width: 30%;">اسم معد الإخطار</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.reporterName || 'غير محدد')}</td>
-                        </tr>
-                        ${notificationData.reporterCode ? `
-                        <tr>
-                            <th style="padding: 12px; border: 1px solid #ddd; background-color: #d1fae5; text-align: right;">كود معد الإخطار</th>
-                            <td style="padding: 12px; border: 1px solid #ddd;">${Utils.escapeHTML(notificationData.reporterCode)}</td>
-                        </tr>
-                        ` : ''}
-                    </table>
+                </div>
+
+                <!-- 5) بيانات الإبلاغ -->
+                <div class="inv-print-section inv-s5" style="background: linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%); border-color: #009688; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; border: 2px solid #009688;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #00695C; margin: 0 0 14px; padding-bottom: 8px; border-bottom: 2px solid #009688;">
+                        5) بيانات جهة الإبلاغ
+                    </h3>
+                    <div class="inv-field-grid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">اسم معد / مبلِّغ الإخطار</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; border: 2px solid #009688;">${esc(notificationData.reporterName)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 4px;">كود معد الإخطار</div>
+                            <div style="padding: 8px 10px; background: #fff; border-radius: 6px; font-weight: 700; font-family: monospace; border: 2px solid #009688;">${esc(notificationData.reporterCode)}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
     },
 
     _buildNotificationReportHtml(notificationData) {
-            const content = this.buildNotificationPrintContent(notificationData);
-            const formCode = notificationData.notificationNumber || `NOT-${new Date().toISOString().slice(0, 10)}`;
+        const content = this.buildNotificationPrintContent(notificationData);
+        const formCode = notificationData.notificationNumber || `DOC-HSE-INC-NOTIF-01`;
 
-        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
-            return FormHeader.generatePDFHTML(
-                    formCode,
-                    'إخطار عن حادث - Incident Notification',
-                    content,
-                    false,
-                false,
-                {
-                    version: AppState?.companySettings?.formVersion || '1.0',
-                    titleAr: 'إخطار عن حادث',
-                    titleEn: 'Incident Notification',
-                    includeQRCode: false
-                },
-                notificationData.date || new Date(),
-                new Date()
-            );
-        }
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            'إخطار مبدئي عن حادث / واقعة مهنية',
+            'Flash Incident Notification & Immediate Action Report',
+            formCode,
+            'Rev. 02',
+            'عاجل وداخلي'
+        );
 
-        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+        const footerHtml = this.getIsoPrintFooterHtml(
+            formCode,
+            'Rev. 02',
+            'ISO 45001:2018 (Clause 10.2 Incident Management)'
+        );
+
+        const summaryStripHtml = `
+            <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="info-card">
+                    <div class="card-label">رقم الإخطار:</div>
+                    <div class="card-value" style="color: #1e3a8a;">${Utils.escapeHTML(formCode)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تاريخ ووقت الحادث:</div>
+                    <div class="card-value">${notificationData.date ? new Date(notificationData.date).toLocaleDateString('ar-SA') : '—'}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">المصنع / الموقع:</div>
+                    <div class="card-value">${Utils.escapeHTML(notificationData.siteName || notificationData.location || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تصنيف الحادث:</div>
+                    <div class="card-value" style="color: #b91c1c;">${Utils.escapeHTML(notificationData.incidentType || '—')}</div>
+                </div>
+            </div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signatures-grid" style="margin-top: 24px;">
+                <div class="sig-card">
+                    <div class="sig-card-title">مبلِّغ الحادث / معد الإخطار</div>
+                    <div class="sig-card-name">${Utils.escapeHTML(notificationData.reporterName || 'مسئول الموقع')}</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">رئيس الوردية / مسئول الموقع</div>
+                    <div class="sig-card-name">رئيس الوردية المناوب</div>
+                    <div class="sig-line-area">التوقيع والاعتماد</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مشرف / مهندس السلامة المستلم</div>
+                    <div class="sig-card-name">قسم السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">استلام الإخطار وبدء التحقيق</div>
+                </div>
+            </div>
+        `;
+
+        const bodyHtml = `
+            <div class="no-print-bar">
+                <div class="brand-badge">
+                    <span class="pill-tag">ICAPP FLASH NOTIFICATION</span>
+                    <span class="title-text">إخطار مبدئي عن حادث — ${Utils.escapeHTML(formCode)}</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-print" onclick="window.print()">
+                        <i class="fas fa-print"></i> طباعة الإخطار / PDF
+                    </button>
+                    <button class="btn-close" onclick="window.close()">
+                        <i class="fas fa-times"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-page-container">
+                ${headerHtml}
+                ${summaryStripHtml}
+                ${content}
+                ${signaturesHtml}
+                ${footerHtml}
+            </div>
+        `;
+
+        return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إخطار حادث ${Utils.escapeHTML(formCode)} — ICAPP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(false)}
+    </style>
+</head>
+<body>
+    ${bodyHtml}
+</body>
+</html>`;
     },
 
     // تصدير إخطار الحادث إلى PDF — تحميل مباشر
@@ -11808,53 +12019,208 @@ const Incidents = {
 
     _buildIncidentReportHtml(incident) {
         const content = this.buildIncidentReportPrintContent(incident);
-        const formCode = incident.isoCode || incident.notificationNumber || incident.id || `INC-${new Date().toISOString().slice(0, 10)}`;
+        const formCode = incident.isoCode || incident.notificationNumber || incident.id || 'DOC-HSE-INC-01';
 
-        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
-            return FormHeader.generatePDFHTML(
-                formCode,
-                'تقرير الحادث – Incident Report',
-                content,
-                false,
-                false,
-                {
-                    version: AppState?.companySettings?.formVersion || '1.0',
-                    titleAr: 'تقرير الحادث',
-                    titleEn: 'Incident Report',
-                    includeQRCode: false,
-                    'مرجع الحادث': incident.id || '—'
-                },
-                incident.createdAt || incident.date,
-                incident.updatedAt
-            );
-        }
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            'تقرير الحادث والواقعة المهنية',
+            'Occupational Incident Detailed Dossier & Investigation Report',
+            formCode,
+            'Rev. 03',
+            'سري وداخلي'
+        );
 
-        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+        const footerHtml = this.getIsoPrintFooterHtml(
+            formCode,
+            'Rev. 03',
+            'ISO 45001:2018 (Clause 10.2 Incident Investigation & Corrective Actions)'
+        );
+
+        const summaryStripHtml = `
+            <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="info-card">
+                    <div class="card-label">كود الحادث / المرجع:</div>
+                    <div class="card-value" style="color: #1e3a8a;">${Utils.escapeHTML(formCode)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تاريخ ووقت الحادث:</div>
+                    <div class="card-value">${this._formatIncidentPrintDate(incident.date || incident.incidentDateTime)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">المصنع والموقع:</div>
+                    <div class="card-value">${Utils.escapeHTML(incident.siteName || incident.factory || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">درجة الشدة / الحالة:</div>
+                    <div class="card-value" style="color: #b91c1c;">${Utils.escapeHTML(incident.severity || '—')} / ${Utils.escapeHTML(incident.status || '—')}</div>
+                </div>
+            </div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signatures-grid" style="margin-top: 24px;">
+                <div class="sig-card">
+                    <div class="sig-card-title">مُعِد التقرير (أخصائي السلامة)</div>
+                    <div class="sig-card-name">${Utils.escapeHTML(incident.reportedBy || 'أخصائي السلامة بالموقع')}</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">رئيس قسم السلامة والصحة المهنية</div>
+                    <div class="sig-card-name">رئيس قسم السلامة بالمصنع</div>
+                    <div class="sig-line-area">التوقيع والاعتماد</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                    <div class="sig-card-name">مدير عام السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">الاعتماد النهائي والمتابعة</div>
+                </div>
+            </div>
+        `;
+
+        const bodyHtml = `
+            <div class="no-print-bar">
+                <div class="brand-badge">
+                    <span class="pill-tag">ICAPP HSE DOSSIER</span>
+                    <span class="title-text">تقرير الحادث والواقعة المهنية — ${Utils.escapeHTML(formCode)}</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-print" onclick="window.print()">
+                        <i class="fas fa-print"></i> طباعة التقرير / PDF
+                    </button>
+                    <button class="btn-close" onclick="window.close()">
+                        <i class="fas fa-times"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-page-container">
+                ${headerHtml}
+                ${summaryStripHtml}
+                ${content}
+                ${signaturesHtml}
+                ${footerHtml}
+            </div>
+        `;
+
+        return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تقرير حادث ${Utils.escapeHTML(formCode)} — ICAPP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(false)}
+    </style>
+</head>
+<body>
+    ${bodyHtml}
+</body>
+</html>`;
     },
 
     _buildRegistryEntryReportHtml(entry) {
         const content = this.buildRegistryEntryReportPrintContent(entry);
-        const formCode = `REG-${entry.sequentialNumber || entry.id}`;
+        const formCode = entry.sequentialNumber ? `REG-${entry.sequentialNumber}` : 'DOC-HSE-INC-REG-02';
 
-        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
-            return FormHeader.generatePDFHTML(
-                formCode,
-                'تقرير سجل الحادث – Incident Registry Report',
-                content,
-                false,
-                false,
-                {
-                    version: AppState?.companySettings?.formVersion || '1.0',
-                    titleAr: 'تقرير سجل الحادث',
-                    titleEn: 'Incident Registry Report',
-                    includeQRCode: false
-                },
-                entry.incidentDate,
-                entry.updatedAt
-            );
-        }
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            'بيان تسجيل حادث من السجل العام',
+            'Individual Incident Registry Extract Record',
+            formCode,
+            'Rev. 03',
+            'سري وداخلي'
+        );
 
-        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+        const footerHtml = this.getIsoPrintFooterHtml(
+            formCode,
+            'Rev. 03',
+            'ISO 45001:2018 & Egyptian Labor Law 12/2003'
+        );
+
+        const summaryStripHtml = `
+            <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="info-card">
+                    <div class="card-label">رقم القيد بالسجل:</div>
+                    <div class="card-value" style="color: #1e3a8a;">${Utils.escapeHTML(entry.sequentialNumber || formCode)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تاريخ الحادث:</div>
+                    <div class="card-value">${this._formatIncidentPrintDateOnly(entry.incidentDate)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">المصنع:</div>
+                    <div class="card-value">${Utils.escapeHTML(entry.factory || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">أيام الإجازة المرضية:</div>
+                    <div class="card-value" style="color: #b91c1c;">${entry.totalLeaveDays != null ? `${entry.totalLeaveDays} يوم` : '0'}</div>
+                </div>
+            </div>
+        `;
+
+        const signaturesHtml = `
+            <div class="signatures-grid" style="margin-top: 24px;">
+                <div class="sig-card">
+                    <div class="sig-card-title">مُعِد القيد بالسجل</div>
+                    <div class="sig-card-name">أخصائي السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">التوقيع والتاريخ</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">رئيس قسم السلامة بالمصنع</div>
+                    <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">التوقيع والاعتماد</div>
+                </div>
+                <div class="sig-card">
+                    <div class="sig-card-title">مدير إدارة السلامة والصحة المهنية والبيئة</div>
+                    <div class="sig-card-name">مدير عام السلامة والصحة المهنية</div>
+                    <div class="sig-line-area">التصديق النهائي</div>
+                </div>
+            </div>
+        `;
+
+        const bodyHtml = `
+            <div class="no-print-bar">
+                <div class="brand-badge">
+                    <span class="pill-tag">ICAPP REGISTRY EXTRACT</span>
+                    <span class="title-text">بيان قيد حادث بالسجل — ${Utils.escapeHTML(formCode)}</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-print" onclick="window.print()">
+                        <i class="fas fa-print"></i> طباعة البيان / PDF
+                    </button>
+                    <button class="btn-close" onclick="window.close()">
+                        <i class="fas fa-times"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-page-container">
+                ${headerHtml}
+                ${summaryStripHtml}
+                ${content}
+                ${signaturesHtml}
+                ${footerHtml}
+            </div>
+        `;
+
+        return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بيان سجل حادث ${Utils.escapeHTML(formCode)} — ICAPP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(false)}
+    </style>
+</head>
+<body>
+    ${bodyHtml}
+</body>
+</html>`;
     },
 
     async _exportIncidentReportPdf(incidentId) {
@@ -12305,31 +12671,88 @@ const Incidents = {
     },
 
     _buildInvestigationReportHtml(incident, investigationData) {
-        const content = this.buildInvestigationPrintContent(incident, investigationData);
+        const content = this.buildInvestigationPrintContent(incident, investigationData, { includeStyles: false });
         const formCode = investigationData.investigationNumber
             || incident.isoCode
-            || `INV-${String(incident.id || '').substring(0, 8)}`;
+            || 'DOC-HSE-INV-01';
 
-        if (typeof FormHeader !== 'undefined' && FormHeader.generatePDFHTML) {
-            return FormHeader.generatePDFHTML(
-                formCode,
-                'التحقيق في الحادث – Incident Investigation',
-                content,
-                false,
-                false,
-                {
-                    version: AppState?.companySettings?.formVersion || '1.0',
-                    titleAr: 'التحقيق في الحادث',
-                    titleEn: 'Incident Investigation',
-                    includeQRCode: false,
-                    'مرجع الحادث': incident.id || '—'
-                },
-                incident.createdAt,
-                investigationData.updatedAt || incident.updatedAt
-            );
-        }
+        const headerHtml = this.getIsoPrintHeaderHtml(
+            'تقرير التحقيق في الحادث وتحليل الأسباب الجذرية (RCA)',
+            'Official Incident Investigation & Root Cause Analysis Dossier',
+            formCode,
+            'Rev. 03',
+            'سري للغاية / Confidential'
+        );
 
-        return `<html dir="rtl" lang="ar"><head><meta charset="UTF-8"><style>body { font-family: 'Tahoma', Arial, sans-serif; direction: rtl; text-align: right; padding: 20px; } @media print { body { margin: 0; padding: 15px; } }</style></head><body>${content}</body></html>`;
+        const footerHtml = this.getIsoPrintFooterHtml(
+            formCode,
+            'Rev. 03',
+            'ISO 45001:2018 (Clause 10.2 Incident Investigation & CAPA)'
+        );
+
+        const summaryStripHtml = `
+            <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="info-card">
+                    <div class="card-label">رقم التحقيق الرسمي:</div>
+                    <div class="card-value" style="color: #1e3a8a;">${Utils.escapeHTML(investigationData.investigationNumber || formCode)}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">كود الحادث المرجعي:</div>
+                    <div class="card-value">${Utils.escapeHTML(incident.isoCode || incident.id || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">المصنع والموقع:</div>
+                    <div class="card-value">${Utils.escapeHTML(investigationData.factoryName || incident.siteName || incident.factory || '—')}</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">تاريخ التحقيق:</div>
+                    <div class="card-value" style="color: #047857;">${investigationData.investigationDateTime ? new Date(investigationData.investigationDateTime).toLocaleDateString('ar-SA') : '—'}</div>
+                </div>
+            </div>
+        `;
+
+        const bodyHtml = `
+            <div class="no-print-bar">
+                <div class="brand-badge">
+                    <span class="pill-tag">ICAPP INVESTIGATION</span>
+                    <span class="title-text">تقرير التحقيق في الحادث — ${Utils.escapeHTML(formCode)}</span>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-print" onclick="window.print()">
+                        <i class="fas fa-print"></i> طباعة التقرير / PDF
+                    </button>
+                    <button class="btn-close" onclick="window.close()">
+                        <i class="fas fa-times"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+
+            <div class="report-page-container">
+                ${headerHtml}
+                ${summaryStripHtml}
+                ${content}
+                ${footerHtml}
+            </div>
+        `;
+
+        return `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحقيق حادث ${Utils.escapeHTML(formCode)} — ICAPP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(false)}
+        ${this._getInvestigationFormPrintStyles()}
+    </style>
+</head>
+<body>
+    ${bodyHtml}
+</body>
+</html>`;
     },
 
     async _exportInvestigationReportPdf(incidentId) {
@@ -12367,24 +12790,33 @@ const Incidents = {
     },
 
     _openIncidentPrintableHtml(htmlContent, successMessage) {
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+        const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
         if (!printWindow) {
             Loading.hide();
             Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
             return false;
         }
-                printWindow.onload = () => {
-                    setTimeout(() => {
-                        printWindow.print();
-                        setTimeout(() => {
-                            URL.revokeObjectURL(url);
-                            Loading.hide();
-                    Notification.success(successMessage || 'تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                }, 800);
-                    }, 500);
-                };
+
+        let printed = false;
+        const triggerPrint = () => {
+            if (printed) return;
+            printed = true;
+            try {
+                printWindow.print();
+            } catch (_e) { /* ignore */ }
+            setTimeout(() => {
+                try { URL.revokeObjectURL(url); } catch (_e) {}
+                Loading.hide();
+                Notification.success(successMessage || 'تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
+            }, 800);
+        };
+
+        printWindow.onload = () => {
+            setTimeout(triggerPrint, 500);
+        };
+        setTimeout(triggerPrint, 1500);
         return true;
     },
 
@@ -14974,331 +15406,203 @@ const Incidents = {
     },
 
     // بناء محتوى HTML للطباعة
+    // بناء محتوى HTML للطباعة لنشرة السلامة (Safety Alert)
     buildSafetyAlertPrintContent(alertData) {
-        const companyName = AppState?.companySettings?.name || AppState?.companyName || '';
-        const companySecondaryName = AppState?.companySettings?.secondaryName || '';
-        const companyLogo = AppState?.companyLogo || '';
         const sequentialNumber = alertData.sequentialNumber || '001';
         const notificationNumber = alertData.notificationNumber || sequentialNumber;
         
         // معالجة الصور للتأكد من ظهورها بشكل صحيح
         const locationImageSrc = alertData.locationImage ? this.convertGoogleDriveLinkToPrintable(alertData.locationImage) : '';
         const causesImageSrc = alertData.causesImage ? this.convertGoogleDriveLinkToPrintable(alertData.causesImage) : '';
-        const logoSrc = companyLogo ? this.convertGoogleDriveLinkToPrintable(companyLogo) : '';
+
+        const esc = (val) => Utils.escapeHTML(String(val ?? '—'));
         
         return `
-            <div style="direction: rtl; text-align: right; font-family: 'Tahoma', Arial, sans-serif; page-break-inside: avoid;">
-                <!-- Top Header with Logo and Company Name -->
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 3px solid #003865;">
-                    <div style="flex: 0 0 auto; text-align: right; padding-left: 20px;">
-                        ${logoSrc ? `<img src="${logoSrc}" alt="شعار الشركة" style="max-height: 60px; max-width: 150px; object-fit: contain; display: block;" onerror="this.style.display='none';">` : ''}
+            <div class="safety-alert-wrap" style="direction: rtl; text-align: right;">
+                <!-- شريط رقم التنبيه والتصنيف العام -->
+                <div style="background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%); color: #fff; padding: 12px 18px; border-radius: 8px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">
+                        <i class="fas fa-exclamation-triangle" style="margin-left: 6px;"></i>
+                        نشرة توعية وتنبيه بالسلامة والصحة المهنية — SAFETY ALERT
                     </div>
-                    <div style="flex: 1; text-align: center;">
-                        <div style="font-size: 1.5rem; font-weight: 700; color: #003865; margin-bottom: 5px;">تنبيه - Safety Alert</div>
-                        <div style="font-size: 1.3rem; font-weight: 700; color: #003865;">السلامة</div>
-                    </div>
-                    <div style="flex: 0 0 auto; text-align: left; padding-right: 20px;">
-                        <div style="background: #e0f2fe; padding: 8px 16px; border-radius: 8px; font-weight: 600; color: #003865; font-size: 0.95rem;">
-                            كود التقرير: SAFETY-ALERT
-                        </div>
-                        <div style="font-size: 14px; font-weight: 700; color: #1f2937; margin-top: 8px; line-height: 1.3;">
-                            <div style="white-space: nowrap; word-break: keep-all;">${Utils.escapeHTML(companyName || '')}</div>
-                            ${companySecondaryName ? `<div style="font-size: 12px; font-weight: 500; color: #6b7280; margin-top: 2px;">${Utils.escapeHTML(companySecondaryName)}</div>` : ''}
-                        </div>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="background: #ffffff; color: #b91c1c; font-weight: 900; padding: 3px 12px; border-radius: 6px; font-size: 13px;">
+                            رقم: ${esc(sequentialNumber)}
+                        </span>
+                        <span style="background: rgba(255,255,255,0.25); color: #fff; font-weight: 800; padding: 3px 10px; border-radius: 6px; font-size: 12px;">
+                            ${esc(alertData.incidentType || 'حادث مهني')}
+                        </span>
                     </div>
                 </div>
 
-                <!-- Incident Number and Type Section -->
-                <div style="text-align: center; margin: 15px 0 20px 0;">
-                    <div style="color: #dc2626; font-weight: 700; font-size: 0.75rem; margin-bottom: 2px;">No</div>
-                    <div style="color: #dc2626; font-weight: 700; font-size: 12px; margin-bottom: 15px;">${Utils.escapeHTML(sequentialNumber)}</div>
-                    <div style="background: #9ca3af; color: white; padding: 14px 20px; text-align: center; font-weight: 700; font-size: 1.15rem; border-radius: 8px; display: inline-block; min-width: 200px;">
-                        ${Utils.escapeHTML(alertData.incidentType || '')}
+                <!-- شبكة الحقائق الأربع: أين / متى / من / التصنيف -->
+                <div class="handover-info-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 14px;">
+                    <div class="info-card" style="border-right: 4px solid #b91c1c;">
+                        <div class="card-label">أين (مكان الحادث):</div>
+                        <div class="card-value" style="font-size: 11px;">${esc(alertData.incidentLocation)}</div>
+                    </div>
+                    <div class="info-card" style="border-right: 4px solid #1e3a8a;">
+                        <div class="card-label">متى (تاريخ الحادث):</div>
+                        <div class="card-value" style="font-size: 11px;">${alertData.incidentDate ? new Date(alertData.incidentDate).toLocaleDateString('ar-SA') : '—'}</div>
+                    </div>
+                    <div class="info-card" style="border-right: 4px solid #047857;">
+                        <div class="card-label">من (الطرف المتضرر / الجهة):</div>
+                        <div class="card-value" style="font-size: 11px;">${esc(alertData.who)}</div>
+                    </div>
+                    <div class="info-card" style="border-right: 4px solid #d97706;">
+                        <div class="card-label">رقم الإشعار المرجعي:</div>
+                        <div class="card-value" style="font-size: 11px; font-family: monospace;">${esc(notificationNumber)}</div>
                     </div>
                 </div>
 
-                <!-- Incident Details -->
-                <div style="background: #9ca3af; height: 4px; margin: 20px 0 15px 0; border-radius: 2px;"></div>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px;">
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.95rem;">أين</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; min-height: 70px; font-size: 0.9rem;">
-                            ${Utils.escapeHTML(alertData.incidentLocation || '')}
-                        </div>
-                    </div>
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.95rem;">متى</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; min-height: 70px; font-size: 0.9rem;">
-                            ${alertData.incidentDate ? new Date(alertData.incidentDate).toLocaleDateString('ar-SA') : ''}
-                        </div>
-                    </div>
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.95rem;">من</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; min-height: 70px; font-size: 0.9rem;">
-                            ${Utils.escapeHTML(alertData.who || '')}
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Images -->
+                <!-- معرض الصور التوضيحية للحادث -->
                 ${locationImageSrc || causesImageSrc ? `
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; page-break-inside: avoid;">
+                <div style="display: grid; grid-template-columns: ${locationImageSrc && causesImageSrc ? 'repeat(2, 1fr)' : '1fr'}; gap: 14px; margin-bottom: 14px; page-break-inside: avoid;">
                     ${locationImageSrc ? `
-                    <div style="text-align: center;">
-                        <div style="margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #374151;">صورة توضيحية لمكان الحادث</div>
-                        <div style="background: #fbbf24; padding: 8px; text-align: center; border-radius: 6px; border: 2px solid #f59e0b; display: inline-block; max-width: 100%; width: 100%; box-sizing: border-box;">
-                            <img src="${locationImageSrc}" alt="صورة المكان" 
-                                style="max-width: 100%; max-height: 350px; width: auto; height: auto; border-radius: 4px; object-fit: contain; display: block; margin: 0 auto;"
-                                onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'padding: 20px; color: #666;\\'>فشل تحميل الصورة</div>';">
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: 800; color: #1e3a8a; margin-bottom: 6px;">
+                            <i class="fas fa-camera" style="margin-left: 4px;"></i> صورة توضيحية لموقع الحادث
+                        </div>
+                        <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;">
+                            <img src="${locationImageSrc}" alt="صورة الموقع" style="max-height: 100%; max-width: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<div style=\\'color:#94a3b8;font-size:12px;\\'>تعذر تحميل صورة الموقع</div>';">
                         </div>
                     </div>
-                    ` : '<div></div>'}
+                    ` : ''}
                     ${causesImageSrc ? `
-                    <div style="text-align: center;">
-                        <div style="margin-bottom: 6px; font-size: 0.85rem; font-weight: 600; color: #374151;">صورة توضيحية لأسباب الحادث</div>
-                        <div style="background: #fbbf24; padding: 8px; text-align: center; border-radius: 6px; border: 2px solid #f59e0b; display: inline-block; max-width: 100%; width: 100%; box-sizing: border-box;">
-                            <img src="${causesImageSrc}" alt="صورة الأسباب" 
-                                style="max-width: 100%; max-height: 350px; width: auto; height: auto; border-radius: 4px; object-fit: contain; display: block; margin: 0 auto;"
-                                onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\\'padding: 20px; color: #666;\\'>فشل تحميل الصورة</div>';">
+                    <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 8px; text-align: center;">
+                        <div style="font-size: 11px; font-weight: 800; color: #b91c1c; margin-bottom: 6px;">
+                            <i class="fas fa-search-plus" style="margin-left: 4px;"></i> صورة توضيحية لأسباب وظروف الحادث
+                        </div>
+                        <div style="height: 250px; display: flex; align-items: center; justify-content: center; background: #ffffff; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;">
+                            <img src="${causesImageSrc}" alt="صورة الأسباب" style="max-height: 100%; max-width: 100%; object-fit: contain;" onerror="this.parentElement.innerHTML='<div style=\\'color:#94a3b8;font-size:12px;\\'>تعذر تحميل صورة الأسباب</div>';">
                         </div>
                     </div>
                     ` : ''}
                 </div>
                 ` : ''}
 
-                <!-- Description -->
-                <div style="background: #9ca3af; height: 4px; margin: 18px 0 12px 0; border-radius: 2px;"></div>
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; page-break-inside: avoid;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">وصف الحادث :</label>
-                    <div style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">${Utils.escapeHTML(alertData.description || '')}</div>
+                <!-- بطاقة وصف الحادث والوقائع -->
+                <div style="border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 12px 14px; background: #ffffff; margin-bottom: 12px; page-break-inside: avoid;">
+                    <div style="font-size: 12px; font-weight: 800; color: #1e3a8a; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
+                        <i class="fas fa-file-alt" style="margin-left: 5px;"></i> وصف الواقعة والظروف المصاحبة:
+                    </div>
+                    <div style="font-size: 11px; line-height: 1.65; white-space: pre-wrap; color: #1e293b;">${esc(alertData.description)}</div>
                 </div>
 
-                ${alertData.facts ? `
-                <div style="background: #9ca3af; height: 4px; margin: 15px 0 12px 0; border-radius: 2px;"></div>
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; page-break-inside: avoid;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">حقائق عن الحادث :</label>
-                    <div style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">${Utils.escapeHTML(alertData.facts)}</div>
+                ${alertData.facts || alertData.causes ? `
+                <div style="display: grid; grid-template-columns: ${alertData.facts && alertData.causes ? 'repeat(2, 1fr)' : '1fr'}; gap: 12px; margin-bottom: 12px; page-break-inside: avoid;">
+                    ${alertData.facts ? `
+                    <div style="border: 1.5px solid #fed7aa; border-radius: 8px; padding: 10px 12px; background: #fffaf5;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #c2410c; margin-bottom: 4px;">
+                            <i class="fas fa-info-circle" style="margin-left: 4px;"></i> حقائق مؤكدة عن الحادث:
+                        </div>
+                        <div style="font-size: 10.5px; line-height: 1.6; white-space: pre-wrap; color: #334155;">${esc(alertData.facts)}</div>
+                    </div>
+                    ` : ''}
+                    ${alertData.causes ? `
+                    <div style="border: 1.5px solid #fecaca; border-radius: 8px; padding: 10px 12px; background: #fef2f2;">
+                        <div style="font-size: 11.5px; font-weight: 800; color: #b91c1c; margin-bottom: 4px;">
+                            <i class="fas fa-exclamation-circle" style="margin-left: 4px;"></i> الأسباب الجذرية والمباشرة:
+                        </div>
+                        <div style="font-size: 10.5px; line-height: 1.6; white-space: pre-wrap; color: #334155;">${esc(alertData.causes)}</div>
+                    </div>
+                    ` : ''}
                 </div>
                 ` : ''}
 
-                ${alertData.causes ? `
-                <div style="background: #9ca3af; height: 4px; margin: 15px 0 12px 0; border-radius: 2px;"></div>
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; page-break-inside: avoid;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">الأسباب :</label>
-                    <div style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">${Utils.escapeHTML(alertData.causes)}</div>
-                </div>
-                ` : ''}
-
-                <div style="background: #9ca3af; height: 4px; margin: 15px 0 12px 0; border-radius: 2px;"></div>
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; page-break-inside: avoid;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">الدروس المستفادة :</label>
-                    <div style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">${Utils.escapeHTML(alertData.lessonsLearned || '')}</div>
+                <!-- بطاقة الدروس المستفادة (Lessons Learned) -->
+                <div style="border: 2px solid #059669; border-radius: 8px; padding: 12px 14px; background: #ecfdf5; margin-bottom: 12px; page-break-inside: avoid;">
+                    <div style="font-size: 12.5px; font-weight: 900; color: #065f46; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-graduation-cap"></i> الدروس المستفادة لمنع تكرار الحدث (Lessons Learned):
+                    </div>
+                    <div style="font-size: 11px; line-height: 1.65; white-space: pre-wrap; color: #064e3b; font-weight: 600;">
+                        ${esc(alertData.lessonsLearned || 'الالتزام التام بإجراءات السلامة القياسية وارتداء مهمات الوقاية الشخصية المناسبة والتبليغ الفوري عن أي ظروف أو سلوكيات غير آمنة')}
+                    </div>
                 </div>
 
-                <div style="background: #9ca3af; height: 4px; margin: 15px 0 12px 0; border-radius: 2px;"></div>
-                <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-bottom: 15px; page-break-inside: avoid;">
-                    <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">إجراءات منع تكرار الحدث :</label>
-                    <div style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.6;">${Utils.escapeHTML(alertData.preventiveMeasures || '')}</div>
+                <!-- بطاقة الإجراءات الوقائية والتصحيحية -->
+                <div style="border: 2px solid #2563eb; border-radius: 8px; padding: 12px 14px; background: #eff6ff; margin-bottom: 14px; page-break-inside: avoid;">
+                    <div style="font-size: 12.5px; font-weight: 900; color: #1e40af; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-shield-alt"></i> الإجراءات الوقائية والتصحيحية الفورية:
+                    </div>
+                    <div style="font-size: 11px; line-height: 1.65; white-space: pre-wrap; color: #1e3a8a; font-weight: 600;">
+                        ${esc(alertData.preventiveMeasures || 'تم تدريب وتوعية العاملين ومراجعة تقييم المخاطر وتحديث تعليمات العمل الآمن')}
+                    </div>
                 </div>
 
-                <!-- Footer -->
-                <div style="background: #9ca3af; height: 4px; margin: 15px 0 12px 0; border-radius: 2px;"></div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;">
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.9rem;">رقم الإشعار</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; font-size: 0.85rem; min-height: 50px;">
-                            ${Utils.escapeHTML(notificationNumber)}
-                        </div>
+                <!-- التوقيعات والاعتمادات المؤسسية -->
+                <div class="signatures-grid" style="margin-top: 16px;">
+                    <div class="sig-card">
+                        <div class="sig-card-title">إعداد (أخصائي السلامة والصحة)</div>
+                        <div class="sig-card-name">${esc(alertData.preparedBy || 'أخصائي السلامة بالموقع')}</div>
+                        <div class="sig-line-area">التوقيع والتاريخ</div>
                     </div>
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.9rem;">إعداد</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; font-size: 0.85rem; min-height: 50px;">
-                            ${Utils.escapeHTML(alertData.preparedBy || '')}
-                        </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">مراجعة رئيس قسم السلامة</div>
+                        <div class="sig-card-name">رئيس قسم السلامة والصحة المهنية</div>
+                        <div class="sig-line-area">التوقيع والاعتماد</div>
                     </div>
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.9rem;">اعتماد</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; font-size: 0.85rem; min-height: 50px;">
-                            ${Utils.escapeHTML(alertData.approvedBy || '-')}
-                        </div>
-                    </div>
-                    <div>
-                        <div style="background: #9ca3af; color: white; padding: 10px; text-align: center; font-weight: 600; border-radius: 4px; font-size: 0.9rem;">تاريخ الإصدار</div>
-                        <div style="background: white; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; margin-top: 8px; font-size: 0.85rem; min-height: 50px;">
-                            ${alertData.issueDate ? new Date(alertData.issueDate).toLocaleDateString('ar-SA') : '-'}
-                        </div>
+                    <div class="sig-card">
+                        <div class="sig-card-title">اعتماد مدير إدارة السلامة والصحة والبيئة</div>
+                        <div class="sig-card-name">${esc(alertData.approvedBy || 'مدير عام السلامة والصحة المهنية')}</div>
+                        <div class="sig-line-area">الاعتماد للنشر والتوزيع</div>
                     </div>
                 </div>
             </div>
         `;
     },
 
-    // تصدير Safety Alert إلى PDF باستخدام البيانات المباشرة
+    // تصدير Safety Alert إلى PDF باستخدام النمط المؤسسي ISO الموحد
     exportSafetyAlertPDFWithData(alertData) {
         try {
-            Loading.show('جاري تحضير PDF...');
+            Loading.show('جاري إعداد نشرة التوعية Safety Alert...');
 
             const content = this.buildSafetyAlertPrintContent(alertData);
+            const docCode = `DOC-HSE-ALT-${alertData.sequentialNumber || '01'}`;
 
-            // استخدام نفس HTML template من exportSafetyAlertPDF
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <title>Safety Alert - تنبيه السلامة</title>
-    <style>
-        @page {
-            size: A4 portrait;
-            margin: 12mm 15mm;
-        }
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-        body {
-            font-family: 'Tahoma', Arial, sans-serif;
-            direction: rtl;
-            text-align: right;
-            background: white;
-            color: #1f2937;
-            font-size: 11px;
-            line-height: 1.4;
-            padding: 0;
-            margin: 0;
-        }
-        .content-wrapper {
-            width: 100%;
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 5px;
-            page-break-inside: avoid;
-            overflow: hidden;
-        }
-        img {
-            max-width: 100%;
-            height: auto;
-            object-fit: contain;
-            display: block;
-        }
-        .safety-alert-image-container {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        .safety-alert-image-container img {
-            max-width: 100%;
-            max-height: 350px;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto;
-        }
-        @media print {
-            body {
-                margin: 0;
-                padding: 0;
-            }
-            .safety-alert-image-container {
-                page-break-inside: avoid;
-                break-inside: avoid;
-            }
-            img {
-                max-width: 100%;
-                max-height: 350px;
-                object-fit: contain;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="content-wrapper">
-        ${content}
-    </div>
-</body>
-</html>`;
+            const headerHtml = this.getIsoPrintHeaderHtml(
+                'نشرة تنبيه وتوعية بالسلامة والصحة المهنية (Safety Alert)',
+                'Occupational Safety Flash & Lessons Learned Communication Bulletin',
+                docCode,
+                'Rev. 02',
+                'عام للتوعية / Safety Bulletin'
+            );
 
-            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const printWindow = window.open(url, '_blank');
+            const footerHtml = this.getIsoPrintFooterHtml(
+                docCode,
+                'Rev. 02',
+                'ISO 45001:2018 (Clause 7.4 Communication & Awareness)'
+            );
 
-            if (printWindow) {
-                printWindow.onload = () => {
-                    // انتظار تحميل جميع الصور قبل الطباعة
-                    const images = printWindow.document.querySelectorAll('img');
-                    let imagesLoaded = 0;
-                    const totalImages = images.length;
-                    
-                    if (totalImages === 0) {
-                        // لا توجد صور، اطبع مباشرة
-                        setTimeout(() => {
-                            printWindow.print();
-                            setTimeout(() => {
-                                URL.revokeObjectURL(url);
-                                Loading.hide();
-                                Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                            }, 800);
-                        }, 500);
-                        return;
-                    }
-                    
-                    // معالجة تحميل الصور
-                    const checkAllImagesLoaded = () => {
-                        imagesLoaded++;
-                        if (imagesLoaded >= totalImages) {
-                            // جميع الصور تم تحميلها
-                            setTimeout(() => {
-                                printWindow.print();
-                                setTimeout(() => {
-                                    URL.revokeObjectURL(url);
-                                    Loading.hide();
-                                    Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                                }, 800);
-                            }, 500);
-                        }
-                    };
-                    
-                    // إضافة معالجات للأحداث لكل صورة
-                    images.forEach((img) => {
-                        if (img.complete) {
-                            checkAllImagesLoaded();
-                        } else {
-                            img.onload = checkAllImagesLoaded;
-                            img.onerror = () => {
-                                // في حالة فشل تحميل الصورة، استمر في الطباعة
-                                console.warn('فشل تحميل صورة:', img.src);
-                                checkAllImagesLoaded();
-                            };
-                        }
-                    });
-                    
-                    // timeout احتياطي - اطبع بعد 3 ثوانٍ حتى لو لم يتم تحميل جميع الصور
-                    setTimeout(() => {
-                        if (imagesLoaded < totalImages) {
-                            console.warn('بعض الصور لم يتم تحميلها، لكن سيتم المتابعة مع الطباعة');
-                            printWindow.print();
-                            setTimeout(() => {
-                                URL.revokeObjectURL(url);
-                                Loading.hide();
-                                Notification.success('تم تجهيز التقرير للطباعة/الحفظ كـ PDF');
-                            }, 800);
-                        }
-                    }, 3000);
-                };
-            } else {
-                Loading.hide();
-                Notification.error('يرجى السماح للنوافذ المنبثقة لعرض التقرير');
-            }
+            const htmlBody = `
+                <div class="no-print-bar">
+                    <div class="brand-badge">
+                        <span class="pill-tag">ICAPP SAFETY FLASH</span>
+                        <span class="title-text">نشرة تنبيه السلامة — ${Utils.escapeHTML(docCode)}</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-print" onclick="window.print()">
+                            <i class="fas fa-print"></i> طباعة النشرة / PDF
+                        </button>
+                        <button class="btn-close" onclick="window.close()">
+                            <i class="fas fa-times"></i> إغلاق
+                        </button>
+                    </div>
+                </div>
+
+                <div class="report-page-container">
+                    ${headerHtml}
+                    ${content}
+                    ${footerHtml}
+                </div>
+            `;
+
+            this.openIsoPrintWindow('نشرة تنبيه السلامة والصحة المهنية', htmlBody, false);
+            Loading.hide();
         } catch (error) {
             Loading.hide();
-            Utils.safeError('خطأ في تصدير PDF:', error);
-            Notification.error('فشل تصدير PDF: ' + error.message);
+            Utils.safeError('خطأ في تصدير Safety Alert:', error);
+            Notification.error('فشل تصدير نشرة السلامة: ' + error.message);
         }
     },
 
@@ -15310,7 +15614,6 @@ const Incidents = {
             if (!alertId || alertId === '') {
                 const formData = this.getSafetyAlertFormData();
                 if (formData) {
-                    // استخدام البيانات من النموذج
                     this.exportSafetyAlertPDFWithData(formData);
                     return;
                 } else {
@@ -15319,20 +15622,507 @@ const Incidents = {
                 }
             }
             
-            // إذا كان هناك alertId، استخدم البيانات المحفوظة
             alert = (AppState.appData?.safetyAlerts || []).find(a => a.id === alertId);
             if (!alert) {
                 Notification.error('Safety Alert غير موجود');
                 return;
             }
 
-            // استخدام البيانات المحفوظة
             this.exportSafetyAlertPDFWithData(alert);
         } catch (error) {
             Loading.hide();
             Utils.safeError('خطأ في تصدير PDF:', error);
             Notification.error('فشل تصدير PDF: ' + error.message);
         }
+    },
+
+    // ===== دوال التنسيق الموحدة لنماذج وتقارير ISO 45001 الرسمية =====
+
+    /**
+     * الأنماط والقواعد المشتركة لطباعة وتصدير جميع نماذج الحوادث والتحقيقات والسجلات
+     */
+    getIsoPrintCommonStyles(isLandscape = false) {
+        return `
+            :root {
+                --brand-primary: #1e3a8a;
+                --brand-navy: #0f172a;
+                --brand-green: #047857;
+                --brand-red: #b91c1c;
+                --brand-amber: #d97706;
+                --border-color: #cbd5e1;
+            }
+            * {
+                box-sizing: border-box;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body {
+                font-family: 'Cairo', system-ui, -apple-system, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: #f8fafc;
+                color: #0f172a;
+                line-height: 1.5;
+                direction: rtl;
+            }
+            .no-print-bar {
+                position: sticky;
+                top: 0;
+                z-index: 9999;
+                background: #0f172a;
+                color: #ffffff;
+                padding: 12px 24px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+                border-bottom: 3px solid #2563eb;
+            }
+            .no-print-bar .brand-badge {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .no-print-bar .pill-tag {
+                background: #2563eb;
+                color: #ffffff;
+                padding: 4px 10px;
+                border-radius: 6px;
+                font-weight: 800;
+                font-size: 11px;
+                letter-spacing: 0.5px;
+            }
+            .no-print-bar .title-text {
+                font-size: 13.5px;
+                font-weight: 800;
+            }
+            .no-print-bar .action-buttons {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .btn-print {
+                padding: 8px 20px;
+                background: #2563eb;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 8px rgba(37,99,235,0.4);
+            }
+            .btn-print:hover { background: #1d4ed8; }
+            .btn-close {
+                padding: 8px 18px;
+                background: #475569;
+                color: #ffffff;
+                border: none;
+                border-radius: 8px;
+                font-weight: 800;
+                font-size: 13px;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+            }
+            .btn-close:hover { background: #334155; }
+
+            .report-page-container {
+                max-width: ${isLandscape ? '1180px' : '920px'};
+                margin: 22px auto 40px auto;
+                background: #ffffff;
+                padding: 24px 30px;
+                border-radius: 12px;
+                box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+                border: 1px solid #e2e8f0;
+            }
+
+            .iso-print-header {
+                display: grid;
+                grid-template-columns: 240px 1fr 210px;
+                border: 2px solid #0f172a;
+                border-top: 5px solid #1e3a8a;
+                border-radius: 8px;
+                overflow: hidden;
+                background: #ffffff;
+                margin-bottom: 16px;
+            }
+            .iso-box-brand {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-left: 1.5px solid #0f172a;
+                background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+                gap: 4px;
+                text-align: center;
+            }
+            .iso-print-logo {
+                max-height: 46px;
+                max-width: 130px;
+                object-fit: contain;
+                margin-bottom: 2px;
+            }
+            .iso-company-title {
+                font-size: 10.5px;
+                font-weight: 900;
+                color: #0f172a;
+                line-height: 1.3;
+            }
+            .iso-dept-title {
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #1e3a8a;
+                line-height: 1.25;
+            }
+
+            .iso-box-title {
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                background: #ffffff;
+            }
+            .iso-main-title {
+                margin: 0;
+                font-size: 16px;
+                font-weight: 900;
+                color: #1e3a8a;
+                line-height: 1.3;
+            }
+            .iso-sub-title {
+                font-size: 10.5px;
+                font-weight: 700;
+                color: #475569;
+                margin-top: 3px;
+            }
+            .iso-badge-std {
+                display: inline-block;
+                margin-top: 5px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                border: 1px solid #bfdbfe;
+                padding: 2px 8px;
+                border-radius: 4px;
+                font-size: 9.5px;
+                font-weight: 800;
+            }
+
+            .iso-box-meta {
+                padding: 8px 12px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                border-right: 1.5px solid #0f172a;
+                background: #f8fafc;
+                gap: 3px;
+            }
+            .meta-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px dashed #cbd5e1;
+                padding-bottom: 2px;
+                font-size: 10px;
+            }
+            .meta-row:last-child { border-bottom: none; }
+            .meta-row span { color: #64748b; font-weight: 700; }
+            .meta-row strong { color: #0f172a; font-family: monospace, inherit; font-size: 10px; }
+
+            .handover-info-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .info-card {
+                background: #f8fafc;
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 7px 10px;
+            }
+            .info-card .card-label {
+                font-size: 9.5px;
+                color: #64748b;
+                font-weight: 700;
+                margin-bottom: 2px;
+            }
+            .info-card .card-value {
+                font-size: 11.5px;
+                font-weight: 800;
+                color: #0f172a;
+            }
+
+            .iso-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                margin-bottom: 16px;
+                font-size: 11px;
+            }
+            .iso-table th {
+                background: #1e3a8a;
+                color: #ffffff;
+                padding: 7px 8px;
+                font-weight: 800;
+                border: 1px solid #0f172a;
+                text-align: center;
+            }
+            .iso-table td {
+                padding: 6px 8px;
+                border: 1px solid #cbd5e1;
+                text-align: center;
+                color: #0f172a;
+            }
+            .iso-table tr:nth-child(even) td {
+                background: #f8fafc;
+            }
+            .iso-table tr.total-row td {
+                background: #eff6ff;
+                font-weight: 900;
+                border-top: 2px solid #1e3a8a;
+                color: #1e3a8a;
+            }
+
+            .signatures-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 12px;
+                margin-top: 18px;
+                page-break-inside: avoid;
+            }
+            .sig-card {
+                border: 1.5px solid #cbd5e1;
+                border-radius: 6px;
+                padding: 8px 10px;
+                background: #f8fafc;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+                min-height: 100px;
+            }
+            .sig-card-title {
+                font-size: 10px;
+                font-weight: 800;
+                color: #1e3a8a;
+                border-bottom: 1px solid #e2e8f0;
+                padding-bottom: 3px;
+                margin-bottom: 4px;
+                text-align: center;
+            }
+            .sig-card-name {
+                font-size: 10.5px;
+                font-weight: 800;
+                color: #0f172a;
+                text-align: center;
+            }
+            .sig-line-area {
+                margin-top: 16px;
+                border-top: 1.5px dashed #64748b;
+                padding-top: 3px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                font-weight: 700;
+            }
+
+            .iso-footer-strip {
+                margin-top: 16px;
+                border: 1.5px solid #0f172a;
+                border-radius: 6px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 5px 12px;
+                background: #f8fafc;
+                font-size: 9.5px;
+                font-weight: 800;
+                color: #334155;
+                page-break-inside: avoid;
+            }
+            .iso-footer-strip span strong {
+                color: #0f172a;
+                font-family: monospace, inherit;
+            }
+            .portal-unified-footer {
+                margin-top: 10px;
+                text-align: center;
+                font-size: 9px;
+                color: #64748b;
+                line-height: 1.45;
+                page-break-inside: avoid;
+            }
+            .portal-unified-footer strong {
+                color: #1e3a8a;
+                font-weight: 800;
+            }
+
+            @media print {
+                body {
+                    background: #ffffff !important;
+                    padding: 0 !important;
+                }
+                .no-print-bar {
+                    display: none !important;
+                }
+                .report-page-container {
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 4mm 6mm !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+                @page {
+                    size: ${isLandscape ? 'A4 landscape' : 'A4 portrait'};
+                    margin: 8mm 10mm 8mm 10mm;
+                }
+            }
+        `;
+    },
+
+    /**
+     * ترويسة ISO 45001 الثلاثية المعتمدة لجميع نماذج وتقارير الحوادث
+     */
+    getIsoPrintHeaderHtml(title, subtitle, docCode, revision = 'Rev. 03', classification = 'سري وداخلي') {
+        let logoSrc = '/icons/icapp-logo.png';
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.protocol === 'file:') {
+                logoSrc = 'icons/icapp-logo.png';
+            } else if (window.location.origin && window.location.origin !== 'null') {
+                logoSrc = `${window.location.origin}/icons/icapp-logo.png`;
+            }
+        }
+        if (AppState && (AppState.companyLogo || AppState.companySettings?.logo)) {
+            const configuredLogo = AppState.companyLogo || AppState.companySettings?.logo;
+            if (configuredLogo) logoSrc = this.convertGoogleDriveLinkToPrintable(configuredLogo);
+        }
+        const logoFallback = 'icons/icon-192x192.png';
+        const now = new Date();
+        const releaseDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+        return `
+            <div class="iso-print-header">
+                <div class="iso-box-brand">
+                    <img src="${logoSrc}" alt="شعار ICAPP" class="iso-print-logo" onerror="this.onerror=null; this.src='${logoFallback}';">
+                    <div class="iso-company-title">الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</div>
+                    <div class="iso-dept-title">إدارة السلامة والصحة المهنية والبيئة</div>
+                </div>
+
+                <div class="iso-box-title">
+                    <h1 class="iso-main-title">${Utils.escapeHTML(title)}</h1>
+                    <div class="iso-sub-title">${Utils.escapeHTML(subtitle)}</div>
+                    <div class="iso-badge-std">معتمد طبقاً للمواصفة ISO 45001:2018 & ISO 9001:2015</div>
+                </div>
+
+                <div class="iso-box-meta">
+                    <div class="meta-row">
+                        <span>كود الوثيقة:</span>
+                        <strong>${Utils.escapeHTML(docCode)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>رقم الإصدار:</span>
+                        <strong>${Utils.escapeHTML(revision)}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>تاريخ الاعتماد:</span>
+                        <strong>${releaseDate}</strong>
+                    </div>
+                    <div class="meta-row">
+                        <span>درجة السرية:</span>
+                        <strong style="color: #047857;">${Utils.escapeHTML(classification)}</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * تذييل ISO 45001 المعتمد لجميع نماذج وتقارير الحوادث
+     */
+    getIsoPrintFooterHtml(docCode, revision = 'Rev. 03', standard = 'ISO 45001:2018') {
+        return `
+            <div class="iso-footer-strip">
+                <span>كود الوثيقة: <strong>${Utils.escapeHTML(docCode)}</strong></span>
+                <span>رقم الإصدار: <strong>${Utils.escapeHTML(revision)}</strong></span>
+                <span>مرجعية التوثيق: <strong>${Utils.escapeHTML(standard)}</strong></span>
+                <span>نظام الجودة: <strong>ICAPP HSE MS</strong></span>
+            </div>
+            <footer class="portal-unified-footer">
+                <div><strong>الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</strong> • منظومة إدارة السلامة والصحة المهنية المتكاملة © 2026</div>
+                <div>وثيقة رسمية معتمدة صادرة إلكترونياً من البوابة الرقمية للسلامة والصحة المهنية (ICAPP SafetyHub) • صالحة للتدقيق والمراجعة الإدارية</div>
+            </footer>
+        `;
+    },
+
+    /**
+     * فتح نافذة معاينة وطباعة النموذج بنظام A4 وشريط الطباعة العلوي
+     */
+    openIsoPrintWindow(title, htmlBody, isLandscape = false, customStyle = '') {
+        const fullHtml = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${Utils.escapeHTML(title)} — الشركة العالمية للإنتاج والتصنيع الزراعي (ICAPP)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        ${this.getIsoPrintCommonStyles(isLandscape)}
+        ${customStyle}
+    </style>
+</head>
+<body>
+    ${htmlBody}
+    <script>
+        window.addEventListener('load', function() {
+            var images = document.querySelectorAll('img');
+            var loaded = 0;
+            if (images.length === 0) {
+                setTimeout(function() { window.print(); }, 400);
+            } else {
+                images.forEach(function(img) {
+                    if (img.complete) {
+                        loaded++;
+                        if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                    } else {
+                        img.addEventListener('load', function() {
+                            loaded++;
+                            if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                        });
+                        img.addEventListener('error', function() {
+                            loaded++;
+                            if (loaded === images.length) setTimeout(function() { window.print(); }, 400);
+                        });
+                    }
+                });
+                setTimeout(function() { window.print(); }, 1800);
+            }
+        });
+    </script>
+</body>
+</html>`;
+
+        const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url, '_blank');
+        if (!printWindow) {
+            Notification.error('يرجى السماح بالنوافذ المنبثقة لطباعة النموذج');
+            return false;
+        }
+        setTimeout(() => {
+            URL.revokeObjectURL(url);
+        }, 12000);
+        return true;
     }
 };
 // ===== Export module to global scope =====
