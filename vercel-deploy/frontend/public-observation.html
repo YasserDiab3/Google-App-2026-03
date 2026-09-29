@@ -3811,7 +3811,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span>إصدار النموذج:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1793</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1794</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث النموذج ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span>تحديث</span>
                 </button>
@@ -5230,6 +5230,32 @@
 
             if (siteSelect.selectedIndex > 0) {
                 handleSiteChange(siteSelect.value);
+                
+                // قراءة query param للمكان / العنبر الفرعي (مثل الخريطة الحرارية Plant Risk Heatmap)
+                const placeParam = urlParams.get('place') || urlParams.get('location') || urlParams.get('subLocation');
+                if (placeParam) {
+                    const placeSelect = document.getElementById('placeSelect');
+                    if (placeSelect) {
+                        let placeFound = false;
+                        for (let i = 0; i < placeSelect.options.length; i++) {
+                            const optVal = placeSelect.options[i].value;
+                            if (optVal && (optVal.toLowerCase().includes(placeParam.toLowerCase()) || placeParam.toLowerCase().includes(optVal.toLowerCase()))) {
+                                placeSelect.selectedIndex = i;
+                                handlePlaceChange(placeSelect.value);
+                                placeFound = true;
+                                break;
+                            }
+                        }
+                        if (!placeFound) {
+                            const customOpt = document.createElement('option');
+                            customOpt.value = placeParam;
+                            customOpt.textContent = `📍 ${placeParam}`;
+                            placeSelect.appendChild(customOpt);
+                            placeSelect.value = placeParam;
+                            handlePlaceChange(placeParam);
+                        }
+                    }
+                }
             }
 
             // 2. الإدارات الفعلية الشاملة المطابقة للنظام بالكامل
@@ -5365,6 +5391,16 @@
 
             // استعادة بروفايل المبلّغ المحفوظ تلقائياً
             loadReporterProfile();
+
+            // تعبئة تفاصيل الخطر التلقائية إن وُجدت بالرابط (مثل المساعد الصوتي)
+            const detailsParam = urlParams.get('details') || urlParams.get('desc') || urlParams.get('description');
+            if (detailsParam) {
+                const detailsInput = document.getElementById('detailsInput');
+                if (detailsInput && !detailsInput.value) {
+                    detailsInput.value = detailsParam;
+                    detailsInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            }
         }
 
         function formatSubLocationName(str, selectedSite = '') {

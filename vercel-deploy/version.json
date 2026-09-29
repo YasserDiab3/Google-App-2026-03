@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1793",
+  "version": "1.0.1794",
   "highlights": {
     "ar": [
-      "إضافة الهوية المؤسسية العليا المعتمدة لقطاع السلامة والصحة المهنية (ICAPP QHSE) وشريط الترويسة الرسمي مع كود الوثيقة المعتمد ICAPP-HSE-VIO-01.",
-      "تعديل مسمى حقل الإدارة التابع لمخالفة المقاول رسمياً إلى «الإدارة التابع له المقاول» وتوحيد عرضه حصراً مع الإدارات الرسمية المعتمدة بالنظام.",
-      "تنميق فاخر للجزء الأول وأزرار الحفظ والإلغاء التنفيذية مع تدقيق التحقق الإلزامي وتأكيد التوثيق الميداني."
+      "إعادة هندسة وتنسيق حقول نموذج المخالفات بتوزيع متباعد رحب (20px-22px) بارتفاع 48px وحل مشكلة التصاق وتلاصق الحقول نهائياً.",
+      "إزالة مسمى شركة الشرق الأوسط للزجاج (ICAPP) بالكامل من رأس النموذج وكافة مواضع الفحص وتعميم الترويسة الرسمية لمنظومة السلامة والصحة المهنية (QHSE).",
+      "تحسين استجابة النموذج على الشاشات المتوسطة والصغيرة وتنسيق حقول المقاول والموظف والموقع بمحاذاة قياسية مريحة."
     ],
     "en": [
-      "Added official ICAPP QHSE top corporate identity header, branded ribbon, and quality document code ICAPP-HSE-VIO-01.",
-      "Renamed contractor department field to 'Contractor Department' and strictly restricted its options to official system departments only.",
-      "Executive visual polish for Section 1 and action buttons with enhanced validation and styling."
+      "Re-engineered violation form fields layout with generous 20px-22px spacing, 48px input height, completely eliminating touching/cramped fields.",
+      "Removed Middle East Glass (ICAPP) company name completely from the header and all inspection places, standardizing QHSE system titles.",
+      "Enhanced responsive grid behavior for contractor and employee fields with standard aligned layouts."
     ]
   },
-  "releaseName": "v1.0.1793 - ICAPP HSE Violation Form Branding & Department Standardization",
-  "lastUpdate": "2026-09-28T21:16:00.000Z"
+  "releaseName": "v1.0.1794 - Spacious Violation Form Layout & Company Name Cleared",
+  "lastUpdate": "2026-09-29T05:15:00.000Z"
 }

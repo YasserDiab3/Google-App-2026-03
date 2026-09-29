@@ -1,17 +1,17 @@
 {
-  "version": "1.0.1793",
+  "version": "1.0.1794",
   "highlights": {
     "ar": [
-      "إضافة الهوية المؤسسية العليا المعتمدة لقطاع السلامة والصحة المهنية (ICAPP QHSE) وشريط الترويسة الرسمي مع كود الوثيقة المعتمد ICAPP-HSE-VIO-01.",
-      "تعديل مسمى حقل الإدارة التابع لمخالفة المقاول رسمياً إلى «الإدارة التابع له المقاول» وتوحيد عرضه حصراً مع الإدارات الرسمية المعتمدة بالنظام.",
-      "تنميق فاخر للجزء الأول وأزرار الحفظ والإلغاء التنفيذية مع تدقيق التحقق الإلزامي وتأكيد التوثيق الميداني."
+      "تدقيق وتأمين تسجيل الدخول الميداني (كود الموظف + PIN) بدقة 100% مع دعم كامل للعمل أوفلاين والمزامنة اللحظية بدون تأخير.",
+      "تكامل الخريطة الحرارية (Plant Risk Heatmap) مع نموذج الملاحظات لتعبئة المصنع والموقع الفرعي وتفاصيل الخطر تلقائياً فور النقر.",
+      "التحقق الشامل من دورة إغلاق الملاحظات في لوحة «مهامي وملاحظاتي» واختفاء الملاحظة فور إغلاقها وتحديث العدادات والمؤشرات الحية."
     ],
     "en": [
-      "Added official ICAPP QHSE top corporate identity header, branded ribbon, and quality document code ICAPP-HSE-VIO-01.",
-      "Renamed contractor department field to 'Contractor Department' and strictly restricted its options to official system departments only.",
-      "Executive visual polish for Section 1 and action buttons with enhanced validation and styling."
+      "Rigorous 100% verification and hardening for Field Login (Employee Code + PIN) with full offline support and instant sync.",
+      "Integrated Plant Risk Heatmap direct navigation into Observation Form with automatic site and sub-location autofill.",
+      "Verified Observation Action Closure workflow in My Tasks dashboard with instant removal of closed items and real-time KPI updates."
     ]
   },
-  "releaseName": "v1.0.1793 - ICAPP HSE Violation Form Branding & Department Standardization",
-  "lastUpdate": "2026-09-28T21:16:00.000Z"
+  "releaseName": "v1.0.1794 - Field Login Hardening, Heatmap Direct Linkage & Task Closure Verification",
+  "lastUpdate": "2026-09-29T05:16:00.000Z"
 }

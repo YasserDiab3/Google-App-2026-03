@@ -5928,18 +5928,18 @@ const Violations = {
                     padding-left: 12px !important;
                     font-size: 0.92rem !important;
                     line-height: 1.5 !important;
-                    border-radius: 9px !important;
+                    border-radius: 10px !important;
                     border: 1.5px solid #cbd5e1 !important;
                     background-color: #ffffff !important;
                     color: #0f172a !important;
                     display: block !important;
                     width: 100% !important;
                     outline: none !important;
-                    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
                 }
                 #violation-modal-overlay select.form-input {
-                    padding-right: 10px !important;
-                    padding-left: 28px !important;
+                    padding-right: 12px !important;
+                    padding-left: 32px !important;
                     appearance: auto !important;
                     -webkit-appearance: menulist !important;
                     -moz-appearance: menulist !important;
@@ -5947,12 +5947,12 @@ const Violations = {
                 }
                 #violation-modal-overlay textarea.form-input {
                     box-sizing: border-box !important;
-                    min-height: 80px !important;
+                    min-height: 85px !important;
                     height: auto !important;
-                    padding: 9px 12px !important;
-                    font-size: 0.90rem !important;
+                    padding: 10px 14px !important;
+                    font-size: 0.92rem !important;
                     line-height: 1.55 !important;
-                    border-radius: 9px !important;
+                    border-radius: 10px !important;
                     border: 1.5px solid #cbd5e1 !important;
                     background-color: #ffffff !important;
                     color: #0f172a !important;
@@ -5963,14 +5963,22 @@ const Violations = {
                 }
                 #violation-modal-overlay .form-input:focus {
                     border-color: #2563eb !important;
-                    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+                    box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.18) !important;
+                }
+                @media (max-width: 768px) {
+                    #violation-modal-overlay .v-contractor-row-1,
+                    #violation-modal-overlay .v-contractor-row-2,
+                    #violation-modal-overlay .v-employee-row-2 {
+                        grid-template-columns: 1fr !important;
+                        gap: 16px !important;
+                    }
                 }
             </style>
             <div class="modal-content" style="max-width: 880px; max-height: 92vh; display: flex; flex-direction: column; border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35); border: 1px solid #cbd5e1;">
                 <!-- شريط الهوية المؤسسية العلوية (Corporate Identity Ribbon) -->
                 <div style="height: 5px; width: 100%; background: linear-gradient(90deg, #1d4ed8 0%, #38bdf8 35%, #fbbf24 70%, #10b981 100%);"></div>
 
-                <!-- رأس النموذج التنفيذي بهوية ICAPP المعتمدة -->
+                <!-- رأس النموذج التنفيذي -->
                 <div class="modal-header" style="background: linear-gradient(135deg, #0b1329 0%, #1e293b 60%, #0f172a 100%); color: #ffffff; padding: 18px 24px; border-bottom: 2px solid #2563eb; display: flex; align-items: center; justify-content: space-between; position: relative;">
                     <div style="display: flex; align-items: center; gap: 14px;">
                         <div style="width: 46px; height: 46px; border-radius: 12px; background: linear-gradient(135deg, rgba(37, 99, 235, 0.25) 0%, rgba(245, 158, 11, 0.22) 100%); border: 1.5px solid rgba(245, 158, 11, 0.45); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);">
@@ -5986,16 +5994,16 @@ const Violations = {
                                 </span>
                             </div>
                             <p style="margin: 3px 0 0 0; font-size: 0.80rem; color: #cbd5e1; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                                <span style="color: #60a5fa; font-weight: 700;">شركة الشرق الأوسط للزجاج (ICAPP)</span>
+                                <span style="color: #60a5fa; font-weight: 700;">منظومة إدارة السلامة والصحة المهنية والبيئة (QHSE)</span>
                                 <span style="color: #64748b;">•</span>
-                                <span>قطاع السلامة والصحة المهنية والبيئة (QHSE)</span>
+                                <span>سجل توثيق المخالفات الميدانية المعتمد</span>
                             </p>
                         </div>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div class="hidden sm:flex" style="flex-direction: column; align-items: flex-end; gap: 2px; text-align: left;">
                             <span style="font-size: 0.72rem; font-weight: 800; color: #38bdf8; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.25); padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px; font-family: monospace;">
-                                ICAPP-HSE-VIO-01
+                                HSE-VIO-01
                             </span>
                             <span style="font-size: 0.66rem; color: #94a3b8; font-weight: 600;">وثيقة جودة وسلامة معتمدة</span>
                         </div>
@@ -6021,48 +6029,55 @@ const Violations = {
 
                     <form id="violation-form" class="space-y-4">
                         <!-- البطاقة 1: بيانات الشخص المخالف -->
-                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 16px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 20px; overflow: hidden;">
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                                 <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #ffffff; font-weight: 800; font-size: 13px; box-shadow: 0 2px 4px rgba(37,99,235,0.25);">1</span>
-                                    <span style="font-size: 0.94rem; font-weight: 800; color: #1e293b;">بيانات الشخص المخالف (الموظف / المقاول)</span>
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #1d4ed8, #2563eb); color: #ffffff; font-weight: 800; font-size: 13px; box-shadow: 0 2px 4px rgba(37,99,235,0.25);">1</span>
+                                    <span style="font-size: 0.96rem; font-weight: 800; color: #0f172a;">بيانات الشخص المخالف (الموظف / المقاول)</span>
                                 </div>
-                                <span style="font-size: 0.76rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 3px 11px; border-radius: 20px;">
-                                    <i class="fas fa-bolt-lightning ml-1 text-amber-500"></i> فحص ذكي فوري لسجل الجزاءات والتكرار الشهري
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #2563eb; background: #eff6ff; border: 1px solid #dbeafe; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+                                    <i class="fas fa-bolt-lightning text-amber-500"></i> فحص ذكي فوري لسجل الجزاءات والتكرار الشهري
                                 </span>
                             </div>
 
-                            <div style="padding: 16px 18px;">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style="padding: 22px 20px;">
+                                <!-- الصف الأول: نوع الشخص + الشركة/الكود (متباعد ومريح) -->
+                                <div class="v-contractor-row-1" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px;">
                                     <div>
-                                        <label class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-user-tag text-blue-600 ml-1"></i> نوع الشخص المخالف *
+                                        <label for="violation-person-type" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-user-tag text-blue-600" style="font-size: 0.95rem;"></i>
+                                            <span>نوع الشخص المخالف</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
-                                        <select id="violation-person-type" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-person-type" required class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <option value="">-- اختر صفة المخالف --</option>
-                                            <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف بالشركة (ICAPP)</option>
+                                            <option value="employee" ${isEmployeeRecord ? 'selected' : ''}>موظف بالشركة</option>
                                             <option value="contractor" ${isContractorRecord ? 'selected' : ''}>عمالة تابعة لمقاول</option>
                                         </select>
                                     </div>
 
                                     <!-- للموظف: الكود الوظيفي -->
                                     <div id="violation-employee-code-container" style="display: ${isEmployeeRecord ? 'block' : 'none'};">
-                                        <label for="violation-employee-code" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-id-card text-indigo-600 ml-1"></i> الكود الوظيفي المخالف *
+                                        <label for="violation-employee-code" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-id-card text-indigo-600" style="font-size: 0.95rem;"></i>
+                                            <span>الكود الوظيفي المخالف</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
                                         <input type="text" id="violation-employee-code" class="form-input"
                                             value="${violationData?.employeeCode || violationData?.employeeNumber || ''}" 
-                                            placeholder="أدخل الكود (جلب فوري للاسم والإدارة)"
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;"
+                                            placeholder="أدخل الكود (جلب فوري للاسم والإدارة)..."
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;"
                                             ${isEmployeeRecord ? 'required' : ''}>
                                     </div>
 
                                     <!-- للمقاول: شركة المقاول -->
                                     <div id="violation-contractor-company-container" style="display: ${isContractorRecord ? 'block' : 'none'};">
-                                        <label for="violation-contractor-select" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-building text-amber-600 ml-1"></i> شركة المقاول المعتمدة *
+                                        <label for="violation-contractor-select" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-building text-amber-600" style="font-size: 0.95rem;"></i>
+                                            <span>شركة المقاول المعتمدة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
-                                        <select id="violation-contractor-select" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;"
+                                        <select id="violation-contractor-select" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;"
                                             ${isContractorRecord ? 'required' : ''}>
                                             <option value="">-- اختر شركة المقاول --</option>
                                         </select>
@@ -6070,68 +6085,75 @@ const Violations = {
                                 </div>
 
                                 <!-- تفاصيل الموظف التلقائية -->
-                                <div id="violation-employee-details-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-3.5" style="display: ${isEmployeeRecord ? 'grid' : 'none'};">
+                                <div id="violation-employee-details-grid" class="v-employee-row-2" style="display: ${isEmployeeRecord ? 'grid' : 'none'}; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 22px; padding-top: 20px; border-top: 1px dashed #cbd5e1;">
                                     <div>
-                                        <label for="violation-person-name" class="block text-xs font-bold text-gray-600 mb-1" id="violation-person-name-label">
-                                            <i class="fas fa-user ml-1 text-slate-500"></i> اسم الموظف
+                                        <label for="violation-person-name" style="display: flex; align-items: center; gap: 7px; font-size: 0.84rem; font-weight: 700; color: #475569; margin-bottom: 8px;" id="violation-person-name-label">
+                                            <i class="fas fa-user text-slate-500"></i>
+                                            <span>اسم الموظف</span>
                                         </label>
                                         <input type="text" id="violation-person-name" class="form-input"
                                             value="${violationData?.employeeName || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 700; color: #0f172a;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-size: 0.94rem; font-weight: 700; color: #0f172a; width: 100%;">
                                     </div>
                                     <div id="violation-employee-position-container">
-                                        <label for="violation-employee-position" class="block text-xs font-bold text-gray-600 mb-1">
-                                            <i class="fas fa-briefcase ml-1 text-slate-500"></i> الوظيفة
+                                        <label for="violation-employee-position" style="display: flex; align-items: center; gap: 7px; font-size: 0.84rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
+                                            <i class="fas fa-briefcase text-slate-500"></i>
+                                            <span>الوظيفة</span>
                                         </label>
                                         <input type="text" id="violation-employee-position" class="form-input"
                                             value="${violationData?.employeePosition || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-size: 0.94rem; font-weight: 600; color: #334155; width: 100%;">
                                     </div>
                                     <div id="violation-employee-department-container">
-                                        <label for="violation-employee-department" class="block text-xs font-bold text-gray-600 mb-1">
-                                            <i class="fas fa-sitemap ml-1 text-slate-500"></i> الإدارة
+                                        <label for="violation-employee-department" style="display: flex; align-items: center; gap: 7px; font-size: 0.84rem; font-weight: 700; color: #475569; margin-bottom: 8px;">
+                                            <i class="fas fa-sitemap text-slate-500"></i>
+                                            <span>الإدارة</span>
                                         </label>
                                         <input type="text" id="violation-employee-department" class="form-input"
                                             value="${violationData?.employeeDepartment || ''}" 
                                             placeholder="سيتم الجلب تلقائياً" readonly
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-weight: 600; color: #334155;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; background: #f8fafc; border: 1.5px solid #e2e8f0; font-size: 0.94rem; font-weight: 600; color: #334155; width: 100%;">
                                     </div>
                                 </div>
 
-                                <!-- تفاصيل عمالة المقاول الذكية -->
-                                <div id="violation-contractor-fields-container" class="mt-3.5" style="display: ${isContractorRecord ? 'block' : 'none'};">
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                                <!-- تفاصيل عمالة المقاول الذكية: متباعدة، كبيرة، وواضحة جداً دون أي التصاق -->
+                                <div id="violation-contractor-fields-container" style="display: ${isContractorRecord ? 'block' : 'none'}; margin-top: 22px; padding-top: 20px; border-top: 1px dashed #cbd5e1;">
+                                    <div class="v-contractor-row-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px;">
                                         <div id="violation-contractor-worker-container">
-                                            <label for="violation-contractor-worker" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-user-hard-hat ml-1 text-amber-600"></i> اسم العامل التابع للمقاول
+                                            <label for="violation-contractor-worker" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-user-hard-hat text-amber-600" style="font-size: 0.95rem;"></i>
+                                                <span>اسم العامل التابع للمقاول</span>
                                             </label>
                                             <input type="text" id="violation-contractor-worker" list="violation-contractor-workers-list" class="form-input"
                                                 value="${violationData?.contractorWorker || ''}" 
                                                 placeholder="اختر أو اكتب اسم العامل..."
-                                                style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
+                                                style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <datalist id="violation-contractor-workers-list">
                                                 ${workerDatalistHtml}
                                             </datalist>
                                         </div>
                                         <div id="violation-contractor-position-container">
-                                            <label for="violation-contractor-position" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-briefcase ml-1 text-slate-600"></i> مهنة / وظيفة العامل
+                                            <label for="violation-contractor-position" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-briefcase text-slate-600" style="font-size: 0.95rem;"></i>
+                                                <span>مهنة / وظيفة العامل</span>
                                             </label>
                                             <input type="text" id="violation-contractor-position" list="violation-contractor-positions-list" class="form-input"
                                                 value="${violationData?.contractorPosition || ''}" 
                                                 placeholder="اختر أو اكتب المهنة الميدانية..."
-                                                style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
+                                                style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <datalist id="violation-contractor-positions-list">
                                                 ${positionDatalistHtml}
                                             </datalist>
                                         </div>
                                         <div id="violation-contractor-department-container">
-                                            <label for="violation-contractor-department" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-sitemap ml-1 text-teal-600"></i> الإدارة التابع له المقاول *
+                                            <label for="violation-contractor-department" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-sitemap text-teal-600" style="font-size: 0.95rem;"></i>
+                                                <span>الإدارة التابع له المقاول</span>
+                                                <span style="color: #dc2626;">*</span>
                                             </label>
-                                            <select id="violation-contractor-department" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
+                                            <select id="violation-contractor-department" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                                 <option value="">-- اختر الإدارة التابع له المقاول --</option>
                                                 ${contractorDeptOptions}
                                             </select>
@@ -6145,38 +6167,42 @@ const Violations = {
                         </div>
 
                         <!-- البطاقة 2: الموقع وتوقيت الرصد الميداني -->
-                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 16px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 9px;">
-                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: #059669; color: #ffffff; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(5,150,105,0.25);">2</span>
-                                    <span style="font-size: 0.92rem; font-weight: 800; color: #1e293b;">الموقع وتوقيت الرصد الميداني</span>
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 20px; overflow: hidden;">
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; font-weight: 800; font-size: 13px; box-shadow: 0 2px 4px rgba(16,185,129,0.25);">2</span>
+                                    <span style="font-size: 0.96rem; font-weight: 800; color: #0f172a;">الموقع وتوقيت الرصد الميداني</span>
                                 </div>
-                                <span style="font-size: 0.76rem; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 10px; border-radius: 20px;">
-                                    فحص وتنبيه تلقائي لبؤر الخطر بالمنطقة
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #059669; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+                                    <i class="fas fa-location-crosshairs text-emerald-600"></i> فحص وتنبيه تلقائي لبؤر الخطر بالمنطقة
                                 </span>
                             </div>
 
-                            <div style="padding: 16px 18px;">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style="padding: 22px 20px;">
+                                <div class="v-contractor-row-1" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
                                     <!-- للموظف: الموقع والمكان -->
                                     <div id="violation-location-fields-container" class="contents" style="display: ${isEmployeeRecord ? 'contents' : 'none'};">
                                         <div>
-                                            <label for="violation-employee-location" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع الرئيسي *
+                                            <label for="violation-employee-location" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-industry text-emerald-600" style="font-size: 0.95rem;"></i>
+                                                <span>الموقع الرئيسي</span>
+                                                <span style="color: #dc2626;">*</span>
                                             </label>
-                                            <select id="violation-employee-location" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
+                                            <select id="violation-employee-location" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;" ${isEmployeeRecord ? 'required' : ''}>
                                                 <option value="">-- اختر الموقع --</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label for="violation-employee-place" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان / منطقة المخالفة *
+                                            <label for="violation-employee-place" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-compass text-emerald-600" style="font-size: 0.95rem;"></i>
+                                                <span>مكان / منطقة المخالفة</span>
+                                                <span style="color: #dc2626;">*</span>
                                             </label>
-                                            <select id="violation-employee-place" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isEmployeeRecord ? 'required' : ''}>
+                                            <select id="violation-employee-place" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;" ${isEmployeeRecord ? 'required' : ''}>
                                                 <option value="">-- اختر مكان المخالفة --</option>
                                             </select>
                                             <div id="violation-employee-custom-place-box" class="hidden mt-2">
-                                                <input type="text" id="violation-employee-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px;">
+                                                <input type="text" id="violation-employee-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem;">
                                             </div>
                                         </div>
                                     </div>
@@ -6184,69 +6210,79 @@ const Violations = {
                                     <!-- للمقاول: الموقع والمكان -->
                                     <div id="violation-contractor-location-fields-container" class="contents" style="display: ${isContractorRecord ? 'contents' : 'none'};">
                                         <div>
-                                            <label for="violation-contractor-location" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-industry ml-1 text-emerald-600"></i> الموقع الرئيسي *
+                                            <label for="violation-contractor-location" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-industry text-emerald-600" style="font-size: 0.95rem;"></i>
+                                                <span>الموقع الرئيسي</span>
+                                                <span style="color: #dc2626;">*</span>
                                             </label>
-                                            <select id="violation-contractor-location" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
+                                            <select id="violation-contractor-location" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;" ${isContractorRecord ? 'required' : ''}>
                                                 <option value="">-- اختر الموقع --</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label for="violation-contractor-place" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                                <i class="fas fa-compass ml-1 text-emerald-600"></i> مكان / منطقة المخالفة *
+                                            <label for="violation-contractor-place" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                                <i class="fas fa-compass text-emerald-600" style="font-size: 0.95rem;"></i>
+                                                <span>مكان / منطقة المخالفة</span>
+                                                <span style="color: #dc2626;">*</span>
                                             </label>
-                                            <select id="violation-contractor-place" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;" ${isContractorRecord ? 'required' : ''}>
+                                            <select id="violation-contractor-place" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;" ${isContractorRecord ? 'required' : ''}>
                                                 <option value="">-- اختر مكان المخالفة --</option>
                                             </select>
                                             <div id="violation-contractor-custom-place-box" class="hidden mt-2">
-                                                <input type="text" id="violation-contractor-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 8px;">
+                                                <input type="text" id="violation-contractor-custom-place" class="form-input" placeholder="اكتب اسم المكان المخصص بالتحديد..." style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem;">
                                             </div>
                                         </div>
                                     </div>
 
                                     <!-- التاريخ والوقت -->
                                     <div>
-                                        <label for="violation-date" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-calendar-alt ml-1 text-blue-600"></i> تاريخ رصد المخالفة *
+                                        <label for="violation-date" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-calendar-alt text-blue-600" style="font-size: 0.95rem;"></i>
+                                            <span>تاريخ رصد المخالفة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
                                         <input type="date" id="violation-date" required class="form-input"
                                             value="${formDateValue}"
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                     </div>
                                     <div>
-                                        <label for="violation-time" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-clock ml-1 text-purple-600"></i> وقت المخالفة *
+                                        <label for="violation-time" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-clock text-purple-600" style="font-size: 0.95rem;"></i>
+                                            <span>وقت المخالفة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
                                         <input type="time" id="violation-time" required class="form-input"
                                             value="${formTimeValue}"
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 600;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                     </div>
                                 </div>
 
                                 <!-- ✅ بطاقة تنبيه بؤرة الخطر في المنطقة المحددة -->
-                                <div id="violation-area-hotspot-container" class="hidden"></div>
+                                <div id="violation-area-hotspot-container" class="hidden" style="margin-top: 16px;"></div>
                             </div>
                         </div>
 
-                        <!-- البطاقة 3: تصنيف المخالفة والغرامة والتحليل الجذري -->
-                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); margin-bottom: 16px; overflow: hidden;">
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
-                                <div style="display: flex; align-items: center; gap: 9px;">
-                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 7px; background: #d97706; color: #ffffff; font-weight: 800; font-size: 12px; box-shadow: 0 1px 2px rgba(217,119,6,0.25);">3</span>
-                                    <span style="font-size: 0.92rem; font-weight: 800; color: #1e293b;">تصنيف المخالفة والغرامة والسبب الجذري</span>
+                        <!-- البطاقة 3: تصنيف المخالفة والغرامة والسبب الجذري -->
+                        <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); margin-bottom: 20px; overflow: hidden;">
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 1px solid #e2e8f0; padding: 13px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: linear-gradient(135deg, #d97706, #f59e0b); color: #ffffff; font-weight: 800; font-size: 13px; box-shadow: 0 2px 4px rgba(245,158,11,0.25);">3</span>
+                                    <span style="font-size: 0.96rem; font-weight: 800; color: #0f172a;">تصنيف المخالفة والغرامة والسبب الجذري</span>
                                 </div>
-                                <span style="font-size: 0.76rem; font-weight: 700; color: #d97706; background: #fffbeb; border: 1px solid #fde68a; padding: 2px 10px; border-radius: 20px;">
-                                    تحديد النوع يضبط الغرامة والمقترحات تلقائياً
+                                <span style="font-size: 0.78rem; font-weight: 700; color: #d97706; background: #fffbeb; border: 1px solid #fde68a; padding: 4px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px;">
+                                    <i class="fas fa-coins text-amber-500"></i> تحديد النوع يضبط الغرامة والمقترحات تلقائياً
                                 </span>
                             </div>
 
-                            <div style="padding: 16px 18px;">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div style="padding: 22px 20px;">
+                                <div class="v-contractor-row-1" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px;">
                                     <div>
-                                        <label for="violation-type" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-exclamation-circle ml-1 text-red-600"></i> نوع وتوصيف المخالفة *
+                                        <label for="violation-type" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-exclamation-circle text-red-600" style="font-size: 0.95rem;"></i>
+                                            <span>نوع وتوصيف المخالفة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
-                                        <select id="violation-type" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 700;">
+                                        <select id="violation-type" required class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 700; width: 100%;">
                                             <option value="">-- اختر نوع المخالفة --</option>
                                             ${legacyTypeOption}
                                             ${typeOptions}
@@ -6254,25 +6290,28 @@ const Violations = {
                                     </div>
 
                                     <div>
-                                        <label for="violation-fine-amount" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-money-bill-wave ml-1 text-green-600"></i> القيمة المالية للغرامة (ج.م)
+                                        <label for="violation-fine-amount" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-money-bill-wave text-green-600" style="font-size: 0.95rem;"></i>
+                                            <span>القيمة المالية للغرامة (ج.م)</span>
                                         </label>
                                         <input type="number" id="violation-fine-amount" class="form-input" min="0" step="1"
                                             value="${Number(effectiveFineForForm)}"
                                             placeholder="القيمة المالية"
-                                            style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 12px; border-radius: 9px; font-weight: 700;">
-                                        <p style="font-size: 0.74rem; color: #64748b; margin: 4px 0 0 0;">
+                                            style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 700; width: 100%;">
+                                        <p style="font-size: 0.74rem; color: #64748b; margin: 5px 0 0 0;">
                                             ${canManagerEditFineAmount ? 'يتم التحديد تلقائياً حسب نوع المخالفة، والتعديل متاح للمدير.' : 'يتم التحديد تلقائياً حسب اللائحة، وتعديلها متاح للمدير فقط.'}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 mt-3.5">
+                                <div class="v-contractor-row-2" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin-top: 22px; padding-top: 20px; border-top: 1px dashed #cbd5e1;">
                                     <div>
-                                        <label for="violation-severity" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-signal ml-1 text-orange-600"></i> مستوى الشدة والخطورة *
+                                        <label for="violation-severity" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-signal text-orange-600" style="font-size: 0.95rem;"></i>
+                                            <span>مستوى الشدة والخطورة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
-                                        <select id="violation-severity" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-severity" required class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <option value="">اختر الشدة</option>
                                             <option value="عالية" ${violationData?.severity === 'عالية' ? 'selected' : ''}>🔴 عالية الخطورة</option>
                                             <option value="متوسطة" ${violationData?.severity === 'متوسطة' ? 'selected' : ''}>🟡 متوسطة</option>
@@ -6281,10 +6320,12 @@ const Violations = {
                                     </div>
 
                                     <div>
-                                        <label for="violation-status" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-info-circle ml-1 text-blue-600"></i> حالة المعالجة والمتابعة *
+                                        <label for="violation-status" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-info-circle text-blue-600" style="font-size: 0.95rem;"></i>
+                                            <span>حالة المعالجة والمتابعة</span>
+                                            <span style="color: #dc2626;">*</span>
                                         </label>
-                                        <select id="violation-status" required class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-status" required class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <option value="">اختر الحالة</option>
                                             <option value="قيد المراجعة" ${!violationData?.status || violationData?.status === 'قيد المراجعة' ? 'selected' : ''}>⏳ قيد المراجعة والمتابعة</option>
                                             <option value="محلول" ${violationData?.status === 'محلول' ? 'selected' : ''}>✅ تم المعالجة والتصحيح (محلول)</option>
@@ -6293,10 +6334,11 @@ const Violations = {
                                     </div>
 
                                     <div>
-                                        <label for="violation-root-cause" class="block text-xs font-bold text-gray-700 mb-1.5">
-                                            <i class="fas fa-search-plus ml-1 text-teal-600"></i> تصنيف السبب الجذري (RCA)
+                                        <label for="violation-root-cause" style="display: flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 700; color: #1e293b; margin-bottom: 8px;">
+                                            <i class="fas fa-search-plus text-teal-600" style="font-size: 0.95rem;"></i>
+                                            <span>تصنيف السبب الجذري (RCA)</span>
                                         </label>
-                                        <select id="violation-root-cause" class="form-input" style="min-height: 44px; height: 44px; box-sizing: border-box; padding: 6px 10px; border-radius: 9px; font-weight: 600;">
+                                        <select id="violation-root-cause" class="form-input" style="min-height: 48px; height: 48px; box-sizing: border-box; padding: 8px 14px; border-radius: 10px; font-size: 0.94rem; font-weight: 600; width: 100%;">
                                             <option value="">اختر السبب الجذري</option>
                                             <option value="سلوك غير آمن (Unsafe Act)" ${violationData?.rootCause === 'سلوك غير آمن (Unsafe Act)' ? 'selected' : ''}>سلوك غير آمن (Unsafe Act)</option>
                                             <option value="ظرف عمل غير آمن (Unsafe Condition)" ${violationData?.rootCause === 'ظرف عمل غير آمن (Unsafe Condition)' ? 'selected' : ''}>ظرف عمل غير آمن (Unsafe Condition)</option>

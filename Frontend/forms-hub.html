@@ -3753,7 +3753,7 @@
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">رقم الإصدار:</span>
-                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1793</span>
+                        <span class="iso-meta-val" id="isoHubVersionVal" style="font-family: monospace; font-weight: 800;">v1.0.1794</span>
                     </div>
                     <div class="iso-meta-row">
                         <span class="iso-meta-key">درجة السرية:</span>
@@ -4125,7 +4125,7 @@
             <div class="footer-meta-strip">
                 <i class="fas fa-code-branch text-amber-600"></i>
                 <span id="lblHubAppVersionText">إصدار المنظومة:</span>
-                <span class="footer-version-pill" id="lblAppVersion">v1.0.1793</span>
+                <span class="footer-version-pill" id="lblAppVersion">v1.0.1794</span>
                 <button type="button" onclick="forceAppRefresh(event)" title="تحديث المنظومة ومسح الذاكرة المؤقتة" class="footer-refresh-btn">
                     <i class="fas fa-rotate" id="refreshIconSpin"></i> <span id="lblHubRefreshBtn">تحديث</span>
                 </button>
@@ -8707,6 +8707,19 @@
                     if (newPinWrap) newPinWrap.style.display = 'block';
                     const npInp = document.getElementById('sessionNewPinInput');
                     if (npInp) { npInp.value = ''; npInp.focus(); }
+
+                    // مزامنة خلفية فورية مع السيرفر للتحقق إن كان الموظف لديه PIN مسجل مسبقاً بقاعدة البيانات
+                    if (navigator.onLine) {
+                        callPortalApi('fieldPortalCheckEmployee', { employeeCode: localEmp.code }).then(res => {
+                            if (res && res.success && res.hasPin) {
+                                isEmployeeHasPin = true;
+                                if (pinWrap) pinWrap.style.display = 'block';
+                                if (newPinWrap) newPinWrap.style.display = 'none';
+                                const pInp = document.getElementById('sessionPinInput');
+                                if (pInp) { pInp.value = ''; pInp.placeholder = '••••'; pInp.focus(); }
+                            }
+                        }).catch(() => {});
+                    }
                 }
                 updateFieldSessionGpsBadge();
                 return;
@@ -8926,6 +8939,29 @@
                         localStorage.setItem('HSE_BROADCAST_AUTH', 'true');
                         sessionStorage.setItem('HSE_BROADCAST_AUTH', 'true');
                     }
+
+                    // حفظ وتحديث كاش PIN والموظف محلياً لدعم العمل أوفلاين بنسبة 100%
+                    const activePin = (isEmployeeHasPin ? document.getElementById('sessionPinInput')?.value?.trim() : document.getElementById('sessionNewPinInput')?.value?.trim()) || '';
+                    if (activePin && /^\d{4}$/.test(activePin)) {
+                        localStorage.setItem('HSE_PIN_' + currentVerifiedEmployee.code, activePin);
+                        localStorage.setItem('field_portal_pin_' + currentVerifiedEmployee.code, activePin);
+                    }
+                    try {
+                        let cached = JSON.parse(localStorage.getItem('hse_cached_employees') || '[]');
+                        if (!Array.isArray(cached)) cached = [];
+                        const cleanC = String(currentVerifiedEmployee.code).replace(/[^0-9]/g, '');
+                        const idx = cached.findIndex(e => String(e.code || e.employeeNumber || '').replace(/[^0-9]/g, '') === cleanC);
+                        const record = {
+                            code: currentVerifiedEmployee.code,
+                            name: currentVerifiedEmployee.name,
+                            job: currentVerifiedEmployee.job,
+                            department: currentVerifiedEmployee.department,
+                            isSafety: !!currentVerifiedEmployee.isSafety
+                        };
+                        if (idx >= 0) cached[idx] = record; else cached.push(record);
+                        localStorage.setItem('hse_cached_employees', JSON.stringify(cached));
+                    } catch (_) {}
+
                     if (typeof HseDeviceAudit !== 'undefined') HseDeviceAudit.logAction('session_created', { employeeCode: sessionData.employeeCode, site: sessionData.site });
                 } catch(e) {}
 
@@ -9376,7 +9412,7 @@
         // Service Worker Registration with Auto Update & Force Refresh
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1793-20260929')
+                navigator.serviceWorker.register('/service-worker.js?v=hse-app-v1.0.1794-20260929')
                     .then(reg => {
                         reg.update();
                         console.log('Hub Service Worker registered successfully:', reg.scope);
